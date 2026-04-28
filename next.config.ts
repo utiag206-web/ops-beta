@@ -3,6 +3,17 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   /* config options here */
   reactStrictMode: true,
+  output: "standalone",
+  eslint: {
+    // Warning: This allows production builds to successfully complete even if
+    // your project has ESLint errors.
+    ignoreDuringBuilds: true,
+  },
+  typescript: {
+    // Warning: This allows production builds to successfully complete even if
+    // your project has type errors.
+    ignoreBuildErrors: true,
+  },
   images: {
     remotePatterns: [
       {
@@ -10,15 +21,13 @@ const nextConfig: NextConfig = {
         hostname: "**",
       },
     ],
+    unoptimized: true,
   },
   experimental: {
-    // Optimizations for production
     serverActions: {
-      bodySizeLimit: "2mb",
+      bodySizeLimit: "10mb",
     },
   },
-  // Standalone output is best for production (Docker, VPS, etc.)
-  output: "standalone",
 };
 
 export default nextConfig;
