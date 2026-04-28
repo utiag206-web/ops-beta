@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
 export function middleware(request: NextRequest) {
+  // InthalyOps Landing Page Middleware
   // Add custom headers or security logic here
   const response = NextResponse.next();
 
