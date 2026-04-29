@@ -182,11 +182,19 @@ export default function LoginPage() {
                 </button>
               </form>
 
-              <div className="mt-10 text-center text-sm font-bold text-slate-500">
-                ¿Problemas para acceder?{" "}
-                <a href="#" className="text-blue-600 hover:underline">
-                  Contactar a soporte
-                </a>
+              <div className="mt-10 text-center text-sm font-bold text-slate-500 space-y-4">
+                <p>
+                  ¿No tienes una cuenta?{" "}
+                  <Link href="/register" className="text-blue-600 hover:underline">
+                    Regístrate ahora
+                  </Link>
+                </p>
+                <p className="opacity-50">
+                  ¿Problemas para acceder?{" "}
+                  <a href="#" className="text-blue-600 hover:underline">
+                    Contactar a soporte
+                  </a>
+                </p>
               </div>
             </div>
           </div>
