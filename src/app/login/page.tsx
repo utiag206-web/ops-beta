@@ -7,23 +7,32 @@ import {
   Mail, 
   Lock, 
   EyeOff,
+  Eye,
   ChevronRight,
   ShieldCheck,
   Zap,
   LayoutDashboard
 } from "lucide-react";
 import { useState } from "react";
+import { login } from "./actions";
+import { toast } from "sonner";
 
 export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setIsLoading(true);
-    // Simular autenticación empresarial
-    setTimeout(() => setIsLoading(false), 2000);
-  };
+
+    const formData = new FormData(e.currentTarget);
+    const result = await login(formData);
+
+    if (result?.error) {
+      toast.error(result.error);
+      setIsLoading(false);
+    }
+  }
 
   return (
     <div className="relative flex min-h-screen flex-col items-center justify-center bg-slate-50 overflow-hidden selection:bg-blue-100 selection:text-blue-900">
@@ -106,6 +115,7 @@ export default function LoginPage() {
                   <div className="relative group">
                     <Mail className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400 transition-colors group-focus-within:text-blue-600" />
                     <input 
+                      name="email"
                       type="email" 
                       required
                       placeholder="usuario@empresa.com"
@@ -126,6 +136,7 @@ export default function LoginPage() {
                   <div className="relative group">
                     <Lock className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400 transition-colors group-focus-within:text-blue-600" />
                     <input 
+                      name="password"
                       type={showPassword ? "text" : "password"} 
                       required
                       placeholder="••••••••"
@@ -136,7 +147,7 @@ export default function LoginPage() {
                       onClick={() => setShowPassword(!showPassword)}
                       className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-blue-600 transition-colors"
                     >
-                      <EyeOff className="h-5 w-5" />
+                      {showPassword ? <Eye className="h-5 w-5" /> : <EyeOff className="h-5 w-5" />}
                     </button>
                   </div>
                 </div>
