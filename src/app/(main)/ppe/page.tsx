@@ -1,6 +1,7 @@
 import { getPPEDeliveries } from './actions'
 import { getWorkers } from '../workers/actions'
 import { getUserSession } from '@/lib/auth'
+export const dynamic = 'force-dynamic'
 
 export const dynamic = 'force-dynamic'
 import { PPEList } from '@/components/ppe/ppe-list'

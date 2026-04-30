@@ -1,11 +1,11 @@
+import { Suspense } from 'react'
+import { redirect } from 'next/navigation'
 import { IncidentsList } from '@/components/incidents/incidents-list'
 import { getUserSession } from '@/lib/auth'
+import { getIncidencias } from './actions'
+import { OperationsDashboardSkeleton } from '@/components/dashboard/dashboard-skeletons'
 
 export const dynamic = 'force-dynamic'
-import { redirect } from 'next/navigation'
-import { getIncidencias } from './actions'
-import { Suspense } from 'react'
-import { OperationsDashboardSkeleton } from '@/components/dashboard/dashboard-skeletons'
 
 export const metadata = {
   title: 'Incidencias | Sistema de Gestión',

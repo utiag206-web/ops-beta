@@ -1,4 +1,6 @@
 
+export const dynamic = 'force-dynamic'
+
 import { getUserSession } from '@/lib/auth'
 import { getDashboardStats } from '../dashboard/actions'
 

@@ -1,5 +1,6 @@
 import RequirementsPage from '@/components/requirements/requirements-list'
 import { getUserSession } from '@/lib/auth'
+export const dynamic = 'force-dynamic'
 import { redirect } from 'next/navigation'
 import { getRequirements } from './actions'
 import { Suspense } from 'react'

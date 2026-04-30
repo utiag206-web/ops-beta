@@ -1,5 +1,7 @@
 'use client'
 
+export const dynamic = 'force-dynamic'
+
 import { Lock, Mail, User, Building2, AlertCircle, Loader2, ArrowRight, CheckCircle2, ShieldCheck } from 'lucide-react'
 import { useActionState } from 'react'
 import { register } from './actions'

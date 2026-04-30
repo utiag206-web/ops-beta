@@ -1,6 +1,7 @@
 import { getMovements } from './actions'
 import { getWorkers } from '../workers/actions'
 import { getUserSession } from '@/lib/auth'
+export const dynamic = 'force-dynamic'
 import MovementsClient from './movements-client'
 
 export const dynamic = 'force-dynamic'

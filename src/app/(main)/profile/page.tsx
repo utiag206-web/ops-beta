@@ -1,4 +1,5 @@
 import { getUserSession } from '@/lib/auth'
+export const dynamic = 'force-dynamic'
 import { UserCircle, Mail, Shield, Building, Calendar, CalendarClock, Coins, Bus, ShieldAlert, KeyRound } from 'lucide-react'
 import { getPPEDeliveries } from '../ppe/actions'
 import { getBonuses } from '../bonuses/actions'
