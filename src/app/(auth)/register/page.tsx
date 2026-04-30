@@ -1,30 +1,12 @@
 'use client'
 
 import { Lock, Mail, User, Building2, AlertCircle, Loader2, ArrowRight, CheckCircle2, ShieldCheck } from 'lucide-react'
-import { useState } from 'react'
+import { useActionState } from 'react'
 import { register } from './actions'
 import Link from 'next/link'
 
 export default function RegisterPage() {
-  const [errorState, setErrorState] = useState<{ error: string | null; code?: string | null }>({ error: null })
-  const [isPending, setIsPending] = useState(false)
-
-  const handleAction = async (formData: FormData) => {
-    setIsPending(true)
-    setErrorState({ error: null })
-    
-    try {
-      const result = await register(formData)
-      if (result?.error) {
-        setErrorState({ error: result.error, code: (result as any).code })
-      }
-    } catch (e) {
-      setErrorState({ error: 'Excepción crítica en registro. Reintenta.' })
-      console.error(e)
-    } finally {
-      setIsPending(false)
-    }
-  }
+  const [state, formAction, isPending] = useActionState(register, { error: null })
 
   return (
     <div className="min-h-screen grid lg:grid-cols-2 bg-white">
@@ -70,11 +52,11 @@ export default function RegisterPage() {
             <p className="text-slate-500 font-medium">Crea tu cuenta de administrador en segundos.</p>
           </div>
 
-          <form action={handleAction} className="space-y-5">
-            {errorState?.error && (
+          <form action={formAction} className="space-y-5">
+            {state?.error && (
               <div className="p-4 bg-rose-50 border border-rose-100 rounded-2xl flex items-start gap-3 text-sm text-rose-600 animate-in fade-in slide-in-from-top-2">
                 <AlertCircle size={20} className="shrink-0 mt-0.5" />
-                <span className="font-bold">{errorState.error}</span>
+                <span className="font-bold">{state.error}</span>
               </div>
             )}
 

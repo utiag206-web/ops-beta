@@ -1,34 +1,12 @@
 'use client'
 
 import { Lock, Mail, AlertCircle, Loader2 } from 'lucide-react'
-import { useActionState, useState } from 'react'
+import { useActionState } from 'react'
 import { login } from './actions'
 import Link from 'next/link'
 
-const initialState = {
-  error: null as string | null,
-}
-
 export default function LoginPage() {
-  const [errorState, setErrorState] = useState<{ error: string | null; code?: string | null }>({ error: null })
-  const [isPending, setIsPending] = useState(false)
-
-  const handleAction = async (formData: FormData) => {
-    setIsPending(true)
-    setErrorState({ error: null })
-    
-    try {
-      const result = await login(formData)
-      if (result?.error) {
-        setErrorState({ error: result.error, code: (result as any).code })
-      }
-    } catch (e) {
-      setErrorState({ error: 'Excepción crítica en login. Reintenta.' })
-      console.error(e)
-    } finally {
-      setIsPending(false)
-    }
-  }
+  const [state, formAction, isPending] = useActionState(login, { error: null })
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-slate-50 p-4">
@@ -42,13 +20,13 @@ export default function LoginPage() {
         </div>
         
         <div className="p-8">
-          <form action={handleAction} className="space-y-5">
-            {errorState?.error && (
+          <form action={formAction} className="space-y-5">
+            {state?.error && (
               <div className={`p-3 border rounded-lg flex items-center gap-2 text-sm ${
-                errorState.code === 'weak_password' ? 'bg-amber-50 border-amber-200 text-amber-700' : 'bg-red-50 border-red-200 text-red-600'
+                (state as any).code === 'weak_password' ? 'bg-amber-50 border-amber-200 text-amber-700' : 'bg-red-50 border-red-200 text-red-600'
               }`}>
                 <AlertCircle size={18} />
-                <span>{errorState.error}</span>
+                <span>{state.error}</span>
               </div>
             )}
 
