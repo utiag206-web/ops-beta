@@ -7,6 +7,8 @@ import { headers } from 'next/headers'
 import { hasPermission } from '@/lib/permissions'
 import { redirect } from 'next/navigation'
 
+import { SidebarProvider } from '@/components/providers/sidebar-provider'
+
 export default async function DashboardLayout({
   children,
 }: {
@@ -52,17 +54,19 @@ export default async function DashboardLayout({
       permissions={(extendedUser as any)?.permissions}
       user={extendedUser}
     >
-      <div className="flex h-screen bg-slate-50 overflow-hidden">
-        <Sidebar />
-        <div className="flex-1 flex flex-col h-screen overflow-hidden">
-          <Header />
-          <main className="flex-1 overflow-y-auto p-4 md:p-8 bg-slate-50/50">
-            <div className="max-w-7xl mx-auto">
-              {children}
-            </div>
-          </main>
+      <SidebarProvider>
+        <div className="flex h-screen bg-slate-50 overflow-hidden relative">
+          <Sidebar />
+          <div className="flex-1 flex flex-col min-w-0 h-screen overflow-hidden">
+            <Header />
+            <main className="flex-1 overflow-y-auto p-3 md:p-8 bg-slate-50/50">
+              <div className="max-w-[1600px] mx-auto">
+                {children}
+              </div>
+            </main>
+          </div>
         </div>
-      </div>
+      </SidebarProvider>
     </RbacProvider>
   )
 }

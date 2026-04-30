@@ -1,6 +1,4 @@
-import { Bell, Menu } from 'lucide-react'
-import { getUserSession } from '@/lib/auth'
-import { UserDropdown } from './user-dropdown'
+import { SidebarToggle } from './sidebar-toggle'
 
 export async function Header() {
   const { extendedUser } = await getUserSession()
@@ -29,17 +27,14 @@ export async function Header() {
   const companyName = (Array.isArray(companyData) ? companyData[0]?.name : (companyData as any)?.name) || 'Mi Empresa'
 
   return (
-    <header className="h-20 bg-white border-b border-slate-200 px-6 flex items-center justify-between sticky top-0 z-10">
-      <div className="flex items-center gap-4">
-        {/* Mobile menu button */}
-        <button className="md:hidden p-2 text-slate-500 hover:bg-slate-50 rounded-lg">
-          <Menu size={24} />
-        </button>
-        <div className="hidden sm:block">
-          <h1 className="text-xl font-bold text-slate-800">
+    <header className="h-16 md:h-20 bg-white border-b border-slate-100 px-4 md:px-8 flex items-center justify-between sticky top-0 z-[30] shadow-sm shadow-slate-100/50">
+      <div className="flex items-center gap-3 md:gap-4">
+        <SidebarToggle />
+        <div className="flex flex-col">
+          <h1 className="text-sm md:text-xl font-black text-slate-800 tracking-tight leading-none uppercase truncate max-w-[150px] md:max-w-none">
             {companyName}
           </h1>
-          <p className="text-[10px] text-blue-600 font-bold uppercase tracking-widest opacity-70">SISTEMA DE GESTIÓN</p>
+          <p className="text-[8px] md:text-[10px] text-blue-600 font-black uppercase tracking-widest mt-1">Gestión OPS</p>
         </div>
       </div>
 
