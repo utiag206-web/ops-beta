@@ -31,14 +31,14 @@ export function AddWorkerModal({ isOpen, onClose }: AddWorkerModalProps) {
       <div className="bg-white rounded-t-[2rem] sm:rounded-3xl shadow-xl w-full max-w-md overflow-hidden flex flex-col max-h-[92vh] animate-in slide-in-from-bottom duration-300">
         <div className="p-5 md:p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50">
           <h2 className="text-lg md:text-xl font-black text-slate-800 flex items-center gap-2 uppercase tracking-tight">
-            <UserPlus size={22} className="text-blue-600" />
+            <UserPlus className="text-blue-600 w-[22px] h-[22px]" />
             Nuevo Trabajador
           </h2>
           <button 
             onClick={onClose}
             className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-200 rounded-xl transition-all"
           >
-            <X size={24} />
+            <X className="w-6 h-6" />
           </button>
         </div>
 

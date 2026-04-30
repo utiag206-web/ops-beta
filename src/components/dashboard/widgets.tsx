@@ -13,7 +13,7 @@ export function StatWidget({ title, value, icon: Icon, color, bg, href, trend }:
       
       <div className="flex items-start justify-between relative z-10">
         <div className={`${bg} p-3 md:p-4 rounded-xl md:rounded-[1.25rem] group-hover:scale-110 transition-transform duration-300 shrink-0 shadow-sm`}>
-          <Icon className={color} size={22} md:size={26} strokeWidth={2.5} />
+          <Icon className={`${color} w-[22px] h-[22px] md:w-[26px] md:h-[26px]`} strokeWidth={2.5} />
         </div>
         {trend && (
           <div className={`flex items-center gap-1 px-2 py-0.5 md:px-2.5 md:py-1 rounded-lg text-[9px] md:text-[10px] font-black uppercase tracking-tighter ${
@@ -40,7 +40,7 @@ export function AlertWidget({ title, message, icon: Icon, color, bg, href }: any
     <div className={`${bg} border border-slate-100 p-6 md:p-8 rounded-2xl md:rounded-[2.5rem] shadow-sm flex items-center justify-between group hover:shadow-xl transition-all duration-300`}>
       <div className="flex items-center gap-4 md:gap-6">
         <div className="bg-white p-3 md:p-4 rounded-xl md:rounded-2xl shadow-md border border-slate-50 group-hover:rotate-12 transition-transform">
-          <Icon className={color} size={24} md:size={28} strokeWidth={2.5} />
+          <Icon className={`${color} w-6 h-6 md:w-7 md:h-7`} strokeWidth={2.5} />
         </div>
         <div>
           <p className="text-[9px] md:text-[10px] font-black text-slate-500 uppercase tracking-[0.15em] mb-0.5">{title}</p>
@@ -49,7 +49,7 @@ export function AlertWidget({ title, message, icon: Icon, color, bg, href }: any
       </div>
       {href && (
         <Link href={href} className="p-2.5 md:p-3 bg-white rounded-xl text-slate-400 shadow-sm opacity-0 group-hover:opacity-100 transition-all hover:text-blue-600">
-          <ArrowRight size={20} md:size={24} />
+          <ArrowRight className="w-5 h-5 md:w-6 md:h-6" />
         </Link>
       )}
     </div>
@@ -62,7 +62,7 @@ export function ListWidget({ title, items, icon: Icon, color, hrefLabel, href }:
       <div className="flex items-center justify-between mb-6 md:mb-8">
         <h3 className="text-lg md:text-xl font-black text-slate-800 flex items-center gap-3 md:gap-4">
           <div className={`${color.replace('text-', 'bg-')}/10 p-2.5 md:p-3 rounded-xl md:rounded-2xl`}>
-            <Icon className={color} size={20} md:size={22} strokeWidth={2.5} />
+            <Icon className={`${color} w-5 h-5 md:w-[22px] md:h-[22px]`} strokeWidth={2.5} />
           </div>
           <span className="tracking-tight">{title}</span>
         </h3>
@@ -91,7 +91,7 @@ export function ListWidget({ title, items, icon: Icon, color, hrefLabel, href }:
         ) : (
           <div className="h-full min-h-[150px] md:min-h-[200px] flex flex-col items-center justify-center text-center p-6 md:p-10 bg-slate-50/30 rounded-2xl md:rounded-[2.5rem] border-2 border-dashed border-slate-100">
             <div className="bg-white p-3 md:p-4 rounded-full shadow-sm mb-3">
-               <Icon className="text-slate-200" size={24} md:size={32} />
+               <Icon className="text-slate-200 w-6 h-6 md:w-8 md:h-8" />
             </div>
             <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest leading-loose">No hay actividad</p>
           </div>
@@ -163,7 +163,7 @@ export function WelcomeHero({ userName, roleName, area, companyName, viewMode }:
             </span>
             <div className="hidden sm:block w-1 h-1 bg-white/20 rounded-full" />
             <span className="text-white text-[10px] md:text-xs font-black uppercase tracking-widest flex items-center gap-1.5">
-              <Building2 size={12} md:size={14} />
+              <Building2 className="w-3 h-3 md:w-3.5 md:h-3.5" />
               <span className="truncate max-w-[150px] md:max-w-none">{companyName}</span>
             </span>
           </div>
@@ -187,7 +187,7 @@ export function WelcomeHero({ userName, roleName, area, companyName, viewMode }:
            </div>
            
            <div className="hidden sm:flex flex-col items-center justify-center w-16 h-16 md:w-24 md:h-24 bg-white/10 rounded-full border border-white/20">
-              <Activity size={24} md:size={32} className="text-white animate-pulse" />
+              <Activity className="text-white animate-pulse w-6 h-6 md:w-8 md:h-8" />
            </div>
         </div>
       </div>
