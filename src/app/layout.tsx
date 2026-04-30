@@ -8,8 +8,8 @@ import { Toaster } from "sonner";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "InthalyOps | Gestión Inteligente",
-  description: "Plataforma de gestión de equipos y operaciones",
+  title: "InthalyOps | Gestión Inteligente de Equipos",
+  description: "Plataforma moderna para la gestión de trabajadores, asistencia, productividad y operaciones empresariales.",
 };
 
 export default function RootLayout({

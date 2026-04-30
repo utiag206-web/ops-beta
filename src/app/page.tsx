@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { 
@@ -13,7 +14,7 @@ import {
   Lock
 } from "lucide-react";
 
-export const metadata = {
+export const metadata: Metadata = {
   title: "InthalyOps | Gestión Inteligente de Equipos",
   description: "Plataforma moderna para la gestión de trabajadores, asistencia, productividad y operaciones empresariales.",
 };
@@ -47,9 +48,9 @@ export default function LandingPage() {
           <div className="flex items-center gap-4">
             <Link 
               href="/login" 
-              className="hidden text-sm font-semibold text-slate-900 transition-colors hover:text-blue-600 sm:block"
+              className="text-sm font-semibold text-slate-900 transition-colors hover:text-blue-600"
             >
-              Ingresar
+              Iniciar sesión
             </Link>
             <Link 
               href="/register" 
@@ -67,13 +68,7 @@ export default function LandingPage() {
           <div className="container mx-auto px-6 lg:px-12">
             <div className="grid items-center gap-16 lg:grid-cols-2">
               <div className="flex flex-col gap-8 text-center lg:text-left">
-                <div className="inline-flex self-center lg:self-start items-center gap-2 rounded-full border border-blue-100 bg-blue-50 px-4 py-1.5 text-sm font-semibold text-blue-600">
-                  <span className="relative flex h-2 w-2">
-                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-blue-400 opacity-75"></span>
-                    <span className="relative inline-flex h-2 w-2 rounded-full bg-blue-600"></span>
-                  </span>
-                  Sistema de Gestión Profesional
-                </div>
+
                 
                 <h1 className="text-5xl font-black tracking-tight text-slate-900 sm:text-6xl xl:text-7xl">
                   Gestiona tu equipo con <span className="text-blue-600">inteligencia</span>
@@ -85,17 +80,16 @@ export default function LandingPage() {
                 
                 <div className="flex flex-col gap-4 sm:flex-row sm:justify-center lg:justify-start">
                   <Link 
-                    href="/register" 
-                    className="group flex h-14 items-center justify-center gap-2 rounded-full bg-blue-600 px-8 text-lg font-bold text-white shadow-xl shadow-blue-200 transition-all hover:bg-blue-700 hover:shadow-blue-300"
+                    href="/login" 
+                    className="flex h-14 items-center justify-center rounded-full border border-slate-200 bg-white px-10 text-lg font-semibold text-slate-900 shadow-sm transition-all hover:bg-slate-50 hover:border-slate-300 active:scale-95"
                   >
-                    Empezar Ahora
-                    <ArrowRight className="h-5 w-5 transition-transform group-hover:translate-x-1" />
+                    Iniciar sesión
                   </Link>
                   <Link 
-                    href="/login" 
-                    className="flex h-14 items-center justify-center rounded-full border border-slate-200 bg-white px-8 text-lg font-semibold text-slate-900 transition-all hover:bg-slate-50"
+                    href="/register" 
+                    className="flex h-14 items-center justify-center rounded-full bg-blue-600 px-10 text-lg font-bold text-white shadow-xl shadow-blue-200 transition-all hover:bg-blue-700 hover:shadow-blue-300 active:scale-95"
                   >
-                    Ingresar
+                    Registrarse
                   </Link>
                 </div>
               </div>
@@ -159,6 +153,39 @@ export default function LandingPage() {
                   <p className="text-slate-600">{feature.desc}</p>
                 </div>
               ))}
+            </div>
+          </div>
+        </section>
+
+        {/* CTA Section */}
+        <section className="relative py-24">
+          <div className="container mx-auto px-6 lg:px-12">
+            <div className="relative overflow-hidden rounded-[2.5rem] bg-blue-600 px-8 py-20 text-center shadow-2xl shadow-blue-200 lg:px-20 lg:py-28">
+              {/* Pattern Background */}
+              <div className="absolute inset-0 opacity-10" style={{ backgroundImage: "radial-gradient(circle at 2px 2px, white 1px, transparent 0)", backgroundSize: "40px 40px" }} />
+              
+              <div className="relative z-10">
+                <h2 className="mb-6 text-4xl font-black text-white sm:text-5xl lg:text-6xl">
+                  Impulsa tu empresa hoy
+                </h2>
+                <p className="mx-auto mb-12 max-w-2xl text-xl text-blue-100">
+                  Únete a cientos de empresas que ya están transformando su gestión operativa con InthalyOps.
+                </p>
+                <div className="flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
+                  <Link 
+                    href="/login" 
+                    className="flex h-16 items-center justify-center rounded-full border-2 border-white/30 px-10 text-lg font-bold text-white transition-all hover:bg-white/10 active:scale-95"
+                  >
+                    Iniciar sesión
+                  </Link>
+                  <Link 
+                    href="/register" 
+                    className="flex h-16 items-center justify-center rounded-full bg-white px-10 text-lg font-bold text-blue-600 shadow-xl transition-all hover:scale-105 active:scale-95"
+                  >
+                    Registrarse
+                  </Link>
+                </div>
+              </div>
             </div>
           </div>
         </section>
