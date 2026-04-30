@@ -10,6 +10,8 @@ export const metadata = {
   description: 'Gestión de solicitudes y requerimientos internos.',
 }
 
+export const dynamic = 'force-dynamic'
+
 export default async function Page() {
   const { extendedUser } = await getUserSession()
 
