@@ -213,6 +213,15 @@ export async function getDashboardStats() {
       stats.personalStats = { ppe: ppe.data || [], bonuses: bns.data || [], transport: trns.data || [], attendance: att.data || [] }
     }
 
+    // 5. FETCH RECENT DATA FOR ALL RELEVANT ROLES
+    const [recentInc, pendingReqs] = await Promise.all([
+      supabase.from('incidencias').select('*').eq('company_id', companyId).order('created_at', { ascending: false }).limit(5),
+      supabase.from('requirements').select('*').eq('company_id', companyId).eq('status', 'pendiente').order('created_at', { ascending: false }).limit(5)
+    ])
+
+    stats.recentIncidents = recentInc.data || []
+    stats.pendingRequirements = pendingReqs.data || []
+
     return stats
   } catch (err: any) {
     console.error("[DASHBOARD_STATS_ERROR]:", err.message)

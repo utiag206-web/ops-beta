@@ -13,8 +13,10 @@ export function AttendanceMarker({ initialStatus }: AttendanceMarkerProps) {
   const [isPending, setIsPending] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [currentTime, setCurrentTime] = useState(new Date())
+  const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
+    setMounted(true)
     const timer = setInterval(() => setCurrentTime(new Date()), 1000)
     return () => clearInterval(timer)
   }, [])
@@ -52,6 +54,8 @@ export function AttendanceMarker({ initialStatus }: AttendanceMarkerProps) {
       setIsPending(false)
     }
   }
+
+  if (!mounted) return null
 
   return (
     <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100">

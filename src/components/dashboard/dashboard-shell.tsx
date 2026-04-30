@@ -15,6 +15,7 @@ import { BonusList } from '@/components/bonuses/bonus-list'
 import { TransportList } from '@/components/transport/transport-list'
 import { AttendanceList } from '@/components/attendance/attendance-list'
 import { ROLE_NAMES } from '@/lib/constants'
+import { useState, useEffect } from 'react'
 
 interface DashboardShellProps {
   user: any
@@ -34,6 +35,11 @@ function getViewMode(role_id: string, area: string | null) {
   return 'DEFAULT'
 }
 export function DashboardShell({ user, stats }: DashboardShellProps) {
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
   const roleName = ROLE_NAMES[user.role_id] || "Usuario"
   const companyName = user.companies?.name || "Empresa"
   const viewMode = getViewMode(user.role_id, user.area)
@@ -148,7 +154,8 @@ export function DashboardShell({ user, stats }: DashboardShellProps) {
                 </div>
                 <div className="h-[300px] w-full flex items-end justify-between gap-4 px-4">
                   {(stats.admin?.weeklyActivity || []).map((day: any) => {
-                    const height = Math.min((day.count / (Math.max(...stats.admin.weeklyActivity.map((d:any) => d.count), 1))) * 100, 100)
+                    const maxCount = Math.max(...(stats.admin?.weeklyActivity || []).map((d:any) => d.count), 1)
+                    const height = Math.min((day.count / maxCount) * 100, 100)
                     return (
                       <div key={day.day} className="flex-1 flex flex-col items-center gap-4 group">
                         <div className="relative w-full flex flex-col items-center">
@@ -442,6 +449,8 @@ export function DashboardShell({ user, stats }: DashboardShellProps) {
         return null
     }
   }
+
+  if (!mounted) return null
 
   return (
     <div className="space-y-12 pb-20 max-w-[1700px] mx-auto animate-in fade-in slide-in-from-bottom-4 duration-1000">
