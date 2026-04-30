@@ -1,0 +1,114 @@
+'use server'
+
+import { createClient } from '@/lib/supabase/server'
+import { getUserSession } from '@/lib/auth'
+import { revalidatePath } from 'next/cache'
+
+export async function getCompanyProfile() {
+  const { extendedUser } = await getUserSession()
+  if (!extendedUser?.company_id) return null
+
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from('companies')
+    .select('*')
+    .eq('id', extendedUser.company_id)
+    .single()
+
+  if (error) {
+    console.error('Error fetching company profile:', error)
+    return null
+  }
+
+  return data
+}
+
+export async function updateCompanyProfile(formData: {
+  name: string
+  address: string
+  phone: string
+  contact_email: string
+  tax_id?: string
+  industry?: string
+  timezone?: string
+  working_hours?: string
+  logo_url?: string
+}) {
+  const { extendedUser } = await getUserSession()
+  const isAdmin = extendedUser?.role_id === 'admin' || extendedUser?.role_id === 'gerente'
+  
+  if (!extendedUser?.company_id || !isAdmin) {
+    return { success: false, error: 'No autorizado para editar el perfil de la empresa.' }
+  }
+
+  const supabase = await createClient()
+  const { error } = await supabase
+    .from('companies')
+    .update({
+      name: formData.name,
+      address: formData.address,
+      phone: formData.phone,
+      contact_email: formData.contact_email,
+      tax_id: formData.tax_id,
+      industry: formData.industry,
+      timezone: formData.timezone,
+      working_hours: formData.working_hours,
+      logo_url: formData.logo_url
+    })
+    .eq('id', extendedUser.company_id)
+
+  if (error) {
+    console.error('Error updating company profile:', error)
+    return { success: false, error: error.message }
+  }
+
+  revalidatePath('/', 'layout')
+  return { success: true }
+}
+
+export async function uploadCompanyLogo(formData: FormData) {
+  try {
+    const { extendedUser } = await getUserSession()
+    if (!extendedUser?.company_id) return { success: false, error: 'No autorizado' }
+
+    const file = formData.get('file') as File
+    if (!file) return { success: false, error: 'No se envió ningún archivo' }
+
+    const supabase = await createClient()
+    const fileExt = file.name.split('.').pop()
+    const fileName = `${extendedUser.company_id}/logo.${fileExt}`
+    const filePath = `company-logos/${fileName}`
+
+    const { error: uploadError } = await supabase.storage
+      .from('documents')
+      .upload(filePath, file, { upsert: true })
+
+    if (uploadError) throw uploadError
+
+    const { data: { publicUrl } } = supabase.storage
+      .from('documents')
+      .getPublicUrl(filePath)
+
+    // Actualizar la URL en la tabla de compañías
+    const { error: updateError } = await supabase
+      .from('companies')
+      .update({ logo_url: publicUrl })
+      .eq('id', extendedUser.company_id)
+
+    if (updateError) throw updateError
+
+    revalidatePath('/company')
+    return { success: true, url: publicUrl }
+  } catch (err: any) {
+    console.error('[LOGO_UPLOAD_ERROR]', err)
+    return { success: false, error: err.message }
+  }
+}
+
+export async function isCompanyProfileComplete() {
+  const profile = await getCompanyProfile()
+  if (!profile) return false
+  
+  // Hard requirement: Name, Address, Phone and Email
+  return !!(profile.name && profile.address && profile.phone && profile.contact_email)
+}

@@ -32,6 +32,9 @@
   --primary-foreground: #ffffff;
   --brand-light: #60a5fa; /* Blue-400 */
   --brand-dark: #1e40af; /* Blue-800 */
+
+  /* Sidebar Force Color */
+  --sidebar-bg: #1D4ED8;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -43,6 +46,9 @@
     --primary: #3b82f6; /* Blue-500 */
     --brand-light: #93c5fd; /* Blue-300 */
     --brand-dark: #1e3a8a; /* Blue-900 */
+    
+    /* Ensure Sidebar stays Blue even in dark mode */
+    --sidebar-bg: #1D4ED8;
   }
 }
 
@@ -52,6 +58,62 @@ body {
   font-family: Arial, Helvetica, sans-serif;
   @apply antialiased;
 }
+
+
+/* Fix for form text visibility */
+input, select, textarea {
+  @apply text-slate-900;
+}
+
+input::placeholder {
+  @apply text-slate-400 font-medium;
+}
+
+/* --- NTH-SIDEBAR BRUTE FORCE OVERRIDE --- */
+.nth-sidebar {
+  background-color: #1D4ED8 !important;
+  color: white !important;
+  border-right: 1px solid rgba(255, 255, 255, 0.05) !important;
+}
+
+.nth-sidebar .nth-nav-item {
+  color: rgba(255, 255, 255, 0.9) !important;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  border: 1px solid transparent !important;
+}
+
+.nth-sidebar .nth-nav-item:hover {
+  background-color: rgba(255, 255, 255, 0.1) !important;
+  color: white !important;
+  transform: translateX(4px);
+}
+
+.nth-sidebar .nth-nav-item-active {
+  background-color: rgba(255, 255, 255, 0.15) !important;
+  color: white !important;
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+  box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1) !important;
+  backdrop-filter: blur(12px) !important;
+}
+
+.nth-sidebar .nth-nav-group-label {
+  color: rgba(255, 255, 255, 0.8) !important; /* Aumentado por legibilidad */
+  font-weight: 900 !important;
+  letter-spacing: 0.2em !important;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.1);
+}
+
+.nth-sidebar .nth-divider {
+  border-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+.nth-sidebar .nth-logo-box {
+  background: white !important;
+  color: #1D4ED8 !important;
+  box-shadow: 0 10px 25px -5px rgba(0,0,0,0.3) !important;
+}
+
+/* ------------------------------------------ */
 
 /* --- Landing Page Utilities --- */
 .glass {
@@ -86,3 +148,4 @@ body {
   filter: blur(60px);
   z-index: -1;
 }
+
