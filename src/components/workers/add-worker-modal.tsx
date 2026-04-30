@@ -136,10 +136,6 @@ export function AddWorkerModal({ isOpen, onClose }: AddWorkerModalProps) {
           </form>
         </div>
       </div>
-    </div>iv>
-          </form>
-        </div>
-      </div>
     </div>
   )
 }
