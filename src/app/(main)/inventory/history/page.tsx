@@ -1,11 +1,11 @@
+export const dynamic = 'force-dynamic'
+
 import { getInventoryMovements, getProducts } from '../actions'
 import { InventoryMovementsList } from '@/components/inventory/movements-list'
 import { Suspense } from 'react'
 import { OperationsDashboardSkeleton } from '@/components/dashboard/dashboard-skeletons'
 import { getUserSession } from '@/lib/auth'
 import { redirect } from 'next/navigation'
-
-export const dynamic = 'force-dynamic'
 
 export default async function InventoryMovementsPage() {
   const { extendedUser } = await getUserSession()

@@ -1,5 +1,6 @@
-import { getUserSession } from '@/lib/auth'
 export const dynamic = 'force-dynamic'
+
+import { getUserSession } from '@/lib/auth'
 import { UserCircle, Mail, Shield, Building, Calendar, CalendarClock, Coins, Bus, ShieldAlert, KeyRound } from 'lucide-react'
 import { getPPEDeliveries } from '../ppe/actions'
 import { getBonuses } from '../bonuses/actions'
@@ -11,8 +12,6 @@ import { TransportList } from '@/components/transport/transport-list'
 import { AttendanceMarker } from '@/components/attendance/attendance-marker'
 import { AttendanceList } from '@/components/attendance/attendance-list'
 import { AccountForm } from '@/components/profile/account-form'
-
-export const dynamic = 'force-dynamic'
 
 export default async function ProfilePage() {
   const { extendedUser, user } = await getUserSession()

@@ -1,11 +1,11 @@
+export const dynamic = 'force-dynamic'
+
 import { getWorkers } from './actions'
 import { WorkersList } from '@/components/workers/workers-list'
 import { getUserSession } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { Suspense } from 'react'
 import { OperationsDashboardSkeleton } from '@/components/dashboard/dashboard-skeletons'
-
-export const dynamic = 'force-dynamic'
 
 export default async function WorkersPage({
   searchParams

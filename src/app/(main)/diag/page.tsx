@@ -1,4 +1,3 @@
-
 export const dynamic = 'force-dynamic'
 
 import { getUserSession } from '@/lib/auth'

@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic'
+
 import { getWorkerById, getWorkerDocuments, getWorkerChildren } from '../actions'
 import { getUserSession } from '@/lib/auth'
 import { getPPEDeliveries } from '../../ppe/actions'
@@ -14,8 +16,6 @@ import { AttendanceList } from '@/components/attendance/attendance-list'
 import { ArrowLeft, User, Phone, IdCard, Calendar, Briefcase, Shield, FileText, Coins, Bus, Clock } from 'lucide-react'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-
-export const dynamic = 'force-dynamic'
 
 export default async function WorkerDetailPage({ 
   params 

@@ -1,7 +1,8 @@
+export const dynamic = 'force-dynamic'
+
 import { getAttendance } from './actions'
 import { AttendanceList } from '@/components/attendance/attendance-list'
 
-export const dynamic = 'force-dynamic'
 import { Calendar, Search, Filter } from 'lucide-react'
 
 export default async function AttendancePage() {

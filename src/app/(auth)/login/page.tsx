@@ -1,11 +1,11 @@
 'use client'
 
+export const dynamic = 'force-dynamic'
+
 import { Lock, Mail, AlertCircle, Loader2 } from 'lucide-react'
 import { useActionState } from 'react'
 import { login } from './actions'
 import Link from 'next/link'
-
-export const dynamic = 'force-dynamic'
 
 export default function LoginPage() {
   const [state, formAction, isPending] = useActionState(login, { error: null })

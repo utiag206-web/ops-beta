@@ -1,10 +1,9 @@
+export const dynamic = 'force-dynamic'
+
 import { redirect } from 'next/navigation'
 import { getUserSession } from '@/lib/auth'
-export const dynamic = 'force-dynamic'
 import { ReportsClient } from './reports-client'
 import { getStockByWarehouse, getLowStockProducts, getDormantProducts, getTopConsumedProducts } from './actions'
-
-export const dynamic = 'force-dynamic'
 
 export default async function ReportsPage() {
   const { user } = await getUserSession()

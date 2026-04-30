@@ -1,7 +1,7 @@
+export const dynamic = 'force-dynamic'
+
 import { getUsers, getAvailableWorkers } from './actions'
 import { UsersList } from '@/components/users/users-list'
-
-export const dynamic = 'force-dynamic'
 
 export default async function UsersPage() {
   try {

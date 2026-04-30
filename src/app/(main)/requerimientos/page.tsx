@@ -1,6 +1,7 @@
+export const dynamic = 'force-dynamic'
+
 import RequirementsPage from '@/components/requirements/requirements-list'
 import { getUserSession } from '@/lib/auth'
-export const dynamic = 'force-dynamic'
 import { redirect } from 'next/navigation'
 import { getRequirements } from './actions'
 import { Suspense } from 'react'
@@ -10,8 +11,6 @@ export const metadata = {
   title: 'Requerimientos | Sistema de Gestión',
   description: 'Gestión de solicitudes y requerimientos internos.',
 }
-
-export const dynamic = 'force-dynamic'
 
 export default async function Page() {
   const { extendedUser } = await getUserSession()

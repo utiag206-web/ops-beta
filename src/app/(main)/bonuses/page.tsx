@@ -1,8 +1,9 @@
+export const dynamic = 'force-dynamic'
+
 import { getBonuses } from './actions'
 import { getWorkersShort } from '../workers/actions'
 import { getUserSession } from '@/lib/auth'
 
-export const dynamic = 'force-dynamic'
 import { BonusList } from '@/components/bonuses/bonus-list'
 import { AddBonusContainer } from '@/components/bonuses/add-bonus-container'
 import { Coins, LayoutGrid } from 'lucide-react'
