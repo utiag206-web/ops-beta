@@ -38,20 +38,29 @@ export function WorkerImport() {
         const ws = wb.Sheets[wsname]
         const jsonData = XLSX.utils.sheet_to_json(ws) as any[]
 
-        // Validate structure
+        // Robust mapping function
+        const findValue = (row: any, options: string[]) => {
+          const keys = Object.keys(row);
+          for (const option of options) {
+            const foundKey = keys.find(k => k.toLowerCase().trim() === option.toLowerCase());
+            if (foundKey) return row[foundKey];
+          }
+          return null;
+        };
+
         const validatedData = jsonData.map((row: any) => ({
-          name: row.name || row.Nombre || row.nombre,
-          dni: row.dni || row.DNI || row.Dni,
-          position: row.position || row.Cargo || row.cargo || row.Puesto,
-          phone: row.phone || row.Teléfono || row.telefono || row.Telefono,
-          hire_date: row.hire_date || row.Fecha_Ingreso || row.fecha_ingreso || row.hireDate
+          name: findValue(row, ['name', 'nombre', 'nombre completo', 'nombres', 'trabajador']),
+          dni: findValue(row, ['dni', 'documento', 'cedula', 'id']),
+          position: findValue(row, ['position', 'cargo', 'puesto', 'rol', 'ocupacion']),
+          phone: findValue(row, ['phone', 'telefono', 'celular', 'movil']),
+          hire_date: findValue(row, ['hire_date', 'fecha_ingreso', 'fecha ingreso', 'fecha de ingreso', 'hiredate'])
         }))
 
         // Filter valid rows (must have name and DNI)
         const validRows = validatedData.filter(row => row.name && row.dni)
         
         if (validRows.length === 0) {
-          setError('El archivo no tiene trabajadores válidos. Asegúrate de incluir las columnas: name, dni, position, phone, hire_date.')
+          setError('No se encontraron datos válidos. Revisa los encabezados (Nombre, DNI, Cargo, Teléfono).')
           setData([])
         } else {
           setData(validRows)
@@ -100,6 +109,16 @@ export function WorkerImport() {
         </div>
       </div>
 
+      {error && (
+        <div className="p-4 bg-red-50 border border-red-100 text-red-700 rounded-xl flex items-start gap-3 animate-in fade-in slide-in-from-top-2 duration-300">
+          <AlertCircle size={20} className="mt-0.5 shrink-0" />
+          <div>
+            <p className="text-sm font-bold">Atención</p>
+            <p className="text-xs opacity-90">{error}</p>
+          </div>
+        </div>
+      )}
+
       <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-100">
         {!data.length ? (
           <div className="flex flex-col items-center justify-center border-2 border-dashed border-slate-200 rounded-xl p-12 transition-colors hover:border-blue-400 bg-slate-50">
@@ -109,7 +128,7 @@ export function WorkerImport() {
             <h3 className="text-lg font-bold text-slate-800">Selecciona tu archivo</h3>
             <p className="text-slate-500 text-sm mt-1 text-center max-w-xs">
               Sube un archivo .xlsx, .xls o .csv con las columnas: <br/>
-              <span className="font-mono text-xs font-bold bg-white px-1 rounded shadow-sm">name, dni, position, phone, hire_date</span>
+              <span className="font-mono text-xs font-bold bg-white px-1 rounded shadow-sm text-blue-600">Nombre, DNI, Cargo, Teléfono</span>
             </p>
             
             <label className="mt-6">
@@ -138,7 +157,10 @@ export function WorkerImport() {
               </div>
               <div className="flex gap-2">
                 <button 
-                  onClick={() => setData([])}
+                  onClick={() => {
+                    setData([])
+                    setError(null)
+                  }}
                   className="px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 rounded-lg transition-colors"
                 >
                   Cambiar archivo
@@ -153,13 +175,6 @@ export function WorkerImport() {
                 </button>
               </div>
             </div>
-
-            {error && (
-              <div className="p-4 bg-red-50 border border-red-100 text-red-700 rounded-xl flex items-start gap-3">
-                <AlertCircle size={20} className="mt-0.5 shrink-0" />
-                <p className="text-sm">{error}</p>
-              </div>
-            )}
 
             <div className="overflow-x-auto rounded-xl border border-slate-100 shadow-sm">
               <table className="w-full text-left border-collapse">
