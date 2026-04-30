@@ -22,10 +22,12 @@ export function SidebarProvider({ children }: { children: React.ReactNode }) {
 
   // Prevent body scroll when sidebar is open on mobile
   useEffect(() => {
-    if (isOpen) {
-      document.body.style.overflow = 'hidden'
-    } else {
-      document.body.style.overflow = 'unset'
+    if (typeof document !== 'undefined') {
+      if (isOpen) {
+        document.body.style.overflow = 'hidden'
+      } else {
+        document.body.style.overflow = 'unset'
+      }
     }
   }, [isOpen])
 

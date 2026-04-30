@@ -105,6 +105,11 @@ export function Sidebar() {
   const { role_id, user } = useUserRole()
   const { isOpen, close } = useSidebar()
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({})
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
   
   const area = user?.area
   const context = getSidebarContext(role_id, area)
@@ -236,6 +241,8 @@ export function Sidebar() {
   }
 
   const filteredGroups = getFilteredGroups().filter(group => group.items.length > 0)
+
+  if (!mounted) return null
 
   return (
     <>

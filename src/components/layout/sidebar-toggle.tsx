@@ -5,6 +5,13 @@ import { useSidebar } from '@/components/providers/sidebar-provider'
 
 export function SidebarToggle() {
   const { isOpen, toggle } = useSidebar()
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  if (!mounted) return null
 
   return (
     <button 
