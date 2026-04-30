@@ -2,7 +2,7 @@
 
 import { useState, useActionState, useEffect } from 'react'
 import { X, UserPlus, AlertCircle, Loader2 } from 'lucide-react'
-import { createWorker } from '@/app/(dashboard)/workers/actions'
+import { createWorker } from '@/app/(main)/workers/actions'
 
 interface AddWorkerModalProps {
   isOpen: boolean

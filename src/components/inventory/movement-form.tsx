@@ -10,7 +10,7 @@ import {
   getPurchaseOrders, 
   getPurchaseOrderItems,
   processInboundFromPO 
-} from '@/app/(dashboard)/inventory/actions'
+} from '@/app/(main)/inventory/actions'
 import { toast } from 'sonner'
 
 interface MovementFormProps {

@@ -18,7 +18,7 @@ import {
   Paperclip,
   CheckCircle2
 } from 'lucide-react'
-import { registerPettyCashTransaction } from '@/app/(dashboard)/caja-chica/actions'
+import { registerPettyCashTransaction } from '@/app/(main)/caja-chica/actions'
 import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase/client'
 

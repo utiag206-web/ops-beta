@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { AlertCircle, Search, Filter, Activity, Clock, User, CheckCircle2, ChevronRight, Hash } from 'lucide-react'
-import { getIncidencias } from '@/app/(dashboard)/incidencias/actions'
+import { getIncidencias } from '@/app/(main)/incidencias/actions'
 import { ReportIncidentModal } from '@/components/requirements/requirements-components'
 
 export function IncidentsList({ initialData = [], user }: { initialData?: any[], user?: any }) {

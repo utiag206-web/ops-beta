@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { 
   getWarehouses, 
   deleteWarehouse 
-} from '@/app/(dashboard)/inventory/actions'
+} from '@/app/(main)/inventory/actions'
 import { WarehouseForm } from '@/components/inventory/warehouse-form'
 import { 
   Plus, 

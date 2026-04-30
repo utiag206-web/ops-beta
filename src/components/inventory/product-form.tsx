@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { X, Loader2, CheckCircle2, Box, Info, Eye } from 'lucide-react'
-import { createProduct, updateProduct } from '@/app/(dashboard)/inventory/actions'
+import { createProduct, updateProduct } from '@/app/(main)/inventory/actions'
 import { toast } from 'sonner'
 
 interface ProductFormProps {

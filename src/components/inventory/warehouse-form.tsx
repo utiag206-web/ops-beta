@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { X, Loader2, CheckCircle2, Factory } from 'lucide-react'
-import { createWarehouse, updateWarehouse } from '@/app/(dashboard)/inventory/actions'
+import { createWarehouse, updateWarehouse } from '@/app/(main)/inventory/actions'
 import { toast } from 'sonner'
 
 interface WarehouseFormProps {

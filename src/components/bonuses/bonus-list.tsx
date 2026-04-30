@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { Coins, Calendar, Clock, CheckCircle2, AlertCircle, DollarSign, User } from 'lucide-react'
-import { updateBonusStatus } from '@/app/(dashboard)/bonuses/actions'
+import { updateBonusStatus } from '@/app/(main)/bonuses/actions'
 
 interface BonusListProps {
   bonuses: any[]

@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { Plus, Pencil, Trash2, X, Baby } from 'lucide-react'
 import { useRouter } from 'next/navigation'
-import { upsertWorkerChild, deleteWorkerChild } from '@/app/(dashboard)/workers/actions'
+import { upsertWorkerChild, deleteWorkerChild } from '@/app/(main)/workers/actions'
 
 interface WorkerChild {
   id: string
