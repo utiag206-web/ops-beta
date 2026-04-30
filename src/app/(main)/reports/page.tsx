@@ -1,6 +1,8 @@
 import { getReportsData } from './actions'
 import { ReportsDashboard } from '@/components/reports/reports-dashboard'
 
+export const dynamic = 'force-dynamic'
+
 export default async function ReportsPage() {
   const data = await getReportsData()
 

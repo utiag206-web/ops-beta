@@ -1,5 +1,7 @@
 import { IncidentsList } from '@/components/incidents/incidents-list'
 import { getUserSession } from '@/lib/auth'
+
+export const dynamic = 'force-dynamic'
 import { redirect } from 'next/navigation'
 import { getIncidencias } from './actions'
 import { Suspense } from 'react'

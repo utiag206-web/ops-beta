@@ -1,5 +1,7 @@
 import { Sidebar } from '@/components/layout/sidebar'
 import { Header } from '@/components/layout/header'
+
+export const dynamic = 'force-dynamic'
 import { getUserSession } from '@/lib/auth'
 import { OnboardingCheck } from '@/components/auth/onboarding-check'
 import { RbacProvider } from '@/components/providers/rbac-provider'
