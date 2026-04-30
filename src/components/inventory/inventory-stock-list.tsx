@@ -144,6 +144,8 @@ export function InventoryStockList({
     const wb = XLSX.utils.book_new()
     XLSX.utils.book_append_sheet(wb, ws, 'Stock Actual')
     XLSX.writeFile(wb, `Stock_Inventario_${new Date().toISOString().split('T')[0]}.xlsx`)
+  }
+
   return (
     <div className="space-y-4 md:space-y-6">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white p-6 md:p-8 rounded-2xl md:rounded-[2rem] shadow-sm border border-slate-50">
@@ -406,9 +408,6 @@ function TraceabilityCard({ productId, unit }: { productId: string, unit: string
       ) : (
         <div className="py-8 md:py-12 text-center text-slate-400 italic text-xs">Sin registros</div>
       )}
-    </div>
-  )
-}
     </div>
   )
 }
