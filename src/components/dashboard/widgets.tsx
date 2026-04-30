@@ -170,7 +170,7 @@ export function WelcomeHero({ userName, roleName, area, companyName, viewMode }:
           
           <h1 className="text-2xl md:text-4xl lg:text-5xl font-black mb-2 md:mb-4 tracking-tighter leading-tight text-white">
             {content.title} 👋
-            <span className="text-xl md:text-2xl lg:text-3xl text-blue-100 mt-2 md:mt-3 block font-black leading-none">Hola, {userName}</span>
+            <span className="text-xl md:text-2xl lg:text-3xl text-blue-100 mt-2 md:mt-3 block font-black leading-none">Hola, {userName || 'Usuario'}</span>
           </h1>
           <p className="text-blue-50 text-sm md:text-lg font-bold leading-relaxed max-w-lg mt-4 md:mt-6 hidden sm:block">
             {content.text}

@@ -10,8 +10,8 @@ interface BonusListProps {
   isAdmin?: boolean
 }
 
-export function BonusList({ bonuses: initialBonuses, isWorker = false, isAdmin = false }: BonusListProps) {
-  const [bonuses, setBonuses] = useState(initialBonuses)
+export function BonusList({ bonuses: initialBonuses = [], isWorker = false, isAdmin = false }: BonusListProps) {
+  const [bonuses, setBonuses] = useState(initialBonuses || [])
   const [loadingId, setLoadingId] = useState<string | null>(null)
 
   const handleToggleStatus = async (id: string, currentStatus: string) => {
@@ -31,7 +31,7 @@ export function BonusList({ bonuses: initialBonuses, isWorker = false, isAdmin =
     }
   }
 
-  if (bonuses.length === 0) {
+  if (!bonuses || bonuses.length === 0) {
     return (
       <div className="bg-white p-12 rounded-2xl border border-slate-100 text-center">
         <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-4 border border-slate-100">

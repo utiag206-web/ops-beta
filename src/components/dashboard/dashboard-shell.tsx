@@ -42,14 +42,14 @@ export function DashboardShell({ user, stats }: DashboardShellProps) {
     setMounted(true)
   }, [])
 
-  const roleName = ROLE_NAMES[user.role_id] || "Usuario"
-  const companyName = user.companies?.name || "Empresa"
-  const viewMode = getViewMode(user.role_id, user.area)
+  const roleName = ROLE_NAMES[user?.role_id] || "Usuario"
+  const companyName = user?.companies?.name || "Empresa"
+  const viewMode = getViewMode(user?.role_id, user?.area)
 
   // Función para renderizar el gráfico de actividad (SVG ligero)
   const renderActivityChart = () => {
-    if (!stats.weeklyActivity) return null
-    const maxVal = Math.max(...stats.weeklyActivity.map((d: any) => d.count), 5)
+    if (!stats?.weeklyActivity || stats.weeklyActivity.length === 0) return null
+    const maxVal = Math.max(...stats.weeklyActivity.map((d: any) => d.count || 0), 5)
     
     return (
       <div className="bg-white p-8 rounded-[3rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 flex flex-col h-full hover:shadow-[0_20px_50px_rgba(0,0,0,0.08)] transition-all duration-300">
@@ -468,7 +468,7 @@ export function DashboardShell({ user, stats }: DashboardShellProps) {
 
       {/* Attendance for Workers */}
       {viewMode === 'WORKER' && (
-        <AttendanceMarker initialStatus={stats.todayAttendance} />
+        <AttendanceMarker initialStatus={stats?.todayAttendance} />
       )}
 
       {/* Main Stats Segment */}
@@ -522,11 +522,11 @@ export function DashboardShell({ user, stats }: DashboardShellProps) {
             icon={Activity}
             color="text-orange-600"
             href="/incidencias"
-            items={stats.recentIncidents.map((i: any) => ({
-              title: i.equipment_name || 'Incidente Reportado',
-              subtitle: i.description,
-              badge: i.severity,
-              badgeColor: i.severity === 'critica' || i.severity === 'fatal' ? 'bg-rose-100 text-rose-700 border-rose-200' : 'bg-orange-100 text-orange-700 border-orange-200'
+            items={(stats?.recentIncidents || []).map((i: any) => ({
+              title: i?.equipment_name || 'Incidente Reportado',
+              subtitle: i?.description,
+              badge: i?.severity,
+              badgeColor: i?.severity === 'critica' || i?.severity === 'fatal' ? 'bg-rose-100 text-rose-700 border-rose-200' : 'bg-orange-100 text-orange-700 border-orange-200'
             }))}
           />
         )}
@@ -537,10 +537,10 @@ export function DashboardShell({ user, stats }: DashboardShellProps) {
             icon={ShoppingCart}
             color="text-indigo-600"
             href="/requerimientos"
-            items={stats.pendingRequirements.map((r: any) => ({
-              title: r.title || r.description,
-              subtitle: `Prioridad: ${r.priority}`,
-              badge: r.status,
+            items={(stats?.pendingRequirements || []).map((r: any) => ({
+              title: r?.title || r?.description,
+              subtitle: `Prioridad: ${r?.priority || 'Media'}`,
+              badge: r?.status,
               badgeColor: 'bg-blue-100 text-blue-700 border-blue-200'
             }))}
           />
@@ -548,7 +548,7 @@ export function DashboardShell({ user, stats }: DashboardShellProps) {
       </div>
 
       {/* Panel Personal de Trabajador (si aplica) */}
-      {user.worker_id && viewMode !== 'WORKER' && stats.personalStats && (
+      {user?.worker_id && viewMode !== 'WORKER' && stats?.personalStats && (
         <div className="pt-16 border-t border-slate-100 space-y-12 animate-in fade-in slide-in-from-bottom-8 duration-1000 delay-300">
           <div className="flex items-center gap-8">
              <div className="w-20 h-20 bg-slate-900 text-white rounded-[2rem] flex items-center justify-center shadow-2xl relative">
