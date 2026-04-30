@@ -1,4 +1,6 @@
 import { SidebarToggle } from './sidebar-toggle'
+import { getUserSession } from '@/lib/auth'
+import { UserDropdown } from './user-dropdown'
 
 export async function Header() {
   const { extendedUser } = await getUserSession()

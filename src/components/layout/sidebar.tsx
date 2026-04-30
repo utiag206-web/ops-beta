@@ -1,5 +1,6 @@
 'use client'
 
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { 
@@ -9,8 +10,8 @@ import {
   AlertCircle, GraduationCap, MessageSquare, Eye, ShieldAlert, Clock
 } from 'lucide-react'
 import { logout } from '@/app/(auth)/login/actions'
-import { useState } from 'react'
 import { useUserRole } from '@/components/providers/rbac-provider'
+import { useSidebar } from '@/components/providers/sidebar-provider'
 
 // MASTER LIST: Grupos de navegación por defecto
 const navGroups = [
@@ -97,8 +98,6 @@ function getSidebarContext(role_id: string | undefined, area: string | null | un
   if (role_id === 'trabajador') return 'WORKER'
   return 'DEFAULT'
 }
-
-import { useSidebar } from '@/components/providers/sidebar-provider'
 
 export function Sidebar() {
   const pathname = usePathname()

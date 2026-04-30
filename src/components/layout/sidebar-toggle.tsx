@@ -1,5 +1,6 @@
 'use client'
 
+import { useState, useEffect } from 'react'
 import { Menu, X } from 'lucide-react'
 import { useSidebar } from '@/components/providers/sidebar-provider'
 
