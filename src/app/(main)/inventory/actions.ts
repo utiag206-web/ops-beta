@@ -64,7 +64,8 @@ export async function getMovementTypes() {
 
   if (error) return { error: error.message }
   
-  if (!data || data.length === 0) {
+  // Si faltan tipos o está vacío, sembramos los básicos
+  if (!data || data.length < 4) {
     const seeded = await seedMovementTypes(extendedUser.company_id)
     return { data: seeded }
   }
@@ -74,21 +75,25 @@ export async function getMovementTypes() {
 
 async function seedMovementTypes(companyId: string) {
   const supabase = await createAdminClient()
+  
   const defaults = [
-    { company_id: companyId, name: 'Ingreso Almacén', effect: 'IN', is_system: true },
-    { company_id: companyId, name: 'Salida Consumo', effect: 'OUT', is_system: true },
-    { company_id: companyId, name: 'Transferencia', effect: 'BOTH', is_system: true },
-    { company_id: companyId, name: 'Ajuste Stock', effect: 'SET', is_system: true }
+    { company_id: companyId, name: 'Ingreso', effect: 'IN', is_system: true, code: 'ING' },
+    { company_id: companyId, name: 'Salida', effect: 'OUT', is_system: true, code: 'SAL' },
+    { company_id: companyId, name: 'Transferencia', effect: 'BOTH', is_system: true, code: 'TRS' },
+    { company_id: companyId, name: 'Ajuste', effect: 'SET', is_system: true, code: 'AJU' }
   ]
 
+  // Usamos upsert por código para no duplicar si algunos ya existen
   const { data, error } = await supabase
     .from('movement_types')
-    .insert(defaults)
+    .upsert(defaults, { onConflict: 'company_id,effect' }) 
     .select()
 
   if (error) {
-    console.error('Error seeding movement types in root:', error)
-    return []
+    console.error('Error seeding movement types:', error)
+    // Fallback: intentar insertar si upsert falla por falta de constraint
+    const { data: retryData } = await supabase.from('movement_types').insert(defaults).select()
+    return retryData || []
   }
 
   return data || []

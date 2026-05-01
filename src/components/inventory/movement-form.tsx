@@ -67,7 +67,14 @@ export function MovementForm({ isOpen, onClose, onSuccess, products }: MovementF
           getPurchaseOrders()
         ])
         if (wRes.data) setWarehouses(wRes.data)
-        if (mTRes.data) setMovementTypes(mTRes.data)
+        if (mTRes.data) {
+          setMovementTypes(mTRes.data)
+          // Auto-seleccionar Ingreso por defecto si no hay nada seleccionado
+          const ingreso = mTRes.data.find(t => t.effect === 'IN')
+          if (ingreso) {
+            setForm(prev => ({ ...prev, movement_type_id: ingreso.id }))
+          }
+        }
         if (poRes.data) setPurchaseOrders(poRes.data)
         setInitLoading(false)
       }
@@ -248,24 +255,33 @@ export function MovementForm({ isOpen, onClose, onSuccess, products }: MovementF
                 { id: 'BOTH', label: 'Transferencia', color: 'bg-indigo-600', icon: <ArrowRight size={16} /> },
                 { id: 'SET', label: 'Ajuste Stock', color: 'bg-amber-600', icon: <Settings2 size={16} /> }
               ].map(mode => {
-                const isActive = (mode.id === 'SET' && (activeMovementType?.effect === 'SET' || activeMovementType?.name?.toLowerCase().includes('ajuste'))) || 
-                                 (activeMovementType?.effect === mode.id);
+                // Mejora en la detección del modo activo
+                const isActive = activeMovementType?.effect === mode.id || 
+                                (mode.id === 'SET' && activeMovementType?.name?.toLowerCase().includes('ajuste'));
                 
                 return (
                   <button
                     key={mode.id}
                     type="button"
+                    disabled={initLoading || movementTypes.length === 0}
                     onClick={() => {
                       const mt = movementTypes.find(t => 
-                        mode.id === 'SET' ? (t.effect === 'SET' || t.name?.toLowerCase().includes('ajuste')) : t.effect === mode.id
+                        mode.id === 'SET' 
+                          ? (t.effect === 'SET' || t.name?.toLowerCase().includes('ajuste')) 
+                          : t.effect === mode.id
                       );
+                      
                       if (mt) {
                         setForm({...form, movement_type_id: mt.id, outbound_type: mode.id === 'BOTH' ? 'INTERNAL' : 'EXTERNAL'});
                       } else {
-                        toast.error(`El tipo de movimiento ${mode.label} no existe.`)
+                        toast.error(`Configuración de "${mode.label}" no encontrada. Reintentando sincronización...`)
+                        // Opcional: Re-cargar tipos si falla
+                        getMovementTypes().then(res => {
+                          if (res.data) setMovementTypes(res.data)
+                        })
                       }
                     }}
-                    className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-2xl text-[11px] font-black uppercase tracking-tight transition-all duration-300 ${
+                    className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-2xl text-[11px] font-black uppercase tracking-tight transition-all duration-300 disabled:opacity-50 ${
                       isActive 
                         ? `${mode.color} text-white shadow-lg scale-[1.02]` 
                         : 'text-slate-400 hover:bg-white hover:text-slate-600'
