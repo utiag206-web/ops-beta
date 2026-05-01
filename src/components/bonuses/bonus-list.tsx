@@ -193,6 +193,5 @@ export function BonusList({ bonuses: initialBonuses, isWorker = false, isAdmin =
         ))}
       </div>
     </div>
-    </div>
   )
 }

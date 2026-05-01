@@ -68,17 +68,26 @@ export function AddTransactionModal({ isOpen, onClose, onSuccess, area }: AddTra
 
     setUploading(true)
     try {
-      const { uploadFile } = await import('@/lib/storage')
-      const fileName = `${Date.now()}-${file.name.replace(/\s+/g, '_')}`
-      const storagePath = `caja-chica/${area.toLowerCase().replace(/\s+/g, '_')}/${fileName}`
+      const { uploadFilesAction } = await import('@/app/actions/storage')
+      
+      const reader = new FileReader()
+      const base64 = await new Promise<string>((resolve) => {
+        reader.onload = () => resolve(reader.result as string)
+        reader.readAsDataURL(file)
+      })
 
-      const { publicUrl } = await uploadFile(file, 'worker_documents', storagePath)
+      const uploadRes = await uploadFilesAction(
+        [{ name: file.name, type: file.type, base64 }],
+        'worker_documents',
+        'caja-chica',
+        area.toLowerCase().replace(/\s+/g, '_')
+      )
 
-      if (publicUrl) {
-        setFormData({ ...formData, voucher_url: publicUrl })
+      if (uploadRes.success && uploadRes.urls) {
+        setFormData({ ...formData, voucher_url: uploadRes.urls[0] })
         toast.success('Comprobante subido correctamente')
       } else {
-        throw new Error('No se obtuvo la URL pública')
+        throw new Error(uploadRes.error || 'Error desconocido')
       }
     } catch (error: any) {
       toast.error('Error al subir comprobante: ' + error.message)

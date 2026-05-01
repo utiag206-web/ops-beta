@@ -79,6 +79,7 @@ export async function uploadCompanyLogo(formData: FormData) {
     const fileName = `logo-${Date.now()}.${fileExt}`
     const storagePath = `${extendedUser.company_id}/${fileName}`
 
+    const supabase = await createClient()
     const { publicUrl } = await uploadFile(file, 'worker_documents', storagePath)
 
     // Actualizar la URL en la tabla de compañías

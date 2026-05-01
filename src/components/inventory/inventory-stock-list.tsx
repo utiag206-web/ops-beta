@@ -152,7 +152,7 @@ export function InventoryStockList({
         <div>
           <h1 className="text-xl md:text-2xl font-black text-slate-800 tracking-tight flex items-center gap-3">
             <div className="bg-emerald-100 p-2 rounded-xl">
-              <Layers className="text-emerald-600" size={20} md:size={24} />
+              <Layers className="text-emerald-600" size={24} />
             </div>
             Control de Stock
           </h1>
@@ -167,7 +167,7 @@ export function InventoryStockList({
                 : 'bg-white border-slate-100 text-slate-600 hover:bg-slate-50'
             }`}
           >
-            <AlertCircle size={16} md:size={18} />
+            <AlertCircle size={18} />
             <span>{filterAlert === 'alerts' ? 'Viendo Alertas' : 'Filtrar Alertas'}</span>
           </button>
           
@@ -193,7 +193,7 @@ export function InventoryStockList({
                 onClick={() => { setEditingItem(null); setIsModalOpen(true); }}
                 className="flex-[2] md:flex-none bg-emerald-600 hover:bg-emerald-700 text-white px-4 md:px-6 py-2.5 md:py-3 rounded-xl md:rounded-2xl font-black flex items-center justify-center gap-2 transition-all shadow-lg shadow-emerald-100 active:scale-95 text-xs md:text-sm"
               >
-                <Plus size={16} md:size={18} strokeWidth={3} />
+                <Plus size={18} strokeWidth={3} />
                 <span>Movimiento</span>
               </button>
             </>
@@ -203,7 +203,7 @@ export function InventoryStockList({
             onClick={exportToExcel}
             className="flex-1 md:flex-none bg-white border-2 border-emerald-100 text-emerald-600 px-4 md:px-6 py-2.5 md:py-3 rounded-xl md:rounded-2xl font-black flex items-center justify-center gap-2 transition-all hover:bg-emerald-50 active:scale-95 text-xs md:text-sm"
           >
-            <Download size={16} md:size={18} />
+            <Download size={18} />
             <span>Exportar</span>
           </button>
         </div>

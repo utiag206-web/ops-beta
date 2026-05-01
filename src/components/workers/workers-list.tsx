@@ -255,8 +255,7 @@ export function WorkersList({ workers, canManage = false }: { workers: Worker[],
               <p className="text-slate-500 font-black text-lg">No se encontraron colaboradores</p>
               <p className="text-slate-400 text-sm font-medium mt-1">Intenta con otros términos de búsqueda.</p>
             </div>
-          )}
-        </div>
+        )}
       </div>
 
       {isAddModalOpen && (

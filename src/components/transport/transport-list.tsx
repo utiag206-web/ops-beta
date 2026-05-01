@@ -117,6 +117,5 @@ export function TransportList({ payments, isWorker = false }: TransportListProps
         ))}
       </div>
     </div>
-    </div>
   )
 }
