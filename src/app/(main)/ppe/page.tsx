@@ -1,8 +1,8 @@
-export const dynamic = 'force-dynamic'
-
 import { getPPEDeliveries } from './actions'
 import { getWorkers } from '../workers/actions'
 import { getUserSession } from '@/lib/auth'
+
+export const dynamic = 'force-dynamic'
 import { PPEList } from '@/components/ppe/ppe-list'
 import { AddPPEContainer } from '@/components/ppe/add-ppe-container' 
 import { Shield } from 'lucide-react'

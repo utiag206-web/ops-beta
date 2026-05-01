@@ -9,7 +9,7 @@ import {
 } from 'lucide-react'
 import { ProductForm } from './product-form'
 import { useUserRole } from '@/components/providers/rbac-provider'
-import { deleteProduct } from '@/app/(main)/inventory/actions'
+import { deleteProduct } from '@/app/(dashboard)/inventory/actions'
 
 interface Product {
   id: string

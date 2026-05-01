@@ -75,8 +75,8 @@ export async function getMovementTypes() {
 async function seedMovementTypes(companyId: string) {
   const supabase = await createAdminClient()
   const defaults = [
-    { company_id: companyId, name: 'Ingreso Almacén', effect: 'INGRESS', is_system: true },
-    { company_id: companyId, name: 'Salida Consumo', effect: 'EGRESS', is_system: true },
+    { company_id: companyId, name: 'Ingreso Almacén', effect: 'IN', is_system: true },
+    { company_id: companyId, name: 'Salida Consumo', effect: 'OUT', is_system: true },
     { company_id: companyId, name: 'Transferencia', effect: 'BOTH', is_system: true },
     { company_id: companyId, name: 'Ajuste Stock', effect: 'SET', is_system: true }
   ]
@@ -87,7 +87,7 @@ async function seedMovementTypes(companyId: string) {
     .select()
 
   if (error) {
-    console.error('Error seeding movement types:', error)
+    console.error('Error seeding movement types in root:', error)
     return []
   }
 
@@ -1036,9 +1036,6 @@ export async function processInboundFromPO(payload: {
 
     revalidatePath('/inventory/history')
     revalidatePath('/inventory/stock')
-    revalidatePath('/inventory/kardex')
-    revalidatePath('/inventory/products')
-    
     return { success: true }
   } catch (err: any) {
     console.error('PO_INBOUND_ERROR:', err)

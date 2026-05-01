@@ -1,12 +1,10 @@
 'use client'
 
-export const dynamic = 'force-dynamic'
-
 import { useState, useEffect } from 'react'
 import { 
   getWarehouses, 
   deleteWarehouse 
-} from '@/app/(main)/inventory/actions'
+} from '@/app/(dashboard)/inventory/actions'
 import { WarehouseForm } from '@/components/inventory/warehouse-form'
 import { 
   Plus, 

@@ -1,7 +1,9 @@
 'use client'
-export const dynamic = 'force-dynamic'
 
-import React, { useState, useEffect } from 'react'
+import React, { 
+  useState, 
+  useEffect 
+} from 'react'
 import { 
   Coins, 
   Plus, 

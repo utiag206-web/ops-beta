@@ -46,22 +46,19 @@ export async function createTransportPayment(formData: {
   const { data, error } = await supabase
     .from('transport_payments')
     .insert([{
-      worker_id: formData.worker_id,
-      amount: formData.amount,
-      date: formData.date,
-      status: formData.status || 'pending',
+      ...formData,
       company_id: extendedUser.company_id
     }])
     .select()
 
   if (error) {
-    console.error('[CREATE TRANSPORT PAYMENT] DB Error:', error)
-    return { success: false, error: `Error en base de datos: ${error.message}` }
+    console.error('Error creating transport payment:', error)
+    return { success: false, error: error.message }
   }
 
   revalidatePath(`/workers/${formData.worker_id}`)
   revalidatePath('/transport')
   revalidatePath('/reports')
   revalidatePath('/dashboard')
-  return { success: true, data: data?.[0] }
+  return { success: true, data: data[0] }
 }

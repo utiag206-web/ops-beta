@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { Package, Calendar, User, X, Loader2, Save } from 'lucide-react'
-import { createPPEDelivery } from '@/app/(main)/ppe/actions'
+import { createPPEDelivery } from '@/app/(dashboard)/ppe/actions'
 
 interface AddPPEDeliveryModalProps {
   workers: any[]

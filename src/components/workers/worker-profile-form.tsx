@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { updateWorkerFullProfile } from '@/app/(main)/workers/actions'
+import { updateWorkerFullProfile } from '@/app/(dashboard)/workers/actions'
 import { Save, Loader2, Briefcase, Landmark, User, ShieldAlert } from 'lucide-react'
 import { WorkerChildren } from '@/components/workers/worker-children'
 
@@ -89,13 +89,9 @@ export function WorkerProfileForm({ worker, childrenList = [], canManage = false
     })
     setIsSaving(false)
     if (result.success) {
-      if (result.failedFields) {
-        alert(`${result.message}\n\nNota: Los campos no guardados requieren una actualización de base de datos que se realizará en la siguiente fase.`)
-      } else {
-        alert("Perfil actualizado correctamente.")
-      }
+      alert(result.message || "Perfil actualizado correctamente.")
     } else {
-      alert("Error: " + result.error)
+      alert("Error crítico: " + (result.error || "No se pudo guardar la información."))
     }
   }
 

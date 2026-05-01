@@ -1,5 +1,3 @@
-export const dynamic = 'force-dynamic'
-
 import { getWorkerById, getWorkerDocuments, getWorkerChildren } from '../actions'
 import { getUserSession } from '@/lib/auth'
 import { getPPEDeliveries } from '../../ppe/actions'

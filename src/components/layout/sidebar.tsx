@@ -1,6 +1,5 @@
 'use client'
 
-import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { 
@@ -10,8 +9,10 @@ import {
   AlertCircle, GraduationCap, MessageSquare, Eye, ShieldAlert, Clock
 } from 'lucide-react'
 import { logout } from '@/app/(auth)/login/actions'
+import { useState } from 'react'
 import { useUserRole } from '@/components/providers/rbac-provider'
 import { useSidebar } from '@/components/providers/sidebar-provider'
+import { X } from 'lucide-react'
 
 // MASTER LIST: Grupos de navegación por defecto
 const navGroups = [
@@ -101,20 +102,14 @@ function getSidebarContext(role_id: string | undefined, area: string | null | un
 
 export function Sidebar() {
   const pathname = usePathname()
-  const { role_id, user } = useUserRole()
-  const { isOpen, close } = useSidebar()
+  const { role_id, user, hasAccess } = useUserRole()
+  const { isOpen, setIsOpen } = useSidebar()
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({})
-  const [mounted, setMounted] = useState(false)
-
-  useEffect(() => {
-    setMounted(true)
-  }, [])
   
   const area = user?.area
   const context = getSidebarContext(role_id, area)
 
   const getFilteredGroups = () => {
-    // ... (rest of the switch remains same, I'll keep the full function body to be safe)
     switch (context) {
       case 'ADMIN':
         return navGroups.map(g => {
@@ -241,101 +236,105 @@ export function Sidebar() {
 
   const filteredGroups = getFilteredGroups().filter(group => group.items.length > 0)
 
-  if (!mounted) return null
-
   return (
     <>
-      {/* Overlay para móvil */}
+      {/* Mobile Overlay */}
       {isOpen && (
         <div 
-          className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[40] lg:hidden animate-in fade-in duration-300"
-          onClick={close}
+          className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-40 lg:hidden animate-in fade-in duration-300"
+          onClick={() => setIsOpen(false)}
         />
       )}
 
       <aside className={`
-        fixed lg:static inset-y-0 left-0 w-80 flex flex-col z-[45] shadow-2xl overflow-hidden nth-sidebar
-        transform transition-transform duration-300 ease-in-out
-        ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
+        fixed inset-y-0 left-0 z-50 w-72 flex flex-col shadow-2xl overflow-hidden nth-sidebar transition-transform duration-300 ease-in-out
+        lg:translate-x-0 lg:static lg:w-80
+        ${isOpen ? 'translate-x-0' : '-translate-x-full'}
       `}>
-        {/* Branding */}
-        <div className="p-10 nth-divider border-b">
-          <div className="flex items-center gap-5 text-white">
-            <div className="w-16 h-16 flex items-center justify-center shrink-0">
+        {/* Branding & Close Button */}
+        <div className="p-8 nth-divider border-b flex items-center justify-between">
+          <div className="flex items-center gap-4 text-white">
+            <div className="w-12 h-12 flex items-center justify-center bg-white/10 rounded-xl border border-white/10">
               <img 
                 src="/logo-ops.png" 
                 alt="Inthaly OPS Logo" 
-                className="w-full h-full object-contain mix-blend-screen brightness-125"
+                className="w-8 h-8 object-contain mix-blend-screen brightness-125"
               />
             </div>
-            <div className="flex flex-col min-w-0">
-              <span className="text-2xl font-black tracking-tighter leading-none truncate">Inthaly OPS</span>
-              <span className="text-[10px] font-black text-white/50 uppercase tracking-[0.2em] mt-2">Sistema ERP</span>
+            <div className="flex flex-col">
+              <span className="text-xl font-black tracking-tighter leading-none whitespace-nowrap">Inthaly OPS</span>
+              <span className="text-[9px] font-black text-white/50 uppercase tracking-[0.2em] mt-1">ERP Cloud</span>
             </div>
           </div>
+          
+          <button 
+            onClick={() => setIsOpen(false)}
+            className="lg:hidden p-2 text-white/60 hover:text-white hover:bg-white/10 rounded-xl transition-all"
+          >
+            <X size={20} />
+          </button>
         </div>
 
-        <nav className="flex-1 px-6 py-2 space-y-2 overflow-y-auto custom-scrollbar">
-          {filteredGroups.map((group) => {
-            const isCollapsed = collapsed[group.id]
-            const hasActiveChild = group.items.some(item => pathname.startsWith(item.href))
-            const effectivelyCollapsed = isCollapsed === undefined ? !hasActiveChild : isCollapsed
+      <nav className="flex-1 px-6 py-2 space-y-2 overflow-y-auto custom-scrollbar">
+        {filteredGroups.map((group) => {
+          const isCollapsed = collapsed[group.id]
+          const hasActiveChild = group.items.some(item => pathname.startsWith(item.href))
+          const effectivelyCollapsed = isCollapsed === undefined ? !hasActiveChild : isCollapsed
 
-            const toggleGroup = () => {
-              setCollapsed(prev => ({ ...prev, [group.id]: !effectivelyCollapsed }))
-            }
+          const toggleGroup = () => {
+            setCollapsed(prev => ({ ...prev, [group.id]: !effectivelyCollapsed }))
+          }
 
-            return (
-              <div key={group.id} className="pt-6 first:pt-0">
-                <button
-                  onClick={toggleGroup}
-                  className="w-full flex items-center justify-between px-3 py-2 text-[10px] uppercase tracking-widest transition-colors group nth-nav-group-label"
-                >
-                  <span>{group.label}</span>
-                  {effectivelyCollapsed ? (
-                    <ChevronRight size={14} className="group-hover:translate-x-0.5 transition-transform opacity-40" />
-                  ) : (
-                    <ChevronDown size={14} className="opacity-70" />
-                  )}
-                </button>
-                
-                {!effectivelyCollapsed && (
-                  <div className="mt-4 space-y-1 animate-in fade-in slide-in-from-top-1 duration-200">
-                    {group.items.map((item) => {
-                      const isActive = pathname.startsWith(item.href)
-                      const Icon = item.icon
-                      
-                      return (
-                        <Link
-                          key={`${group.id}-${item.href}`}
-                          href={item.href}
-                          className={`flex items-center gap-4 px-4 py-3.5 rounded-2xl font-bold text-sm group/item nth-nav-item ${
-                            isActive ? 'nth-nav-item-active' : ''
-                          }`}
-                        >
-                          <Icon size={20} strokeWidth={2.5} className="transition-colors shrink-0" />
-                          <span className="tracking-tight truncate">{item.name}</span>
-                        </Link>
-                      )
-                    })}
-                  </div>
+          return (
+            <div key={group.id} className="pt-6 first:pt-0">
+              <button
+                onClick={toggleGroup}
+                className="w-full flex items-center justify-between px-3 py-2 text-[10px] uppercase tracking-widest transition-colors group nth-nav-group-label"
+              >
+                <span>{group.label}</span>
+                {effectivelyCollapsed ? (
+                  <ChevronRight size={14} className="group-hover:translate-x-0.5 transition-transform opacity-40" />
+                ) : (
+                  <ChevronDown size={14} className="opacity-70" />
                 )}
-              </div>
-            )
-          })}
-        </nav>
+              </button>
+              
+              {!effectivelyCollapsed && (
+                <div className="mt-4 space-y-1 animate-in fade-in slide-in-from-top-1 duration-200">
+                  {group.items.map((item) => {
+                    const isActive = pathname.startsWith(item.href)
+                    const Icon = item.icon
+                    
+                    return (
+                      <Link
+                        key={`${group.id}-${item.href}`}
+                        href={item.href}
+                        className={`flex items-center gap-4 px-4 py-3.5 rounded-2xl font-bold text-sm group/item nth-nav-item ${
+                          isActive ? 'nth-nav-item-active' : ''
+                        }`}
+                      >
+                        <Icon size={20} strokeWidth={2.5} className="transition-colors" />
+                        <span className="tracking-tight">{item.name}</span>
+                      </Link>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+          )
+        })}
+      </nav>
 
-        <div className="p-6 mt-auto nth-divider border-t bg-slate-900/50">
-          <form action={logout}>
-            <button type="submit" className="flex w-full items-center gap-4 px-4 py-4 transition-all rounded-[1.5rem] font-bold text-sm group nth-nav-item">
-              <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center group-hover:bg-white/15 transition-colors shrink-0">
-                <LogOut size={20} className="opacity-60 group-hover:opacity-100" />
-              </div>
-              <span>Cerrar sesión</span>
-            </button>
-          </form>
-        </div>
-      </aside>
-    </>
+      <div className="p-6 mt-auto nth-divider border-t">
+        <form action={logout}>
+          <button type="submit" className="flex w-full items-center gap-4 px-4 py-4 transition-all rounded-[1.5rem] font-bold text-sm group nth-nav-item">
+            <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center group-hover:bg-white/15 transition-colors">
+              <LogOut size={20} className="opacity-60 group-hover:opacity-100" />
+            </div>
+            <span>Cerrar sesión</span>
+          </button>
+        </form>
+      </div>
+    </aside>
   )
 }

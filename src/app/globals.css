@@ -56,31 +56,9 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
-  @apply antialiased;
+  @apply antialiased text-sm md:text-base;
 }
 
-/* Custom Scrollbar for better UX */
-.custom-scrollbar::-webkit-scrollbar {
-  width: 5px;
-  height: 5px;
-}
-.custom-scrollbar::-webkit-scrollbar-track {
-  background: transparent;
-}
-.custom-scrollbar::-webkit-scrollbar-thumb {
-  background: rgba(0,0,0,0.1);
-  border-radius: 10px;
-}
-.custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: rgba(0,0,0,0.2);
-}
-
-/* Responsive Grid/Gap Utilities */
-@layer utilities {
-  .mobile-grid-cols-1 {
-    grid-template-columns: repeat(1, minmax(0, 1fr));
-  }
-}
 
 /* Fix for form text visibility */
 input, select, textarea {
@@ -98,50 +76,44 @@ input::placeholder {
   border-right: 1px solid rgba(255, 255, 255, 0.05) !important;
 }
 
-/* Ensure sidebar is scrollable without showing big scrollbars */
-.nth-sidebar nav {
-  scrollbar-width: none;
-}
-.nth-sidebar nav::-webkit-scrollbar {
-  display: none;
-}
-
 .nth-sidebar .nth-nav-item {
-  color: rgba(255, 255, 255, 0.75) !important;
-  transition: all 0.2s ease !important;
+  color: rgba(255, 255, 255, 0.9) !important;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
   border: 1px solid transparent !important;
 }
 
 .nth-sidebar .nth-nav-item:hover {
-  background-color: rgba(255, 255, 255, 0.08) !important;
+  background-color: rgba(255, 255, 255, 0.1) !important;
   color: white !important;
+  transform: translateX(4px);
 }
 
 .nth-sidebar .nth-nav-item-active {
   background-color: rgba(255, 255, 255, 0.15) !important;
   color: white !important;
-  border: 1px solid rgba(255, 255, 255, 0.1) !important;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+  box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1) !important;
+  backdrop-filter: blur(12px) !important;
 }
 
 .nth-sidebar .nth-nav-group-label {
-  color: rgba(255, 255, 255, 0.4) !important;
+  color: rgba(255, 255, 255, 0.8) !important; /* Aumentado por legibilidad */
   font-weight: 900 !important;
   letter-spacing: 0.2em !important;
-  font-size: 9px !important;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.1);
 }
 
 .nth-sidebar .nth-divider {
-  border-color: rgba(255, 255, 255, 0.05) !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
 }
 
-/* --- Responsive Layout Fixes --- */
-@media (max-width: 640px) {
-  .max-w-7xl {
-    padding-left: 0 !important;
-    padding-right: 0 !important;
-  }
+.nth-sidebar .nth-logo-box {
+  background: white !important;
+  color: #1D4ED8 !important;
+  box-shadow: 0 10px 25px -5px rgba(0,0,0,0.3) !important;
 }
+
+/* ------------------------------------------ */
 
 /* --- Landing Page Utilities --- */
 .glass {

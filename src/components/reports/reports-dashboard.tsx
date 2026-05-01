@@ -16,7 +16,7 @@ import {
   Filter
 } from 'lucide-react'
 import { StatsCard, SimpleBarChart, DonutChart } from '@/components/reports/visual-reports'
-import { getDetailedHistory } from '@/app/(main)/reports/actions'
+import { getDetailedHistory } from '@/app/(dashboard)/reports/actions'
 import * as XLSX from 'xlsx'
 
 export function ReportsDashboard({ initialData }: { initialData: any }) {

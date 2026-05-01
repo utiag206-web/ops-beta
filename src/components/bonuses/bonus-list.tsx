@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { Coins, Calendar, Clock, CheckCircle2, AlertCircle, DollarSign, User } from 'lucide-react'
-import { updateBonusStatus } from '@/app/(main)/bonuses/actions'
+import { updateBonusStatus } from '@/app/(dashboard)/bonuses/actions'
 
 interface BonusListProps {
   bonuses: any[]
@@ -10,8 +10,8 @@ interface BonusListProps {
   isAdmin?: boolean
 }
 
-export function BonusList({ bonuses: initialBonuses = [], isWorker = false, isAdmin = false }: BonusListProps) {
-  const [bonuses, setBonuses] = useState(initialBonuses || [])
+export function BonusList({ bonuses: initialBonuses, isWorker = false, isAdmin = false }: BonusListProps) {
+  const [bonuses, setBonuses] = useState(initialBonuses)
   const [loadingId, setLoadingId] = useState<string | null>(null)
 
   const handleToggleStatus = async (id: string, currentStatus: string) => {
@@ -31,7 +31,7 @@ export function BonusList({ bonuses: initialBonuses = [], isWorker = false, isAd
     }
   }
 
-  if (!bonuses || bonuses.length === 0) {
+  if (bonuses.length === 0) {
     return (
       <div className="bg-white p-12 rounded-2xl border border-slate-100 text-center">
         <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-4 border border-slate-100">
@@ -44,8 +44,9 @@ export function BonusList({ bonuses: initialBonuses = [], isWorker = false, isAd
   }
 
   return (
-    <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-100 overflow-hidden">
-      <div className="overflow-x-auto">
+    <div className="bg-white rounded-2xl md:rounded-[2.5rem] shadow-sm border border-slate-100 overflow-hidden">
+      {/* Desktop Table View */}
+      <div className="hidden md:block overflow-x-auto">
         <table className="w-full text-left">
           <thead>
             <tr className="bg-slate-50/50 border-b border-slate-100">
@@ -119,6 +120,79 @@ export function BonusList({ bonuses: initialBonuses = [], isWorker = false, isAd
           </tbody>
         </table>
       </div>
+
+      {/* Mobile Card View */}
+      <div className="md:hidden divide-y divide-slate-100">
+        {bonuses.map((bonus) => (
+          <div key={bonus.id} className="p-6 space-y-4">
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-600 shrink-0">
+                  <DollarSign size={20} />
+                </div>
+                <div>
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Concepto</p>
+                  <p className="text-sm font-black text-slate-800 uppercase">{bonus.bonus_type}</p>
+                </div>
+              </div>
+              <span className={`text-[10px] font-black px-2.5 py-1 rounded-lg uppercase border shadow-sm ${
+                bonus.status === 'paid' 
+                  ? 'bg-emerald-50 text-emerald-700 border-emerald-100' 
+                  : 'bg-amber-50 text-amber-700 border-amber-100'
+              }`}>
+                {bonus.status === 'paid' ? 'Pagado' : 'Pendiente'}
+              </span>
+            </div>
+
+            <div className="bg-slate-50 rounded-xl p-4 flex items-center justify-between">
+              <div>
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Monto</p>
+                <p className="text-lg font-black text-slate-900 tracking-tighter">S/ {Number(bonus.amount).toFixed(2)}</p>
+              </div>
+              <div className="text-right">
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Fecha</p>
+                <p className="text-xs font-bold text-slate-600">{new Date(bonus.date).toLocaleDateString()}</p>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between gap-4 pt-2">
+               <div className="flex items-center gap-2">
+                  <div className="w-6 h-6 rounded-full bg-slate-100 flex items-center justify-center text-slate-500">
+                    <User size={12} />
+                  </div>
+                  <span className="text-[10px] font-bold text-slate-500 uppercase truncate max-w-[150px]">{bonus.worker?.name || 'Sistema'}</span>
+               </div>
+               
+               {isAdmin && (
+                <button
+                  disabled={loadingId === bonus.id}
+                  onClick={() => handleToggleStatus(bonus.id, bonus.status)}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] font-black uppercase transition-all shadow-sm ${
+                    bonus.status === 'paid' 
+                      ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' 
+                      : 'bg-blue-600 text-white shadow-blue-100'
+                  }`}
+                >
+                  {loadingId === bonus.id ? (
+                    <Clock size={14} className="animate-spin" />
+                  ) : bonus.status === 'paid' ? (
+                    <>
+                      <CheckCircle2 size={14} />
+                      Pagado
+                    </>
+                  ) : (
+                    <>
+                      <DollarSign size={14} />
+                      Pagar
+                    </>
+                  )}
+                </button>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
     </div>
   )
 }

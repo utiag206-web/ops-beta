@@ -15,8 +15,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "InthalyOps | Gestión Inteligente de Equipos",
-  description: "Plataforma moderna para la gestión de trabajadores, asistencia, productividad y operaciones empresariales.",
+  title: "InthalyOps",
+  description: "Plataforma de Gestión de Trabajadores - Horizon Industries",
   manifest: "/manifest.json",
 };
 

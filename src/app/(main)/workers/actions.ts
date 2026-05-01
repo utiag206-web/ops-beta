@@ -439,8 +439,7 @@ export async function updateWorkerFullProfile(id: string, payload: {
     const supabase = await createAdminClient()
     const failedFields: string[] = []
 
-    // 1. Update basic workers table - Separated into safe blocks
-    // Block A: Essential fields (Guaranteed to exist)
+    // 1. Update basic workers table - Safe Blocks
     const { error: errA } = await supabase
       .from('workers')
       .update({
@@ -456,8 +455,6 @@ export async function updateWorkerFullProfile(id: string, payload: {
     
     if (errA) throw new Error(`Fallo crítico en tabla trabajadores: ${errA.message}`)
 
-    // Block B: Extended fields (Might be missing in current schema)
-    // We attempt these separately to not break the whole save
     const extendedFields = {
       last_name: payload.laboral.last_name,
       cod: payload.laboral.cod,
@@ -476,7 +473,7 @@ export async function updateWorkerFullProfile(id: string, payload: {
       
       if (errB) {
         failedFields.push(key)
-        console.warn(`[SCHEMA_LIMITATION] Column '${key}' missing in 'workers' table.`)
+        console.warn(`[SCHEMA_LIMITATION] Column '${key}' missing in root 'workers' table.`)
       }
     }
 
@@ -517,11 +514,11 @@ export async function updateWorkerFullProfile(id: string, payload: {
       success: true, 
       failedFields: failedFields.length > 0 ? failedFields : undefined,
       message: failedFields.length > 0 
-        ? `Guardado parcial. Los siguientes campos no son compatibles con tu base de datos actual: ${failedFields.join(', ')}` 
-        : 'Perfil actualizado al 100% exitosamente.'
+        ? `Guardado parcial en el servidor principal. Campos no compatibles omitidos: ${failedFields.join(', ')}` 
+        : 'Perfil actualizado exitosamente en producción.'
     }
   } catch (error: any) {
-    console.error('[UPDATE FULL PROFILE] Fatal Error:', error)
+    console.error('[UPDATE FULL PROFILE] Fatal Error in Root:', error)
     return { success: false, error: error.message || 'Error al procesar la actualización del perfil.' }
   }
 }

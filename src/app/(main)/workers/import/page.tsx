@@ -1,5 +1,3 @@
-export const dynamic = 'force-dynamic'
-
 import { WorkerImport } from '@/components/workers/worker-import'
 import { getUserSession } from '@/lib/auth'
 import { redirect } from 'next/navigation'

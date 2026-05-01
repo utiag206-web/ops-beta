@@ -1,6 +1,7 @@
-import { SidebarToggle } from './sidebar-toggle'
+import { Bell } from 'lucide-react'
 import { getUserSession } from '@/lib/auth'
 import { UserDropdown } from './user-dropdown'
+import { SidebarToggle } from './sidebar-toggle'
 
 export async function Header() {
   const { extendedUser } = await getUserSession()
@@ -23,20 +24,19 @@ export async function Header() {
   
   const userRole = roleNames[roleId?.toLowerCase()] || 'Sin Rol'
   const userEmail = extendedUser?.email || ''
-
-  // Safe extraction of company name
+  
   const companyData = extendedUser?.companies
   const companyName = (Array.isArray(companyData) ? companyData[0]?.name : (companyData as any)?.name) || 'Mi Empresa'
 
   return (
-    <header className="h-16 md:h-20 bg-white border-b border-slate-100 px-4 md:px-8 flex items-center justify-between sticky top-0 z-[30] shadow-sm shadow-slate-100/50">
+    <header className="h-20 bg-white border-b border-slate-200 px-4 md:px-6 flex items-center justify-between sticky top-0 z-30">
       <div className="flex items-center gap-3 md:gap-4">
         <SidebarToggle />
-        <div className="flex flex-col">
-          <h1 className="text-sm md:text-xl font-black text-slate-800 tracking-tight leading-none uppercase truncate max-w-[150px] md:max-w-none">
+        <div className="flex flex-col md:flex-row md:items-baseline md:gap-2">
+          <h1 className="text-lg md:text-xl font-bold text-slate-800 line-clamp-1">
             {companyName}
           </h1>
-          <p className="text-[8px] md:text-[10px] text-blue-600 font-black uppercase tracking-widest mt-1">Gestión OPS</p>
+          <p className="text-[9px] text-blue-600 font-black uppercase tracking-widest opacity-70 hidden sm:block">SISTEMA ERP</p>
         </div>
       </div>
 

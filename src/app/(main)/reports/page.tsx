@@ -1,5 +1,3 @@
-export const dynamic = 'force-dynamic'
-
 import { getReportsData } from './actions'
 import { ReportsDashboard } from '@/components/reports/reports-dashboard'
 

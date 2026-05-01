@@ -1,5 +1,3 @@
-export const dynamic = 'force-dynamic'
-
 import { Suspense } from 'react'
 import Link from 'next/link'
 import { AlertCircle, ShieldAlert } from 'lucide-react'
@@ -7,6 +5,8 @@ import { getDashboardStats } from './actions'
 import { getUserSession } from '@/lib/auth'
 import { DashboardShell } from '@/components/dashboard/dashboard-shell'
 import { AdminDashboardSkeleton } from '@/components/dashboard/dashboard-skeletons'
+
+export const dynamic = 'force-dynamic'
 
 export default async function DashboardPage() {
   const { extendedUser } = await getUserSession()

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { X, Loader2, CheckCircle2, Package } from 'lucide-react'
-import { updateStockRecord, getWarehouses } from '@/app/(main)/inventory/actions'
+import { updateStockRecord, getWarehouses } from '@/app/(dashboard)/inventory/actions'
 import { WarehouseForm } from './warehouse-form'
 import { toast } from 'sonner'
 

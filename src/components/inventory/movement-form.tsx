@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { X, Loader2, CheckCircle2, Settings2, Plus, ArrowRight, ArrowUpRight, ArrowDownLeft, AlertCircle, AlertTriangle, History } from 'lucide-react'
+import { X, Loader2, CheckCircle2, Settings2, Plus, ArrowRight, ArrowUpRight, ArrowDownLeft, AlertCircle, History } from 'lucide-react'
 import { 
   createMovement, 
   getWarehouses, 
@@ -10,7 +10,7 @@ import {
   getPurchaseOrders, 
   getPurchaseOrderItems,
   processInboundFromPO 
-} from '@/app/(main)/inventory/actions'
+} from '@/app/(dashboard)/inventory/actions'
 import { toast } from 'sonner'
 
 interface MovementFormProps {
@@ -205,6 +205,7 @@ export function MovementForm({ isOpen, onClose, onSuccess, products }: MovementF
       setLoading(false)
     }
   }
+
   const handleQtyChange = (itemId: string, val: number, pending: number) => {
     if (val > pending) {
       toast.error('No puedes ingresar más de lo pendiente')
@@ -258,7 +259,11 @@ export function MovementForm({ isOpen, onClose, onSuccess, products }: MovementF
                       const mt = movementTypes.find(t => 
                         mode.id === 'SET' ? (t.effect === 'SET' || t.name?.toLowerCase().includes('ajuste')) : t.effect === mode.id
                       );
-                      if (mt) setForm({...form, movement_type_id: mt.id, outbound_type: mode.id === 'BOTH' ? 'INTERNAL' : 'EXTERNAL'});
+                      if (mt) {
+                        setForm({...form, movement_type_id: mt.id, outbound_type: mode.id === 'BOTH' ? 'INTERNAL' : 'EXTERNAL'});
+                      } else {
+                        toast.error(`El tipo de movimiento ${mode.label} no existe.`)
+                      }
                     }}
                     className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-2xl text-[11px] font-black uppercase tracking-tight transition-all duration-300 ${
                       isActive 

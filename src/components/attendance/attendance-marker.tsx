@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { Clock, LogIn, LogOut, CheckCircle2, Loader2, Calendar } from 'lucide-react'
-import { checkIn, checkOut } from '@/app/(main)/attendance/actions'
+import { checkIn, checkOut } from '@/app/(dashboard)/attendance/actions'
 
 interface AttendanceMarkerProps {
   initialStatus?: any
@@ -13,10 +13,8 @@ export function AttendanceMarker({ initialStatus }: AttendanceMarkerProps) {
   const [isPending, setIsPending] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [currentTime, setCurrentTime] = useState(new Date())
-  const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
-    setMounted(true)
     const timer = setInterval(() => setCurrentTime(new Date()), 1000)
     return () => clearInterval(timer)
   }, [])
@@ -54,8 +52,6 @@ export function AttendanceMarker({ initialStatus }: AttendanceMarkerProps) {
       setIsPending(false)
     }
   }
-
-  if (!mounted) return null
 
   return (
     <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100">

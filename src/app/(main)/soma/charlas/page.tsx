@@ -1,7 +1,5 @@
 'use client'
 
-export const dynamic = 'force-dynamic'
-
 import { useState, useEffect } from 'react'
 import { 
   MessageSquare, Plus, Search, Calendar, Users, 
@@ -10,7 +8,7 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { getSomaTalks, createSomaTalk, getCurrentUser, confirmSomaTalk } from '../actions'
-import { getWorkers } from '@/app/(main)/workers/actions'
+import { getWorkers } from '@/app/(dashboard)/workers/actions'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 

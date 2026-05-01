@@ -1,8 +1,7 @@
-export const dynamic = 'force-dynamic'
-
 import { getTransportPayments } from './actions'
 import { getWorkers } from '../workers/actions'
 
+export const dynamic = 'force-dynamic'
 import { TransportList } from '@/components/transport/transport-list'
 import { AddTransportContainer } from '@/components/transport/add-transport-container'
 import { Bus } from 'lucide-react'

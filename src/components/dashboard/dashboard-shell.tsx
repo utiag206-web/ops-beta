@@ -1,5 +1,3 @@
-'use client'
-
 import Link from 'next/link'
 import { 
   Users, UserCheck, ShieldAlert, BadgeDollarSign, 
@@ -17,7 +15,6 @@ import { BonusList } from '@/components/bonuses/bonus-list'
 import { TransportList } from '@/components/transport/transport-list'
 import { AttendanceList } from '@/components/attendance/attendance-list'
 import { ROLE_NAMES } from '@/lib/constants'
-import { useState, useEffect } from 'react'
 
 interface DashboardShellProps {
   user: any
@@ -37,22 +34,17 @@ function getViewMode(role_id: string, area: string | null) {
   return 'DEFAULT'
 }
 export function DashboardShell({ user, stats }: DashboardShellProps) {
-  const [mounted, setMounted] = useState(false)
-  useEffect(() => {
-    setMounted(true)
-  }, [])
-
-  const roleName = ROLE_NAMES[user?.role_id] || "Usuario"
-  const companyName = user?.companies?.name || "Empresa"
-  const viewMode = getViewMode(user?.role_id, user?.area)
+  const roleName = ROLE_NAMES[user.role_id] || "Usuario"
+  const companyName = user.companies?.name || "Empresa"
+  const viewMode = getViewMode(user.role_id, user.area)
 
   // Función para renderizar el gráfico de actividad (SVG ligero)
   const renderActivityChart = () => {
-    if (!stats?.weeklyActivity || stats.weeklyActivity.length === 0) return null
-    const maxVal = Math.max(...stats.weeklyActivity.map((d: any) => d.count || 0), 5)
+    if (!stats.weeklyActivity) return null
+    const maxVal = Math.max(...stats.weeklyActivity.map((d: any) => d.count), 5)
     
     return (
-      <div className="bg-white p-8 rounded-[3rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 flex flex-col h-full hover:shadow-[0_20px_50px_rgba(0,0,0,0.08)] transition-all duration-300">
+      <div className="bg-white p-6 md:p-8 rounded-2xl md:rounded-[3rem] shadow-sm border border-slate-100 flex flex-col h-full hover:shadow-xl transition-all duration-300">
         <div className="flex items-center justify-between mb-8">
            <div className="flex items-center gap-4">
               <div className="bg-indigo-50 p-3 rounded-2xl">
@@ -63,7 +55,7 @@ export function DashboardShell({ user, stats }: DashboardShellProps) {
            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100">Últimos 7 días</span>
         </div>
         
-        <div className="flex-1 flex items-end justify-between gap-4 min-h-[140px] px-2">
+        <div className="flex-1 flex items-end justify-between gap-2 md:gap-4 min-h-[120px] md:min-h-[140px] px-1 md:px-2">
            {stats.weeklyActivity.map((day: any, idx: number) => {
              const height = (day.count / maxVal) * 100
              return (
@@ -146,18 +138,17 @@ export function DashboardShell({ user, stats }: DashboardShellProps) {
 
             <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
               {/* ... existing activity chart col-span-2 ... */}
-              <div className="xl:col-span-2 bg-white rounded-[3rem] p-10 shadow-xl shadow-slate-200/50 border border-slate-100">
-                <div className="flex items-center justify-between mb-10">
+              <div className="xl:col-span-2 bg-white rounded-2xl md:rounded-[3rem] p-6 md:p-10 shadow-xl shadow-slate-200/50 border border-slate-100">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8 md:mb-10">
                   <div>
                     <h3 className="text-2xl font-black text-slate-800 tracking-tight">Actividad Semanal</h3>
                     <p className="text-slate-400 font-bold text-sm mt-1 uppercase tracking-widest">Movimientos de Inventario</p>
                   </div>
                   <div className="bg-blue-50 px-5 py-2 rounded-2xl text-blue-600 font-black text-xs border border-blue-100 uppercase">Tiempo Real</div>
                 </div>
-                <div className="h-[300px] w-full flex items-end justify-between gap-4 px-4">
+                <div className="h-[200px] md:h-[300px] w-full flex items-end justify-between gap-2 md:gap-4 px-2 md:px-4">
                   {(stats.admin?.weeklyActivity || []).map((day: any) => {
-                    const maxCount = Math.max(...(stats.admin?.weeklyActivity || []).map((d:any) => d.count), 1)
-                    const height = Math.min((day.count / maxCount) * 100, 100)
+                    const height = Math.min((day.count / (Math.max(...stats.admin.weeklyActivity.map((d:any) => d.count), 1))) * 100, 100)
                     return (
                       <div key={day.day} className="flex-1 flex flex-col items-center gap-4 group">
                         <div className="relative w-full flex flex-col items-center">
@@ -179,7 +170,7 @@ export function DashboardShell({ user, stats }: DashboardShellProps) {
               </div>
 
               <div className="xl:col-span-1 space-y-8">
-                <div className="bg-[#1D4ED8] rounded-[3rem] p-10 shadow-2xl shadow-blue-900/20 relative overflow-hidden group">
+                <div className="bg-[#1D4ED8] rounded-2xl md:rounded-[3rem] p-8 md:p-10 shadow-2xl shadow-blue-900/20 relative overflow-hidden group">
                   <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl group-hover:bg-white/20 transition-all" />
                   <div className="relative z-10">
                     <div className="flex items-center gap-3 mb-8">
@@ -452,8 +443,6 @@ export function DashboardShell({ user, stats }: DashboardShellProps) {
     }
   }
 
-  if (!mounted) return null
-
   return (
     <div className="space-y-12 pb-20 max-w-[1700px] mx-auto animate-in fade-in slide-in-from-bottom-4 duration-1000">
       
@@ -468,7 +457,7 @@ export function DashboardShell({ user, stats }: DashboardShellProps) {
 
       {/* Attendance for Workers */}
       {viewMode === 'WORKER' && (
-        <AttendanceMarker initialStatus={stats?.todayAttendance} />
+        <AttendanceMarker initialStatus={stats.todayAttendance} />
       )}
 
       {/* Main Stats Segment */}
@@ -522,11 +511,11 @@ export function DashboardShell({ user, stats }: DashboardShellProps) {
             icon={Activity}
             color="text-orange-600"
             href="/incidencias"
-            items={(stats?.recentIncidents || []).map((i: any) => ({
-              title: i?.equipment_name || 'Incidente Reportado',
-              subtitle: i?.description,
-              badge: i?.severity,
-              badgeColor: i?.severity === 'critica' || i?.severity === 'fatal' ? 'bg-rose-100 text-rose-700 border-rose-200' : 'bg-orange-100 text-orange-700 border-orange-200'
+            items={stats.recentIncidents.map((i: any) => ({
+              title: i.equipment_name || 'Incidente Reportado',
+              subtitle: i.description,
+              badge: i.severity,
+              badgeColor: i.severity === 'critica' || i.severity === 'fatal' ? 'bg-rose-100 text-rose-700 border-rose-200' : 'bg-orange-100 text-orange-700 border-orange-200'
             }))}
           />
         )}
@@ -537,10 +526,10 @@ export function DashboardShell({ user, stats }: DashboardShellProps) {
             icon={ShoppingCart}
             color="text-indigo-600"
             href="/requerimientos"
-            items={(stats?.pendingRequirements || []).map((r: any) => ({
-              title: r?.title || r?.description,
-              subtitle: `Prioridad: ${r?.priority || 'Media'}`,
-              badge: r?.status,
+            items={stats.pendingRequirements.map((r: any) => ({
+              title: r.title || r.description,
+              subtitle: `Prioridad: ${r.priority}`,
+              badge: r.status,
               badgeColor: 'bg-blue-100 text-blue-700 border-blue-200'
             }))}
           />
@@ -548,7 +537,7 @@ export function DashboardShell({ user, stats }: DashboardShellProps) {
       </div>
 
       {/* Panel Personal de Trabajador (si aplica) */}
-      {user?.worker_id && viewMode !== 'WORKER' && stats?.personalStats && (
+      {user.worker_id && viewMode !== 'WORKER' && stats.personalStats && (
         <div className="pt-16 border-t border-slate-100 space-y-12 animate-in fade-in slide-in-from-bottom-8 duration-1000 delay-300">
           <div className="flex items-center gap-8">
              <div className="w-20 h-20 bg-slate-900 text-white rounded-[2rem] flex items-center justify-center shadow-2xl relative">

@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { FileText, Upload, Trash2, Download, Plus, Loader2, File, CheckCircle2 } from 'lucide-react'
-import { uploadWorkerDocument, deleteWorkerDocument } from '@/app/(main)/workers/actions'
+import { uploadWorkerDocument, deleteWorkerDocument } from '@/app/(dashboard)/workers/actions'
 
 type Document = {
   id: string

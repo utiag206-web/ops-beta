@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { Upload, FileSpreadsheet, Check, AlertCircle, ArrowLeft, Loader2, Save } from 'lucide-react'
 import Link from 'next/link'
 import * as XLSX from 'xlsx'
-import { importWorkers } from '@/app/(main)/workers/actions'
+import { importWorkers } from '@/app/(dashboard)/workers/actions'
 
 interface WorkerImportData {
   name: string
@@ -96,16 +96,16 @@ export function WorkerImport() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center gap-4">
         <Link 
           href="/workers" 
-          className="p-2 hover:bg-white rounded-full transition-colors text-slate-500 hover:text-blue-600"
+          className="p-2 hover:bg-white rounded-full transition-colors text-slate-500 hover:text-blue-600 self-start"
         >
           <ArrowLeft size={24} />
         </Link>
         <div>
-          <h1 className="text-2xl font-bold text-slate-800">Importar Trabajadores</h1>
-          <p className="text-slate-500 text-sm">Carga masiva de personal mediante Excel o CSV</p>
+          <h1 className="text-2xl font-black text-slate-800 tracking-tight">Importar Trabajadores</h1>
+          <p className="text-slate-500 text-sm font-medium">Carga masiva de personal mediante Excel o CSV</p>
         </div>
       </div>
 
@@ -145,33 +145,33 @@ export function WorkerImport() {
           </div>
         ) : (
           <div className="space-y-6">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-100 pb-6 gap-4">
               <div className="flex items-center gap-3">
-                <div className="p-2 bg-green-100 text-green-700 rounded-lg">
-                  <FileSpreadsheet size={20} />
+                <div className="p-3 bg-green-100 text-green-700 rounded-2xl shadow-sm shadow-green-100">
+                  <FileSpreadsheet size={24} />
                 </div>
                 <div>
-                  <p className="font-bold text-slate-800">{fileName}</p>
-                  <p className="text-xs text-slate-500">{data.length} trabajadores detectados</p>
+                  <p className="font-black text-slate-800 uppercase tracking-tight leading-none mb-1">{fileName}</p>
+                  <p className="text-xs text-slate-500 font-bold uppercase tracking-widest">{data.length} registros</p>
                 </div>
               </div>
-              <div className="flex gap-2">
+              <div className="flex flex-col sm:flex-row gap-3">
                 <button 
                   onClick={() => {
                     setData([])
                     setError(null)
                   }}
-                  className="px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 rounded-lg transition-colors"
+                  className="w-full sm:w-auto px-6 py-2.5 text-xs font-black text-slate-600 uppercase tracking-widest hover:bg-slate-50 rounded-xl border-2 border-slate-100 transition-all active:scale-95"
                 >
-                  Cambiar archivo
+                  Cambiar
                 </button>
                 <button 
                   onClick={handleImport}
                   disabled={isPending}
-                  className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white px-6 py-2 rounded-lg font-medium transition-all shadow-md"
+                  className="w-full sm:w-auto flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white px-8 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all shadow-lg shadow-blue-100 active:scale-95"
                 >
-                  {isPending ? <Loader2 className="animate-spin" size={18} /> : <Save size={18} />}
-                  {isPending ? 'Importando...' : 'Confirmar Importación'}
+                  {isPending ? <Loader2 className="animate-spin" size={16} /> : <Save size={16} />}
+                  {isPending ? 'Importando...' : 'Confirmar'}
                 </button>
               </div>
             </div>
