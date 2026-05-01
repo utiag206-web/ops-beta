@@ -3,6 +3,13 @@ import { cookies } from 'next/headers'
 
 export async function createClient() {
   const cookieStore = await cookies()
+  const allCookies = cookieStore.getAll()
+  
+  if (allCookies.length === 0) {
+    console.warn("[SUPABASE_CLIENT] No cookies found in store")
+  } else {
+    // console.log("[SUPABASE_CLIENT] Cookies available:", allCookies.length)
+  }
 
   return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,

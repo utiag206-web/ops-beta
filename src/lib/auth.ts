@@ -14,8 +14,11 @@ export const getUserSession = cache(async () => {
 
     if (authError || !user) {
       console.warn("[AUTH] No active session or auth error:", authError?.message)
+      if (authError) console.error("[AUTH_DEBUG] Full error:", authError)
       redirect('/login')
     }
+
+    console.log("[AUTH_DEBUG] User authenticated:", user.email)
 
     // [STRICT_RBAC_V2] Solo usamos la tabla 'users' y el campo 'role_id'
     

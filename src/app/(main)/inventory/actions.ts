@@ -53,34 +53,36 @@ export async function getWarehouses() {
 }
 
 export async function getMovementTypes() {
+  const { extendedUser } = await getUserSession()
+  console.log("[INVENTORY_DEBUG] Fetching movement types for company:", extendedUser?.company_id)
+  
+  if (!extendedUser?.company_id) {
+    console.error("[INVENTORY_ERROR] No company_id in extendedUser")
+    return { error: 'No se encontró información de la empresa en la sesión.' }
+  }
+
   try {
     const supabase = await createAdminClient()
-    const session = await getUserSession().catch(() => null)
-    
-    // Si no hay sesión, intentamos al menos obtener los del sistema o fallback
-    const companyId = session?.extendedUser?.company_id
-    if (!companyId) {
-       console.warn("[INVENTORY] No company_id found in session, returning empty or system types")
-       return { data: [] }
-    }
-
     const { data, error } = await supabase
       .from('movement_types')
       .select('*')
-      .eq('company_id', companyId)
+      .eq('company_id', extendedUser.company_id)
 
-    if (error) return { error: error.message }
+    if (error) {
+      console.error("[INVENTORY_ERROR] Supabase error:", error.message)
+      return { error: error.message }
+    }
     
-    // Si faltan tipos o está vacío, sembramos los básicos
     if (!data || data.length < 4) {
-      const seeded = await seedMovementTypes(companyId)
+      console.log("[INVENTORY_DEBUG] Missing types, seeding...")
+      const seeded = await seedMovementTypes(extendedUser.company_id)
       return { data: seeded }
     }
 
     return { data }
   } catch (err: any) {
-    console.error("[GET_MOVEMENT_TYPES_CRITICAL]", err)
-    return { data: [] }
+    console.error("[INVENTORY_CRITICAL] error:", err.message)
+    return { error: 'Error interno al cargar tipos de movimiento.' }
   }
 }
 
