@@ -152,6 +152,7 @@ export function MovementForm({ isOpen, onClose, onSuccess, products }: MovementF
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    console.log("[MOVEMENT_FORM] Submitting form...", form);
     
     // Validaciones base
     if (!form.warehouse_id || !form.movement_type_id) {
@@ -263,7 +264,6 @@ export function MovementForm({ isOpen, onClose, onSuccess, products }: MovementF
                 { id: 'BOTH', label: 'Transferencia', color: 'bg-indigo-600', icon: <ArrowRight size={16} /> },
                 { id: 'SET', label: 'Ajuste Stock', color: 'bg-amber-600', icon: <Settings2 size={16} /> }
               ].map(mode => {
-                // Mejora en la detección del modo activo
                 const isActive = activeMovementType?.effect === mode.id || 
                                 (mode.id === 'SET' && activeMovementType?.name?.toLowerCase().includes('ajuste'));
                 
@@ -271,8 +271,8 @@ export function MovementForm({ isOpen, onClose, onSuccess, products }: MovementF
                   <button
                     key={mode.id}
                     type="button"
-                    disabled={initLoading || movementTypes.length === 0}
                     onClick={() => {
+                      console.log(`[MOVEMENT_FORM] Clicking mode: ${mode.label} (ID: ${mode.id})`);
                       const mt = movementTypes.find(t => 
                         mode.id === 'SET' 
                           ? (t.effect === 'SET' || t.name?.toLowerCase().includes('ajuste')) 
@@ -280,16 +280,14 @@ export function MovementForm({ isOpen, onClose, onSuccess, products }: MovementF
                       );
                       
                       if (mt) {
+                        console.log(`[MOVEMENT_FORM] Type found: ${mt.name} (ID: ${mt.id})`);
                         setForm({...form, movement_type_id: mt.id, outbound_type: mode.id === 'BOTH' ? 'INTERNAL' : 'EXTERNAL'});
                       } else {
-                        toast.error(`Configuración de "${mode.label}" no encontrada. Reintentando sincronización...`)
-                        // Opcional: Re-cargar tipos si falla
-                        getMovementTypes().then(res => {
-                          if (res.data) setMovementTypes(res.data)
-                        })
+                        console.warn(`[MOVEMENT_FORM] Type NOT found for mode: ${mode.id}. Available:`, movementTypes.map(t => t.effect));
+                        toast.error(`La configuración de "${mode.label}" no está disponible.`)
                       }
                     }}
-                    className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-2xl text-[11px] font-black uppercase tracking-tight transition-all duration-300 disabled:opacity-50 ${
+                    className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-2xl text-[11px] font-black uppercase tracking-tight transition-all duration-300 ${
                       isActive 
                         ? `${mode.color} text-white shadow-lg scale-[1.02]` 
                         : 'text-slate-400 hover:bg-white hover:text-slate-600'

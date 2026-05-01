@@ -500,6 +500,7 @@ export async function createMovement(payload: {
   observation?: string
   responsible_name?: string
 }) {
+  console.log("[INVENTORY_ACTION] Creating movement with payload:", payload);
   await requirePermission('inventory')
   const supabase = await createAdminClient()
   const { extendedUser } = await getUserSession()

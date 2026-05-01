@@ -190,7 +190,11 @@ export function InventoryStockList({
               </button>
               
               <button 
-                onClick={() => { setEditingItem(null); setIsModalOpen(true); }}
+                onClick={() => { 
+                  console.log("[INVENTORY_STOCK] Opening Movement Modal");
+                  setEditingItem(null); 
+                  setIsModalOpen(true); 
+                }}
                 className="flex-[2] md:flex-none bg-emerald-600 hover:bg-emerald-700 text-white px-4 md:px-6 py-2.5 md:py-3 rounded-xl md:rounded-2xl font-black flex items-center justify-center gap-2 transition-all shadow-lg shadow-emerald-100 active:scale-95 text-xs md:text-sm"
               >
                 <Plus size={18} strokeWidth={3} />
