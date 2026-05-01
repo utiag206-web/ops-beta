@@ -437,31 +437,47 @@ export async function updateWorkerFullProfile(id: string, payload: {
     }
 
     const supabase = await createAdminClient()
-    const warnings: string[] = []
+    const failedFields: string[] = []
 
-    // 1. Update basic workers table (Smart Update)
-    const { error: err1 } = await supabase
+    // 1. Update basic workers table - Separated into safe blocks
+    // Block A: Essential fields (Guaranteed to exist)
+    const { error: errA } = await supabase
       .from('workers')
       .update({
         name: payload.laboral.name,
-        last_name: payload.laboral.last_name,
         dni: payload.laboral.document_number || payload.laboral.dni,
-        cod: payload.laboral.cod,
         position: payload.laboral.position,
-        guardia: payload.laboral.guardia,
-        condition: payload.laboral.condition,
-        work_system: payload.laboral.work_system,
-        status: payload.laboral.current_status || payload.laboral.status || 'ACTIVO',
         hire_date: payload.laboral.hire_date,
-        termination_date: payload.laboral.termination_date,
+        status: payload.laboral.current_status || payload.laboral.status || 'ACTIVO',
         updated_at: new Date().toISOString()
       })
       .eq('id', id)
       .eq('company_id', extendedUser.company_id)
     
-    if (err1) {
-      console.warn('[WORKER_UPDATE_WARNING]', err1.message)
-      warnings.push(`Datos laborales: Algunas columnas no existen en la base de datos actual (${err1.message})`)
+    if (errA) throw new Error(`Fallo crítico en tabla trabajadores: ${errA.message}`)
+
+    // Block B: Extended fields (Might be missing in current schema)
+    // We attempt these separately to not break the whole save
+    const extendedFields = {
+      last_name: payload.laboral.last_name,
+      cod: payload.laboral.cod,
+      guardia: payload.laboral.guardia,
+      condition: payload.laboral.condition,
+      work_system: payload.laboral.work_system,
+      termination_date: payload.laboral.termination_date
+    }
+
+    for (const [key, value] of Object.entries(extendedFields)) {
+      if (!value) continue;
+      const { error: errB } = await supabase
+        .from('workers')
+        .update({ [key]: value })
+        .eq('id', id)
+      
+      if (errB) {
+        failedFields.push(key)
+        console.warn(`[SCHEMA_LIMITATION] Column '${key}' missing in 'workers' table.`)
+      }
     }
 
     // 2. Upsert financial
@@ -475,8 +491,8 @@ export async function updateWorkerFullProfile(id: string, payload: {
       }, { onConflict: 'worker_id' })
 
     if (err2) {
-      console.warn('[FINANCIAL_UPDATE_WARNING]', err2.message)
-      warnings.push(`Datos financieros: ${err2.message}`)
+      console.error('[FINANCIAL_UPDATE_ERROR]', err2.message)
+      failedFields.push('datos_financieros')
     }
 
     // 3. Upsert personal
@@ -490,8 +506,8 @@ export async function updateWorkerFullProfile(id: string, payload: {
       }, { onConflict: 'worker_id' })
 
     if (err3) {
-      console.warn('[PERSONAL_UPDATE_WARNING]', err3.message)
-      warnings.push(`Datos personales: ${err3.message}`)
+      console.error('[PERSONAL_UPDATE_ERROR]', err3.message)
+      failedFields.push('datos_personales')
     }
 
     revalidatePath(`/workers/${id}`)
@@ -499,12 +515,14 @@ export async function updateWorkerFullProfile(id: string, payload: {
     
     return { 
       success: true, 
-      warnings: warnings.length > 0 ? warnings : undefined,
-      message: warnings.length > 0 ? 'Perfil actualizado con limitaciones de esquema.' : 'Perfil actualizado correctamente.'
+      failedFields: failedFields.length > 0 ? failedFields : undefined,
+      message: failedFields.length > 0 
+        ? `Guardado parcial. Los siguientes campos no son compatibles con tu base de datos actual: ${failedFields.join(', ')}` 
+        : 'Perfil actualizado al 100% exitosamente.'
     }
   } catch (error: any) {
     console.error('[UPDATE FULL PROFILE] Fatal Error:', error)
-    return { success: false, error: 'Error al procesar la actualización del perfil en el servidor.' }
+    return { success: false, error: error.message || 'Error al procesar la actualización del perfil.' }
   }
 }
 

@@ -89,7 +89,11 @@ export function WorkerProfileForm({ worker, childrenList = [], canManage = false
     })
     setIsSaving(false)
     if (result.success) {
-      alert("Perfil actualizado correctamente.")
+      if (result.failedFields) {
+        alert(`${result.message}\n\nNota: Los campos no guardados requieren una actualización de base de datos que se realizará en la siguiente fase.`)
+      } else {
+        alert("Perfil actualizado correctamente.")
+      }
     } else {
       alert("Error: " + result.error)
     }

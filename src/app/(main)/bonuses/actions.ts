@@ -112,9 +112,9 @@ export async function createBonus(formData: {
 
     if (!isPasaje) {
       insertData.bonus_type = formData.bonus_type
-    } else {
-      insertData.concept = formData.bonus_type
     }
+    // Note: 'transport_payments' table does not have a 'concept' column, 
+    // so we skip adding it to avoid schema errors.
 
     const { data, error } = await supabase
       .from(targetTable)
