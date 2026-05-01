@@ -69,16 +69,21 @@ export function MovementForm({ isOpen, onClose, onSuccess, products }: MovementF
             getPurchaseOrders()
           ])
           
-          if (wRes.error) console.error("[MOVEMENT_FORM] Warehouses error:", wRes.error)
-          if (mTRes.error) console.error("[MOVEMENT_FORM] MovementTypes error:", mTRes.error)
+          if (mTRes.error) {
+            console.error("[MOVEMENT_FORM] MovementTypes error:", mTRes.error)
+            toast.error(`Error de configuración: ${mTRes.error}`)
+          }
           
-          if (wRes.data) setWarehouses(wRes.data)
           if (mTRes.data) {
             console.log("[MOVEMENT_FORM] MovementTypes loaded:", mTRes.data.length)
             setMovementTypes(mTRes.data)
+            if (mTRes.data.length === 0) {
+              toast.error("Atención: No se encontraron tipos de movimiento configurados.")
+            }
             const ingreso = mTRes.data.find(t => t.effect === 'IN')
             if (ingreso) setForm(prev => ({ ...prev, movement_type_id: ingreso.id }))
           }
+          if (wRes.data) setWarehouses(wRes.data)
           if (poRes.data) setPurchaseOrders(poRes.data)
         } catch (err) {
           console.error("[MOVEMENT_FORM] Critical load error:", err)
