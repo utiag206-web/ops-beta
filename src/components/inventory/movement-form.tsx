@@ -61,22 +61,30 @@ export function MovementForm({ isOpen, onClose, onSuccess, products }: MovementF
     if (isOpen) {
       const load = async () => {
         setInitLoading(true)
-        const [wRes, mTRes, poRes] = await Promise.all([
-          getWarehouses(), 
-          getMovementTypes(),
-          getPurchaseOrders()
-        ])
-        if (wRes.data) setWarehouses(wRes.data)
-        if (mTRes.data) {
-          setMovementTypes(mTRes.data)
-          // Auto-seleccionar Ingreso por defecto si no hay nada seleccionado
-          const ingreso = mTRes.data.find(t => t.effect === 'IN')
-          if (ingreso) {
-            setForm(prev => ({ ...prev, movement_type_id: ingreso.id }))
+        try {
+          console.log("[MOVEMENT_FORM] Loading masters...")
+          const [wRes, mTRes, poRes] = await Promise.all([
+            getWarehouses(), 
+            getMovementTypes(),
+            getPurchaseOrders()
+          ])
+          
+          if (wRes.error) console.error("[MOVEMENT_FORM] Warehouses error:", wRes.error)
+          if (mTRes.error) console.error("[MOVEMENT_FORM] MovementTypes error:", mTRes.error)
+          
+          if (wRes.data) setWarehouses(wRes.data)
+          if (mTRes.data) {
+            console.log("[MOVEMENT_FORM] MovementTypes loaded:", mTRes.data.length)
+            setMovementTypes(mTRes.data)
+            const ingreso = mTRes.data.find(t => t.effect === 'IN')
+            if (ingreso) setForm(prev => ({ ...prev, movement_type_id: ingreso.id }))
           }
+          if (poRes.data) setPurchaseOrders(poRes.data)
+        } catch (err) {
+          console.error("[MOVEMENT_FORM] Critical load error:", err)
+        } finally {
+          setInitLoading(false)
         }
-        if (poRes.data) setPurchaseOrders(poRes.data)
-        setInitLoading(false)
       }
       load()
     } else {

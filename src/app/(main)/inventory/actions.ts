@@ -53,24 +53,35 @@ export async function getWarehouses() {
 }
 
 export async function getMovementTypes() {
-  const supabase = await createAdminClient()
-  const { extendedUser } = await getUserSession()
-  if (!extendedUser?.company_id) return { error: 'Acceso denegado.' }
+  try {
+    const supabase = await createAdminClient()
+    const session = await getUserSession().catch(() => null)
+    
+    // Si no hay sesión, intentamos al menos obtener los del sistema o fallback
+    const companyId = session?.extendedUser?.company_id
+    if (!companyId) {
+       console.warn("[INVENTORY] No company_id found in session, returning empty or system types")
+       return { data: [] }
+    }
 
-  const { data, error } = await supabase
-    .from('movement_types')
-    .select('*')
-    .eq('company_id', extendedUser.company_id)
+    const { data, error } = await supabase
+      .from('movement_types')
+      .select('*')
+      .eq('company_id', companyId)
 
-  if (error) return { error: error.message }
-  
-  // Si faltan tipos o está vacío, sembramos los básicos
-  if (!data || data.length < 4) {
-    const seeded = await seedMovementTypes(extendedUser.company_id)
-    return { data: seeded }
+    if (error) return { error: error.message }
+    
+    // Si faltan tipos o está vacío, sembramos los básicos
+    if (!data || data.length < 4) {
+      const seeded = await seedMovementTypes(companyId)
+      return { data: seeded }
+    }
+
+    return { data }
+  } catch (err: any) {
+    console.error("[GET_MOVEMENT_TYPES_CRITICAL]", err)
+    return { data: [] }
   }
-
-  return { data }
 }
 
 async function seedMovementTypes(companyId: string) {
