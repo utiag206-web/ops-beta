@@ -13,7 +13,7 @@ import {
 } from 'lucide-react'
 import { StockForm } from './stock-form'
 import * as XLSX from 'xlsx'
-import { getMovementTraceability } from '@/app/(dashboard)/inventory/actions'
+import { getMovementTraceability } from '@/app/(main)/inventory/actions'
 import { toast } from 'sonner'
 
 interface Movement {
@@ -176,7 +176,7 @@ export function InventoryStockList({
               <button 
                 onClick={async () => {
                   if (confirm('¿Deseas recalcular el stock base en todos los movimientos? Esta operación es segura y corregirá cualquier desfase.')) {
-                    toast.promise(import('@/app/(dashboard)/inventory/actions').then(a => a.syncInventoryStock()), {
+                    toast.promise(import('@/app/(main)/inventory/actions').then(a => a.syncInventoryStock()), {
                       loading: 'Sincronizando stock...',
                       success: 'Stock sincronizado correctamente',
                       error: 'Error al sincronizar'

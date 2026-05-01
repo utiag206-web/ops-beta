@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { User, Mail, Lock, Save, KeyRound, CheckCircle2, AlertCircle, Building } from 'lucide-react'
-import { updateProfile, updatePassword } from '@/app/(dashboard)/profile/actions'
+import { updateProfile, updatePassword } from '@/app/(main)/profile/actions'
 import { toast } from 'sonner'
 
 interface AccountFormProps {

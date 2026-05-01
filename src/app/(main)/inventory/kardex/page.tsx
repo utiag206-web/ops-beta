@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation'
 import { getUserSession } from '@/lib/auth'
-import { getProducts, getWarehouses } from '@/app/(dashboard)/inventory/actions'
+import { getProducts, getWarehouses } from '@/app/(main)/inventory/actions'
 import { KardexClient } from './kardex-client'
 
 export const dynamic = 'force-dynamic'

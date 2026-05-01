@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { Clock, LogIn, LogOut, CheckCircle2, Loader2, Calendar } from 'lucide-react'
-import { checkIn, checkOut } from '@/app/(dashboard)/attendance/actions'
+import { checkIn, checkOut } from '@/app/(main)/attendance/actions'
 
 interface AttendanceMarkerProps {
   initialStatus?: any
