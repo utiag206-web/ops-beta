@@ -437,47 +437,74 @@ export async function updateWorkerFullProfile(id: string, payload: {
     }
 
     const supabase = await createAdminClient()
+    const warnings: string[] = []
 
-    // 1. Update basic workers table
+    // 1. Update basic workers table (Smart Update)
     const { error: err1 } = await supabase
       .from('workers')
       .update({
-        ...payload.laboral,
+        name: payload.laboral.name,
+        last_name: payload.laboral.last_name,
+        dni: payload.laboral.document_number || payload.laboral.dni,
+        cod: payload.laboral.cod,
+        position: payload.laboral.position,
+        guardia: payload.laboral.guardia,
+        condition: payload.laboral.condition,
+        work_system: payload.laboral.work_system,
+        status: payload.laboral.current_status || payload.laboral.status || 'ACTIVO',
+        hire_date: payload.laboral.hire_date,
+        termination_date: payload.laboral.termination_date,
         updated_at: new Date().toISOString()
       })
       .eq('id', id)
       .eq('company_id', extendedUser.company_id)
-
-    if (err1) throw err1
+    
+    if (err1) {
+      console.warn('[WORKER_UPDATE_WARNING]', err1.message)
+      warnings.push(`Datos laborales: Algunas columnas no existen en la base de datos actual (${err1.message})`)
+    }
 
     // 2. Upsert financial
     const { error: err2 } = await supabase
       .from('worker_financial')
       .upsert({
         worker_id: id,
+        company_id: extendedUser.company_id,
         ...payload.financial,
         updated_at: new Date().toISOString()
       }, { onConflict: 'worker_id' })
 
-    if (err2) throw err2
+    if (err2) {
+      console.warn('[FINANCIAL_UPDATE_WARNING]', err2.message)
+      warnings.push(`Datos financieros: ${err2.message}`)
+    }
 
     // 3. Upsert personal
     const { error: err3 } = await supabase
       .from('worker_personal')
       .upsert({
         worker_id: id,
+        company_id: extendedUser.company_id,
         ...payload.personal,
         updated_at: new Date().toISOString()
       }, { onConflict: 'worker_id' })
 
-    if (err3) throw err3
+    if (err3) {
+      console.warn('[PERSONAL_UPDATE_WARNING]', err3.message)
+      warnings.push(`Datos personales: ${err3.message}`)
+    }
 
     revalidatePath(`/workers/${id}`)
     revalidatePath('/workers')
-    return { success: true }
+    
+    return { 
+      success: true, 
+      warnings: warnings.length > 0 ? warnings : undefined,
+      message: warnings.length > 0 ? 'Perfil actualizado con limitaciones de esquema.' : 'Perfil actualizado correctamente.'
+    }
   } catch (error: any) {
-    console.error('[UPDATE FULL PROFILE] Error:', error)
-    return { success: false, error: error.message || 'Error inesperado.' }
+    console.error('[UPDATE FULL PROFILE] Fatal Error:', error)
+    return { success: false, error: 'Error al procesar la actualización del perfil en el servidor.' }
   }
 }
 

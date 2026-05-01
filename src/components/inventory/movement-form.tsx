@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { X, Loader2, CheckCircle2, Settings2, Plus, ArrowRight, ArrowUpRight, ArrowDownLeft, AlertCircle, History } from 'lucide-react'
+import { X, Loader2, CheckCircle2, Settings2, Plus, ArrowRight, ArrowUpRight, ArrowDownLeft, AlertCircle, AlertTriangle, History } from 'lucide-react'
 import { 
   createMovement, 
   getWarehouses, 
@@ -209,11 +209,6 @@ export function MovementForm({ isOpen, onClose, onSuccess, products }: MovementF
   const handleQtyChange = (itemId: string, val: number, pending: number) => {
     if (val > pending) {
       toast.error('No puedes ingresar más de lo pendiente')
-      return
-    }
-    setReceivedQtys(prev => ({ ...prev, [itemId]: val }))
-  }
-
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
       <div className="bg-white w-full max-w-3xl rounded-[3rem] shadow-2xl overflow-hidden border border-slate-100 animate-in zoom-in-95 duration-200 flex flex-col max-h-[90vh]">

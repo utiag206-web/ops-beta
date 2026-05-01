@@ -74,34 +74,30 @@ export async function uploadCompanyLogo(formData: FormData) {
     const file = formData.get('file') as File
     if (!file) return { success: false, error: 'No se envió ningún archivo' }
 
-    const supabase = await createClient()
+    const { uploadFile, generateStoragePath } = await import('@/lib/storage')
     const fileExt = file.name.split('.').pop()
-    const fileName = `${extendedUser.company_id}/logo.${fileExt}`
-    const filePath = `company-logos/${fileName}`
+    const fileName = `logo-${Date.now()}.${fileExt}`
+    const storagePath = `${extendedUser.company_id}/${fileName}`
 
-    const { error: uploadError } = await supabase.storage
-      .from('documents')
-      .upload(filePath, file, { upsert: true })
-
-    if (uploadError) throw uploadError
-
-    const { data: { publicUrl } } = supabase.storage
-      .from('documents')
-      .getPublicUrl(filePath)
+    const { publicUrl } = await uploadFile(file, 'company-logos', storagePath)
 
     // Actualizar la URL en la tabla de compañías
-    const { error: updateError } = await supabase
+    const { data: updatedCompany, error: updateError } = await supabase
       .from('companies')
       .update({ logo_url: publicUrl })
       .eq('id', extendedUser.company_id)
+      .select()
+      .maybeSingle()
 
     if (updateError) throw updateError
+    if (!updatedCompany) throw new Error('No se pudo encontrar la compañía para actualizar el logo')
 
     revalidatePath('/company')
-    return { success: true, url: publicUrl }
+    revalidatePath('/', 'layout')
+    return { success: true, url: publicUrl, company: updatedCompany }
   } catch (err: any) {
     console.error('[LOGO_UPLOAD_ERROR]', err)
-    return { success: false, error: err.message }
+    return { success: false, error: `Fallo en carga de logo: ${err.message}` }
   }
 }
 

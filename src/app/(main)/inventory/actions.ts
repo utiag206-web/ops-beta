@@ -63,7 +63,35 @@ export async function getMovementTypes() {
     .eq('company_id', extendedUser.company_id)
 
   if (error) return { error: error.message }
+  
+  if (!data || data.length === 0) {
+    const seeded = await seedMovementTypes(extendedUser.company_id)
+    return { data: seeded }
+  }
+
   return { data }
+}
+
+async function seedMovementTypes(companyId: string) {
+  const supabase = await createAdminClient()
+  const defaults = [
+    { company_id: companyId, name: 'Ingreso Almacén', effect: 'INGRESS', is_system: true },
+    { company_id: companyId, name: 'Salida Consumo', effect: 'EGRESS', is_system: true },
+    { company_id: companyId, name: 'Transferencia', effect: 'BOTH', is_system: true },
+    { company_id: companyId, name: 'Ajuste Stock', effect: 'SET', is_system: true }
+  ]
+
+  const { data, error } = await supabase
+    .from('movement_types')
+    .insert(defaults)
+    .select()
+
+  if (error) {
+    console.error('Error seeding movement types:', error)
+    return []
+  }
+
+  return data || []
 }
 
 export async function getProductsMinimal() {
