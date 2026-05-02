@@ -52,7 +52,8 @@ export function PPEList({ deliveries: initialDeliveries, isWorker = false }: PPE
   }
 
   return (
-    <div className="bg-white rounded-2xl md:rounded-[2.5rem] shadow-sm border border-slate-100 overflow-hidden">
+    <>
+      <div className="bg-white rounded-2xl md:rounded-[2.5rem] shadow-sm border border-slate-100 overflow-hidden">
       {/* Desktop Table View */}
       <div className="hidden md:block overflow-x-auto">
         <table className="w-full text-left">
@@ -201,6 +202,6 @@ export function PPEList({ deliveries: initialDeliveries, isWorker = false }: PPE
           )}
         </div>
       )}
-    </div>
+    </>
   )
 }
