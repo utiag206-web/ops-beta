@@ -821,6 +821,7 @@ export async function updateWarehouse(id: string, payload: { name: string, code?
   const normalizedName = capitalizeName(payload.name)
   if (!normalizedName) return { error: 'El nombre del almacén es inválido.' }
 
+  const { data: existing } = await supabase
     .from('warehouses')
     .select('id')
     .eq('company_id', companyId)
@@ -832,9 +833,15 @@ export async function updateWarehouse(id: string, payload: { name: string, code?
     return { error: 'Ya existe otro almacén con este nombre.' }
   }
 
-    code: payload.code?.trim().toUpperCase() || null,
-    updated_at: new Date().toISOString()
-  }).eq('id', id).eq('company_id', companyId)
+  const { error } = await supabase
+    .from('warehouses')
+    .update({ 
+      name: normalizedName,
+      code: payload.code?.trim().toUpperCase() || null,
+      updated_at: new Date().toISOString()
+    })
+    .eq('id', id)
+    .eq('company_id', companyId)
 
   if (error) return { error: error.message }
   revalidatePath('/configuracion/warehouses')
