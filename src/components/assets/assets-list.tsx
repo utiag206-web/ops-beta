@@ -7,7 +7,7 @@ import {
   MapPin, Hash, Trash2, Pencil, ExternalLink
 } from 'lucide-react'
 import { AssetForm } from './asset-form'
-import { deleteAsset } from '@/app/(dashboard)/assets/actions'
+import { deleteAsset } from '@/app/(main)/assets/actions'
 import { useUserRole } from '@/components/providers/rbac-provider'
 import { useRouter } from 'next/navigation'
 import { useEffect } from 'react'

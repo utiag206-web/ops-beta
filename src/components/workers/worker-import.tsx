@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { Upload, FileSpreadsheet, Check, AlertCircle, ArrowLeft, Loader2, Save } from 'lucide-react'
 import Link from 'next/link'
 import * as XLSX from 'xlsx'
-import { importWorkers } from '@/app/(dashboard)/workers/actions'
+import { importWorkers } from '@/app/(main)/workers/actions'
 
 interface WorkerImportData {
   name: string

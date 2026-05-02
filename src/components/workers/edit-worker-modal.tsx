@@ -2,7 +2,7 @@
 
 import { useState, useActionState, useEffect } from 'react'
 import { X, UserCog, AlertCircle, Loader2 } from 'lucide-react'
-import { updateWorker } from '@/app/(dashboard)/workers/actions'
+import { updateWorker } from '@/app/(main)/workers/actions'
 
 interface EditWorkerModalProps {
   isOpen: boolean

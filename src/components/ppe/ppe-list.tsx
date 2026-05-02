@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Shield, Calendar, CheckCircle2, PenTool, Loader2, Clock } from 'lucide-react'
 import { SignaturePad } from './signature-pad'
-import { signPPEDelivery } from '@/app/(dashboard)/ppe/actions'
+import { signPPEDelivery } from '@/app/(main)/ppe/actions'
 
 interface PPEListProps {
   deliveries: any[]

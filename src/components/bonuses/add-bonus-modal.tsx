@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { Coins, Calendar, User, X, Loader2, Save, DollarSign, Bus } from 'lucide-react'
-import { createBonus } from '@/app/(dashboard)/bonuses/actions'
+import { createBonus } from '@/app/(main)/bonuses/actions'
 
 interface AddBonusModalProps {
   workers: any[]

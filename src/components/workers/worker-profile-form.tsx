@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { updateWorkerFullProfile } from '@/app/(dashboard)/workers/actions'
+import { updateWorkerFullProfile } from '@/app/(main)/workers/actions'
 import { Save, Loader2, Briefcase, Landmark, User, ShieldAlert } from 'lucide-react'
 import { WorkerChildren } from '@/components/workers/worker-children'
 

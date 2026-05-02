@@ -2,7 +2,7 @@
 
 import { useState, useActionState, useEffect } from 'react'
 import { X, UserPlus, AlertCircle, Loader2 } from 'lucide-react'
-import { createUser } from '@/app/(dashboard)/users/actions'
+import { createUser } from '@/app/(main)/users/actions'
 import { useRouter } from 'next/navigation'
 
 interface AddUserModalProps {

@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { AddWorkerModal } from '@/components/workers/add-worker-modal'
 import { EditWorkerModal } from '@/components/workers/edit-worker-modal'
-import { deleteWorker } from '@/app/(dashboard)/workers/actions'
+import { deleteWorker } from '@/app/(main)/workers/actions'
 import { Search, UserMinus, MoreVertical, Edit2, Trash2, Loader2, User, Folder, Upload, Plus, Filter } from 'lucide-react'
 import Link from 'next/link'
 
