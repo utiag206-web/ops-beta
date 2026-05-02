@@ -858,7 +858,7 @@ export async function deleteWarehouse(id: string) {
   }
 
   // Restricciones: Si tiene stock o movimientos, no se puede borrar (la base de datos debe arrojar error por FK RESTRICT)
-  // Intentaremos borrar
+  const { error } = await supabase
     .from('warehouses')
     .delete()
     .eq('id', id)
@@ -883,6 +883,7 @@ export async function getSuppliers() {
   const companyId = await getStrictCompanyId()
   const supabase = await createAdminClient()
 
+  const { data, error } = await supabase
     .from('suppliers')
     .select('*')
     .eq('company_id', companyId)
@@ -896,6 +897,7 @@ export async function getNextPONumber() {
   const companyId = await getStrictCompanyId()
   const supabase = await createAdminClient()
 
+  const { data: lastPO } = await supabase
     .from('purchase_orders')
     .select('po_number')
     .eq('company_id', companyId)
