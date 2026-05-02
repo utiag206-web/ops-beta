@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { AddWorkerModal } from '@/components/workers/add-worker-modal'
 import { EditWorkerModal } from '@/components/workers/edit-worker-modal'
-import { deleteWorker } from '@/app/(main)/workers/actions'
+import { deleteWorker } from '@/app/(dashboard)/workers/actions'
 import { Search, UserMinus, MoreVertical, Edit2, Trash2, Loader2, User, Folder, Upload, Plus, Filter } from 'lucide-react'
 import Link from 'next/link'
 
@@ -255,7 +255,8 @@ export function WorkersList({ workers, canManage = false }: { workers: Worker[],
               <p className="text-slate-500 font-black text-lg">No se encontraron colaboradores</p>
               <p className="text-slate-400 text-sm font-medium mt-1">Intenta con otros términos de búsqueda.</p>
             </div>
-        )}
+          )}
+        </div>
       </div>
 
       {isAddModalOpen && (

@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { AddUserModal } from './add-user-modal'
-import { updateUserStatus, updateUserRole, updateUserArea } from '@/app/(main)/users/actions'
+import { updateUserStatus, updateUserRole, updateUserArea } from '@/app/(dashboard)/users/actions'
 import { Search, Shield, UserX, UserCheck, MoreVertical, ShieldAlert, BadgeCheck, UserPlus, Building } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 

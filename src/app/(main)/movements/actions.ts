@@ -1,12 +1,12 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
-import { getUserSession } from '@/lib/auth'
+import { getUserSession, getStrictCompanyId } from '@/lib/auth'
 import { revalidatePath } from 'next/cache'
 
 export async function getMovements() {
+  const companyId = await getStrictCompanyId()
   const { extendedUser } = await getUserSession()
-  if (!extendedUser) return []
 
   const supabase = await createClient()
 
@@ -16,7 +16,7 @@ export async function getMovements() {
   let query = supabase
     .from('worker_movements')
     .select(`*, worker:workers(name)`)
-    .eq('company_id', extendedUser.company_id)
+    .eq('company_id', companyId)
     .order('created_at', { ascending: false })
 
   if (extendedUser.role_id === 'trabajador') {
@@ -43,8 +43,9 @@ export async function registerMovement(payload: {
   date: string
 }) {
   try {
+    const companyId = await getStrictCompanyId()
     const { extendedUser } = await getUserSession()
-    if (!extendedUser || extendedUser.role_id === 'trabajador') {
+    if (extendedUser.role_id === 'trabajador') {
       return { success: false, error: 'No autorizado' }
     }
 
@@ -52,7 +53,7 @@ export async function registerMovement(payload: {
 
     const movementData: any = {
       worker_id: payload.worker_id,
-      company_id: extendedUser.company_id,
+      company_id: companyId,
       status: payload.type === 'subida' ? 'En mina' : 'En descanso'
     }
 

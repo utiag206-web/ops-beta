@@ -18,7 +18,7 @@ import {
   Paperclip,
   CheckCircle2
 } from 'lucide-react'
-import { registerPettyCashTransaction } from '@/app/(main)/caja-chica/actions'
+import { registerPettyCashTransaction } from '@/app/(dashboard)/caja-chica/actions'
 import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase/client'
 
@@ -68,26 +68,17 @@ export function AddTransactionModal({ isOpen, onClose, onSuccess, area }: AddTra
 
     setUploading(true)
     try {
-      const { uploadFilesAction } = await import('@/app/actions/storage')
-      
-      const reader = new FileReader()
-      const base64 = await new Promise<string>((resolve) => {
-        reader.onload = () => resolve(reader.result as string)
-        reader.readAsDataURL(file)
-      })
+      const { uploadFile } = await import('@/lib/storage')
+      const fileName = `${Date.now()}-${file.name.replace(/\s+/g, '_')}`
+      const storagePath = `caja-chica/${area.toLowerCase().replace(/\s+/g, '_')}/${fileName}`
 
-      const uploadRes = await uploadFilesAction(
-        [{ name: file.name, type: file.type, base64 }],
-        'worker_documents',
-        'caja-chica',
-        area.toLowerCase().replace(/\s+/g, '_')
-      )
+      const { publicUrl } = await uploadFile(file, 'worker_documents', storagePath)
 
-      if (uploadRes.success && uploadRes.urls) {
-        setFormData({ ...formData, voucher_url: uploadRes.urls[0] })
+      if (publicUrl) {
+        setFormData({ ...formData, voucher_url: publicUrl })
         toast.success('Comprobante subido correctamente')
       } else {
-        throw new Error(uploadRes.error || 'Error desconocido')
+        throw new Error('No se obtuvo la URL pública')
       }
     } catch (error: any) {
       toast.error('Error al subir comprobante: ' + error.message)

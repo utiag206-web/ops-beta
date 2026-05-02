@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { X, Loader2, CheckCircle2, Shield, Settings, Activity } from 'lucide-react'
-import { createAsset, updateAsset } from '@/app/(main)/assets/actions'
+import { createAsset, updateAsset } from '@/app/(dashboard)/assets/actions'
 import { toast } from 'sonner'
 import { useEffect } from 'react'
 

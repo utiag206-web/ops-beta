@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Shield, Calendar, CheckCircle2, PenTool, Loader2, Clock } from 'lucide-react'
 import { SignaturePad } from './signature-pad'
-import { signPPEDelivery } from '@/app/(main)/ppe/actions'
+import { signPPEDelivery } from '@/app/(dashboard)/ppe/actions'
 
 interface PPEListProps {
   deliveries: any[]
@@ -184,6 +184,7 @@ export function PPEList({ deliveries: initialDeliveries, isWorker = false }: PPE
           </div>
         ))}
       </div>
+    </div>
 
       {signingId && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-300">

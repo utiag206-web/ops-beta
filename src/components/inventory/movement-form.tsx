@@ -61,35 +61,25 @@ export function MovementForm({ isOpen, onClose, onSuccess, products }: MovementF
     if (isOpen) {
       const load = async () => {
         setInitLoading(true)
-        try {
-          console.log("[MOVEMENT_FORM] Loading masters...")
-          const [wRes, mTRes, poRes] = await Promise.all([
-            getWarehouses(), 
-            getMovementTypes(),
-            getPurchaseOrders()
-          ])
-          
-          if (mTRes.error) {
-            console.error("[MOVEMENT_FORM] MovementTypes error:", mTRes.error)
-            toast.error(`Error de configuración: ${mTRes.error}`)
-          }
-          
-          if (mTRes.data) {
-            console.log("[MOVEMENT_FORM] MovementTypes loaded:", mTRes.data.length)
-            setMovementTypes(mTRes.data)
-            if (mTRes.data.length === 0) {
-              toast.error("Atención: No se encontraron tipos de movimiento configurados.")
-            }
-            const ingreso = mTRes.data.find(t => t.effect === 'IN')
-            if (ingreso) setForm(prev => ({ ...prev, movement_type_id: ingreso.id }))
-          }
-          if (wRes.data) setWarehouses(wRes.data)
-          if (poRes.data) setPurchaseOrders(poRes.data)
-        } catch (err) {
-          console.error("[MOVEMENT_FORM] Critical load error:", err)
-        } finally {
-          setInitLoading(false)
+        console.log("[MOVEMENT_FORM_DEBUG] Loading initial data...")
+        const [wRes, mTRes, poRes] = await Promise.all([
+          getWarehouses(), 
+          getMovementTypes(),
+          getPurchaseOrders()
+        ])
+        console.log("[MOVEMENT_FORM_DEBUG] Warehouses:", wRes.data?.length || 0, "Types:", mTRes.data?.length || 0)
+        if (mTRes.error) {
+          console.error("[MOVEMENT_FORM_DEBUG] Error loading types:", mTRes.error)
+          toast.error(`Error al cargar tipos de movimiento: ${mTRes.error}`)
+        } else if (!mTRes.data || mTRes.data.length === 0) {
+          console.warn("[MOVEMENT_FORM_DEBUG] No movement types found after load/seed")
+          toast.error("No se encontraron tipos de movimiento configurados en el sistema.")
         }
+        
+        if (wRes.data) setWarehouses(wRes.data)
+        if (mTRes.data) setMovementTypes(mTRes.data)
+        if (poRes.data) setPurchaseOrders(poRes.data)
+        setInitLoading(false)
       }
       load()
     } else {
@@ -157,7 +147,6 @@ export function MovementForm({ isOpen, onClose, onSuccess, products }: MovementF
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    console.log("[MOVEMENT_FORM] Submitting form...", form);
     
     // Validaciones base
     if (!form.warehouse_id || !form.movement_type_id) {
@@ -261,6 +250,16 @@ export function MovementForm({ isOpen, onClose, onSuccess, products }: MovementF
         ) : (
           <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto custom-scrollbar p-8 space-y-8">
             
+            {movementTypes.length === 0 && !initLoading && (
+              <div className="bg-rose-50 border border-rose-100 p-6 rounded-3xl flex items-center gap-4 text-rose-800 animate-pulse">
+                <AlertCircle className="shrink-0" />
+                <div>
+                  <p className="font-black text-sm uppercase tracking-tight">Error de Configuración ERP</p>
+                  <p className="text-xs font-medium opacity-80">No se han detectado tipos de movimiento para su empresa. Contacte a soporte o intente recargar.</p>
+                </div>
+              </div>
+            )}
+            
             {/* Selector de Modo ERP */}
             <div className="flex gap-2 p-1.5 bg-slate-100 rounded-3xl shrink-0">
               {[
@@ -269,27 +268,23 @@ export function MovementForm({ isOpen, onClose, onSuccess, products }: MovementF
                 { id: 'BOTH', label: 'Transferencia', color: 'bg-indigo-600', icon: <ArrowRight size={16} /> },
                 { id: 'SET', label: 'Ajuste Stock', color: 'bg-amber-600', icon: <Settings2 size={16} /> }
               ].map(mode => {
-                const isActive = activeMovementType?.effect === mode.id || 
-                                (mode.id === 'SET' && activeMovementType?.name?.toLowerCase().includes('ajuste'));
+                const isActive = (mode.id === 'SET' && (activeMovementType?.effect === 'SET' || activeMovementType?.name?.toLowerCase().includes('ajuste'))) || 
+                                 (activeMovementType?.effect === mode.id);
                 
                 return (
                   <button
                     key={mode.id}
                     type="button"
                     onClick={() => {
-                      console.log(`[MOVEMENT_FORM] Clicking mode: ${mode.label} (ID: ${mode.id})`);
                       const mt = movementTypes.find(t => 
                         mode.id === 'SET' 
-                          ? (t.effect === 'SET' || t.name?.toLowerCase().includes('ajuste')) 
-                          : t.effect === mode.id
+                          ? (t.effect?.toUpperCase() === 'SET' || t.name?.toLowerCase().includes('ajuste')) 
+                          : t.effect?.toUpperCase() === mode.id
                       );
-                      
                       if (mt) {
-                        console.log(`[MOVEMENT_FORM] Type found: ${mt.name} (ID: ${mt.id})`);
                         setForm({...form, movement_type_id: mt.id, outbound_type: mode.id === 'BOTH' ? 'INTERNAL' : 'EXTERNAL'});
                       } else {
-                        console.warn(`[MOVEMENT_FORM] Type NOT found for mode: ${mode.id}. Available:`, movementTypes.map(t => t.effect));
-                        toast.error(`La configuración de "${mode.label}" no está disponible.`)
+                        toast.error(`El tipo de movimiento ${mode.label} no existe.`)
                       }
                     }}
                     className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-2xl text-[11px] font-black uppercase tracking-tight transition-all duration-300 ${

@@ -3,7 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@supabase/supabase-js'
 import { createClient as createServerClient } from '@/lib/supabase/server'
-import { getUserSession } from '@/lib/auth'
+import { getUserSession, getStrictCompanyId } from '@/lib/auth'
 
 // Administrative client for user creation (bypasses regular Auth restrictions)
 const supabaseAdmin = createClient(
@@ -12,14 +12,13 @@ const supabaseAdmin = createClient(
 )
 
 export async function getUsers() {
-  const { extendedUser } = await getUserSession()
-  if (!extendedUser?.company_id) return []
+  const companyId = await getStrictCompanyId()
 
   const supabase = await createServerClient()
   const { data: users, error } = await supabase
     .from('users')
     .select('*, workers(name, position)')
-    .eq('company_id', extendedUser.company_id)
+    .eq('company_id', companyId)
     .order('created_at', { ascending: false })
 
   if (error) {
@@ -31,8 +30,7 @@ export async function getUsers() {
 }
 
 export async function getAvailableWorkers() {
-  const { extendedUser } = await getUserSession()
-  if (!extendedUser?.company_id) return []
+  const companyId = await getStrictCompanyId()
 
   const supabase = await createServerClient()
   
@@ -42,7 +40,7 @@ export async function getAvailableWorkers() {
   const { data: workers, error } = await supabase
     .from('workers')
     .select('id, name, dni, position')
-    .eq('company_id', extendedUser.company_id)
+    .eq('company_id', companyId)
     .order('name', { ascending: true })
 
   if (error) {
@@ -55,9 +53,10 @@ export async function getAvailableWorkers() {
 
 export async function createUser(prevState: any, formData: FormData) {
   try {
+    const companyId = await getStrictCompanyId()
     const { extendedUser } = await getUserSession()
     
-    if (!extendedUser?.company_id || extendedUser.role_id !== 'admin') {
+    if (extendedUser.role_id !== 'admin') {
       return { success: false, error: 'No tienes permisos para crear usuarios.' }
     }
 
@@ -120,7 +119,7 @@ export async function createUser(prevState: any, formData: FormData) {
       .from('users')
       .upsert({
         id: authUserId,
-        company_id: extendedUser.company_id,
+        company_id: companyId,
         name,
         email,
         role_id: roleId,
@@ -141,7 +140,7 @@ export async function createUser(prevState: any, formData: FormData) {
       .from('user_roles')
       .upsert({
         user_id: authUserId,
-        company_id: extendedUser.company_id,
+        company_id: companyId,
         role_id: roleId
       }, { onConflict: 'user_id, company_id' })
 
@@ -157,8 +156,9 @@ export async function createUser(prevState: any, formData: FormData) {
 
 export async function updateUserStatus(userId: string, status: 'active' | 'inactive') {
   try {
+    const companyId = await getStrictCompanyId()
     const { extendedUser } = await getUserSession()
-    if (!extendedUser?.company_id || extendedUser.role_id !== 'admin') {
+    if (extendedUser.role_id !== 'admin') {
       return { success: false, error: 'Permiso denegado.' }
     }
 
@@ -166,7 +166,7 @@ export async function updateUserStatus(userId: string, status: 'active' | 'inact
       .from('users')
       .update({ status })
       .eq('id', userId)
-      .eq('company_id', extendedUser.company_id)
+      .eq('company_id', companyId)
 
     if (error) {
       console.error('Update Status Error:', error)
@@ -182,8 +182,9 @@ export async function updateUserStatus(userId: string, status: 'active' | 'inact
 
 export async function updateUserRole(userId: string, role_id: string) {
   try {
+    const companyId = await getStrictCompanyId()
     const { extendedUser } = await getUserSession()
-    if (!extendedUser?.company_id || extendedUser.role_id !== 'admin') {
+    if (extendedUser.role_id !== 'admin') {
       return { success: false, error: 'Permiso denegado.' }
     }
 
@@ -192,7 +193,7 @@ export async function updateUserRole(userId: string, role_id: string) {
       .from('users')
       .update({ role_id })
       .eq('id', userId)
-      .eq('company_id', extendedUser.company_id)
+      .eq('company_id', companyId)
 
     if (userError) {
       console.error('User Role Update Error:', userError)
@@ -204,7 +205,7 @@ export async function updateUserRole(userId: string, role_id: string) {
       .from('user_roles')
       .upsert({
         user_id: userId,
-        company_id: extendedUser.company_id,
+        company_id: companyId,
         role_id: role_id
       }, { onConflict: 'user_id, company_id' })
 
@@ -220,8 +221,9 @@ export async function updateUserRole(userId: string, role_id: string) {
 
 export async function updateUserArea(userId: string, area: string) {
   try {
+    const companyId = await getStrictCompanyId()
     const { extendedUser } = await getUserSession()
-    if (!extendedUser?.company_id || extendedUser.role_id !== 'admin') {
+    if (extendedUser.role_id !== 'admin') {
       return { success: false, error: 'Permiso denegado.' }
     }
 
@@ -229,7 +231,7 @@ export async function updateUserArea(userId: string, area: string) {
       .from('users')
       .update({ area })
       .eq('id', userId)
-      .eq('company_id', extendedUser.company_id)
+      .eq('company_id', companyId)
 
     if (error) {
       console.error('User Area Update Error:', error)

@@ -3,13 +3,6 @@ import { cookies } from 'next/headers'
 
 export async function createClient() {
   const cookieStore = await cookies()
-  const allCookies = cookieStore.getAll()
-  
-  if (allCookies.length === 0) {
-    console.warn("[SUPABASE_CLIENT] No cookies found in store")
-  } else {
-    // console.log("[SUPABASE_CLIENT] Cookies available:", allCookies.length)
-  }
 
   return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -24,10 +17,8 @@ export async function createClient() {
             cookiesToSet.forEach(({ name, value, options }) =>
               cookieStore.set(name, value, options)
             )
-          } catch (error) {
-            // The `setAll` method was called from a Server Component.
-            // This can be ignored if you have middleware refreshing
-            // user sessions.
+          } catch {
+            // Error handled
           }
         },
       },
@@ -36,10 +27,14 @@ export async function createClient() {
 }
 
 export async function createAdminClient() {
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+  if (!serviceRoleKey) {
+    console.error("[ADMIN_CLIENT_DEBUG] SUPABASE_SERVICE_ROLE_KEY is missing!")
+  }
   const { createClient: createSupabaseClient } = await import('@supabase/supabase-js')
   return createSupabaseClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    serviceRoleKey!,
     {
       auth: { persistSession: false }
     }

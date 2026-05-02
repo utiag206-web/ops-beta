@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { Bus, Calendar, User, X, Loader2, Save, DollarSign } from 'lucide-react'
-import { createTransportPayment } from '@/app/(main)/transport/actions'
+import { createTransportPayment } from '@/app/(dashboard)/transport/actions'
 
 interface AddTransportModalProps {
   workers: any[]

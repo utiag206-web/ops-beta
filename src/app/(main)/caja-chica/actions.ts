@@ -1,12 +1,11 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
-import { getUserSession, requirePermission } from '@/lib/auth'
+import { getUserSession, requirePermission, getStrictCompanyId } from '@/lib/auth'
 import { revalidatePath } from 'next/cache'
 
 export async function getPettyCashStats(area: string) {
-  const { extendedUser } = await getUserSession()
-  if (!extendedUser?.company_id) return null
+  const companyId = await getStrictCompanyId()
   
   const supabase = await createClient()
   const today = new Date()
@@ -16,7 +15,7 @@ export async function getPettyCashStats(area: string) {
   const { data: allTransactions } = await supabase
     .from('petty_cash_transactions')
     .select('amount, type')
-    .eq('company_id', extendedUser.company_id)
+    .eq('company_id', companyId)
     .ilike('area', area)
 
   const balance = (allTransactions || []).reduce((acc, t) => {
@@ -27,7 +26,7 @@ export async function getPettyCashStats(area: string) {
   const { data: monthTransactions } = await supabase
     .from('petty_cash_transactions')
     .select('amount, type')
-    .eq('company_id', extendedUser.company_id)
+    .eq('company_id', companyId)
     .ilike('area', area)
     .gte('date', firstDayOfMonth)
 
@@ -48,14 +47,13 @@ export async function getPettyCashStats(area: string) {
 }
 
 export async function getPettyCashTransactions(area: string) {
-  const { extendedUser } = await getUserSession()
-  if (!extendedUser?.company_id) return { error: 'No autorizado' }
+  const companyId = await getStrictCompanyId()
 
   const supabase = await createClient()
   const { data, error } = await supabase
     .from('petty_cash_transactions')
     .select('*, responsible:users!responsible_id(name)')
-    .eq('company_id', extendedUser.company_id)
+    .eq('company_id', companyId)
     .ilike('area', area) // [SYNC_NORMALIZATION]
     .order('date', { ascending: false })
     .order('created_at', { ascending: false })
@@ -77,7 +75,7 @@ export async function registerPettyCashTransaction(payload: {
   voucher_url?: string
 }) {
   const { extendedUser } = await getUserSession()
-  if (!extendedUser?.company_id) return { error: 'No autorizado' }
+  const companyId = await getStrictCompanyId()
 
   let finalType = payload.type
   let finalCategory = payload.category
@@ -110,7 +108,7 @@ export async function registerPettyCashTransaction(payload: {
       ...payload,
       type: finalType,
       category: finalCategory,
-      company_id: extendedUser.company_id,
+      company_id: companyId,
       responsible_id: extendedUser.id,
       date: payload.date || new Date().toISOString().split('T')[0]
     }])

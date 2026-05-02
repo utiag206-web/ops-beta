@@ -138,5 +138,6 @@ export function AttendanceList({ records, isWorker = false }: AttendanceListProp
         ))}
       </div>
     </div>
+    </div>
   )
 }

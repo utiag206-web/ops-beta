@@ -336,6 +336,5 @@ export function Sidebar() {
         </form>
       </div>
     </aside>
-    </>
   )
 }

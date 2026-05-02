@@ -15,7 +15,7 @@ export async function updateSession(request: NextRequest) {
           return request.cookies.getAll()
         },
         setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value, options }) => request.cookies.set(name, value, options))
+          cookiesToSet.forEach(({ name, value, options }) => request.cookies.set(name, value))
           supabaseResponse = NextResponse.next({
             request,
           })
@@ -34,19 +34,12 @@ export async function updateSession(request: NextRequest) {
   const { data, error: authError } = await supabase.auth.getUser()
   const user = data?.user
 
+  console.log("[MIDDLEWARE_DEBUG] User:", user?.id, "Path:", request.nextUrl.pathname)
+
   const isAuthRoute = request.nextUrl.pathname.startsWith('/login') || request.nextUrl.pathname.startsWith('/register') || request.nextUrl.pathname.startsWith('/auth')
-  const isProtectedRoute = 
-    request.nextUrl.pathname.startsWith('/dashboard') || 
-    request.nextUrl.pathname.startsWith('/workers') || 
-    request.nextUrl.pathname.startsWith('/profile') ||
-    request.nextUrl.pathname.startsWith('/inventory') ||
-    request.nextUrl.pathname.startsWith('/caja-chica') ||
-    request.nextUrl.pathname.startsWith('/transport') ||
-    request.nextUrl.pathname.startsWith('/bonuses') ||
-    request.nextUrl.pathname.startsWith('/attendance') ||
-    request.nextUrl.pathname.startsWith('/ppe') ||
-    request.nextUrl.pathname.startsWith('/assets') ||
-    request.nextUrl.pathname.startsWith('/incidencias')
+  const isProtectedRoute = request.nextUrl.pathname.startsWith('/dashboard') || 
+                           request.nextUrl.pathname.startsWith('/workers') || 
+                           request.nextUrl.pathname.startsWith('/profile')
 
   if (!user && isProtectedRoute) {
     // no user, potentially respond by redirecting the user to the login page

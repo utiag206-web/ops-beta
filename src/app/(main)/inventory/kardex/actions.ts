@@ -1,7 +1,7 @@
 'use server'
 
 import { createAdminClient } from '@/lib/supabase/server'
-import { getUserSession } from '@/lib/auth'
+import { getUserSession, getStrictCompanyId } from '@/lib/auth'
 
 export async function getKardexRecords(filters: {
   product_id: string
@@ -19,9 +19,8 @@ export async function getKardexRecords(filters: {
   } = filters
 
   try {
+    const companyId = await getStrictCompanyId()
     const supabase = await createAdminClient()
-    const { extendedUser } = await getUserSession()
-    if (!extendedUser?.company_id) return { error: 'Acceso denegado.' }
 
     // Helper to calculate delta based on movement type/effect
     const getDelta = (m: any) => {
@@ -48,11 +47,10 @@ export async function getKardexRecords(filters: {
     const warehouseBalances = new Map<string, number>()
 
     // 1. CALCULAR SALDOS INICIALES (PREVIO AL date_from)
-    let initialBalanceQuery = supabase
       .from('inventory_movements')
       .select('quantity, archive_id, warehouse_id, type, movement_types(effect)')
       .eq('product_id', product_id)
-      .eq('company_id', extendedUser.company_id)
+      .eq('company_id', companyId)
 
     if (warehouse_id) initialBalanceQuery = initialBalanceQuery.eq('warehouse_id', warehouse_id)
     
@@ -75,11 +73,10 @@ export async function getKardexRecords(filters: {
     })
 
     // 2. CONTAR TOTAL PARA PAGINACIÓN
-    let countQuery = supabase
       .from('inventory_movements')
       .select('id', { count: 'exact', head: true })
       .eq('product_id', product_id)
-      .eq('company_id', extendedUser.company_id)
+      .eq('company_id', companyId)
 
     if (warehouse_id) countQuery = countQuery.eq('warehouse_id', warehouse_id)
     if (date_from) countQuery = countQuery.gte('created_at', date_from)
@@ -94,11 +91,10 @@ export async function getKardexRecords(filters: {
     // 3. CALCULAR SALDOS OFFSET (De date_from hasta el inicio de la página actual)
     const offset = (page - 1) * limit
     if (offset > 0) {
-      let offsetQuery = supabase
         .from('inventory_movements')
         .select('quantity, warehouse_id, type, movement_types(effect)')
         .eq('product_id', product_id)
-        .eq('company_id', extendedUser.company_id)
+        .eq('company_id', companyId)
         .order('created_at', { ascending: true })
         .range(0, offset - 1)
 
@@ -117,11 +113,10 @@ export async function getKardexRecords(filters: {
     const initialBalancesSnapshot = new Map(warehouseBalances)
 
     // 4. OBTENER REGISTROS DE LA PÁGINA
-    let query = supabase
       .from('inventory_movements')
       .select('*, movement_types(name, effect, code), warehouses(name), users:user_id(name)')
       .eq('product_id', product_id)
-      .eq('company_id', extendedUser.company_id)
+      .eq('company_id', companyId)
       .order('created_at', { ascending: true })
       .range(offset, offset + limit - 1)
 

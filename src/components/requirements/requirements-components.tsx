@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from 'react'
 import { Plus, X, Loader2, CheckCircle2, Package, MapPin, Activity, ShieldAlert, AlertTriangle } from 'lucide-react'
-import { createRequirement, approveRequirementWithMovement } from '@/app/(main)/requerimientos/actions'
-import { getProducts } from '@/app/(main)/inventory/actions'
+import { createRequirement, approveRequirementWithMovement } from '@/app/(dashboard)/requerimientos/actions'
+import { getProducts } from '@/app/(dashboard)/inventory/actions'
 import { toast } from 'sonner'
 
 export function RequirementStatusBadge({ status }: { status: string }) {
@@ -62,7 +62,7 @@ export function CreateRequirementModal({ isOpen, onClose, onSuccess }: CreateReq
     if (isOpen) {
       const loadProducts = async () => {
         setFetchingProducts(true)
-        const { getProductsMinimal } = await import('@/app/(main)/inventory/actions')
+        const { getProductsMinimal } = await import('@/app/(dashboard)/inventory/actions')
         const res = await getProductsMinimal()
         if (res.data) setProducts(res.data)
         setFetchingProducts(false)
@@ -309,7 +309,7 @@ export function ApproveRequirementModal({
   useEffect(() => {
     if (isOpen) {
       const loadWH = async () => {
-        const { getWarehouses } = await import('@/app/(main)/inventory/actions')
+        const { getWarehouses } = await import('@/app/(dashboard)/inventory/actions')
         const res = await getWarehouses()
         if (res.data) setWarehouses(res.data)
       }
@@ -452,7 +452,7 @@ export function ReportIncidentModal({ isOpen, onClose }: { isOpen: boolean, onCl
       }
 
       // 2. Create Incident
-      const { createIncidencia } = await import('@/app/(main)/incidencias/actions')
+      const { createIncidencia } = await import('@/app/(dashboard)/incidencias/actions')
       const res = await createIncidencia({
         area_location: form.area_location || (form.type === 'maquinaria' ? 'Falla de Equipo' : form.type),
         description: form.description,

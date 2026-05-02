@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { 
   getRequirements, 
   updateRequirementStatus 
-} from '@/app/(main)/requerimientos/actions'
+} from '@/app/(dashboard)/requerimientos/actions'
 import { RequirementStatusBadge, PriorityBadge, CreateRequirementModal, ApproveRequirementModal } from '@/components/requirements/requirements-components'
 import { 
   Search, 

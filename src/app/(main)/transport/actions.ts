@@ -1,18 +1,17 @@
 'use server'
 
 import { createClient, createAdminClient } from '@/lib/supabase/server'
-import { getUserSession } from '@/lib/auth'
+import { getUserSession, getStrictCompanyId } from '@/lib/auth'
 import { revalidatePath } from 'next/cache'
 
 export async function getTransportPayments(workerId?: string) {
-  const { extendedUser } = await getUserSession()
-  if (!extendedUser?.company_id) return []
+  const companyId = await getStrictCompanyId()
 
   const supabase = await createAdminClient()
   let query = supabase
     .from('transport_payments')
     .select('*, worker:workers(name)')
-    .eq('company_id', extendedUser.company_id)
+    .eq('company_id', companyId)
     .order('date', { ascending: false })
 
   if (workerId) {
@@ -35,10 +34,11 @@ export async function createTransportPayment(formData: {
   status: 'paid' | 'pending'
 }) {
   const { extendedUser } = await getUserSession()
+  const companyId = await getStrictCompanyId()
   const role = (extendedUser?.role_id || '').toLowerCase()
   const authorized = ['admin', 'gerente', 'operaciones', 'administracion'].includes(role)
 
-  if (!extendedUser?.company_id || !authorized) {
+  if (!authorized) {
     return { success: false, error: 'No autorizado' }
   }
 
@@ -47,7 +47,7 @@ export async function createTransportPayment(formData: {
     .from('transport_payments')
     .insert([{
       ...formData,
-      company_id: extendedUser.company_id
+      company_id: companyId
     }])
     .select()
 

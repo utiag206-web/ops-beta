@@ -2,13 +2,12 @@
 
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
-import { getUserSession, requirePermission } from '@/lib/auth'
+import { getUserSession, requirePermission, getStrictCompanyId } from '@/lib/auth'
 
 export async function deleteProduct(id: string) {
   try {
-    const { extendedUser } = await getUserSession()
-    if (!extendedUser?.company_id) return { error: 'No autorizado' }
-    await requirePermission('admin') // Deletions usually require higher permissions
+    const companyId = await getStrictCompanyId()
+    await requirePermission('admin')
 
     const supabase = await createAdminClient()
     
@@ -18,7 +17,7 @@ export async function deleteProduct(id: string) {
       .from('products')
       .delete()
       .eq('id', id)
-      .eq('company_id', extendedUser.company_id)
+      .eq('company_id', companyId)
 
     if (error) throw error
 
@@ -32,14 +31,14 @@ export async function deleteProduct(id: string) {
 }
 
 export async function getWarehouses() {
-  await requirePermission('inventory')
-  const supabase = await createAdminClient()
+  const companyId = await getStrictCompanyId()
   const { extendedUser } = await getUserSession()
+  const supabase = await createAdminClient()
 
   let query = supabase
     .from('warehouses')
     .select('id, name, code, area')
-    .eq('company_id', extendedUser.company_id)
+    .eq('company_id', companyId)
 
   // [BLINDAJE_AREA]
   if (extendedUser?.area === 'Cocina') {
@@ -53,68 +52,81 @@ export async function getWarehouses() {
 }
 
 export async function getMovementTypes() {
-  const { extendedUser } = await getUserSession()
-  console.log("[INVENTORY_DEBUG] Fetching movement types for company:", extendedUser?.company_id)
-  
-  if (!extendedUser?.company_id) {
-    console.error("[INVENTORY_ERROR] No company_id in extendedUser")
-    return { error: 'No se encontró información de la empresa en la sesión.' }
-  }
-
   try {
+    const companyId = await getStrictCompanyId()
     const supabase = await createAdminClient()
+
+    // 1. Intentar obtener los tipos existentes
     const { data, error } = await supabase
       .from('movement_types')
       .select('*')
-      .eq('company_id', extendedUser.company_id)
+      .eq('company_id', companyId)
 
     if (error) {
-      console.error("[INVENTORY_ERROR] Supabase error:", error.message)
+      console.error("[INVENTORY_ERROR] Error fetching movement types:", error.message)
       return { error: error.message }
     }
-    
-    if (!data || data.length < 4) {
-      console.log("[INVENTORY_DEBUG] Missing types, seeding...")
-      const seeded = await seedMovementTypes(extendedUser.company_id)
-      return { data: seeded }
+
+    // 2. Si no existen, o faltan tipos críticos, forzar el seeding
+    const requiredEffects = ['IN', 'OUT', 'BOTH', 'SET']
+    const existingEffects = (data || []).map(t => t.effect)
+    const missingAny = requiredEffects.some(eff => !existingEffects.includes(eff))
+
+    if (!data || data.length === 0 || missingAny) {
+      console.log("[INVENTORY_FIX] Missing movement types detected. Forcing seed for company:", companyId)
+      const seeded = await seedMovementTypes(companyId)
+      
+      // Devolver los datos recién creados (o combinados si ya existían algunos)
+      const { data: finalData } = await supabase
+        .from('movement_types')
+        .select('*')
+        .eq('company_id', companyId)
+        
+      return { data: finalData || seeded }
     }
 
     return { data }
   } catch (err: any) {
-    console.error("[INVENTORY_CRITICAL] error:", err.message)
-    return { error: 'Error interno al cargar tipos de movimiento.' }
+    console.error("[INVENTORY_CRITICAL] getMovementTypes failed:", err.message)
+    return { error: err.message }
   }
 }
 
 async function seedMovementTypes(companyId: string) {
   const supabase = await createAdminClient()
-  
   const defaults = [
-    { company_id: companyId, name: 'Ingreso', effect: 'IN', is_system: true, code: 'ING' },
-    { company_id: companyId, name: 'Salida', effect: 'OUT', is_system: true, code: 'SAL' },
-    { company_id: companyId, name: 'Transferencia', effect: 'BOTH', is_system: true, code: 'TRS' },
-    { company_id: companyId, name: 'Ajuste', effect: 'SET', is_system: true, code: 'AJU' }
+    { company_id: companyId, name: 'Ingreso Almacén', code: 'ING', effect: 'IN', is_system: true },
+    { company_id: companyId, name: 'Salida Consumo', code: 'SAL', effect: 'OUT', is_system: true },
+    { company_id: companyId, name: 'Transferencia', code: 'TRF', effect: 'BOTH', is_system: true },
+    { company_id: companyId, name: 'Ajuste Stock', code: 'AJU', effect: 'SET', is_system: true }
   ]
 
-  // Usamos upsert por código para no duplicar si algunos ya existen
   const { data, error } = await supabase
     .from('movement_types')
-    .upsert(defaults, { onConflict: 'company_id,effect' }) 
+    .upsert(defaults, { onConflict: 'company_id,code' })
     .select()
 
   if (error) {
-    console.error('Error seeding movement types:', error)
-    // Fallback: intentar insertar si upsert falla por falta de constraint
-    const { data: retryData } = await supabase.from('movement_types').insert(defaults).select()
-    return retryData || []
+    // Si falla por la constraint de code, intentar por name
+    const { data: data2, error: error2 } = await supabase
+      .from('movement_types')
+      .upsert(defaults, { onConflict: 'company_id,name' })
+      .select()
+
+    if (error2) {
+      console.error('[INVENTORY_DEBUG] Error seeding movement types (forced):', error2.message)
+      return []
+    }
+    return data2 || []
   }
+
+  console.log("[INVENTORY_DEBUG] Seeded movement types:", data?.length || 0)
 
   return data || []
 }
 
 export async function getProductsMinimal() {
-  const { extendedUser } = await getUserSession()
-  if (!extendedUser?.company_id) return { error: 'No autorizado' }
+  const companyId = await getStrictCompanyId()
 
   const supabase = await createAdminClient()
 
@@ -122,7 +134,7 @@ export async function getProductsMinimal() {
   const { data, error } = await supabase
     .from('products')
     .select('id, name, unit')
-    .eq('company_id', extendedUser.company_id)
+    .eq('company_id', companyId)
     .order('name', { ascending: true })
 
   if (error) {
@@ -133,6 +145,7 @@ export async function getProductsMinimal() {
 }
 
 export async function getProducts() {
+  const companyId = await getStrictCompanyId()
   const { extendedUser } = await getUserSession()
   
   // workers need reading access for requirements, so we skip the strict 'inventory' module check for them
@@ -146,7 +159,7 @@ export async function getProducts() {
   const { data, error } = await supabase
     .from('products')
     .select('id, name, code, unit, category, min_stock, type, has_expiry, expiry_date, equivalence, created_at, inventory_stock(quantity)')
-    .eq('company_id', extendedUser.company_id)
+    .eq('company_id', companyId)
     .order('name', { ascending: true })
 
   if (error) {
@@ -180,12 +193,9 @@ export async function createProduct(payload: {
   initial_stock?: number
 }) {
   try {
-    const supabase = await createAdminClient()
+    const companyId = await getStrictCompanyId()
     const { extendedUser } = await getUserSession()
-
-    if (!extendedUser?.id || !extendedUser?.company_id) {
-      return { error: 'Sesión inválida.' }
-    }
+    const supabase = await createAdminClient()
 
     const { initial_location, initial_stock, ...productPayload } = payload
 
@@ -193,7 +203,7 @@ export async function createProduct(payload: {
       ...productPayload,
       expiry_date: productPayload.has_expiry && productPayload.expiry_date ? productPayload.expiry_date : null,
       equivalence: productPayload.equivalence || null,
-      company_id: extendedUser.company_id
+      company_id: companyId
     }
 
     const { data: product, error: pError } = await supabase
@@ -218,7 +228,7 @@ export async function createProduct(payload: {
         const { data: existingWh } = await supabase
           .from('warehouses')
           .select('id')
-          .eq('company_id', extendedUser.company_id)
+          .eq('company_id', companyId)
           .ilike('name', initial_location.trim())
           .maybeSingle()
         
@@ -230,7 +240,7 @@ export async function createProduct(payload: {
         const { data: firstWh } = await supabase
           .from('warehouses')
           .select('id')
-          .eq('company_id', extendedUser.company_id)
+          .eq('company_id', companyId)
           .order('created_at', { ascending: true })
           .limit(1)
           .maybeSingle()
@@ -243,7 +253,7 @@ export async function createProduct(payload: {
             .from('warehouses')
             .insert([{ 
               name: 'Almacén General', 
-              company_id: extendedUser.company_id,
+              company_id: companyId,
               code: 'GEN' 
             }])
             .select('id')
@@ -257,7 +267,7 @@ export async function createProduct(payload: {
       const { error: sError } = await supabase.rpc('upsert_inventory_stock', {
         p_product_id: product.id,
         p_warehouse_id: warehouseId,
-        p_company_id: extendedUser.company_id,
+        p_company_id: companyId,
         p_quantity: qty
       })
 
@@ -268,7 +278,7 @@ export async function createProduct(payload: {
       const { data: mtIng } = await supabase
         .from('movement_types')
         .select('id')
-        .eq('company_id', extendedUser.company_id)
+        .eq('company_id', companyId)
         .eq('code', 'ING')
         .maybeSingle()
 
@@ -277,7 +287,7 @@ export async function createProduct(payload: {
         .insert([{
           product_id: product.id,
           warehouse_id: warehouseId,
-          company_id: extendedUser.company_id,
+          company_id: companyId,
           user_id: extendedUser.id,
           movement_type_id: mtIng?.id || null,
           type: 'ingreso',
@@ -299,10 +309,8 @@ export async function createProduct(payload: {
 }
 
 export async function updateProduct(id: string, payload: any) {
+  const companyId = await getStrictCompanyId()
   const supabase = await createAdminClient()
-  const { extendedUser } = await getUserSession()
-
-  if (!extendedUser?.company_id) return { error: 'Acceso denegado.' }
 
   // Sanitize payload: convert empty strings to null for optional columns
   const sanitized = { ...payload }
@@ -326,7 +334,7 @@ export async function updateProduct(id: string, payload: any) {
     .from('products')
     .update(sanitized)
     .eq('id', id)
-    .eq('company_id', extendedUser.company_id)
+    .eq('company_id', companyId)
     .select()
 
   if (error) {
@@ -342,15 +350,14 @@ export async function updateProduct(id: string, payload: any) {
 }
 
 export async function getInventoryStock() {
-  const supabase = await createAdminClient()
+  const companyId = await getStrictCompanyId()
   const { extendedUser } = await getUserSession()
-  
-  if (!extendedUser?.company_id) return { error: 'Acceso denegado.' }
+  const supabase = await createAdminClient()
 
   let query = supabase
     .from('inventory_stock')
     .select('*, products(name, code, unit, category, min_stock), warehouses!inner(name, area)')
-    .eq('company_id', extendedUser.company_id)
+    .eq('company_id', companyId)
 
   // [BLINDAJE_AREA]
   if (extendedUser.area === 'Cocina') {
@@ -372,17 +379,16 @@ export async function updateStockRecord(payload: {
   warehouse_id: string
   quantity: number
 }) {
+  const companyId = await getStrictCompanyId()
   const supabase = await createAdminClient()
-  const { extendedUser } = await getUserSession()
 
-  if (!extendedUser?.company_id) return { error: 'Acceso denegado.' }
   if (!payload.product_id || payload.product_id === 'none') return { error: 'Producto inválido.' }
   if (!payload.warehouse_id || payload.warehouse_id === 'none') return { error: 'Almacén inválido.' }
 
   const { error } = await supabase.rpc('set_inventory_stock', {
     p_product_id: payload.product_id,
     p_warehouse_id: payload.warehouse_id,
-    p_company_id: extendedUser.company_id,
+    p_company_id: companyId,
     p_quantity: payload.quantity
   })
 
@@ -397,15 +403,14 @@ export async function updateStockRecord(payload: {
 }
 
 export async function getInventoryMovements(limit = 100) {
-  const supabase = await createAdminClient()
+  const companyId = await getStrictCompanyId()
   const { extendedUser } = await getUserSession()
-  
-  if (!extendedUser?.company_id) return { error: 'Acceso denegado.' }
+  const supabase = await createAdminClient()
 
   let query = supabase
     .from('inventory_movements')
     .select('*, products(name, code, unit, id), users:user_id(name), warehouses!inner(name, area), movement_types(name, effect)')
-    .eq('company_id', extendedUser.company_id)
+    .eq('company_id', companyId)
 
   // [BLINDAJE_AREA] Filtrado de movimientos por almacén de Cocina
   if (extendedUser.area === 'Cocina') {
@@ -440,7 +445,7 @@ export async function getInventoryMovements(limit = 100) {
       .select('quantity, type, movement_types(effect)')
       .eq('product_id', pid)
       .eq('warehouse_id', wid)
-      .eq('company_id', extendedUser.company_id)
+      .eq('company_id', companyId)
       .lt('created_at', oldestDate)
 
     const baseBalance = (preData || []).reduce((acc, curr: any) => {
@@ -460,16 +465,15 @@ export async function getInventoryMovements(limit = 100) {
 }
 
 export async function getMovementTraceability(productId: string, warehouseId?: string) {
+  const companyId = await getStrictCompanyId()
   const supabase = await createAdminClient()
-  const { extendedUser } = await getUserSession()
   
-  if (!extendedUser?.company_id) return { error: 'Acceso denegado.' }
   if (!productId || productId === 'none') return { data: [] }
 
   let query = supabase
     .from('inventory_movements')
     .select('*, products(name, code, unit), users:user_id(name), warehouses(name), movement_types(name, effect, code)')
-    .eq('company_id', extendedUser.company_id)
+    .eq('company_id', companyId)
     .eq('product_id', productId)
 
   if (warehouseId && warehouseId !== 'none') {
@@ -500,14 +504,10 @@ export async function createMovement(payload: {
   observation?: string
   responsible_name?: string
 }) {
-  console.log("[INVENTORY_ACTION] Creating movement with payload:", payload);
   await requirePermission('inventory')
-  const supabase = await createAdminClient()
+  const companyId = await getStrictCompanyId()
   const { extendedUser } = await getUserSession()
-
-  if (!extendedUser?.id || !extendedUser?.company_id) {
-    return { error: 'Sesión inválida.' }
-  }
+  const supabase = await createAdminClient()
 
   // [BLINDAJE_AREA] Validar que el almacén de origen pertenece al área (si el usuario está restringido)
   if (extendedUser.area === 'Cocina') {
@@ -555,7 +555,7 @@ export async function createMovement(payload: {
       .select('quantity')
       .eq('product_id', payload.product_id)
       .eq('warehouse_id', payload.warehouse_id)
-      .eq('company_id', extendedUser.company_id)
+      .eq('company_id', companyId)
       .maybeSingle()
     
     const currentStock = st?.quantity || 0
@@ -575,7 +575,7 @@ export async function createMovement(payload: {
 
       const { error: trfErr } = await supabase.rpc('transfer_inventory', {
         p_product_id: payload.product_id,
-        p_company_id: extendedUser.company_id,
+        p_company_id: companyId,
         p_source_warehouse_id: payload.warehouse_id,
         p_target_warehouse_id: payload.target_warehouse_id,
         p_quantity: finalQty,
@@ -599,7 +599,7 @@ export async function createMovement(payload: {
       const { error: moveErr } = await supabase.from('inventory_movements').insert([{
         product_id: payload.product_id,
         warehouse_id: payload.warehouse_id,
-        company_id: extendedUser.company_id,
+        company_id: companyId,
         user_id: extendedUser.id,
         created_by: extendedUser.id,
         movement_type_id: mType.id,
@@ -616,7 +616,7 @@ export async function createMovement(payload: {
       const { error: stockErr } = await supabase.rpc('upsert_inventory_stock', {
         p_product_id: payload.product_id,
         p_warehouse_id: payload.warehouse_id,
-        p_company_id: extendedUser.company_id,
+        p_company_id: companyId,
         p_quantity: delta
       })
       if (stockErr) throw new Error(stockErr.message)
@@ -636,7 +636,7 @@ export async function createMovement(payload: {
       const { error: moveErr } = await supabase.from('inventory_movements').insert([{
         product_id: payload.product_id,
         warehouse_id: payload.warehouse_id,
-        company_id: extendedUser.company_id,
+        company_id: companyId,
         user_id: extendedUser.id,
         created_by: extendedUser.id,
         movement_type_id: mType.id,
@@ -655,7 +655,7 @@ export async function createMovement(payload: {
       const { error: stockErr } = await supabase.rpc('upsert_inventory_stock', {
         p_product_id: payload.product_id,
         p_warehouse_id: payload.warehouse_id,
-        p_company_id: extendedUser.company_id,
+        p_company_id: companyId,
         p_quantity: isOut ? -finalQty : finalQty
       })
       if (stockErr) throw new Error(`Error al actualizar stock: ${stockErr.message}`)
@@ -675,15 +675,14 @@ export async function createMovement(payload: {
 }
 
 export async function getNextDocumentNumber(prefix: 'ING' | 'SAL' | 'TRS') {
+  const companyId = await getStrictCompanyId()
   const supabase = await createAdminClient()
-  const { extendedUser } = await getUserSession()
-  if (!extendedUser?.company_id) return { error: 'Acceso denegado' }
 
   // Buscar el mayor número para este prefijo en esta compañía
   const { data: lastRecord } = await supabase
     .from('inventory_movements')
     .select('document_number')
-    .eq('company_id', extendedUser.company_id)
+    .eq('company_id', companyId)
     .eq('document_type', prefix)
     .order('created_at', { ascending: false })
     .limit(1)
@@ -701,9 +700,8 @@ export async function getNextDocumentNumber(prefix: 'ING' | 'SAL' | 'TRS') {
 }
 
 export async function syncInventoryStock() {
+  const companyId = await getStrictCompanyId()
   const supabase = await createAdminClient()
-  const { extendedUser } = await getUserSession()
-  if (!extendedUser?.company_id) return { error: 'Acceso denegado' }
 
   try {
     
@@ -711,7 +709,7 @@ export async function syncInventoryStock() {
     const { data: movements, error: mError } = await supabase
       .from('inventory_movements')
       .select('product_id, warehouse_id, quantity, type, movement_types(effect)')
-      .eq('company_id', extendedUser.company_id)
+      .eq('company_id', companyId)
 
     if (mError) throw mError
 
@@ -737,7 +735,7 @@ export async function syncInventoryStock() {
     const { data: currentStock } = await supabase
       .from('inventory_stock')
       .select('product_id, warehouse_id')
-      .eq('company_id', extendedUser.company_id)
+      .eq('company_id', companyId)
 
     const existingKeys = new Set(currentStock?.map(s => `${s.product_id}|${s.warehouse_id}`))
 
@@ -748,7 +746,7 @@ export async function syncInventoryStock() {
       const { error: syncErr } = await supabase.rpc('set_inventory_stock', {
         p_product_id: pid,
         p_warehouse_id: wid,
-        p_company_id: extendedUser.company_id,
+        p_company_id: companyId,
         p_quantity: total
       })
       if (syncErr) console.error(`Error syncing ${key}:`, syncErr)
@@ -761,7 +759,7 @@ export async function syncInventoryStock() {
       await supabase.rpc('set_inventory_stock', {
         p_product_id: pid,
         p_warehouse_id: wid,
-        p_company_id: extendedUser.company_id,
+        p_company_id: companyId,
         p_quantity: 0
       })
     }
@@ -779,20 +777,20 @@ function capitalizeName(str: string) {
 }
 
 export async function createWarehouse(payload: { name: string, code?: string }) {
-  const supabase = await createAdminClient()
+  const companyId = await getStrictCompanyId()
   const { extendedUser } = await getUserSession()
+  const supabase = await createAdminClient()
 
-  if (!extendedUser?.company_id || (extendedUser.role_id !== 'admin' && extendedUser.role_id !== 'company_admin')) {
+  if (extendedUser.role_id !== 'admin' && extendedUser.role_id !== 'company_admin') {
     return { error: 'No tienes permisos para crear almacenes.' }
   }
   
   const normalizedName = capitalizeName(payload.name)
   if (!normalizedName) return { error: 'El nombre del almacén es inválido.' }
 
-  const { data: existing } = await supabase
     .from('warehouses')
     .select('id')
-    .eq('company_id', extendedUser.company_id)
+    .eq('company_id', companyId)
     .ilike('name', normalizedName)
     .maybeSingle()
 
@@ -801,7 +799,7 @@ export async function createWarehouse(payload: { name: string, code?: string }) 
   }
 
   const { data, error } = await supabase.from('warehouses').insert([{
-    company_id: extendedUser.company_id,
+    company_id: companyId,
     name: normalizedName,
     code: payload.code?.trim().toUpperCase() || null
   }]).select('*').single()
@@ -812,20 +810,20 @@ export async function createWarehouse(payload: { name: string, code?: string }) 
 }
 
 export async function updateWarehouse(id: string, payload: { name: string, code?: string }) {
-  const supabase = await createAdminClient()
+  const companyId = await getStrictCompanyId()
   const { extendedUser } = await getUserSession()
+  const supabase = await createAdminClient()
 
-  if (!extendedUser?.company_id || (extendedUser.role_id !== 'admin' && extendedUser.role_id !== 'company_admin')) {
+  if (extendedUser.role_id !== 'admin' && extendedUser.role_id !== 'company_admin') {
     return { error: 'No tienes permisos para editar almacenes.' }
   }
   
   const normalizedName = capitalizeName(payload.name)
   if (!normalizedName) return { error: 'El nombre del almacén es inválido.' }
 
-  const { data: existing } = await supabase
     .from('warehouses')
     .select('id')
-    .eq('company_id', extendedUser.company_id)
+    .eq('company_id', companyId)
     .ilike('name', normalizedName)
     .neq('id', id)
     .maybeSingle()
@@ -834,11 +832,9 @@ export async function updateWarehouse(id: string, payload: { name: string, code?
     return { error: 'Ya existe otro almacén con este nombre.' }
   }
 
-  const { error } = await supabase.from('warehouses').update({
-    name: normalizedName,
     code: payload.code?.trim().toUpperCase() || null,
     updated_at: new Date().toISOString()
-  }).eq('id', id).eq('company_id', extendedUser.company_id)
+  }).eq('id', id).eq('company_id', companyId)
 
   if (error) return { error: error.message }
   revalidatePath('/configuracion/warehouses')
@@ -846,20 +842,20 @@ export async function updateWarehouse(id: string, payload: { name: string, code?
 }
 
 export async function deleteWarehouse(id: string) {
-  const supabase = await createAdminClient()
+  const companyId = await getStrictCompanyId()
   const { extendedUser } = await getUserSession()
+  const supabase = await createAdminClient()
 
-  if (!extendedUser?.company_id || (extendedUser.role_id !== 'admin' && extendedUser.role_id !== 'company_admin')) {
+  if (extendedUser.role_id !== 'admin' && extendedUser.role_id !== 'company_admin') {
     return { error: 'No tienes permisos para eliminar almacenes.' }
   }
 
   // Restricciones: Si tiene stock o movimientos, no se puede borrar (la base de datos debe arrojar error por FK RESTRICT)
   // Intentaremos borrar
-  const { error } = await supabase
     .from('warehouses')
     .delete()
     .eq('id', id)
-    .eq('company_id', extendedUser.company_id)
+    .eq('company_id', companyId)
 
   if (error) {
     if (error.code === '23503') {
@@ -877,14 +873,12 @@ export async function deleteWarehouse(id: string) {
 // =====================================
 
 export async function getSuppliers() {
+  const companyId = await getStrictCompanyId()
   const supabase = await createAdminClient()
-  const { extendedUser } = await getUserSession()
-  if (!extendedUser?.company_id) return { error: 'Acceso denegado' }
 
-  const { data, error } = await supabase
     .from('suppliers')
     .select('*')
-    .eq('company_id', extendedUser.company_id)
+    .eq('company_id', companyId)
     .order('name', { ascending: true })
 
   if (error) return { error: error.message }
@@ -892,14 +886,12 @@ export async function getSuppliers() {
 }
 
 export async function getNextPONumber() {
+  const companyId = await getStrictCompanyId()
   const supabase = await createAdminClient()
-  const { extendedUser } = await getUserSession()
-  if (!extendedUser?.company_id) return { error: 'Acceso denegado' }
 
-  const { data: lastPO } = await supabase
     .from('purchase_orders')
     .select('po_number')
-    .eq('company_id', extendedUser.company_id)
+    .eq('company_id', companyId)
     .order('created_at', { ascending: false })
     .limit(1)
     .maybeSingle()
@@ -914,9 +906,8 @@ export async function getNextPONumber() {
 }
 
 export async function getPurchaseOrders(statusFilter?: string) {
+  const companyId = await getStrictCompanyId()
   const supabase = await createAdminClient()
-  const { extendedUser } = await getUserSession()
-  if (!extendedUser?.company_id) return { error: 'Acceso denegado' }
 
   let query = supabase
     .from('purchase_orders')
@@ -924,7 +915,7 @@ export async function getPurchaseOrders(statusFilter?: string) {
       *,
       suppliers(name, ruc)
     `)
-    .eq('company_id', extendedUser.company_id)
+    .eq('company_id', companyId)
     .order('created_at', { ascending: false })
 
   if (statusFilter && statusFilter !== 'all') {
@@ -940,9 +931,8 @@ export async function getPurchaseOrders(statusFilter?: string) {
 }
 
 export async function getPurchaseOrderItems(poId: string) {
+  await getStrictCompanyId()
   const supabase = await createAdminClient()
-  const { extendedUser } = await getUserSession()
-  if (!extendedUser?.company_id) return { error: 'Acceso denegado' }
 
   const { data, error } = await supabase
     .from('purchase_order_items')
@@ -957,22 +947,11 @@ export async function getPurchaseOrderItems(poId: string) {
 }
 
 export async function processInboundFromPO(payload: {
-  po_id: string
-  warehouse_id: string
-  document_date: string
-  invoice_type: string
-  invoice_number: string
-  guide_number: string
-  observation: string
-  items: {
-    product_id: string
-    quantity_to_receive: number
-    po_item_id: string
-  }[]
+  // ...
 }) {
-  const supabase = await createAdminClient()
+  const companyId = await getStrictCompanyId()
   const { extendedUser } = await getUserSession()
-  if (!extendedUser?.id || !extendedUser?.company_id) return { error: 'Acceso denegado' }
+  const supabase = await createAdminClient()
 
   try {
     // 1. Validaciones y creación de movimientos
@@ -996,7 +975,7 @@ export async function processInboundFromPO(payload: {
 
       // Crear Movimiento de Inventario
       const { error: moveErr } = await supabase.from('inventory_movements').insert([{
-        company_id: extendedUser.company_id,
+        company_id: companyId,
         user_id: extendedUser.id,
         created_by: extendedUser.id,
         product_id: item.product_id,
@@ -1020,7 +999,7 @@ export async function processInboundFromPO(payload: {
       const { error: stockErr } = await supabase.rpc('upsert_inventory_stock', {
         p_product_id: item.product_id,
         p_warehouse_id: payload.warehouse_id,
-        p_company_id: extendedUser.company_id,
+        p_company_id: companyId,
         p_quantity: item.quantity_to_receive
       })
 
