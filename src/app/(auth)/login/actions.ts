@@ -34,7 +34,17 @@ export async function login(prevState: any, formData: FormData) {
   }
 
   console.log(`[AUTH_SUCCESS] Login exitoso para: ${email}`)
+  
+  // Dynamic Redirection based on role
+  const { extendedUser } = await (await import('@/lib/auth')).getUserSession()
+  const role = extendedUser?.role_id?.toLowerCase()
+
   revalidatePath('/', 'layout')
+
+  if (role === 'super_admin' || role === 'superadmin') {
+    redirect('/super-admin')
+  }
+
   redirect('/dashboard')
 }
 

@@ -106,5 +106,13 @@ export async function register(prevState: any, formData: FormData) {
   }
 
   revalidatePath('/', 'layout')
+  
+  // Dynamic Redirection based on role
+  const role = 'admin' // Registration always creates an admin by default here
+  
+  if (role === 'super_admin' || role === 'superadmin') {
+    redirect('/super-admin')
+  }
+
   redirect('/dashboard')
 }
