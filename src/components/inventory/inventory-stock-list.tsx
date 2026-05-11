@@ -150,9 +150,9 @@ export function InventoryStockList({
     <div className="space-y-4 md:space-y-6">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white p-5 md:p-6 rounded-2xl md:rounded-[2rem] shadow-sm border border-slate-100">
         <div>
-          <h1 className="text-xl md:text-2xl font-black text-slate-800 tracking-tight flex items-center gap-3">
+          <h1 className="text-xl md:text-2xl font-bold text-slate-800 tracking-tight flex items-center gap-3">
             <div className="bg-emerald-100 p-2 rounded-xl">
-              <Layers className="text-emerald-600" size={20} md:size={24} />
+              <Layers className="text-emerald-600 w-5 h-5 md:w-6 md:h-6" />
             </div>
             Control de Stock
           </h1>
@@ -161,49 +161,49 @@ export function InventoryStockList({
         <div className="flex flex-wrap items-center gap-2 md:gap-3 w-full md:w-auto">
           <button 
             onClick={() => setFilterAlert(prev => prev === 'all' ? 'alerts' : 'all')}
-            className={`flex-1 md:flex-none border-2 px-4 md:px-6 py-2.5 md:py-3 rounded-xl md:rounded-2xl font-black flex items-center justify-center gap-2 transition-all active:scale-95 text-xs md:text-sm ${
+            className={`flex-1 md:flex-none border-2 px-4 md:px-6 py-2.5 md:py-3 rounded-xl md:rounded-2xl font-bold flex items-center justify-center gap-2 transition-all active:scale-95 text-xs md:text-sm ${
               filterAlert === 'alerts' 
                 ? 'bg-rose-50 border-rose-100 text-rose-600' 
                 : 'bg-white border-slate-100 text-slate-600 hover:bg-slate-50'
             }`}
           >
-            <AlertCircle size={16} md:size={18} />
+            <AlertCircle className="w-4 h-4 md:w-[18px] md:h-[18px]" />
             <span>{filterAlert === 'alerts' ? 'Viendo Alertas' : 'Filtrar Alertas'}</span>
           </button>
           
           {canWrite && (
-            <>
-              <button 
-                onClick={async () => {
-                  if (confirm('¿Deseas recalcular el stock base en todos los movimientos? Esta operación es segura y corregirá cualquier desfase.')) {
-                    toast.promise(import('@/app/(main)/inventory/actions').then(a => a.syncInventoryStock()), {
-                      loading: 'Sincronizando stock...',
-                      success: 'Stock sincronizado correctamente',
-                      error: 'Error al sincronizar'
-                    })
-                  }
-                }}
-                className="bg-white border-2 border-slate-100 text-slate-400 p-2.5 md:px-6 md:py-3 rounded-xl md:rounded-2xl font-black flex items-center justify-center gap-2 transition-all hover:bg-slate-50 active:scale-95 text-sm"
-                title="Sincronizar Totales"
-              >
-                <Clock size={18} />
-              </button>
-              
-              <button 
-                onClick={() => { setEditingItem(null); setIsModalOpen(true); }}
-                className="flex-[2] md:flex-none bg-emerald-600 hover:bg-emerald-700 text-white px-4 md:px-6 py-2.5 md:py-3 rounded-xl md:rounded-2xl font-black flex items-center justify-center gap-2 transition-all shadow-lg shadow-emerald-100 active:scale-95 text-xs md:text-sm"
-              >
-                <Plus size={16} md:size={18} strokeWidth={3} />
-                <span>Movimiento</span>
-              </button>
-            </>
+            <button 
+              onClick={async () => {
+                if (confirm('¿Deseas recalcular el stock base en todos los movimientos? Esta operación es segura y corregirá cualquier desfase.')) {
+                  toast.promise(import('@/app/(main)/inventory/actions').then(a => a.syncInventoryStock()), {
+                    loading: 'Sincronizando stock...',
+                    success: 'Stock sincronizado correctamente',
+                    error: 'Error al sincronizar'
+                  })
+                }
+              }}
+              className="bg-white border-2 border-slate-100 text-slate-400 p-2.5 md:px-6 md:py-3 rounded-xl md:rounded-2xl font-bold flex items-center justify-center gap-2 transition-all hover:bg-slate-50 active:scale-95 text-sm"
+              title="Sincronizar Totales"
+            >
+              <Clock size={18} />
+            </button>
+          )}
+
+          {canWrite && (
+            <button 
+              onClick={() => { setEditingItem(null); setIsModalOpen(true); }}
+              className="flex-[2] md:flex-none bg-emerald-600 hover:bg-emerald-700 text-white px-4 md:px-6 py-2.5 md:py-3 rounded-xl md:rounded-2xl font-bold flex items-center justify-center gap-2 transition-all shadow-lg shadow-emerald-100 active:scale-95 text-xs md:text-sm"
+            >
+              <Plus className="w-4 h-4 md:w-[18px] md:h-[18px]" strokeWidth={3} />
+              <span>Movimiento</span>
+            </button>
           )}
           
           <button 
             onClick={exportToExcel}
-            className="flex-1 md:flex-none bg-white border-2 border-emerald-100 text-emerald-600 px-4 md:px-6 py-2.5 md:py-3 rounded-xl md:rounded-2xl font-black flex items-center justify-center gap-2 transition-all hover:bg-emerald-50 active:scale-95 text-xs md:text-sm"
+            className="flex-1 md:flex-none bg-white border-2 border-emerald-100 text-emerald-600 px-4 md:px-6 py-2.5 md:py-3 rounded-xl md:rounded-2xl font-bold flex items-center justify-center gap-2 transition-all hover:bg-emerald-50 active:scale-95 text-xs md:text-sm"
           >
-            <Download size={16} md:size={18} />
+            <Download className="w-4 h-4 md:w-[18px] md:h-[18px]" />
             <span>Exportar</span>
           </button>
         </div>
@@ -250,9 +250,9 @@ export function InventoryStockList({
             }}
           />
         )) : (
-          <div className="bg-white rounded-[2.5rem] border-2 border-slate-50 p-24 text-center">
+          <div className="bg-white rounded-[2rem] border-2 border-slate-50 p-24 text-center">
             <LayoutGrid size={48} className="mx-auto text-slate-200 mb-4" />
-            <p className="text-slate-500 font-black text-lg">No se encontraron productos en stock</p>
+            <p className="text-slate-500 font-bold text-lg">No se encontraron productos en stock</p>
           </div>
         )}
       </div>
@@ -293,14 +293,14 @@ function StockGroup({
           </div>
           <div className="flex-1">
             <div className="flex items-center gap-2 mb-1">
-              <span className="text-[10px] font-black text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-100 uppercase tracking-widest">
+              <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-100 uppercase tracking-widest">
                 {Array.isArray(group.product) ? group.product[0]?.code : group.product?.code}
               </span>
               <span className="text-[10px] font-bold text-slate-400 bg-slate-50 px-2 py-0.5 rounded-md border border-slate-100 uppercase">
                 {Array.isArray(group.product) ? group.product[0]?.category : group.product?.category}
               </span>
             </div>
-            <h3 className="text-lg font-black text-slate-800 uppercase tracking-tight leading-tight">
+            <h3 className="text-lg font-bold text-slate-800 uppercase tracking-tight leading-tight">
               {typeof group.product?.name === 'object' ? JSON.stringify(group.product.name) : (Array.isArray(group.product) ? group.product[0]?.name : group.product?.name) || 'Producto sin nombre'}
             </h3>
           </div>
@@ -308,8 +308,8 @@ function StockGroup({
 
         <div className="flex items-center gap-8">
           <div className="text-right hidden md:block">
-            <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1">Disponibilidad Total</p>
-            <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-2xl font-black text-sm border-2 ${
+            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-[0.2em] mb-1">Disponibilidad Total</p>
+            <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-2xl font-bold text-sm border-2 ${
               isCritical ? 'bg-rose-50 text-rose-600 border-rose-100' : 
               isWarning ? 'bg-amber-50 text-amber-600 border-amber-100' : 
               'bg-emerald-50 text-emerald-600 border-emerald-100'
@@ -328,7 +328,7 @@ function StockGroup({
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Warehouse Breakdown */}
             <div className="bg-white rounded-3xl border border-slate-100 p-6 shadow-sm">
-              <h4 className="text-[11px] font-black uppercase tracking-widest text-slate-400 mb-4 flex items-center gap-2">
+              <h4 className="text-[11px] font-bold uppercase tracking-widest text-slate-400 mb-4 flex items-center gap-2">
                 <MapPin size={14} className="text-indigo-500" /> Distribución por Ubicación
               </h4>
               <div className="space-y-3">
@@ -339,12 +339,12 @@ function StockGroup({
                         <Box size={14} />
                       </div>
                       <div>
-                        <p className="text-sm font-black text-slate-700 uppercase">{item.warehouses?.name || item.location}</p>
+                        <p className="text-sm font-bold text-slate-700 uppercase">{item.warehouses?.name || item.location}</p>
                         <p className="text-[10px] font-bold text-slate-400 italic">Actualizado: {new Date(item.updated_at).toLocaleDateString()}</p>
                       </div>
                     </div>
                     <div className="flex items-center gap-4">
-                      <span className="text-lg font-black text-slate-800">{item.quantity}</span>
+                      <span className="text-lg font-bold text-slate-800">{item.quantity}</span>
                       {canWrite && (
                         <button 
                            onClick={(e) => { e.stopPropagation(); onEdit(item); }}
@@ -383,7 +383,7 @@ function TraceabilityCard({ productId, unit }: { productId: string, unit: string
 
   return (
     <div className="bg-white rounded-3xl border border-slate-100 p-6 shadow-sm">
-      <h4 className="text-[11px] font-black uppercase tracking-widest text-slate-400 mb-4 flex items-center gap-2">
+      <h4 className="text-[11px] font-bold uppercase tracking-widest text-slate-400 mb-4 flex items-center gap-2">
         <History size={14} className="text-indigo-500" /> Historial de Trazabilidad (Últimos 50)
       </h4>
       
@@ -407,7 +407,7 @@ function TraceabilityCard({ productId, unit }: { productId: string, unit: string
                    <Settings2 size={14} />}
                 </div>
                 <div>
-                  <p className="text-[10px] font-black text-slate-700 uppercase leading-none mb-1">
+                  <p className="text-[10px] font-bold text-slate-700 uppercase leading-none mb-1">
                     {m.movement_types?.name || m.type}
                     {m.document_number && <span className="ml-2 text-slate-400 font-bold border-l pl-2 border-slate-200"># {m.document_number}</span>}
                   </p>
@@ -415,7 +415,7 @@ function TraceabilityCard({ productId, unit }: { productId: string, unit: string
                 </div>
               </div>
               <div className="text-right">
-                <p className={`text-sm font-black ${m.type === 'ingreso' ? 'text-emerald-600' : 'text-rose-600'}`}>
+                <p className={`text-sm font-bold ${m.type === 'ingreso' ? 'text-emerald-600' : 'text-rose-600'}`}>
                   {m.type === 'salida' ? '-' : '+'}{m.quantity}
                 </p>
                 <p className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">{m.warehouses?.name || m.location}</p>

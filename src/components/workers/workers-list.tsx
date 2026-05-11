@@ -42,23 +42,23 @@ export function WorkersList({ workers, canManage = false }: { workers: Worker[],
 
   return (
     <div className="space-y-4 md:space-y-6">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white p-6 md:p-8 rounded-2xl md:rounded-[2.5rem] shadow-sm border border-slate-50">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white p-6 md:p-8 rounded-2xl md:rounded-[2rem] shadow-sm border border-slate-50">
         <div>
-          <h1 className="text-2xl md:text-3xl font-black text-slate-800 tracking-tight">Gestión de Personal</h1>
+          <h1 className="text-2xl md:text-3xl font-bold text-slate-800 tracking-tight">Gestión de Personal</h1>
           <p className="text-xs md:text-sm text-slate-500 font-medium">Listado maestro de trabajadores y colaboradores.</p>
         </div>
         {canManage && (
           <div className="flex items-center gap-3">
             <Link 
               href="/workers/import"
-              className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-white border-2 border-slate-100 text-slate-600 px-4 md:px-6 py-2.5 md:py-3 rounded-xl md:rounded-2xl font-black hover:bg-slate-50 transition-all shadow-sm active:scale-95"
+              className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-white border-2 border-slate-100 text-slate-600 px-4 md:px-6 py-2.5 md:py-3 rounded-xl md:rounded-2xl font-bold hover:bg-slate-50 transition-all shadow-sm active:scale-95"
             >
               <Upload size={18} />
               <span className="text-sm md:text-base">Importar</span>
             </Link>
             <button 
               onClick={() => setIsAddModalOpen(true)}
-              className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-blue-600 text-white px-4 md:px-6 py-2.5 md:py-3 rounded-xl md:rounded-2xl font-black hover:bg-blue-700 transition-all shadow-lg shadow-blue-100 active:scale-95"
+              className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-blue-600 text-white px-4 md:px-6 py-2.5 md:py-3 rounded-xl md:rounded-2xl font-bold hover:bg-blue-700 transition-all shadow-lg shadow-blue-100 active:scale-95"
             >
               <Plus size={18} />
               <span className="text-sm md:text-base">Nuevo</span>
@@ -86,7 +86,7 @@ export function WorkersList({ workers, canManage = false }: { workers: Worker[],
         </div>
       </div>
       
-      <div className="bg-white rounded-2xl md:rounded-[2.5rem] shadow-sm border border-slate-100 overflow-hidden">
+      <div className="bg-white rounded-2xl md:rounded-[2rem] shadow-sm border border-slate-100 overflow-hidden">
         {filteredWorkers.length > 0 ? (
           <>
             {/* Desktop Table View */}
@@ -94,11 +94,11 @@ export function WorkersList({ workers, canManage = false }: { workers: Worker[],
               <table className="w-full text-left">
                 <thead>
                   <tr className="bg-slate-50/50 border-b border-slate-100">
-                    <th className="py-5 px-6 text-[11px] font-black text-slate-400 uppercase tracking-widest">Colaborador</th>
-                    <th className="py-5 px-6 text-[11px] font-black text-slate-400 uppercase tracking-widest">Documento</th>
-                    <th className="py-5 px-6 text-[11px] font-black text-slate-400 uppercase tracking-widest">Puesto / Cargo</th>
-                    <th className="py-5 px-6 text-[11px] font-black text-slate-400 uppercase tracking-widest text-center">Estado</th>
-                    <th className="py-5 px-6 text-[11px] font-black text-slate-400 uppercase tracking-widest text-right">Acciones</th>
+                    <th className="py-5 px-6 text-[11px] font-bold text-slate-400 uppercase tracking-widest">Colaborador</th>
+                    <th className="py-5 px-6 text-[11px] font-bold text-slate-400 uppercase tracking-widest">Documento</th>
+                    <th className="py-5 px-6 text-[11px] font-bold text-slate-400 uppercase tracking-widest">Puesto / Cargo</th>
+                    <th className="py-5 px-6 text-[11px] font-bold text-slate-400 uppercase tracking-widest text-center">Estado</th>
+                    <th className="py-5 px-6 text-[11px] font-bold text-slate-400 uppercase tracking-widest text-right">Acciones</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-50">
@@ -114,14 +114,14 @@ export function WorkersList({ workers, canManage = false }: { workers: Worker[],
                             )}
                           </div>
                           <div>
-                            <p className="text-base font-black text-slate-800 uppercase tracking-tight">{worker.name}</p>
+                            <p className="text-base font-bold text-slate-800 uppercase tracking-tight">{worker.name}</p>
                             <p className="text-[10px] font-bold text-slate-400 mt-0.5">{worker.hire_date ? `Ingreso: ${new Date(worker.hire_date).toLocaleDateString()}` : 'Sin fecha de ingreso'}</p>
                           </div>
                         </div>
                       </td>
                       <td className="py-5 px-6">
                         <div className="flex flex-col">
-                          <span className="text-[10px] font-black text-blue-600 uppercase tracking-widest">DNI / CE</span>
+                          <span className="text-[10px] font-bold text-blue-600 uppercase tracking-widest">DNI / CE</span>
                           <span className="text-sm font-bold text-slate-700">{worker.dni}</span>
                         </div>
                       </td>
@@ -131,7 +131,7 @@ export function WorkersList({ workers, canManage = false }: { workers: Worker[],
                         </div>
                       </td>
                       <td className="py-5 px-6 text-center">
-                        <span className={`text-[10px] font-black px-3 py-1 rounded-lg uppercase border shadow-sm ${
+                        <span className={`text-[10px] font-bold px-3 py-1 rounded-lg uppercase border shadow-sm ${
                           worker.status === 'active' 
                             ? 'bg-emerald-50 text-emerald-700 border-emerald-100' 
                             : 'bg-slate-50 text-slate-500 border-slate-100'
@@ -193,8 +193,8 @@ export function WorkersList({ workers, canManage = false }: { workers: Worker[],
                         )}
                       </div>
                       <div>
-                        <p className="text-base font-black text-slate-800 uppercase tracking-tight leading-tight mb-1">{worker.name}</p>
-                        <span className={`text-[9px] font-black px-2 py-0.5 rounded-md uppercase border ${
+                        <p className="text-base font-bold text-slate-800 uppercase tracking-tight leading-tight mb-1">{worker.name}</p>
+                        <span className={`text-[9px] font-bold px-2 py-0.5 rounded-md uppercase border ${
                           worker.status === 'active' 
                             ? 'bg-emerald-50 text-emerald-700 border-emerald-100' 
                             : 'bg-slate-50 text-slate-500 border-slate-100'
@@ -215,11 +215,11 @@ export function WorkersList({ workers, canManage = false }: { workers: Worker[],
 
                   <div className="bg-slate-50 rounded-2xl p-4 grid grid-cols-2 gap-4 border border-slate-100/50">
                     <div>
-                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">DNI / Documento</p>
+                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">DNI / Documento</p>
                       <p className="text-sm font-bold text-slate-700">{worker.dni}</p>
                     </div>
                     <div className="text-right">
-                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Cargo / Puesto</p>
+                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Cargo / Puesto</p>
                       <p className="text-sm font-bold text-slate-700 uppercase truncate">{worker.position}</p>
                     </div>
                   </div>
@@ -228,7 +228,7 @@ export function WorkersList({ workers, canManage = false }: { workers: Worker[],
                     <div className="flex gap-3 pt-1">
                       <button 
                         onClick={() => setEditingWorker(worker)}
-                        className="flex-1 flex items-center justify-center gap-2 bg-white border border-slate-200 text-slate-600 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all active:scale-95 shadow-sm"
+                        className="flex-1 flex items-center justify-center gap-2 bg-white border border-slate-200 text-slate-600 py-2.5 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all active:scale-95 shadow-sm"
                       >
                         <Edit2 size={14} />
                         Editar
@@ -236,7 +236,7 @@ export function WorkersList({ workers, canManage = false }: { workers: Worker[],
                       <button 
                         onClick={() => handleDelete(worker.id, worker.name)}
                         disabled={isDeleting === worker.id}
-                        className="flex-1 flex items-center justify-center gap-2 bg-rose-50 border border-rose-100 text-rose-600 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all active:scale-95 shadow-sm"
+                        className="flex-1 flex items-center justify-center gap-2 bg-rose-50 border border-rose-100 text-rose-600 py-2.5 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all active:scale-95 shadow-sm"
                       >
                         {isDeleting === worker.id ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
                         Eliminar
@@ -252,12 +252,11 @@ export function WorkersList({ workers, canManage = false }: { workers: Worker[],
               <div className="bg-slate-50 w-20 h-20 rounded-[2rem] flex items-center justify-center mx-auto mb-6 text-slate-300">
                 <UserMinus size={40} />
               </div>
-              <p className="text-slate-500 font-black text-lg">No se encontraron colaboradores</p>
+              <p className="text-slate-500 font-bold text-lg">No se encontraron colaboradores</p>
               <p className="text-slate-400 text-sm font-medium mt-1">Intenta con otros términos de búsqueda.</p>
             </div>
           )}
         </div>
-      </div>
 
       {isAddModalOpen && (
         <AddWorkerModal 

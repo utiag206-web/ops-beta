@@ -53,18 +53,18 @@ export function PPEList({ deliveries: initialDeliveries, isWorker = false }: PPE
 
   return (
     <>
-      <div className="bg-white rounded-2xl md:rounded-[2.5rem] shadow-sm border border-slate-100 overflow-hidden">
+      <div className="bg-white rounded-2xl md:rounded-[2rem] shadow-sm border border-slate-100 overflow-hidden">
       {/* Desktop Table View */}
       <div className="hidden md:block overflow-x-auto">
         <table className="w-full text-left">
           <thead>
             <tr className="bg-slate-50/50 border-b border-slate-100">
-              <th className="py-5 px-6 text-[11px] font-black text-slate-400 uppercase tracking-widest">Colaborador</th>
-              <th className="py-5 px-6 text-[11px] font-black text-slate-400 uppercase tracking-widest">Equipo / EPP</th>
-              <th className="py-5 px-6 text-[11px] font-black text-slate-400 uppercase tracking-widest text-center">Fecha</th>
-              <th className="py-5 px-6 text-[11px] font-black text-slate-400 uppercase tracking-widest text-center">Hora</th>
-              <th className="py-5 px-6 text-[11px] font-black text-slate-400 uppercase tracking-widest text-center">Estado</th>
-              <th className="py-5 px-6 text-[11px] font-black text-slate-400 uppercase tracking-widest text-right">Firma</th>
+              <th className="py-5 px-6 text-[11px] font-bold text-slate-400 uppercase tracking-widest">Colaborador</th>
+              <th className="py-5 px-6 text-[11px] font-bold text-slate-400 uppercase tracking-widest">Equipo / EPP</th>
+              <th className="py-5 px-6 text-[11px] font-bold text-slate-400 uppercase tracking-widest text-center">Fecha</th>
+              <th className="py-5 px-6 text-[11px] font-bold text-slate-400 uppercase tracking-widest text-center">Hora</th>
+              <th className="py-5 px-6 text-[11px] font-bold text-slate-400 uppercase tracking-widest text-center">Estado</th>
+              <th className="py-5 px-6 text-[11px] font-bold text-slate-400 uppercase tracking-widest text-right">Firma</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-50">
@@ -76,14 +76,14 @@ export function PPEList({ deliveries: initialDeliveries, isWorker = false }: PPE
                       <Shield size={16} />
                     </div>
                     <div>
-                      <p className="text-sm font-black text-slate-800 uppercase tracking-tight">
+                      <p className="text-sm font-bold text-slate-800 uppercase tracking-tight">
                         {delivery.worker?.name || 'Sistema'}
                       </p>
                     </div>
                   </div>
                 </td>
                 <td className="py-5 px-6">
-                  <span className="text-sm font-black text-slate-700 uppercase tracking-tight">{delivery.ppe_type}</span>
+                  <span className="text-sm font-bold text-slate-700 uppercase tracking-tight">{delivery.ppe_type}</span>
                 </td>
                 <td className="py-5 px-6 text-center">
                   <span className="text-sm font-bold text-slate-800">
@@ -91,12 +91,12 @@ export function PPEList({ deliveries: initialDeliveries, isWorker = false }: PPE
                   </span>
                 </td>
                 <td className="py-5 px-6 text-center">
-                  <span className="text-[11px] font-black text-slate-400 uppercase tracking-widest">
+                  <span className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">
                     {new Date(delivery.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                   </span>
                 </td>
                 <td className="py-5 px-6 text-center">
-                  <span className={`text-[10px] font-black px-3 py-1 rounded-lg uppercase border shadow-sm ${
+                  <span className={`text-[10px] font-bold px-3 py-1 rounded-lg uppercase border shadow-sm ${
                     (delivery.status === 'delivered' || delivery.status === 'signed')
                       ? 'bg-emerald-50 text-emerald-700 border-emerald-100' 
                       : 'bg-amber-50 text-amber-700 border-amber-100'
@@ -108,7 +108,7 @@ export function PPEList({ deliveries: initialDeliveries, isWorker = false }: PPE
                   {isWorker && delivery.status === 'pending_signature' ? (
                     <button 
                       onClick={() => setSigningId(delivery.id)}
-                      className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-1.5 rounded-xl text-[10px] font-black transition-all shadow-sm uppercase tracking-tighter active:scale-95"
+                      className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-1.5 rounded-xl text-[10px] font-bold transition-all shadow-sm uppercase tracking-tighter active:scale-95"
                     >
                       <PenTool size={14} />
                       Firmar Recibido
@@ -138,11 +138,11 @@ export function PPEList({ deliveries: initialDeliveries, isWorker = false }: PPE
                   <Shield size={20} />
                 </div>
                 <div>
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Entregado a</p>
-                  <p className="text-sm font-black text-slate-800 uppercase">{delivery.worker?.name || 'Sistema'}</p>
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none mb-1">Entregado a</p>
+                  <p className="text-sm font-bold text-slate-800 uppercase">{delivery.worker?.name || 'Sistema'}</p>
                 </div>
               </div>
-              <span className={`text-[10px] font-black px-2.5 py-1 rounded-lg uppercase border shadow-sm ${
+              <span className={`text-[10px] font-bold px-2.5 py-1 rounded-lg uppercase border shadow-sm ${
                 (delivery.status === 'delivered' || delivery.status === 'signed')
                   ? 'bg-emerald-50 text-emerald-700 border-emerald-100' 
                   : 'bg-amber-50 text-amber-700 border-amber-100'
@@ -153,11 +153,11 @@ export function PPEList({ deliveries: initialDeliveries, isWorker = false }: PPE
 
             <div className="bg-slate-50 rounded-xl p-4 flex items-center justify-between">
               <div>
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Equipo / EPP</p>
-                <p className="text-sm font-black text-slate-700 uppercase">{delivery.ppe_type}</p>
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Equipo / EPP</p>
+                <p className="text-sm font-bold text-slate-700 uppercase">{delivery.ppe_type}</p>
               </div>
               <div className="text-right">
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Fecha</p>
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Fecha</p>
                 <p className="text-xs font-bold text-slate-600">{new Date(delivery.delivery_date).toLocaleDateString()}</p>
               </div>
             </div>
@@ -165,13 +165,13 @@ export function PPEList({ deliveries: initialDeliveries, isWorker = false }: PPE
             <div className="flex items-center justify-between gap-4">
                <div className="flex items-center gap-2 text-slate-400">
                   <Clock size={14} />
-                  <span className="text-[10px] font-black uppercase">{new Date(delivery.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                  <span className="text-[10px] font-bold uppercase">{new Date(delivery.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                </div>
                
                {isWorker && delivery.status === 'pending_signature' ? (
                 <button 
                   onClick={() => setSigningId(delivery.id)}
-                  className="bg-blue-600 text-white px-5 py-2 rounded-xl text-[10px] font-black transition-all shadow-lg shadow-blue-100 uppercase tracking-widest"
+                  className="bg-blue-600 text-white px-5 py-2 rounded-xl text-[10px] font-bold transition-all shadow-lg shadow-blue-100 uppercase tracking-widest"
                 >
                   Firmar Ahora
                 </button>

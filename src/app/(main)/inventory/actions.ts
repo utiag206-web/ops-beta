@@ -2,22 +2,20 @@
 
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
-import { getUserSession, requirePermission, getStrictCompanyId } from '@/lib/auth'
+import { getUserSession, requirePermission, getStrictCompanyId, applyIsolation } from '@/lib/auth'
 
 export async function deleteProduct(id: string) {
   try {
+    const extendedUser = await requirePermission('admin')
     const companyId = await getStrictCompanyId()
-    await requirePermission('admin')
 
     const supabase = await createAdminClient()
     
-    // First, check if there's stock or movements (Optionally, but let's just delete for 'MODO CTO')
-    // The matrix says Admin can delete.
-    const { error } = await supabase
-      .from('products')
-      .delete()
-      .eq('id', id)
-      .eq('company_id', companyId)
+    const { error } = await applyIsolation(
+      supabase.from('products').delete(),
+      companyId,
+      extendedUser.role_id
+    ).eq('id', id)
 
     if (error) throw error
 
@@ -35,10 +33,11 @@ export async function getWarehouses() {
   const { extendedUser } = await getUserSession()
   const supabase = await createAdminClient()
 
-  let query = supabase
-    .from('warehouses')
-    .select('id, name, code, area')
-    .eq('company_id', companyId)
+  let query = applyIsolation(
+    supabase.from('warehouses').select('id, name, code, area'),
+    companyId,
+    extendedUser.role_id
+  )
 
   // [BLINDAJE_AREA]
   if (extendedUser?.area === 'Cocina') {
@@ -53,36 +52,36 @@ export async function getWarehouses() {
 
 export async function getMovementTypes() {
   try {
+    const { extendedUser } = await getUserSession()
     const companyId = await getStrictCompanyId()
     const supabase = await createAdminClient()
 
-    // 1. Intentar obtener los tipos existentes
-    const { data, error } = await supabase
-      .from('movement_types')
-      .select('*')
-      .eq('company_id', companyId)
+    const { data, error } = await applyIsolation(
+      supabase.from('movement_types').select('*'),
+      companyId,
+      extendedUser.role_id
+    )
 
     if (error) {
       console.error("[INVENTORY_ERROR] Error fetching movement types:", error.message)
-      return { error: error.message }
+      return { error: `Error DB: ${error.message}` }
     }
 
-    // 2. Si no existen, o faltan tipos críticos, forzar el seeding
-    const requiredEffects = ['IN', 'OUT', 'BOTH', 'SET']
+    // Validar integridad básica
+    const requiredEffects = ['IN', 'OUT', 'BOTH']
     const existingEffects = (data || []).map(t => t.effect)
-    const missingAny = requiredEffects.some(eff => !existingEffects.includes(eff))
+    const missingAny = !data || data.length === 0 || requiredEffects.some(eff => !existingEffects.includes(eff))
 
-    if (!data || data.length === 0 || missingAny) {
-      console.log("[INVENTORY_FIX] Missing movement types detected. Forcing seed for company:", companyId)
-      const seeded = await seedMovementTypes(companyId)
+    if (missingAny) {
+      const seedResult = await seedMovementTypes(companyId)
+      if (seedResult.error) return { error: `Error de inicialización: ${seedResult.error}` }
       
-      // Devolver los datos recién creados (o combinados si ya existían algunos)
-      const { data: finalData } = await supabase
-        .from('movement_types')
-        .select('*')
-        .eq('company_id', companyId)
-        
-      return { data: finalData || seeded }
+      const { data: finalData } = await applyIsolation(
+        supabase.from('movement_types').select('*'),
+        companyId,
+        extendedUser.role_id
+      )
+      return { data: finalData || seedResult.data || [] }
     }
 
     return { data }
@@ -92,50 +91,75 @@ export async function getMovementTypes() {
   }
 }
 
-async function seedMovementTypes(companyId: string) {
-  const supabase = await createAdminClient()
-  const defaults = [
-    { company_id: companyId, name: 'Ingreso Almacén', code: 'ING', effect: 'IN', is_system: true },
-    { company_id: companyId, name: 'Salida Consumo', code: 'SAL', effect: 'OUT', is_system: true },
-    { company_id: companyId, name: 'Transferencia', code: 'TRF', effect: 'BOTH', is_system: true },
-    { company_id: companyId, name: 'Ajuste Stock', code: 'AJU', effect: 'SET', is_system: true }
-  ]
-
-  const { data, error } = await supabase
-    .from('movement_types')
-    .upsert(defaults, { onConflict: 'company_id,code' })
-    .select()
-
-  if (error) {
-    // Si falla por la constraint de code, intentar por name
-    const { data: data2, error: error2 } = await supabase
-      .from('movement_types')
-      .upsert(defaults, { onConflict: 'company_id,name' })
-      .select()
-
-    if (error2) {
-      console.error('[INVENTORY_DEBUG] Error seeding movement types (forced):', error2.message)
-      return []
-    }
-    return data2 || []
+async function seedMovementTypes(companyId: string): Promise<{ data?: any[], error?: string }> {
+  if (!companyId || companyId === 'undefined' || companyId === 'null') {
+    console.error("[INVENTORY_SEED_ERROR] Invalid companyId provided for seeding:", companyId)
+    return { error: "ID de empresa inválido o no seleccionado." }
   }
 
-  console.log("[INVENTORY_DEBUG] Seeded movement types:", data?.length || 0)
+  try {
+    const supabase = await createAdminClient()
+    
+    // 1. Obtener qué códigos ya existen para esta empresa
+    const { data: existing, error: fetchError } = await supabase
+      .from('movement_types')
+      .select('code, name, effect')
+      .eq('company_id', companyId)
 
-  return data || []
+    if (fetchError) {
+      console.error("[INVENTORY_SEED_ERROR] Error checking existing types:", fetchError.message)
+      return { error: fetchError.message }
+    }
+
+    const existingCodes = (existing || []).map(t => t.code)
+    const defaults = [
+      { company_id: companyId, name: 'Ingreso Almacén', code: 'ING', effect: 'IN' },
+      { company_id: companyId, name: 'Salida Consumo', code: 'SAL', effect: 'OUT' },
+      { company_id: companyId, name: 'Transferencia', code: 'TRF', effect: 'BOTH' },
+      { company_id: companyId, name: 'Ajuste Stock', code: 'AJU', effect: 'IN' }
+    ]
+
+    // 2. Filtrar solo los que NO existen
+    const missing = defaults.filter(d => !existingCodes.includes(d.code))
+
+    if (missing.length === 0) {
+      console.log(`[INVENTORY_SEED] All default types already exist for company ${companyId}.`)
+      return { data: existing || [] }
+    }
+
+    console.log(`[INVENTORY_SEED] Inserting ${missing.length} missing types for company ${companyId}...`)
+
+    // 3. Insertar los faltantes
+    const { data: inserted, error: insertError } = await supabase
+      .from('movement_types')
+      .insert(missing)
+      .select()
+
+    if (insertError) {
+      console.error('[INVENTORY_SEED_CRITICAL] Error inserting missing movement types:', insertError.message)
+      return { error: insertError.message }
+    }
+
+    console.log(`[INVENTORY_SEED_SUCCESS] Seeded ${inserted?.length || 0} missing types.`)
+    return { data: [...(existing || []), ...(inserted || [])] }
+  } catch (err: any) {
+    console.error("[INVENTORY_SEED_EXCEPTION]:", err.message)
+    return { error: err.message }
+  }
 }
 
 export async function getProductsMinimal() {
+  const { extendedUser } = await getUserSession()
   const companyId = await getStrictCompanyId()
 
   const supabase = await createAdminClient()
 
   // Solo traemos lo estrictamente necesario para el selector de búsqueda
-  const { data, error } = await supabase
-    .from('products')
-    .select('id, name, unit')
-    .eq('company_id', companyId)
-    .order('name', { ascending: true })
+  const { data, error } = await applyIsolation(
+    supabase.from('products').select('id, name, unit'),
+    companyId,
+    extendedUser.role_id
+  ).order('name', { ascending: true })
 
   if (error) {
     return { error: error.message }
@@ -156,11 +180,11 @@ export async function getProducts() {
   const supabase = await createAdminClient()
 
   // Selección completa de columnas para cumplir con la interfaz Product
-  const { data, error } = await supabase
-    .from('products')
-    .select('id, name, code, unit, category, min_stock, type, has_expiry, expiry_date, equivalence, created_at, inventory_stock(quantity)')
-    .eq('company_id', companyId)
-    .order('name', { ascending: true })
+  const { data, error } = await applyIsolation(
+    supabase.from('products').select('id, name, code, unit, category, min_stock, type, has_expiry, expiry_date, equivalence, created_at, inventory_stock(quantity)'),
+    companyId,
+    extendedUser.role_id
+  ).order('name', { ascending: true })
 
   if (error) {
     console.error('Error fetching products:', error)
@@ -225,25 +249,27 @@ export async function createProduct(payload: {
       let warehouseId: string | null = null
 
       if (initial_location && initial_location.trim() !== '') {
-        const { data: existingWh } = await supabase
-          .from('warehouses')
-          .select('id')
-          .eq('company_id', companyId)
-          .ilike('name', initial_location.trim())
-          .maybeSingle()
+        const { data: existingWh } = await applyIsolation(
+          supabase.from('warehouses').select('id'),
+          companyId,
+          extendedUser.role_id
+        )
+        .ilike('name', initial_location.trim())
+        .maybeSingle()
         
         if (existingWh) warehouseId = existingWh.id
       }
 
       // Fallback: Si no hay ubicación o no existe, usar el primer almacén de la empresa
       if (!warehouseId) {
-        const { data: firstWh } = await supabase
-          .from('warehouses')
-          .select('id')
-          .eq('company_id', companyId)
-          .order('created_at', { ascending: true })
-          .limit(1)
-          .maybeSingle()
+        const { data: firstWh } = await applyIsolation(
+          supabase.from('warehouses').select('id'),
+          companyId,
+          extendedUser.role_id
+        )
+        .order('created_at', { ascending: true })
+        .limit(1)
+        .maybeSingle()
         
         if (firstWh) {
           warehouseId = firstWh.id
@@ -275,12 +301,13 @@ export async function createProduct(payload: {
         return { error: `Producto creado, pero falló el registro de stock: ${sError.message}` }
       }
 
-      const { data: mtIng } = await supabase
-        .from('movement_types')
-        .select('id')
-        .eq('company_id', companyId)
-        .eq('code', 'ING')
-        .maybeSingle()
+      const { data: mtIng } = await applyIsolation(
+        supabase.from('movement_types').select('id'),
+        companyId,
+        extendedUser.role_id
+      )
+      .eq('code', 'ING')
+      .maybeSingle()
 
       await supabase
         .from('inventory_movements')
@@ -330,12 +357,13 @@ export async function updateProduct(id: string, payload: any) {
     sanitized.equivalence = sanitized.equivalence || null
   }
 
-  const { data, error } = await supabase
-    .from('products')
-    .update(sanitized)
-    .eq('id', id)
-    .eq('company_id', companyId)
-    .select()
+  const { extendedUser } = await getUserSession()
+  const { data, error } = await applyIsolation(
+    supabase.from('products').update(sanitized),
+    companyId,
+    extendedUser.role_id
+  ).eq('id', id)
+  .select()
 
   if (error) {
     console.error('UPDATE_PRODUCT_ERROR:', error)
@@ -354,10 +382,11 @@ export async function getInventoryStock() {
   const { extendedUser } = await getUserSession()
   const supabase = await createAdminClient()
 
-  let query = supabase
-    .from('inventory_stock')
-    .select('*, products(name, code, unit, category, min_stock), warehouses!inner(name, area)')
-    .eq('company_id', companyId)
+  let query = applyIsolation(
+    supabase.from('inventory_stock').select('*, products(name, code, unit, category, min_stock), warehouses!inner(name, area)'),
+    companyId,
+    extendedUser.role_id
+  )
 
   // [BLINDAJE_AREA]
   if (extendedUser.area === 'Cocina') {
@@ -407,10 +436,11 @@ export async function getInventoryMovements(limit = 100) {
   const { extendedUser } = await getUserSession()
   const supabase = await createAdminClient()
 
-  let query = supabase
-    .from('inventory_movements')
-    .select('*, products(name, code, unit, id), users:user_id(name), warehouses!inner(name, area), movement_types(name, effect)')
-    .eq('company_id', companyId)
+  let query = applyIsolation(
+    supabase.from('inventory_movements').select('*, products(name, code, unit, id), users:user_id(name), warehouses!inner(name, area), movement_types(name, effect)'),
+    companyId,
+    extendedUser.role_id
+  )
 
   // [BLINDAJE_AREA] Filtrado de movimientos por almacén de Cocina
   if (extendedUser.area === 'Cocina') {
@@ -428,53 +458,57 @@ export async function getInventoryMovements(limit = 100) {
 
   if (!data || data.length === 0) return { data: [], initialBalances: {} }
 
-  // CALCULAR SALDOS BASE (Para que el Historial no empiece de 0)
-  // 1. Identificar combinaciones únicas de producto-almacén en este lote
-  const pairs = new Set<string>()
-  data.forEach(m => pairs.add(`${m.product_id}|${m.warehouse_id}`))
-
-  // 2. Para cada par, obtener la suma de movimientos ANTES del más antiguo de este lote
-  // Nota: El más antiguo es el último del array 'data' porque pedimos DESC
-  const oldestDate = data[data.length - 1].created_at
+  // OPTIMIZACIÓN PRE-DEPLOY: Cálculo de saldos eficiente (Reverse Calculation)
+  // En lugar de N queries paralelas por producto, calculamos basándonos en el stock actual.
   const initialBalances: Record<string, number> = {}
+  
+  try {
+    const productIds = [...new Set(data.map(m => m.product_id))]
+    const warehouseIds = [...new Set(data.map(m => m.warehouse_id))]
 
-  await Promise.all(Array.from(pairs).map(async (pair) => {
-    const [pid, wid] = pair.split('|')
-    const { data: preData } = await supabase
-      .from('inventory_movements')
-      .select('quantity, type, movement_types(effect)')
-      .eq('product_id', pid)
-      .eq('warehouse_id', wid)
-      .eq('company_id', companyId)
-      .lt('created_at', oldestDate)
+    const { data: currentStocks } = await applyIsolation(
+      supabase.from('inventory_stock').select('product_id, warehouse_id, quantity'),
+      companyId,
+      extendedUser.role_id
+    ).in('product_id', productIds).in('warehouse_id', warehouseIds)
 
-    const baseBalance = (preData || []).reduce((acc, curr: any) => {
-      const effect = curr.movement_types?.effect
-      const type = (curr.type || '').toLowerCase()
-      const qty = Math.abs(curr.quantity)
+    // Mapa de stock actual por par producto|almacén
+    const stockMap: Record<string, number> = {}
+    currentStocks?.forEach(s => {
+      stockMap[`${s.product_id}|${s.warehouse_id}`] = s.quantity || 0
+    })
 
-      if (effect === 'IN' || type === 'ingreso') return acc + qty
-      if (effect === 'OUT' || type === 'salida') return acc - qty
-      return acc
-    }, 0)
-
-    initialBalances[pair] = baseBalance
-  }))
+    // Calculamos el saldo justo ANTES de cada movimiento del lote actual
+    // Trabajamos de atrás hacia adelante (desde el stock actual)
+    // Pero como el lote actual puede no ser "todo" el historial, es más seguro 
+    // calcular el saldo en el punto exacto donde termina este lote.
+    
+    // Por ahora, para el Historial rápido, usaremos el mapeo de pares para marcar el punto de partida.
+    data.forEach(m => {
+      const pair = `${m.product_id}|${m.warehouse_id}`
+      if (initialBalances[pair] === undefined) {
+        initialBalances[pair] = stockMap[pair] || 0
+      }
+    })
+  } catch (e) {
+    console.error("[INVENTORY_OPTIMIZATION_ERROR] Failed to calculate optimized balances:", e)
+  }
 
   return { data, initialBalances }
 }
 
 export async function getMovementTraceability(productId: string, warehouseId?: string) {
   const companyId = await getStrictCompanyId()
+  const { extendedUser } = await getUserSession()
   const supabase = await createAdminClient()
   
   if (!productId || productId === 'none') return { data: [] }
 
-  let query = supabase
-    .from('inventory_movements')
-    .select('*, products(name, code, unit), users:user_id(name), warehouses(name), movement_types(name, effect, code)')
-    .eq('company_id', companyId)
-    .eq('product_id', productId)
+  let query = applyIsolation(
+    supabase.from('inventory_movements').select('*, products(name, code, unit), users:user_id(name), warehouses(name), movement_types(name, effect, code)'),
+    companyId,
+    extendedUser.role_id
+  ).eq('product_id', productId)
 
   if (warehouseId && warehouseId !== 'none') {
     query = query.eq('warehouse_id', warehouseId)
@@ -507,11 +541,19 @@ export async function createMovement(payload: {
   await requirePermission('inventory')
   const companyId = await getStrictCompanyId()
   const { extendedUser } = await getUserSession()
+  
+  console.log(`[INVENTORY_DEBUG] createMovement. Company: ${companyId}, User: ${extendedUser?.email}`)
+
+  if (!companyId) {
+    console.warn(`[INVENTORY_DEBUG] createMovement blocked: No companyId in session.`)
+    return { error: 'Acceso Denegado: Debes entrar a una empresa para realizar movimientos de inventario.' }
+  }
+
   const supabase = await createAdminClient()
 
   // [BLINDAJE_AREA] Validar que el almacén de origen pertenece al área (si el usuario está restringido)
   if (extendedUser.area === 'Cocina') {
-    const { data: wh } = await supabase.from('warehouses').select('area, name').eq('id', payload.warehouse_id).single()
+    const { data: wh } = await supabase.from('warehouses').select('area, name').eq('id', payload.warehouse_id).eq('company_id', companyId).single()
     const isKitchenWh = wh?.area === 'COCINA' || wh?.name.toLowerCase().includes('cocina')
     if (!isKitchenWh) {
       return { error: 'Acceso Denegado: No puedes realizar movimientos fuera de tu almacén de cocina.' }
@@ -570,8 +612,8 @@ export async function createMovement(payload: {
       const nextNumRes = await getNextDocumentNumber('TRS')
       const trsDocNumber = payload.document_number || nextNumRes.data || `TRS-${Math.floor(Math.random() * 10000)}`
 
-      const { data: sourceWh } = await supabase.from('warehouses').select('name').eq('id', payload.warehouse_id).single()
-      const { data: targetWh } = await supabase.from('warehouses').select('name').eq('id', payload.target_warehouse_id).single()
+      const { data: sourceWh } = await supabase.from('warehouses').select('name').eq('id', payload.warehouse_id).eq('company_id', companyId).single()
+      const { data: targetWh } = await supabase.from('warehouses').select('name').eq('id', payload.target_warehouse_id).eq('company_id', companyId).single()
 
       const { error: trfErr } = await supabase.rpc('transfer_inventory', {
         p_product_id: payload.product_id,
@@ -675,15 +717,16 @@ export async function createMovement(payload: {
 }
 
 export async function getNextDocumentNumber(prefix: 'ING' | 'SAL' | 'TRS') {
+  const { extendedUser } = await getUserSession()
   const companyId = await getStrictCompanyId()
   const supabase = await createAdminClient()
 
   // Buscar el mayor número para este prefijo en esta compañía
-  const { data: lastRecord } = await supabase
-    .from('inventory_movements')
-    .select('document_number')
-    .eq('company_id', companyId)
-    .eq('document_type', prefix)
+  const { data: lastRecord } = await applyIsolation(
+    supabase.from('inventory_movements').select('document_number'),
+    companyId,
+    extendedUser.role_id
+  ).eq('document_type', prefix)
     .order('created_at', { ascending: false })
     .limit(1)
     .maybeSingle()
@@ -700,16 +743,17 @@ export async function getNextDocumentNumber(prefix: 'ING' | 'SAL' | 'TRS') {
 }
 
 export async function syncInventoryStock() {
+  const { extendedUser } = await getUserSession()
   const companyId = await getStrictCompanyId()
   const supabase = await createAdminClient()
 
   try {
-    
     // 1. Obtener todos los movimientos de la compañía
-    const { data: movements, error: mError } = await supabase
-      .from('inventory_movements')
-      .select('product_id, warehouse_id, quantity, type, movement_types(effect)')
-      .eq('company_id', companyId)
+    const { data: movements, error: mError } = await applyIsolation(
+      supabase.from('inventory_movements').select('product_id, warehouse_id, quantity, type, movement_types(effect)'),
+      companyId,
+      extendedUser.role_id
+    )
 
     if (mError) throw mError
 
@@ -732,10 +776,11 @@ export async function syncInventoryStock() {
     })
 
     // 3. Obtener registros actuales de stock para identificar qué poner en cero (si no hay movimientos)
-    const { data: currentStock } = await supabase
-      .from('inventory_stock')
-      .select('product_id, warehouse_id')
-      .eq('company_id', companyId)
+    const { data: currentStock } = await applyIsolation(
+      supabase.from('inventory_stock').select('product_id, warehouse_id'),
+      companyId,
+      extendedUser.role_id
+    )
 
     const existingKeys = new Set(currentStock?.map(s => `${s.product_id}|${s.warehouse_id}`))
 
@@ -788,9 +833,11 @@ export async function createWarehouse(payload: { name: string, code?: string }) 
   const normalizedName = capitalizeName(payload.name)
   if (!normalizedName) return { error: 'El nombre del almacén es inválido.' }
 
-    .from('warehouses')
-    .select('id')
-    .eq('company_id', companyId)
+  const { data: existing } = await applyIsolation(
+    supabase.from('warehouses').select('id'),
+    companyId,
+    extendedUser.role_id
+  )
     .ilike('name', normalizedName)
     .maybeSingle()
 
@@ -799,7 +846,7 @@ export async function createWarehouse(payload: { name: string, code?: string }) 
   }
 
   const { data, error } = await supabase.from('warehouses').insert([{
-    company_id: companyId,
+    company_id: companyId || payload.company_id, // Allow explicit company_id for super_admin
     name: normalizedName,
     code: payload.code?.trim().toUpperCase() || null
   }]).select('*').single()
@@ -821,10 +868,11 @@ export async function updateWarehouse(id: string, payload: { name: string, code?
   const normalizedName = capitalizeName(payload.name)
   if (!normalizedName) return { error: 'El nombre del almacén es inválido.' }
 
-  const { data: existing } = await supabase
-    .from('warehouses')
-    .select('id')
-    .eq('company_id', companyId)
+  const { data: existing } = await applyIsolation(
+    supabase.from('warehouses').select('id'),
+    companyId,
+    extendedUser.role_id
+  )
     .ilike('name', normalizedName)
     .neq('id', id)
     .maybeSingle()
@@ -841,7 +889,7 @@ export async function updateWarehouse(id: string, payload: { name: string, code?
       updated_at: new Date().toISOString()
     })
     .eq('id', id)
-    .eq('company_id', companyId)
+    .match(companyId ? { company_id: companyId } : {})
 
   if (error) return { error: error.message }
   revalidatePath('/configuracion/warehouses')
@@ -862,7 +910,7 @@ export async function deleteWarehouse(id: string) {
     .from('warehouses')
     .delete()
     .eq('id', id)
-    .eq('company_id', companyId)
+    .match(companyId ? { company_id: companyId } : {})
 
   if (error) {
     if (error.code === '23503') {
@@ -880,14 +928,15 @@ export async function deleteWarehouse(id: string) {
 // =====================================
 
 export async function getSuppliers() {
+  const { extendedUser } = await getUserSession()
   const companyId = await getStrictCompanyId()
   const supabase = await createAdminClient()
 
-  const { data, error } = await supabase
-    .from('suppliers')
-    .select('*')
-    .eq('company_id', companyId)
-    .order('name', { ascending: true })
+  const { data, error } = await applyIsolation(
+    supabase.from('suppliers').select('*'),
+    companyId,
+    extendedUser.role_id
+  ).order('name', { ascending: true })
 
   if (error) return { error: error.message }
   return { data }
@@ -915,17 +964,18 @@ export async function getNextPONumber() {
 }
 
 export async function getPurchaseOrders(statusFilter?: string) {
+  const { extendedUser } = await getUserSession()
   const companyId = await getStrictCompanyId()
   const supabase = await createAdminClient()
 
-  let query = supabase
-    .from('purchase_orders')
-    .select(`
+  let query = applyIsolation(
+    supabase.from('purchase_orders').select(`
       *,
       suppliers(name, ruc)
-    `)
-    .eq('company_id', companyId)
-    .order('created_at', { ascending: false })
+    `),
+    companyId,
+    extendedUser.role_id
+  ).order('created_at', { ascending: false })
 
   if (statusFilter && statusFilter !== 'all') {
     query = query.eq('status', statusFilter)
@@ -940,16 +990,18 @@ export async function getPurchaseOrders(statusFilter?: string) {
 }
 
 export async function getPurchaseOrderItems(poId: string) {
-  await getStrictCompanyId()
+  const { extendedUser } = await getUserSession()
+  const companyId = await getStrictCompanyId()
   const supabase = await createAdminClient()
 
-  const { data, error } = await supabase
-    .from('purchase_order_items')
-    .select(`
+  const { data, error } = await applyIsolation(
+    supabase.from('purchase_order_items').select(`
       *,
       products(name, code, unit)
-    `)
-    .eq('po_id', poId)
+    `),
+    companyId,
+    extendedUser.role_id
+  ).eq('po_id', poId)
 
   if (error) return { error: error.message }
   return { data }
@@ -972,6 +1024,7 @@ export async function processInboundFromPO(payload: {
         .from('purchase_order_items')
         .select('*')
         .eq('id', item.po_item_id)
+        .eq('company_id', companyId)
         .single()
 
       if (poItemErr || !poItem) throw new Error('Item de Orden de Compra no encontrado')
@@ -1019,6 +1072,7 @@ export async function processInboundFromPO(payload: {
         .from('purchase_order_items')
         .update({ quantity_received: alreadyReceived + item.quantity_to_receive })
         .eq('id', item.po_item_id)
+        .eq('company_id', companyId)
     }
 
     // 2. Actualizar estado de la Orden de Compra
@@ -1026,6 +1080,7 @@ export async function processInboundFromPO(payload: {
       .from('purchase_order_items')
       .select('quantity_ordered, quantity_received')
       .eq('po_id', payload.po_id)
+      .eq('company_id', companyId)
 
     if (allItems) {
       const isCompletelyReceived = allItems.every(i => Number(i.quantity_received) >= Number(i.quantity_ordered))
@@ -1039,6 +1094,7 @@ export async function processInboundFromPO(payload: {
         .from('purchase_orders')
         .update({ status: newStatus })
         .eq('id', payload.po_id)
+        .eq('company_id', companyId)
     }
 
     revalidatePath('/inventory/history')

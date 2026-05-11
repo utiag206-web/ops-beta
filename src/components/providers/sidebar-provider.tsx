@@ -21,16 +21,30 @@ export function SidebarProvider({ children }: { children: React.ReactNode }) {
   }, [pathname])
 
   // Prevent scrolling when sidebar is open on mobile
+  // Optimized to only apply on mobile-like viewports
   useEffect(() => {
-    if (isOpen) {
+    if (isOpen && window.innerWidth < 1024) {
       document.body.style.overflow = 'hidden'
     } else {
       document.body.style.overflow = 'unset'
     }
+    
+    // Explicit cleanup for all scenarios
     return () => {
       document.body.style.overflow = 'unset'
     }
   }, [isOpen])
+
+  // Auto-close on resize to desktop
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth >= 1024) {
+        setIsOpen(false)
+      }
+    }
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
 
   const toggle = () => setIsOpen(prev => !prev)
 

@@ -43,14 +43,16 @@ export function AddUserModal({ isOpen, onClose, availableWorkers }: AddUserModal
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden max-h-[90vh] flex flex-col">
-        <div className="p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50">
-          <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
-            <UserPlus size={20} className="text-blue-600" />
-            Invitar Usuario
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+      <div className="bg-white rounded-[2rem] shadow-2xl w-full max-w-md overflow-hidden max-h-[90vh] flex flex-col border border-slate-200">
+        <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50">
+          <h2 className="text-xl font-bold text-slate-800 flex items-center gap-3">
+            <div className="bg-blue-100 p-2 rounded-xl">
+              <UserPlus size={20} className="text-blue-600" />
+            </div>
+            Gestión de Accesos
           </h2>
-          <button onClick={onClose} className="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg">
+          <button onClick={onClose} className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl transition-all">
             <X size={20} />
           </button>
         </div>

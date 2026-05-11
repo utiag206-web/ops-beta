@@ -68,17 +68,27 @@ export function AddTransactionModal({ isOpen, onClose, onSuccess, area }: AddTra
 
     setUploading(true)
     try {
-      const { uploadFile } = await import('@/lib/storage')
-      const fileName = `${Date.now()}-${file.name.replace(/\s+/g, '_')}`
-      const storagePath = `caja-chica/${area.toLowerCase().replace(/\s+/g, '_')}/${fileName}`
+      const { uploadFilesAction } = await import('@/app/actions/storage')
+      
+      const reader = new FileReader()
+      const base64Promise = new Promise<string>((resolve) => {
+        reader.onload = () => resolve(reader.result as string)
+        reader.readAsDataURL(file)
+      })
+      
+      const base64 = await base64Promise
+      const result = await uploadFilesAction(
+        [{ name: file.name, type: file.type, base64 }],
+        'worker_documents',
+        'petty-cash',
+        area.toLowerCase().replace(/\s+/g, '_')
+      )
 
-      const { publicUrl } = await uploadFile(file, 'worker_documents', storagePath)
-
-      if (publicUrl) {
-        setFormData({ ...formData, voucher_url: publicUrl })
+      if (result.success && result.urls?.[0]) {
+        setFormData({ ...formData, voucher_url: result.urls[0] })
         toast.success('Comprobante subido correctamente')
       } else {
-        throw new Error('No se obtuvo la URL pública')
+        throw new Error(result.error || 'No se obtuvo la URL pública')
       }
     } catch (error: any) {
       toast.error('Error al subir comprobante: ' + error.message)
@@ -113,11 +123,11 @@ export function AddTransactionModal({ isOpen, onClose, onSuccess, area }: AddTra
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
-      <div className="bg-white w-full max-w-xl rounded-[2.5rem] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300">
+      <div className="bg-white w-full max-w-xl rounded-[2rem] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300">
         <div className="p-8 border-b border-slate-50 flex justify-between items-center bg-slate-50/50">
           <div>
-            <h2 className="text-2xl font-black text-slate-800 tracking-tight">Registro de Movimiento</h2>
-            <p className="text-xs font-black text-blue-600 uppercase tracking-widest mt-1">Caja Chica: {area}</p>
+            <h2 className="text-2xl font-bold text-slate-800 tracking-tight">Registro de Movimiento</h2>
+            <p className="text-xs font-bold text-blue-600 uppercase tracking-widest mt-1">Caja Chica: {area}</p>
           </div>
           <button onClick={onClose} className="p-3 hover:bg-white rounded-full text-slate-400 transition-all shadow-sm">
             <X size={20} />
@@ -130,7 +140,7 @@ export function AddTransactionModal({ isOpen, onClose, onSuccess, area }: AddTra
             <button
               type="button"
               onClick={() => setFormData({...formData, type: 'ingreso'})}
-              className={`flex items-center justify-center gap-3 py-3.5 rounded-xl font-black text-[11px] uppercase tracking-widest transition-all ${
+              className={`flex items-center justify-center gap-3 py-3.5 rounded-xl font-bold text-[11px] uppercase tracking-widest transition-all ${
                 formData.type === 'ingreso' 
                 ? 'bg-emerald-500 text-white shadow-lg' 
                 : 'text-slate-500 hover:bg-white/50'
@@ -141,7 +151,7 @@ export function AddTransactionModal({ isOpen, onClose, onSuccess, area }: AddTra
             <button
               type="button"
               onClick={() => setFormData({...formData, type: 'egreso'})}
-              className={`flex items-center justify-center gap-3 py-3.5 rounded-xl font-black text-[11px] uppercase tracking-widest transition-all ${
+              className={`flex items-center justify-center gap-3 py-3.5 rounded-xl font-bold text-[11px] uppercase tracking-widest transition-all ${
                 formData.type === 'egreso' 
                 ? 'bg-rose-500 text-white shadow-lg' 
                 : 'text-slate-500 hover:bg-white/50'
@@ -154,7 +164,7 @@ export function AddTransactionModal({ isOpen, onClose, onSuccess, area }: AddTra
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* CATEGORIA */}
             <div className="space-y-2">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2">
+              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2">
                 <Tag size={12} /> Categoría
               </label>
               <select 
@@ -174,7 +184,7 @@ export function AddTransactionModal({ isOpen, onClose, onSuccess, area }: AddTra
 
             {/* FECHA */}
             <div className="space-y-2">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2">
+              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2">
                 <Calendar size={12} /> Fecha
               </label>
               <input 
@@ -188,7 +198,7 @@ export function AddTransactionModal({ isOpen, onClose, onSuccess, area }: AddTra
           </div>
 
           <div className="space-y-2">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2">
+            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2">
               <FileText size={12} /> Motivo / Concepto
             </label>
             <input 
@@ -204,7 +214,7 @@ export function AddTransactionModal({ isOpen, onClose, onSuccess, area }: AddTra
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* MONTO */}
             <div className="space-y-2">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2">
+              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2">
                  <DollarSign size={12} /> Monto (S/)
               </label>
               <input 
@@ -220,7 +230,7 @@ export function AddTransactionModal({ isOpen, onClose, onSuccess, area }: AddTra
 
             {/* NRO OPERACION */}
             <div className={`space-y-2 transition-all duration-300 ${['transferencia', 'yape'].includes(formData.payment_method) ? 'opacity-100' : 'opacity-40'}`}>
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2">
+              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2">
                  <Hash size={12} /> Nro Operación (Opc)
               </label>
               <input 
@@ -235,7 +245,7 @@ export function AddTransactionModal({ isOpen, onClose, onSuccess, area }: AddTra
 
           {/* METODO DE PAGO */}
           <div className="space-y-3">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Método de Pago</label>
+            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Método de Pago</label>
             <div className="grid grid-cols-3 gap-3">
               {[
                 { id: 'efectivo', icon: Banknote, label: 'Efectivo', color: 'hover:text-emerald-600 hover:bg-emerald-50' },
@@ -253,7 +263,7 @@ export function AddTransactionModal({ isOpen, onClose, onSuccess, area }: AddTra
                   }`}
                 >
                   <m.icon size={20} />
-                  <span className="text-[10px] font-black uppercase tracking-widest">{m.label}</span>
+                  <span className="text-[10px] font-bold uppercase tracking-widest">{m.label}</span>
                 </button>
               ))}
             </div>
@@ -261,7 +271,7 @@ export function AddTransactionModal({ isOpen, onClose, onSuccess, area }: AddTra
 
           {/* COMPROBANTE - FILE UPLOAD */}
           <div className="space-y-2">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2">
+            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2">
                <Paperclip size={12} /> Comprobante (Opc)
             </label>
             <div className="relative">
@@ -283,7 +293,7 @@ export function AddTransactionModal({ isOpen, onClose, onSuccess, area }: AddTra
                 {uploading ? <Loader2 className="w-5 h-5 animate-spin" /> 
                 : formData.voucher_url ? <CheckCircle2 className="w-5 h-5" /> 
                 : <Paperclip className="w-5 h-5" />}
-                <span className="text-xs font-black uppercase tracking-widest">
+                <span className="text-xs font-bold uppercase tracking-widest">
                   {formData.voucher_url ? 'Comprobante Listo' : 'Subir Imagen / PDF'}
                 </span>
               </label>
@@ -293,7 +303,7 @@ export function AddTransactionModal({ isOpen, onClose, onSuccess, area }: AddTra
           <button 
             type="submit"
             disabled={loading || uploading}
-            className={`w-full py-5 text-white font-black rounded-[1.5rem] transition-all shadow-xl flex items-center justify-center gap-3 disabled:opacity-50 ${
+            className={`w-full py-5 text-white font-bold rounded-[1.5rem] transition-all shadow-xl flex items-center justify-center gap-3 disabled:opacity-50 ${
               formData.type === 'ingreso' ? 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-200' : 'bg-slate-900 hover:bg-slate-800 shadow-slate-200'
             }`}
           >

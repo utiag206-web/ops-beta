@@ -102,7 +102,7 @@ export function MovementForm({ isOpen, onClose, onSuccess, products }: MovementF
   const activeMovementType = movementTypes.find(t => t.id === form.movement_type_id)
   const isTransfer = activeMovementType?.effect === 'BOTH'
   const isIngreso = activeMovementType?.effect === 'IN'
-  const isAdjustment = activeMovementType?.effect === 'SET' || activeMovementType?.name?.toLowerCase().includes('ajuste')
+  const isAdjustment = activeMovementType?.effect === 'SET' || activeMovementType?.code === 'AJU' || activeMovementType?.name?.toLowerCase().includes('ajuste')
 
   // Efecto para PREVIEW de TRS
   useEffect(() => {
@@ -251,12 +251,31 @@ export function MovementForm({ isOpen, onClose, onSuccess, products }: MovementF
           <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto custom-scrollbar p-8 space-y-8">
             
             {movementTypes.length === 0 && !initLoading && (
-              <div className="bg-rose-50 border border-rose-100 p-6 rounded-3xl flex items-center gap-4 text-rose-800 animate-pulse">
-                <AlertCircle className="shrink-0" />
-                <div>
-                  <p className="font-black text-sm uppercase tracking-tight">Error de Configuración ERP</p>
-                  <p className="text-xs font-medium opacity-80">No se han detectado tipos de movimiento para su empresa. Contacte a soporte o intente recargar.</p>
+              <div className="bg-rose-50 border border-rose-100 p-6 rounded-3xl flex flex-col gap-4 text-rose-800">
+                <div className="flex items-center gap-4">
+                  <AlertCircle className="shrink-0" />
+                  <div>
+                    <p className="font-black text-sm uppercase tracking-tight">Error de Configuración ERP</p>
+                    <p className="text-xs font-medium opacity-80">No se han detectado tipos de movimiento para su empresa.</p>
+                  </div>
                 </div>
+                <button 
+                  type="button"
+                  onClick={async () => {
+                    setInitLoading(true);
+                    const mTRes = await getMovementTypes();
+                    if (mTRes.data && mTRes.data.length > 0) {
+                      setMovementTypes(mTRes.data);
+                      toast.success("Tipos de movimiento sincronizados correctamente.");
+                    } else {
+                      toast.error(mTRes.error || "Aún no se encuentran tipos de movimiento.");
+                    }
+                    setInitLoading(false);
+                  }}
+                  className="w-full bg-rose-600 text-white font-black py-3 rounded-2xl text-[10px] uppercase tracking-widest hover:bg-rose-700 transition-colors"
+                >
+                  Re-intentar inicialización automática
+                </button>
               </div>
             )}
             

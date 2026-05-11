@@ -395,8 +395,19 @@ export function ApproveRequirementModal({
   )
 }
 
-export function ReportIncidentModal({ isOpen, onClose }: { isOpen: boolean, onClose: () => void }) {
+export function ReportIncidentModal({ 
+  isOpen, 
+  onClose, 
+  onSuccess,
+  initialCategory 
+}: { 
+  isOpen: boolean, 
+  onClose: () => void,
+  onSuccess?: () => void,
+  initialCategory?: string 
+}) {
   const [loading, setLoading] = useState(false)
+  const [uploading, setUploading] = useState(false)
   const [files, setFiles] = useState<{file: File, preview: string}[]>([])
   const [form, setForm] = useState({
     type: 'operacion',
@@ -404,9 +415,15 @@ export function ReportIncidentModal({ isOpen, onClose }: { isOpen: boolean, onCl
     description: '',
     severity: 'media',
     event_date: new Date().toISOString().split('T')[0],
-    incident_category: 'personal',
+    incident_category: initialCategory || 'personal',
     corrective_actions: ''
   })
+
+  useEffect(() => {
+    if (initialCategory) {
+      setForm(f => ({ ...f, incident_category: initialCategory }))
+    }
+  }, [initialCategory])
 
   if (!isOpen) return null
 
@@ -433,6 +450,7 @@ export function ReportIncidentModal({ isOpen, onClose }: { isOpen: boolean, onCl
 
       // 1. Upload files if any
       if (files.length > 0) {
+        setUploading(true)
         const { uploadFilesAction } = await import('@/app/actions/storage')
         const filesData = await Promise.all(files.map(async ({ file }) => {
           const reader = new FileReader()
@@ -444,6 +462,7 @@ export function ReportIncidentModal({ isOpen, onClose }: { isOpen: boolean, onCl
         }))
 
         const uploadRes = await uploadFilesAction(filesData, 'soma', 'incidents', 'new')
+        setUploading(false)
         if (uploadRes.success && uploadRes.urls) {
           photoUrls = uploadRes.urls
         } else {
@@ -465,6 +484,7 @@ export function ReportIncidentModal({ isOpen, onClose }: { isOpen: boolean, onCl
 
       if (res.success) {
         toast.success('Incidencia reportada correctamente')
+        onSuccess?.()
         onClose()
       } else {
         toast.error(res.error || 'Error al reportar incidencia')
@@ -473,6 +493,7 @@ export function ReportIncidentModal({ isOpen, onClose }: { isOpen: boolean, onCl
       toast.error('Error de conexión')
     } finally {
       setLoading(false)
+      setUploading(false)
     }
   }
 
@@ -481,8 +502,12 @@ export function ReportIncidentModal({ isOpen, onClose }: { isOpen: boolean, onCl
       <div className="bg-white w-full max-w-2xl rounded-[2.5rem] shadow-2xl border border-slate-100 animate-in zoom-in-95 duration-200 flex flex-col max-h-[90vh]">
         <div className="p-8 border-b border-slate-50 flex justify-between items-center bg-orange-50/30">
           <div>
-            <h2 className="text-2xl font-black text-slate-800 tracking-tight">Reportar Incidencia SOMA</h2>
-            <p className="text-slate-500 text-sm font-medium italic">FASE 2: Investigación y Seguimiento</p>
+            <h2 className="text-2xl font-black text-slate-800 tracking-tight">
+              {initialCategory === 'soma' ? 'Reportar Incidente SOMA' : 'Reportar Incidencia'}
+            </h2>
+            <p className="text-slate-500 text-sm font-medium italic">
+              {initialCategory === 'soma' ? 'FASE 2: Investigación y Seguimiento HSEC' : 'Control de anomalías y eventos operativos'}
+            </p>
           </div>
           <button onClick={onClose} className="p-2 hover:bg-white rounded-full transition-colors text-slate-400">
             <X size={24} />
@@ -490,6 +515,7 @@ export function ReportIncidentModal({ isOpen, onClose }: { isOpen: boolean, onCl
         </div>
 
         <form onSubmit={handleSubmit} className="p-10 space-y-8 overflow-y-auto custom-scrollbar">
+          {/* ... (existing fields remain identical) ... */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             <div className="space-y-2">
               <label className="text-[11px] font-black uppercase tracking-widest text-slate-400 px-1">Ubicación / Área Relacionada</label>
@@ -545,6 +571,8 @@ export function ReportIncidentModal({ isOpen, onClose }: { isOpen: boolean, onCl
                 <option value="personal">Daño Personal</option>
                 <option value="ambiental">Daño Ambiental</option>
                 <option value="material">Daño Material</option>
+                <option value="soma">HSEC / SOMA</option>
+                <option value="operativa">Operativa / Mantenimiento</option>
               </select>
             </div>
             <div className="space-y-2">
@@ -620,7 +648,7 @@ export function ReportIncidentModal({ isOpen, onClose }: { isOpen: boolean, onCl
               {loading ? <Loader2 className="animate-spin text-white" size={24} /> : (
                 <>
                   <Activity size={20} strokeWidth={3} />
-                  Reportar Incidencia
+                  {uploading ? 'Subiendo Evidencias...' : 'Reportar Incidencia'}
                 </>
               )}
             </button>
@@ -630,3 +658,4 @@ export function ReportIncidentModal({ isOpen, onClose }: { isOpen: boolean, onCl
     </div>
   )
 }
+

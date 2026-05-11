@@ -1,4 +1,4 @@
-import { createClient, createAdminClient } from '@/lib/supabase/server'
+
 
 export type StorageBucket = 'incidencias' | 'worker_documents' | 'ppe' | 'petty-cash' | 'soma'
 
@@ -7,6 +7,7 @@ export async function uploadFile(
   bucket: StorageBucket, 
   path: string
 ) {
+  const { createAdminClient } = await import('@/lib/supabase/server')
   const supabase = await createAdminClient()
 
   // 1. ArrayBuffer conversion
@@ -38,6 +39,7 @@ export async function uploadFile(
 }
 
 export async function deleteFile(bucket: StorageBucket, path: string) {
+  const { createAdminClient } = await import('@/lib/supabase/server')
   const supabase = await createAdminClient()
   const { error } = await supabase.storage.from(bucket).remove([path])
   if (error) {

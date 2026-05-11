@@ -72,9 +72,9 @@ export default function RequirementsPage({ userRole, initialData = [] }: { userR
   return (
     <div className="space-y-8 pb-12">
       {/* Header */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white p-8 rounded-[2.5rem] shadow-sm border border-slate-50">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white p-8 rounded-[2rem] shadow-sm border border-slate-50">
         <div>
-          <h1 className="text-3xl font-black text-slate-800 tracking-tight flex items-center gap-3">
+          <h1 className="text-3xl font-bold text-slate-800 tracking-tight flex items-center gap-3">
             <div className="bg-indigo-100 p-2 rounded-xl">
               <Package className="text-indigo-600" size={24} />
             </div>
@@ -85,7 +85,7 @@ export default function RequirementsPage({ userRole, initialData = [] }: { userR
         
         <button 
           onClick={() => setIsModalOpen(true)}
-          className="w-full md:w-auto bg-indigo-600 hover:bg-indigo-700 text-white px-8 py-4 rounded-2xl font-black transition-all flex items-center justify-center gap-3 shadow-lg shadow-indigo-100 active:scale-95"
+          className="w-full md:w-auto bg-indigo-600 hover:bg-indigo-700 text-white px-8 py-4 rounded-2xl font-bold transition-all flex items-center justify-center gap-3 shadow-lg shadow-indigo-100 active:scale-95"
         >
           <Plus size={20} strokeWidth={3} />
           <span>Nuevo Requerimiento</span>
@@ -125,23 +125,23 @@ export default function RequirementsPage({ userRole, initialData = [] }: { userR
       </div>
 
       {/* Main Table */}
-      <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-100 overflow-hidden">
+      <div className="bg-white rounded-[2rem] shadow-sm border border-slate-100 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
               <tr className="bg-slate-50/50 border-b border-slate-100">
-                <th className="py-5 px-6 text-[11px] font-black text-slate-400 uppercase tracking-widest text-center">Tipo</th>
-                <th className="py-5 px-6 text-[11px] font-black text-slate-400 uppercase tracking-widest">Motivo / Detalle</th>
-                <th className="py-5 px-6 text-[11px] font-black text-slate-400 uppercase tracking-widest">Código</th>
-                <th className="py-5 px-6 text-[11px] font-black text-slate-400 uppercase tracking-widest">Producto</th>
-                <th className="py-5 px-4 text-[11px] font-black text-slate-400 uppercase tracking-widest text-center">Cant.</th>
-                <th className="py-5 px-4 text-[11px] font-black text-slate-400 uppercase tracking-widest text-center">Unidad</th>
-                <th className="py-5 px-4 text-[11px] font-black text-slate-400 uppercase tracking-widest text-center">Área</th>
-                <th className="py-5 px-6 text-[11px] font-black text-slate-400 uppercase tracking-widest">Solicitado por</th>
-                <th className="py-5 px-6 text-[11px] font-black text-slate-400 uppercase tracking-widest text-center">Prioridad</th>
-                <th className="py-5 px-6 text-[11px] font-black text-slate-400 uppercase tracking-widest text-center">Estado</th>
-                <th className="py-5 px-6 text-[11px] font-black text-slate-400 uppercase tracking-widest text-center">Fecha</th>
-                <th className="py-5 px-8 text-[11px] font-black text-slate-400 uppercase tracking-widest text-right">Acciones</th>
+                <th className="py-5 px-6 text-[11px] font-bold text-slate-400 uppercase tracking-widest text-center">Tipo</th>
+                <th className="py-5 px-6 text-[11px] font-bold text-slate-400 uppercase tracking-widest">Motivo / Detalle</th>
+                <th className="py-5 px-6 text-[11px] font-bold text-slate-400 uppercase tracking-widest">Código</th>
+                <th className="py-5 px-6 text-[11px] font-bold text-slate-400 uppercase tracking-widest">Producto</th>
+                <th className="py-5 px-4 text-[11px] font-bold text-slate-400 uppercase tracking-widest text-center">Cant.</th>
+                <th className="py-5 px-4 text-[11px] font-bold text-slate-400 uppercase tracking-widest text-center">Unidad</th>
+                <th className="py-5 px-4 text-[11px] font-bold text-slate-400 uppercase tracking-widest text-center">Área</th>
+                <th className="py-5 px-6 text-[11px] font-bold text-slate-400 uppercase tracking-widest">Solicitado por</th>
+                <th className="py-5 px-6 text-[11px] font-bold text-slate-400 uppercase tracking-widest text-center">Prioridad</th>
+                <th className="py-5 px-6 text-[11px] font-bold text-slate-400 uppercase tracking-widest text-center">Estado</th>
+                <th className="py-5 px-6 text-[11px] font-bold text-slate-400 uppercase tracking-widest text-center">Fecha</th>
+                <th className="py-5 px-8 text-[11px] font-bold text-slate-400 uppercase tracking-widest text-right">Acciones</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
@@ -160,7 +160,7 @@ export default function RequirementsPage({ userRole, initialData = [] }: { userR
                 return (
                   <tr key={req.id} className="group hover:bg-slate-50/50 transition-colors">
                     <td className="px-6 py-6 text-center">
-                      <span className="bg-slate-100 text-slate-500 text-[9px] font-black px-2 py-1 rounded shadow-sm border border-slate-200 uppercase tracking-tighter">
+                      <span className="bg-slate-100 text-slate-500 text-[9px] font-bold px-2 py-1 rounded shadow-sm border border-slate-200 uppercase tracking-tighter">
                         {req.type}
                       </span>
                     </td>
@@ -174,7 +174,7 @@ export default function RequirementsPage({ userRole, initialData = [] }: { userR
                          <div className="bg-slate-100 p-2 rounded-lg text-slate-400 shrink-0">
                            <Hash size={14} />
                          </div>
-                         <span className="text-xs font-black text-indigo-600 uppercase tracking-tighter">
+                         <span className="text-xs font-bold text-indigo-600 uppercase tracking-tighter">
                            {req.products?.code || 'S/C'}
                          </span>
                       </div>
@@ -185,7 +185,7 @@ export default function RequirementsPage({ userRole, initialData = [] }: { userR
                            <div className="bg-indigo-50 p-2 rounded-lg text-indigo-400 shrink-0">
                              <Package size={14} />
                            </div>
-                           <span className="text-sm font-black text-slate-800 uppercase tracking-tight">
+                           <span className="text-sm font-bold text-slate-800 uppercase tracking-tight">
                              {req.products?.name}
                            </span>
                         </div>
@@ -194,17 +194,17 @@ export default function RequirementsPage({ userRole, initialData = [] }: { userR
                       )}
                     </td>
                     <td className="py-6 px-4 text-center">
-                      <span className="text-sm font-black text-slate-800">
+                      <span className="text-sm font-bold text-slate-800">
                         {req.quantity}
                       </span>
                     </td>
                     <td className="py-6 px-4 text-center">
-                      <span className="text-[10px] font-black text-slate-600 bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-100 uppercase tracking-tight whitespace-nowrap">
+                      <span className="text-[10px] font-bold text-slate-600 bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-100 uppercase tracking-tight whitespace-nowrap">
                         {req.products?.unit || '—'}
                       </span>
                     </td>
                     <td className="py-6 px-4 text-center">
-                      <span className="text-[9px] font-black text-indigo-500 bg-indigo-50/30 px-2 py-1 rounded-lg uppercase">
+                      <span className="text-[9px] font-bold text-indigo-500 bg-indigo-50/30 px-2 py-1 rounded-lg uppercase">
                         {req.area || '—'}
                       </span>
                     </td>
@@ -249,7 +249,7 @@ export default function RequirementsPage({ userRole, initialData = [] }: { userR
                             {(req.status === 'aprobado' && isGlobalAdmin) && (
                               <button 
                                 onClick={() => handleStatusUpdate(req.id, 'atendido')}
-                                className="px-4 py-2.5 bg-emerald-50 text-emerald-600 hover:bg-emerald-600 hover:text-white text-[10px] font-black rounded-xl transition-all shadow-sm uppercase tracking-tighter border border-emerald-100/50"
+                                className="px-4 py-2.5 bg-emerald-50 text-emerald-600 hover:bg-emerald-600 hover:text-white text-[10px] font-bold rounded-xl transition-all shadow-sm uppercase tracking-tighter border border-emerald-100/50"
                               >
                                 Marcar Atendido
                               </button>
@@ -275,7 +275,7 @@ export default function RequirementsPage({ userRole, initialData = [] }: { userR
                       <p className="text-slate-400 font-bold">No se encontraron requerimientos con los filtros seleccionados.</p>
                       <button 
                         onClick={() => setFilters({ status: 'todos', priority: 'todas' })}
-                        className="text-xs font-black text-indigo-600 uppercase tracking-widest underline"
+                        className="text-xs font-bold text-indigo-600 uppercase tracking-widest underline"
                       >
                         Limpiar filtros
                       </button>

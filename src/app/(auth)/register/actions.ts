@@ -61,6 +61,11 @@ export async function register(prevState: any, formData: FormData) {
 
     const companyId = companyData.id
 
+    // 2.1 Inicializar tipos de movimiento automáticamente
+    console.log(`[AUTH] Inicializando maestros para empresa: ${companyId}`)
+    const { seedMovementTypes } = await import('@/app/(main)/inventory/actions')
+    await seedMovementTypes(companyId)
+
     // 3. Crear el registro en public.users como ADMIN de esa empresa
     const { error: userError } = await supabaseAdmin
       .from('users')

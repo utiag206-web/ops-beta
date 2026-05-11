@@ -7,6 +7,7 @@ interface RbacContextType {
   permissions: string[];
   isAdmin: boolean;
   user: any;
+  isImpersonating: boolean;
   hasAccess: (module: string) => boolean;
 }
 
@@ -33,6 +34,7 @@ export function RbacProvider({
       permissions: currentPermissions,
       isAdmin,
       user,
+      isImpersonating: !!user?.is_impersonating,
       hasAccess: (module: string) => {
         if (!module || module === 'dashboard' || module === 'profile') return true
         if (!currentRoleId) return false

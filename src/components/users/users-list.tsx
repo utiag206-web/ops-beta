@@ -2,8 +2,8 @@
 
 import { useState } from 'react'
 import { AddUserModal } from './add-user-modal'
-import { updateUserStatus, updateUserRole, updateUserArea } from '@/app/(main)/users/actions'
-import { Search, Shield, UserX, UserCheck, MoreVertical, ShieldAlert, BadgeCheck, UserPlus, Building } from 'lucide-react'
+import { updateUserStatus, updateUserRole, updateUserArea, deleteUser } from '@/app/(main)/users/actions'
+import { Search, Shield, UserX, UserCheck, MoreVertical, ShieldAlert, BadgeCheck, UserPlus, Building, Trash2 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 
 type User = {
@@ -20,7 +20,7 @@ export function UsersList({ initialUsers, availableWorkers, currentUserRole }: {
   const router = useRouter()
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
-  const canManage = ['admin', 'gerente'].includes(currentUserRole || '')
+  const canManage = ['admin', 'gerente', 'super_admin', 'administracion'].includes(currentUserRole?.toLowerCase() || '')
 
   // Combine users and unlinked workers for a unified view
   const unifiedList = [
@@ -62,12 +62,20 @@ export function UsersList({ initialUsers, availableWorkers, currentUserRole }: {
     if (!res.success) alert(res.error)
     else router.refresh()
   }
+  
+  const handleDelete = async (id: string, name: string) => {
+    if (!confirm(`¿Estás seguro de que deseas eliminar permanentemente al usuario ${name}? Esta acción no se puede deshacer.`)) return
+    
+    const res = await deleteUser(id)
+    if (!res.success) alert(res.error)
+    else router.refresh()
+  }
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white p-8 rounded-[2.5rem] shadow-sm border border-slate-50">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white p-8 rounded-[2rem] shadow-sm border border-slate-50">
         <div>
-          <h1 className="text-3xl font-black text-slate-800 tracking-tight flex items-center gap-3">
+          <h1 className="text-3xl font-bold text-slate-800 tracking-tight flex items-center gap-3">
             <div className="bg-blue-100 p-2 rounded-xl">
               <Shield className="text-blue-600" size={24} />
             </div>
@@ -78,7 +86,7 @@ export function UsersList({ initialUsers, availableWorkers, currentUserRole }: {
         {canManage && (
           <button 
             onClick={() => setIsAddModalOpen(true)}
-            className="w-full md:w-auto bg-blue-600 hover:bg-blue-700 text-white px-8 py-4 rounded-2xl font-black transition-all flex items-center justify-center gap-3 shadow-lg shadow-blue-100 active:scale-95"
+            className="w-full md:w-auto bg-blue-600 hover:bg-blue-700 text-white px-8 py-4 rounded-2xl font-bold transition-all flex items-center justify-center gap-3 shadow-lg shadow-blue-100 active:scale-95"
           >
             <UserPlus size={20} strokeWidth={3} />
             <span>Invitar Usuario</span>
@@ -86,7 +94,7 @@ export function UsersList({ initialUsers, availableWorkers, currentUserRole }: {
         )}
       </div>
 
-      <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-100 overflow-hidden">
+      <div className="bg-white rounded-[2rem] shadow-sm border border-slate-100 overflow-hidden">
         <div className="p-6 border-b border-slate-100 bg-slate-50/50">
           <div className="relative max-w-sm">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
@@ -104,12 +112,12 @@ export function UsersList({ initialUsers, availableWorkers, currentUserRole }: {
           <table className="w-full text-left">
             <thead>
               <tr className="bg-slate-50/50 border-b border-slate-100">
-                <th className="py-5 px-8 text-[11px] font-black text-slate-400 uppercase tracking-widest">Nombre / Trabajador</th>
-                <th className="py-5 text-[11px] font-black text-slate-400 uppercase tracking-widest">Correo / Cuenta</th>
-                <th className="py-5 text-[11px] font-black text-slate-400 uppercase tracking-widest">Rol / Acceso</th>
-                <th className="py-5 text-[11px] font-black text-slate-400 uppercase tracking-widest">Área / Depto.</th>
-                <th className="py-5 text-[11px] font-black text-slate-400 uppercase tracking-widest text-center">Estado</th>
-                <th className="py-5 px-8 text-[11px] font-black text-slate-400 uppercase tracking-widest text-right">Acciones</th>
+                <th className="py-5 px-8 text-[11px] font-bold text-slate-400 uppercase tracking-widest">Nombre / Trabajador</th>
+                <th className="py-5 text-[11px] font-bold text-slate-400 uppercase tracking-widest">Correo / Cuenta</th>
+                <th className="py-5 text-[11px] font-bold text-slate-400 uppercase tracking-widest">Rol / Acceso</th>
+                <th className="py-5 text-[11px] font-bold text-slate-400 uppercase tracking-widest">Área / Depto.</th>
+                <th className="py-5 text-[11px] font-bold text-slate-400 uppercase tracking-widest text-center">Estado</th>
+                <th className="py-5 px-8 text-[11px] font-bold text-slate-400 uppercase tracking-widest text-right">Acciones</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
@@ -117,8 +125,8 @@ export function UsersList({ initialUsers, availableWorkers, currentUserRole }: {
                 <tr key={item.id} className="hover:bg-slate-50/50 transition-colors group">
                   <td className="py-6 px-8">
                     <div className="flex flex-col">
-                      <span className="text-base font-black text-slate-800 uppercase tracking-tight">{item.name}</span>
-                      {item.type === 'worker' && <span className="text-[10px] text-blue-500 font-black uppercase tracking-widest mt-0.5">Ficha Trabajador</span>}
+                      <span className="text-base font-bold text-slate-800 uppercase tracking-tight">{item.name}</span>
+                      {item.type === 'worker' && <span className="text-[10px] text-blue-500 font-bold uppercase tracking-widest mt-0.5">Ficha Trabajador</span>}
                     </div>
                   </td>
                   <td className="py-6">
@@ -132,11 +140,10 @@ export function UsersList({ initialUsers, availableWorkers, currentUserRole }: {
                           <select 
                             defaultValue={item.role_id}
                             onChange={(e) => handleRoleChange(item.id, e.target.value)}
-                            className="bg-transparent border-none text-blue-600 text-sm font-black uppercase tracking-tighter focus:ring-0 cursor-pointer p-0"
+                            className="bg-transparent border-none text-blue-600 text-sm font-bold uppercase tracking-tighter focus:ring-0 cursor-pointer p-0"
                           >
                             <option value="admin">Administrador</option>
                             <option value="gerente">Gerente</option>
-                            <option value="administracion">Administración</option>
                             <option value="operaciones">Operaciones</option>
                             <option value="almacen">Almacén</option>
                             <option value="soma">SOMA / Seguridad</option>
@@ -144,7 +151,7 @@ export function UsersList({ initialUsers, availableWorkers, currentUserRole }: {
                             <option value="trabajador">Trabajador</option>
                           </select>
                         ) : (
-                          <span className="text-xs font-black text-blue-600 uppercase tracking-tighter bg-blue-50 px-2 py-0.5 rounded-md">
+                          <span className="text-xs font-bold text-blue-600 uppercase tracking-tighter bg-blue-50 px-2 py-0.5 rounded-md">
                             {item.role_id}
                           </span>
                         )
@@ -174,48 +181,59 @@ export function UsersList({ initialUsers, availableWorkers, currentUserRole }: {
                           </span>
                         )
                     ) : (
-                      <span className="text-xs font-black text-slate-400 uppercase tracking-widest">-</span>
+                      <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">-</span>
                     )}
                   </td>
                   <td className="py-6 text-center">
                     {item.status === 'active' ? (
-                      <span className="inline-flex items-center gap-1.5 bg-emerald-50 text-emerald-700 px-3 py-1 rounded-lg text-[10px] font-black uppercase border border-emerald-100 shadow-sm">
+                      <span className="inline-flex items-center gap-1.5 bg-emerald-50 text-emerald-700 px-3 py-1 rounded-lg text-[10px] font-bold uppercase border border-emerald-100 shadow-sm">
                         <UserCheck size={12} /> Activo
                       </span>
                     ) : item.status === 'inactive' ? (
-                      <span className="inline-flex items-center gap-1.5 bg-slate-50 text-slate-400 px-3 py-1 rounded-lg text-[10px] font-black uppercase border border-slate-100 shadow-sm">
+                      <span className="inline-flex items-center gap-1.5 bg-slate-50 text-slate-400 px-3 py-1 rounded-lg text-[10px] font-bold uppercase border border-slate-100 shadow-sm">
                         <UserX size={12} /> Inactivo
                       </span>
                     ) : (
-                      <span className="inline-flex items-center gap-1.5 bg-amber-50 text-amber-600 px-3 py-1 rounded-lg text-[10px] font-black uppercase border border-amber-100 shadow-sm">
+                      <span className="inline-flex items-center gap-1.5 bg-amber-50 text-amber-600 px-3 py-1 rounded-lg text-[10px] font-bold uppercase border border-amber-100 shadow-sm">
                         <Shield size={12} /> Sin acceso
                       </span>
                     )}
                   </td>
                   <td className="py-6 px-8 text-right">
-                    <div className="flex items-center justify-end gap-2 transition-all">
-                      {canManage && (
-                        item.type === 'user' ? (
+                    <div className="flex items-center justify-end gap-3 transition-all">
+                      {canManage && item.type === 'user' && (
+                        <>
                           <button 
                             onClick={() => handleStatusToggle(item.id, item.status)}
-                            className={`text-[10px] font-black px-4 py-2 rounded-xl border transition-all uppercase tracking-tighter shadow-sm ${
+                            className={`p-2.5 rounded-xl border transition-all shadow-sm ${
                               item.status === 'active' 
-                              ? 'border-rose-100 text-rose-600 bg-rose-50 hover:bg-rose-600 hover:text-white' 
+                              ? 'border-slate-100 text-slate-400 bg-white hover:bg-rose-50 hover:text-rose-600 hover:border-rose-100' 
                               : 'border-emerald-100 text-emerald-600 bg-emerald-50 hover:bg-emerald-600 hover:text-white'
                             }`}
                             title={item.status === 'active' ? 'Desactivar Usuario' : 'Activar Usuario'}
                           >
-                            {item.status === 'active' ? 'Desactivar' : 'Activar'}
+                            {item.status === 'active' ? <UserX size={18} /> : <UserCheck size={18} />}
                           </button>
-                        ) : (
+                          
                           <button 
-                            onClick={() => setIsAddModalOpen(true)}
-                            className="text-[10px] font-black px-4 py-2 rounded-xl border border-blue-100 text-blue-600 bg-blue-50 hover:bg-blue-600 hover:text-white transition-all uppercase tracking-tighter shadow-sm"
-                            title="Invitar a crear cuenta"
+                            onClick={() => handleDelete(item.id, item.name)}
+                            className="p-2.5 rounded-xl border border-slate-100 text-slate-400 bg-white hover:bg-rose-50 hover:text-rose-600 hover:border-rose-100 transition-all shadow-sm"
+                            title="Eliminar Usuario"
                           >
-                            Invitar
+                            <Trash2 size={18} />
                           </button>
-                        )
+                        </>
+                      )}
+                      
+                      {canManage && item.type === 'worker' && (
+                        <button 
+                          onClick={() => setIsAddModalOpen(true)}
+                          className="flex items-center gap-2 text-[10px] font-bold px-4 py-2 rounded-xl border border-blue-100 text-blue-600 bg-blue-50 hover:bg-blue-600 hover:text-white transition-all uppercase tracking-tighter shadow-sm"
+                          title="Invitar a crear cuenta"
+                        >
+                          <UserPlus size={14} />
+                          <span>Invitar</span>
+                        </button>
                       )}
                     </div>
                   </td>

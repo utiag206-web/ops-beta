@@ -24,7 +24,8 @@ interface DashboardShellProps {
 // Lógica de prioridad estricta (Espejo de Sidebar y Actions)
 // Lógica de prioridad estricta (Espejo de Sidebar y Actions)
 function getViewMode(role_id: string, area: string | null) {
-  if (['admin', 'gerente'].includes(role_id)) return 'ADMIN'
+  const role = role_id?.toLowerCase()
+  if (['admin', 'gerente', 'super_admin', 'superadmin'].includes(role)) return 'ADMIN'
   if (role_id === 'administracion') return 'FINANCE'
   if (role_id === 'soma' || (role_id === 'jefe_area' && area === 'Seguridad SOMA')) return 'SOMA'
   if (role_id === 'jefe_area' && area === 'Cocina') return 'COCINA'
@@ -38,55 +39,6 @@ export function DashboardShell({ user, stats }: DashboardShellProps) {
   const companyName = user.companies?.name || "Empresa"
   const viewMode = getViewMode(user.role_id, user.area)
 
-  // Función para renderizar el gráfico de actividad (SVG ligero)
-  const renderActivityChart = () => {
-    if (!stats.weeklyActivity) return null
-    const maxVal = Math.max(...stats.weeklyActivity.map((d: any) => d.count), 5)
-    
-    return (
-      <div className="bg-white p-6 md:p-8 rounded-2xl md:rounded-[3rem] shadow-sm border border-slate-100 flex flex-col h-full hover:shadow-xl transition-all duration-300">
-        <div className="flex items-center justify-between mb-8">
-           <div className="flex items-center gap-4">
-              <div className="bg-indigo-50 p-3 rounded-2xl">
-                <Activity className="text-indigo-600" size={22} strokeWidth={2.5} />
-              </div>
-              <h3 className="text-xl font-black text-slate-800 tracking-tight">Actividad Semanal</h3>
-           </div>
-           <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100">Últimos 7 días</span>
-        </div>
-        
-        <div className="flex-1 flex items-end justify-between gap-2 md:gap-4 min-h-[120px] md:min-h-[140px] px-1 md:px-2">
-           {stats.weeklyActivity.map((day: any, idx: number) => {
-             const height = (day.count / maxVal) * 100
-             return (
-               <div key={idx} className="flex-1 flex flex-col items-center gap-3 group/bar">
-                  <div className="relative w-full flex justify-center">
-                    <div 
-                      className="w-full max-w-[12px] bg-slate-100 rounded-full transition-all duration-700 relative overflow-hidden group-hover/bar:bg-blue-50"
-                      style={{ height: '120px' }}
-                    >
-                      <div 
-                        className="absolute bottom-0 left-0 w-full bg-blue-600 rounded-full transition-all duration-1000 delay-100 group-hover/bar:bg-blue-500 shadow-[0_0_15px_rgba(37,99,235,0.3)]"
-                        style={{ height: `${Math.max(height, 5)}%` }}
-                      >
-                         <div className="absolute top-0 left-0 w-full h-1/2 bg-white/20" />
-                      </div>
-                    </div>
-                    {/* Tooltip */}
-                    <div className="absolute -top-10 bg-slate-900 text-white text-[9px] font-black px-2 py-1 rounded-md opacity-0 group-hover/bar:opacity-100 transition-opacity mb-2 pointer-events-none whitespace-nowrap z-20 shadow-xl">
-                      {day.count} movs
-                    </div>
-                  </div>
-                  <span className="text-[9px] font-black text-slate-400 uppercase tracking-tighter">
-                    {new Date(day.day).toLocaleDateString('es', { weekday: 'short' }).replace('.', '')}
-                  </span>
-               </div>
-             )
-           })}
-        </div>
-      </div>
-    )
-  }
 
   const renderDashboardWidgets = () => {
     switch (viewMode) {
@@ -131,28 +83,29 @@ export function DashboardShell({ user, stats }: DashboardShellProps) {
                 icon={AlertTriangle} color="text-rose-700" bg="bg-rose-50" href="/inventory/stock"
               />
               <StatWidget 
-                title="Empresas" value={stats.admin?.activeCompanies?.toString() || '0'} 
-                icon={Building2} color="text-slate-600" bg="bg-slate-50" href="/company"
+                title="Activos Controlados" value={stats.admin?.assetsCount?.toString() || '0'} 
+                icon={Package} color="text-slate-600" bg="bg-slate-50" href="/assets"
               />
             </div>
 
             <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
               {/* ... existing activity chart col-span-2 ... */}
-              <div className="xl:col-span-2 bg-white rounded-2xl md:rounded-[3rem] p-6 md:p-10 shadow-xl shadow-slate-200/50 border border-slate-100">
+              <div className="xl:col-span-2 bg-white rounded-2xl md:rounded-[2rem] p-6 md:p-10 shadow-xl shadow-slate-200/50 border border-slate-100">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8 md:mb-10">
                   <div>
-                    <h3 className="text-2xl font-black text-slate-800 tracking-tight">Actividad Semanal</h3>
+                    <h3 className="text-2xl font-bold text-slate-800 tracking-tight">Actividad Semanal</h3>
                     <p className="text-slate-400 font-bold text-sm mt-1 uppercase tracking-widest">Movimientos de Inventario</p>
                   </div>
-                  <div className="bg-blue-50 px-5 py-2 rounded-2xl text-blue-600 font-black text-xs border border-blue-100 uppercase">Tiempo Real</div>
+                  <div className="bg-blue-50 px-5 py-2 rounded-2xl text-blue-600 font-bold text-xs border border-blue-100 uppercase">Tiempo Real</div>
                 </div>
                 <div className="h-[200px] md:h-[300px] w-full flex items-end justify-between gap-2 md:gap-4 px-2 md:px-4">
                   {(stats.admin?.weeklyActivity || []).map((day: any) => {
-                    const height = Math.min((day.count / (Math.max(...stats.admin.weeklyActivity.map((d:any) => d.count), 1))) * 100, 100)
+                    const maxWeekly = Math.max(...(stats.admin?.weeklyActivity || []).map((d:any) => d.count || 0), 1)
+                    const height = Math.min((day.count / maxWeekly) * 100, 100)
                     return (
                       <div key={day.day} className="flex-1 flex flex-col items-center gap-4 group">
                         <div className="relative w-full flex flex-col items-center">
-                          <div className="absolute -top-10 opacity-0 group-hover:opacity-100 transition-all bg-slate-900 text-white text-[10px] font-black px-3 py-1.5 rounded-lg shadow-xl translate-y-2 group-hover:translate-y-0">
+                          <div className="absolute -top-10 opacity-0 group-hover:opacity-100 transition-all bg-slate-900 text-white text-[10px] font-bold px-3 py-1.5 rounded-lg shadow-xl translate-y-2 group-hover:translate-y-0">
                             {day.count} mov.
                           </div>
                           <div 
@@ -160,7 +113,7 @@ export function DashboardShell({ user, stats }: DashboardShellProps) {
                             style={{ height: `${height}%`, minHeight: '8px' }}
                           />
                         </div>
-                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-tighter">
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">
                           {new Date(day.day).toLocaleDateString(undefined, { weekday: 'short' })}
                         </span>
                       </div>
@@ -170,27 +123,27 @@ export function DashboardShell({ user, stats }: DashboardShellProps) {
               </div>
 
               <div className="xl:col-span-1 space-y-8">
-                <div className="bg-[#1D4ED8] rounded-2xl md:rounded-[3rem] p-8 md:p-10 shadow-2xl shadow-blue-900/20 relative overflow-hidden group">
+                <div className="bg-[#1D4ED8] rounded-2xl md:rounded-[2rem] p-8 md:p-10 shadow-2xl shadow-blue-900/20 relative overflow-hidden group">
                   <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl group-hover:bg-white/20 transition-all" />
                   <div className="relative z-10">
                     <div className="flex items-center gap-3 mb-8">
                        <div className="p-3 bg-white/10 backdrop-blur-xl rounded-2xl border border-white/20">
                          <LayoutDashboard className="text-white" size={24} />
                        </div>
-                       <h3 className="text-2xl font-black text-white tracking-tight">Acciones Rápidas</h3>
+                       <h3 className="text-2xl font-bold text-white tracking-tight">Acciones Rápidas</h3>
                     </div>
                     <div className="space-y-4">
                        <Link href="/workers" className="flex items-center justify-between p-4 bg-white/10 hover:bg-white/20 border border-white/10 rounded-2xl transition-all group">
                           <div className="flex items-center gap-3">
                             <Users className="text-blue-300" size={18} />
-                            <span className="text-sm font-black text-white uppercase tracking-tight">Gestión Personal</span>
+                            <span className="text-sm font-bold text-white uppercase tracking-tight">Gestión Personal</span>
                           </div>
                           <ArrowRight className="text-white/40 group-hover:translate-x-1 transition-transform" size={16} />
                        </Link>
                        <Link href="/caja-chica" className="flex items-center justify-between p-4 bg-white/10 hover:bg-white/20 border border-white/10 rounded-2xl transition-all group">
                           <div className="flex items-center gap-3">
                             <Coins className="text-emerald-300" size={18} />
-                            <span className="text-sm font-black text-white uppercase tracking-tight">Cargar Caja</span>
+                            <span className="text-sm font-bold text-white uppercase tracking-tight">Cargar Caja</span>
                           </div>
                           <ArrowRight className="text-white/40 group-hover:translate-x-1 transition-transform" size={16} />
                        </Link>
@@ -198,16 +151,16 @@ export function DashboardShell({ user, stats }: DashboardShellProps) {
                   </div>
                 </div>
 
-                <div className="bg-white rounded-[3rem] p-8 border border-slate-100 shadow-sm">
-                   <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-6 flex items-center gap-2">
+                <div className="bg-white rounded-[2rem] p-8 border border-slate-100 shadow-sm">
+                   <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-6 flex items-center gap-2">
                      <AlertTriangle size={14} className="text-rose-500" /> Alerta de Stock
                    </h4>
                    <div className="space-y-4">
                       <div className="flex items-center justify-between p-4 bg-rose-50 rounded-2xl border border-rose-100">
-                         <span className="text-xs font-black text-slate-800 uppercase tracking-tight">Insumos Críticos</span>
-                         <span className="text-lg font-black text-rose-600">{stats.admin?.criticalProductsCount}</span>
+                         <span className="text-xs font-bold text-slate-800 uppercase tracking-tight">Insumos Críticos</span>
+                         <span className="text-lg font-bold text-rose-600">{stats.admin?.criticalProductsCount}</span>
                       </div>
-                      <Link href="/inventory/stock" className="block text-center text-[10px] font-black text-blue-600 uppercase tracking-widest hover:underline">Ver Inventario Total</Link>
+                      <Link href="/inventory/stock" className="block text-center text-[10px] font-bold text-blue-600 uppercase tracking-widest hover:underline">Ver Inventario Total</Link>
                    </div>
                 </div>
               </div>
@@ -237,26 +190,26 @@ export function DashboardShell({ user, stats }: DashboardShellProps) {
               />
             </div>
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-               <div className="lg:col-span-2 bg-white rounded-[3rem] p-10 border border-slate-100 shadow-sm">
-                  <h3 className="text-xl font-black text-slate-800 mb-6 flex items-center gap-3">
+               <div className="lg:col-span-2 bg-white rounded-[2rem] p-10 border border-slate-100 shadow-sm">
+                  <h3 className="text-xl font-bold text-slate-800 mb-6 flex items-center gap-3">
                     <TrendingUp className="text-emerald-500" size={24} /> Reporte Financiero Rápido
                   </h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                      <div className="p-8 bg-slate-50 rounded-[2rem] border border-slate-100">
-                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Total en Bonos</p>
-                        <p className="text-3xl font-black text-slate-800 tracking-tighter">S/ {(stats.admin?.pendingBonusesCount * 150).toLocaleString()}</p>
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Total en Bonos</p>
+                        <p className="text-3xl font-bold text-slate-800 tracking-tighter">S/ {(stats.admin?.pendingBonusesCount * 150).toLocaleString()}</p>
                         <p className="text-[10px] font-bold text-slate-400 mt-1 italic">* Estimado basado en promedio</p>
                      </div>
                      <div className="p-8 bg-slate-50 rounded-[2rem] border border-slate-100">
-                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Total en Pasajes</p>
-                        <p className="text-3xl font-black text-slate-800 tracking-tighter">S/ {(stats.admin?.pendingTransportCount * 80).toLocaleString()}</p>
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Total en Pasajes</p>
+                        <p className="text-3xl font-bold text-slate-800 tracking-tighter">S/ {(stats.admin?.pendingTransportCount * 80).toLocaleString()}</p>
                         <p className="text-[10px] font-bold text-slate-400 mt-1 italic">* Estimado basado en promedio</p>
                      </div>
                   </div>
                </div>
-               <div className="bg-slate-900 rounded-[3rem] p-10 text-white shadow-2xl relative overflow-hidden group">
+               <div className="bg-slate-900 rounded-[2rem] p-10 text-white shadow-2xl relative overflow-hidden group">
                   <div className="absolute -bottom-10 -right-10 w-40 h-40 bg-white/5 rounded-full blur-2xl group-hover:bg-white/10 transition-all" />
-                  <h3 className="text-xl font-black mb-8">Gestión Financiera</h3>
+                  <h3 className="text-xl font-bold mb-8">Gestión Financiera</h3>
                   <div className="space-y-4">
                      <Link href="/caja-chica" className="flex items-center justify-between p-4 bg-white/5 hover:bg-white/10 rounded-2xl border border-white/10 transition-all">
                         <span className="text-sm font-bold">Resumen de Caja</span>
@@ -448,7 +401,7 @@ export function DashboardShell({ user, stats }: DashboardShellProps) {
       
       {/* Hero Section */}
       <WelcomeHero 
-        userName={user.name} 
+        userName={user.display_name} 
         roleName={roleName} 
         area={user.area}
         companyName={companyName} 
@@ -465,13 +418,13 @@ export function DashboardShell({ user, stats }: DashboardShellProps) {
 
       {/* Comunicados de Seguridad Transversales (Nueva Sección) */}
       {stats.transversalSoma && (
-        <div className="bg-slate-50 border border-slate-200 p-10 rounded-[3rem] shadow-sm overflow-hidden relative group">
+        <div className="bg-slate-50 border border-slate-200 p-10 rounded-[2rem] shadow-sm overflow-hidden relative group">
            <div className="absolute top-0 right-0 p-12 opacity-[0.03] scale-150 group-hover:scale-125 transition-transform duration-1000">
              <Shield size={200} />
            </div>
            <div className="relative z-10 flex flex-col md:flex-row gap-10 items-center justify-between">
               <div>
-                <h3 className="text-2xl font-black text-slate-800 flex items-center gap-4">
+                <h3 className="text-2xl font-bold text-slate-800 flex items-center gap-4">
                   <div className="w-10 h-10 bg-emerald-100 text-emerald-600 rounded-xl flex items-center justify-center">
                     <ShieldCheck size={24} />
                   </div>
@@ -484,7 +437,7 @@ export function DashboardShell({ user, stats }: DashboardShellProps) {
                     <div className="bg-white border border-slate-100 p-5 rounded-2xl flex items-center gap-5 hover:border-blue-200 hover:shadow-lg transition-all">
                        <div className="w-12 h-12 rounded-xl bg-blue-50 text-blue-500 flex items-center justify-center"><MessageSquare size={24}/></div>
                        <div>
-                         <span className="block text-[10px] uppercase font-black text-blue-600 tracking-widest mb-1">Última Charla</span>
+                         <span className="block text-[10px] uppercase font-bold text-blue-600 tracking-widest mb-1">Última Charla</span>
                          <span className="block text-slate-800 font-bold">{stats.transversalSoma.lastTalk.topic}</span>
                        </div>
                     </div>
@@ -493,7 +446,7 @@ export function DashboardShell({ user, stats }: DashboardShellProps) {
                     <div className="bg-white border border-slate-100 p-5 rounded-2xl flex items-center gap-5 hover:border-emerald-200 hover:shadow-lg transition-all">
                        <div className="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-500 flex items-center justify-center"><GraduationCap size={24}/></div>
                        <div>
-                         <span className="block text-[10px] uppercase font-black text-emerald-600 tracking-widest mb-1">Capacitación</span>
+                         <span className="block text-[10px] uppercase font-bold text-emerald-600 tracking-widest mb-1">Capacitación</span>
                          <span className="block text-slate-800 font-bold">{stats.transversalSoma.lastTraining.title}</span>
                        </div>
                     </div>
@@ -545,15 +498,15 @@ export function DashboardShell({ user, stats }: DashboardShellProps) {
                 <div className="absolute -top-2 -right-2 w-6 h-6 bg-rose-500 rounded-full border-4 border-white" />
              </div>
              <div>
-               <h3 className="text-4xl font-black text-slate-800 tracking-tighter">Mi Panel Personal</h3>
+               <h3 className="text-4xl font-bold text-slate-800 tracking-tighter">Mi Panel Personal</h3>
                <p className="text-slate-500 font-bold text-xl mt-1">Resumen de tus beneficios y equipos vinculados</p>
              </div>
           </div>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
-            <div className="bg-white p-10 rounded-[3.5rem] shadow-xl border border-slate-100"><PPEList deliveries={stats.personalStats.ppe} isWorker={true} /></div>
+            <div className="bg-white p-10 rounded-[2rem] shadow-xl border border-slate-100"><PPEList deliveries={stats.personalStats.ppe} isWorker={true} /></div>
             <div className="space-y-10">
-              <div className="bg-white p-10 rounded-[3.5rem] shadow-xl border border-slate-100"><BonusList bonuses={stats.personalStats.bonuses} isWorker={true} /></div>
-              <div className="bg-white p-10 rounded-[3.5rem] shadow-xl border border-slate-100"><TransportList payments={stats.personalStats.transport} isWorker={true} /></div>
+              <div className="bg-white p-10 rounded-[2rem] shadow-xl border border-slate-100"><BonusList bonuses={stats.personalStats.bonuses} isWorker={true} /></div>
+              <div className="bg-white p-10 rounded-[2rem] shadow-xl border border-slate-100"><TransportList payments={stats.personalStats.transport} isWorker={true} /></div>
             </div>
           </div>
         </div>

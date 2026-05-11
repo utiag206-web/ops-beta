@@ -21,16 +21,16 @@ export function AttendanceList({ records, isWorker = false }: AttendanceListProp
   }
 
   return (
-    <div className="bg-white rounded-2xl md:rounded-[2.5rem] shadow-sm border border-slate-100 overflow-hidden">
+    <div className="bg-white rounded-2xl md:rounded-[2rem] shadow-sm border border-slate-100 overflow-hidden">
       {/* Desktop Table View */}
       <div className="hidden md:block overflow-x-auto">
         <table className="w-full text-left">
           <thead>
             <tr className="bg-slate-50/50 border-b border-slate-100">
-              <th className="py-5 px-6 text-[11px] font-black text-slate-400 uppercase tracking-widest">Colaborador</th>
-              <th className="py-5 px-6 text-[11px] font-black text-slate-400 uppercase tracking-widest">Día / Fecha</th>
-              <th className="py-5 px-6 text-[11px] font-black text-slate-400 uppercase tracking-widest">Marcación (Ingreso - Salida)</th>
-              <th className="py-5 px-6 text-[11px] font-black text-slate-400 uppercase tracking-widest text-center">Estado</th>
+              <th className="py-5 px-6 text-[11px] font-bold text-slate-400 uppercase tracking-widest">Colaborador</th>
+              <th className="py-5 px-6 text-[11px] font-bold text-slate-400 uppercase tracking-widest">Día / Fecha</th>
+              <th className="py-5 px-6 text-[11px] font-bold text-slate-400 uppercase tracking-widest">Marcación (Ingreso - Salida)</th>
+              <th className="py-5 px-6 text-[11px] font-bold text-slate-400 uppercase tracking-widest text-center">Estado</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-50">
@@ -42,7 +42,7 @@ export function AttendanceList({ records, isWorker = false }: AttendanceListProp
                       <User size={16} />
                     </div>
                     <div>
-                      <p className="text-sm font-black text-slate-800 uppercase tracking-tight">
+                      <p className="text-sm font-bold text-slate-800 uppercase tracking-tight">
                         {isWorker ? 'Mi Asistencia' : record.worker?.name || 'Sistema'}
                       </p>
                     </div>
@@ -72,7 +72,7 @@ export function AttendanceList({ records, isWorker = false }: AttendanceListProp
                   </div>
                 </td>
                 <td className="py-5 px-6 text-center">
-                  <span className={`text-[10px] font-black px-3 py-1 rounded-lg uppercase border shadow-sm ${
+                  <span className={`text-[10px] font-bold px-3 py-1 rounded-lg uppercase border shadow-sm ${
                     record.check_in && record.check_out 
                       ? 'bg-emerald-50 text-emerald-700 border-emerald-100' 
                       : 'bg-blue-50 text-blue-700 border-blue-100'
@@ -96,13 +96,13 @@ export function AttendanceList({ records, isWorker = false }: AttendanceListProp
                   <Calendar size={20} />
                 </div>
                 <div>
-                  <p className="text-sm font-black text-slate-800 uppercase tracking-tight">
+                  <p className="text-sm font-bold text-slate-800 uppercase tracking-tight">
                     {new Date(record.date).toLocaleDateString('es-ES', { weekday: 'long' })}
                   </p>
                   <p className="text-[10px] font-bold text-slate-400">{new Date(record.date).toLocaleDateString()}</p>
                 </div>
               </div>
-              <span className={`text-[10px] font-black px-2.5 py-1 rounded-lg uppercase border shadow-sm ${
+              <span className={`text-[10px] font-bold px-2.5 py-1 rounded-lg uppercase border shadow-sm ${
                 record.check_in && record.check_out 
                   ? 'bg-emerald-50 text-emerald-700 border-emerald-100' 
                   : 'bg-blue-50 text-blue-700 border-blue-100'
@@ -113,18 +113,18 @@ export function AttendanceList({ records, isWorker = false }: AttendanceListProp
 
             <div className="bg-slate-50 rounded-2xl p-4 grid grid-cols-2 gap-4 border border-slate-100/50">
               <div className="space-y-1">
-                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
+                <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
                   <div className="w-1.5 h-1.5 rounded-full bg-emerald-500"></div>
                   Ingreso
                 </p>
-                <p className="text-lg font-black text-slate-700 tabular-nums">{record.check_in || '--:--'}</p>
+                <p className="text-lg font-bold text-slate-700 tabular-nums">{record.check_in || '--:--'}</p>
               </div>
               <div className="space-y-1 text-right border-l border-slate-200 pl-4">
-                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest flex items-center justify-end gap-1.5">
+                <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest flex items-center justify-end gap-1.5">
                   Salida
                   <div className="w-1.5 h-1.5 rounded-full bg-amber-500"></div>
                 </p>
-                <p className="text-lg font-black text-slate-700 tabular-nums">{record.check_out || '--:--'}</p>
+                <p className="text-lg font-bold text-slate-700 tabular-nums">{record.check_out || '--:--'}</p>
               </div>
             </div>
 
@@ -137,7 +137,6 @@ export function AttendanceList({ records, isWorker = false }: AttendanceListProp
           </div>
         ))}
       </div>
-    </div>
     </div>
   )
 }

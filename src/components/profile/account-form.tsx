@@ -12,8 +12,8 @@ interface AccountFormProps {
 export function AccountForm({ user }: AccountFormProps) {
   const [loading, setLoading] = useState(false)
   const [formData, setFormData] = useState({
-    name: user.name || '',
-    email: user.email || ''
+    name: user.display_name || user.name || '',
+    email: user.display_email || user.email || ''
   })
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')

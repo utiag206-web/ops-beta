@@ -121,7 +121,7 @@ export function WorkerProfileForm({ worker, childrenList = [], canManage = false
           <button 
             onClick={handleSave} 
             disabled={isSaving}
-            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl text-sm font-black transition-all shadow-md active:scale-95 disabled:opacity-70"
+            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl text-sm font-bold transition-all shadow-md active:scale-95 disabled:opacity-70"
           >
             {isSaving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
             {isSaving ? 'Guardando...' : 'Guardar Perfil'}
@@ -133,7 +133,7 @@ export function WorkerProfileForm({ worker, childrenList = [], canManage = false
       <div className="p-6">
         {activeTab === 'laboral' && (
           <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2">
-            <h3 className="text-lg font-black text-slate-800 border-b border-slate-100 pb-2">Identidad Corporativa</h3>
+            <h3 className="text-lg font-bold text-slate-800 border-b border-slate-100 pb-2">Identidad Corporativa</h3>
             <div className="flex flex-wrap gap-4">
               <Input label="Código (COD)" value={laboral.cod} onChange={(e:any) => setLaboral({...laboral, cod: e.target.value})} disabled={!canManage} />
               <Input label="Documento (DNI/CE)" value={laboral.document_number} onChange={(e:any) => setLaboral({...laboral, document_number: e.target.value})} required disabled={!canManage} />
@@ -141,7 +141,7 @@ export function WorkerProfileForm({ worker, childrenList = [], canManage = false
               <Input label="Apellidos" value={laboral.last_name} onChange={(e:any) => setLaboral({...laboral, last_name: e.target.value})} disabled={!canManage} />
             </div>
 
-            <h3 className="text-lg font-black text-slate-800 border-b border-slate-100 pb-2 mt-8">Asignación Operativa</h3>
+            <h3 className="text-lg font-bold text-slate-800 border-b border-slate-100 pb-2 mt-8">Asignación Operativa</h3>
             <div className="flex flex-wrap gap-4">
               <Input label="Cargo" value={laboral.position} onChange={(e:any) => setLaboral({...laboral, position: e.target.value})} required disabled={!canManage} />
               <Input label="Guardia" value={laboral.guardia} onChange={(e:any) => setLaboral({...laboral, guardia: e.target.value})} disabled={!canManage} />
@@ -170,7 +170,7 @@ export function WorkerProfileForm({ worker, childrenList = [], canManage = false
               />
             </div>
 
-            <h3 className="text-lg font-black text-slate-800 border-b border-slate-100 pb-2 mt-8">Estado de Contrato</h3>
+            <h3 className="text-lg font-bold text-slate-800 border-b border-slate-100 pb-2 mt-8">Estado de Contrato</h3>
             <div className="flex flex-wrap gap-4">
               <Select 
                 label="Situación Actual" 
@@ -191,13 +191,13 @@ export function WorkerProfileForm({ worker, childrenList = [], canManage = false
 
         {activeTab === 'financial' && (
           <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2">
-            <h3 className="text-lg font-black text-emerald-800 border-b border-emerald-100 pb-2">Remuneración Base</h3>
+            <h3 className="text-lg font-bold text-emerald-800 border-b border-emerald-100 pb-2">Remuneración Base</h3>
             <div className="flex flex-wrap gap-4">
               <Input type="number" label="Sueldo Diario (S/)" value={financial.daily_rate} onChange={(e:any) => setFinancial({...financial, daily_rate: parseFloat(e.target.value) || 0})} disabled={!canManage} />
               <Input type="number" label="Sueldo Mensual Fijo (S/)" value={financial.monthly_salary} onChange={(e:any) => setFinancial({...financial, monthly_salary: parseFloat(e.target.value) || 0})} disabled={!canManage} />
             </div>
 
-            <h3 className="text-lg font-black text-emerald-800 border-b border-emerald-100 pb-2 mt-8">Beneficios Sociales</h3>
+            <h3 className="text-lg font-bold text-emerald-800 border-b border-emerald-100 pb-2 mt-8">Beneficios Sociales</h3>
             <div className="flex flex-wrap items-center gap-6">
               <label className={`flex items-center gap-2 p-3 bg-emerald-50 border border-emerald-200 rounded-xl ${!canManage ? 'opacity-60 cursor-default' : 'cursor-pointer'}`}>
                 <input 
@@ -217,7 +217,7 @@ export function WorkerProfileForm({ worker, childrenList = [], canManage = false
               )}
             </div>
 
-            <h3 className="text-lg font-black text-emerald-800 border-b border-emerald-100 pb-2 mt-8">Cuenta de Pago</h3>
+            <h3 className="text-lg font-bold text-emerald-800 border-b border-emerald-100 pb-2 mt-8">Cuenta de Pago</h3>
             <div className="flex flex-wrap gap-4">
               <Select 
                 label="Entidad Bancaria" 
@@ -252,7 +252,7 @@ export function WorkerProfileForm({ worker, childrenList = [], canManage = false
 
         {activeTab === 'personal' && (
           <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2">
-            <h3 className="text-lg font-black text-purple-800 border-b border-purple-100 pb-2">Información Demográfica</h3>
+            <h3 className="text-lg font-bold text-purple-800 border-b border-purple-100 pb-2">Información Demográfica</h3>
             <div className="flex flex-wrap gap-4">
               <Input type="date" label="Fecha Nacimiento" value={personal.birth_date} onChange={(e:any) => setPersonal({...personal, birth_date: e.target.value})} disabled={!canManage} />
               <Select 
@@ -271,7 +271,7 @@ export function WorkerProfileForm({ worker, childrenList = [], canManage = false
               />
               <div className="space-y-1.5 flex-1 min-w-[200px]">
                 <label className="text-xs font-bold text-slate-500 uppercase">Nº Hijos Registrados</label>
-                <div className="w-full px-3 py-2 text-sm font-black text-blue-700 bg-blue-50 border border-blue-100 rounded-xl flex items-center h-[38px]">
+                <div className="w-full px-3 py-2 text-sm font-bold text-blue-700 bg-blue-50 border border-blue-100 rounded-xl flex items-center h-[38px]">
                   {childrenList.length} {childrenList.length === 1 ? 'Hijo' : 'Hijos'}
                 </div>
               </div>
@@ -281,7 +281,7 @@ export function WorkerProfileForm({ worker, childrenList = [], canManage = false
                <WorkerChildren workerId={worker.id} initialChildren={childrenList} canManage={canManage} />
             </div>
 
-            <h3 className="text-lg font-black text-purple-800 border-b border-purple-100 pb-2 mt-8">Ubicación y Contacto</h3>
+            <h3 className="text-lg font-bold text-purple-800 border-b border-purple-100 pb-2 mt-8">Ubicación y Contacto</h3>
             <div className="flex flex-wrap gap-4">
               <div className="w-full flex gap-4">
                 <Input label="Teléfono / Celular" value={personal.phone_number} onChange={(e:any) => setPersonal({...personal, phone_number: e.target.value})} disabled={!canManage} />
@@ -295,7 +295,7 @@ export function WorkerProfileForm({ worker, childrenList = [], canManage = false
 
             <div className="bg-rose-50 border border-rose-200 rounded-xl p-5 mt-8 relative overflow-hidden">
               <ShieldAlert size={100} className="absolute -right-6 -top-6 text-rose-100 opacity-50" />
-              <h3 className="text-lg font-black text-rose-800 mb-4 flex items-center gap-2 relative z-10">
+              <h3 className="text-lg font-bold text-rose-800 mb-4 flex items-center gap-2 relative z-10">
                 Contacto de Emergencia
               </h3>
               <div className="flex flex-wrap gap-4 relative z-10">

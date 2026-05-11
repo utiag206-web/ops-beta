@@ -91,6 +91,7 @@ export async function getKardexRecords(filters: {
     // 3. CALCULAR SALDOS OFFSET (De date_from hasta el inicio de la página actual)
     const offset = (page - 1) * limit
     if (offset > 0) {
+      let offsetQuery = supabase
         .from('inventory_movements')
         .select('quantity, warehouse_id, type, movement_types(effect)')
         .eq('product_id', product_id)

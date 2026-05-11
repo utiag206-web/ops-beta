@@ -34,34 +34,34 @@ export async function updateSession(request: NextRequest) {
   const { data, error: authError } = await supabase.auth.getUser()
   const user = data?.user
 
-  console.log("[MIDDLEWARE_DEBUG] User:", user?.id, "Path:", request.nextUrl.pathname)
+  console.log(`[MIDDLEWARE] 🛡️ Path: ${request.nextUrl.pathname}`)
+  console.log(`[MIDDLEWARE] 👤 User Auth ID: ${user?.id || 'NO_SESSION'}`)
+  if (authError) console.error(`[MIDDLEWARE] ❌ Auth Error: ${authError.message}`)
 
-  const isAuthRoute = request.nextUrl.pathname.startsWith('/login') || request.nextUrl.pathname.startsWith('/register') || request.nextUrl.pathname.startsWith('/auth')
+  const isAuthRoute = request.nextUrl.pathname.startsWith('/login') || 
+                     request.nextUrl.pathname.startsWith('/register') || 
+                     request.nextUrl.pathname.startsWith('/auth')
+  
   const isProtectedRoute = request.nextUrl.pathname.startsWith('/dashboard') || 
                            request.nextUrl.pathname.startsWith('/workers') || 
-                           request.nextUrl.pathname.startsWith('/profile')
+                           request.nextUrl.pathname.startsWith('/profile') ||
+                           request.nextUrl.pathname.startsWith('/super-admin')
 
+  // Handle Protected Routes
   if (!user && isProtectedRoute) {
-    // no user, potentially respond by redirecting the user to the login page
+    console.log(`[MIDDLEWARE] 🚫 Access Denied to ${request.nextUrl.pathname}. Redirecting to /login`)
     const url = request.nextUrl.clone()
     url.pathname = '/login'
     return NextResponse.redirect(url)
   }
 
-  // If user is already logged in and tries to access login page, redirect to dashboard
-  if (user && isAuthRoute) {
-    const url = request.nextUrl.clone()
-    url.pathname = '/dashboard'
-    return NextResponse.redirect(url)
-  }
-
-  // Handle root route: If logged in, go to dashboard. If not, stay on landing page.
+  // Handle root route
   if (request.nextUrl.pathname === '/' && user) {
-    const url = request.nextUrl.clone()
-    url.pathname = '/dashboard'
-    return NextResponse.redirect(url)
+    console.log(`[MIDDLEWARE] 🏠 Root detected with session. Allowing app to handle entry.`)
   }
 
+  console.log(`[MIDDLEWARE] ✅ Session valid for path: ${request.nextUrl.pathname}. Passing to Layout.`)
+  
   // Inject current pathname so Layouts can read it for RBAC
   supabaseResponse.headers.set('x-pathname', request.nextUrl.pathname)
 

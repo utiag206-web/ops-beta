@@ -44,18 +44,18 @@ export function BonusList({ bonuses: initialBonuses, isWorker = false, isAdmin =
   }
 
   return (
-    <div className="bg-white rounded-2xl md:rounded-[2.5rem] shadow-sm border border-slate-100 overflow-hidden">
+    <div className="bg-white rounded-2xl md:rounded-[2rem] shadow-sm border border-slate-100 overflow-hidden">
       {/* Desktop Table View */}
       <div className="hidden md:block overflow-x-auto">
         <table className="w-full text-left">
           <thead>
             <tr className="bg-slate-50/50 border-b border-slate-100">
-              <th className="py-5 px-6 text-[11px] font-black text-slate-400 uppercase tracking-widest">Colaborador</th>
-              <th className="py-5 px-6 text-[11px] font-black text-slate-400 uppercase tracking-widest">Concepto</th>
-              <th className="py-5 px-6 text-[11px] font-black text-slate-400 uppercase tracking-widest">Fecha</th>
-              <th className="py-5 px-6 text-[11px] font-black text-slate-400 uppercase tracking-widest">Monto</th>
-              <th className="py-5 px-6 text-[11px] font-black text-slate-400 uppercase tracking-widest text-center">Estado</th>
-              <th className="py-5 px-6 text-[11px] font-black text-slate-400 uppercase tracking-widest text-right">Acciones</th>
+              <th className="py-5 px-6 text-[11px] font-bold text-slate-400 uppercase tracking-widest">Colaborador</th>
+              <th className="py-5 px-6 text-[11px] font-bold text-slate-400 uppercase tracking-widest">Concepto</th>
+              <th className="py-5 px-6 text-[11px] font-bold text-slate-400 uppercase tracking-widest">Fecha</th>
+              <th className="py-5 px-6 text-[11px] font-bold text-slate-400 uppercase tracking-widest">Monto</th>
+              <th className="py-5 px-6 text-[11px] font-bold text-slate-400 uppercase tracking-widest text-center">Estado</th>
+              <th className="py-5 px-6 text-[11px] font-bold text-slate-400 uppercase tracking-widest text-right">Acciones</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-50">
@@ -67,7 +67,7 @@ export function BonusList({ bonuses: initialBonuses, isWorker = false, isAdmin =
                       <User size={16} />
                     </div>
                     <div>
-                      <p className="text-sm font-black text-slate-800 uppercase tracking-tight">
+                      <p className="text-sm font-bold text-slate-800 uppercase tracking-tight">
                         {bonus.worker?.name || 'Sistema'}
                       </p>
                     </div>
@@ -80,10 +80,10 @@ export function BonusList({ bonuses: initialBonuses, isWorker = false, isAdmin =
                   <span className="text-sm font-bold text-slate-500">{new Date(bonus.date).toLocaleDateString()}</span>
                 </td>
                 <td className="py-5 px-6">
-                  <span className="text-sm font-black text-slate-800">S/ {Number(bonus.amount).toFixed(2)}</span>
+                  <span className="text-sm font-bold text-slate-800">S/ {Number(bonus.amount).toFixed(2)}</span>
                 </td>
                 <td className="py-5 px-6 text-center">
-                  <span className={`text-[10px] font-black px-3 py-1 rounded-lg uppercase border shadow-sm ${
+                  <span className={`text-[10px] font-bold px-3 py-1 rounded-lg uppercase border shadow-sm ${
                     bonus.status === 'paid' 
                       ? 'bg-emerald-50 text-emerald-700 border-emerald-100' 
                       : 'bg-amber-50 text-amber-700 border-amber-100'
@@ -131,11 +131,11 @@ export function BonusList({ bonuses: initialBonuses, isWorker = false, isAdmin =
                   <DollarSign size={20} />
                 </div>
                 <div>
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Concepto</p>
-                  <p className="text-sm font-black text-slate-800 uppercase">{bonus.bonus_type}</p>
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none mb-1">Concepto</p>
+                  <p className="text-sm font-bold text-slate-800 uppercase">{bonus.bonus_type}</p>
                 </div>
               </div>
-              <span className={`text-[10px] font-black px-2.5 py-1 rounded-lg uppercase border shadow-sm ${
+              <span className={`text-[10px] font-bold px-2.5 py-1 rounded-lg uppercase border shadow-sm ${
                 bonus.status === 'paid' 
                   ? 'bg-emerald-50 text-emerald-700 border-emerald-100' 
                   : 'bg-amber-50 text-amber-700 border-amber-100'
@@ -146,11 +146,11 @@ export function BonusList({ bonuses: initialBonuses, isWorker = false, isAdmin =
 
             <div className="bg-slate-50 rounded-xl p-4 flex items-center justify-between">
               <div>
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Monto</p>
-                <p className="text-lg font-black text-slate-900 tracking-tighter">S/ {Number(bonus.amount).toFixed(2)}</p>
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Monto</p>
+                <p className="text-lg font-bold text-slate-900 tracking-tighter">S/ {Number(bonus.amount).toFixed(2)}</p>
               </div>
               <div className="text-right">
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Fecha</p>
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Fecha</p>
                 <p className="text-xs font-bold text-slate-600">{new Date(bonus.date).toLocaleDateString()}</p>
               </div>
             </div>
@@ -167,7 +167,7 @@ export function BonusList({ bonuses: initialBonuses, isWorker = false, isAdmin =
                 <button
                   disabled={loadingId === bonus.id}
                   onClick={() => handleToggleStatus(bonus.id, bonus.status)}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] font-black uppercase transition-all shadow-sm ${
+                  className={`flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] font-bold uppercase transition-all shadow-sm ${
                     bonus.status === 'paid' 
                       ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' 
                       : 'bg-blue-600 text-white shadow-blue-100'

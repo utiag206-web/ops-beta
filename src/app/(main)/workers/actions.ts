@@ -2,9 +2,10 @@
 
 import { revalidatePath } from 'next/cache'
 import { createClient, createAdminClient } from '@/lib/supabase/server'
-import { getUserSession, getStrictCompanyId } from '@/lib/auth'
+import { getUserSession, getStrictCompanyId, applyIsolation } from '@/lib/auth'
 
 export async function getWorkers(status?: string, isRecent?: boolean) {
+  const { extendedUser } = await getUserSession()
   const companyId = await getStrictCompanyId()
 
   const supabase = await createAdminClient()
@@ -12,7 +13,8 @@ export async function getWorkers(status?: string, isRecent?: boolean) {
   let query = supabase
     .from('workers')
     .select('*, worker_financial(daily_rate, monthly_salary)')
-    .eq('company_id', companyId)
+  
+  query = applyIsolation(query, companyId, extendedUser.role_id)
 
   if (status) {
     query = query.eq('status', status)
@@ -31,7 +33,7 @@ export async function getWorkers(status?: string, isRecent?: boolean) {
     return []
   }
 
-  return workers.map((w: any) => {
+  return (workers || []).map((w: any) => {
     const fin = Array.isArray(w.worker_financial) ? w.worker_financial[0] : w.worker_financial
     return {
       ...w,
@@ -42,14 +44,15 @@ export async function getWorkers(status?: string, isRecent?: boolean) {
 }
 
 export async function getWorkersShort() {
+  const { extendedUser } = await getUserSession()
   const companyId = await getStrictCompanyId()
 
   const supabase = await createAdminClient()
-  const { data, error } = await supabase
-    .from('workers')
-    .select('*')
-    .eq('company_id', companyId)
-    .order('name', { ascending: true })
+  const { data, error } = await applyIsolation(
+    supabase.from('workers').select('*'),
+    companyId,
+    extendedUser.role_id
+  ).order('name', { ascending: true })
 
   if (error) return []
   return data
@@ -60,7 +63,7 @@ export async function createWorker(prevState: any, formData: FormData) {
     const { extendedUser } = await getUserSession()
     const companyId = await getStrictCompanyId()
 
-    const allowedRoles = ['admin', 'operaciones']
+    const allowedRoles = ['admin', 'operaciones', 'super_admin', 'superadmin']
     if (!extendedUser.role_id || !allowedRoles.includes(extendedUser.role_id)) {
       return { success: false, error: 'No tienes permisos para crear trabajadores.' }
     }
@@ -86,7 +89,7 @@ export async function createWorker(prevState: any, formData: FormData) {
         position,
         phone,
         hire_date: hireDate,
-        status: 'active'
+        status: 'ACTIVO'
       })
 
     if (error) {
@@ -106,7 +109,7 @@ export async function updateWorker(prevState: any, formData: FormData) {
   try {
     const { extendedUser } = await getUserSession()
     const companyId = await getStrictCompanyId()
-    const allowedRoles = ['admin', 'operaciones']
+    const allowedRoles = ['admin', 'operaciones', 'super_admin', 'superadmin']
     if (!extendedUser.role_id || !allowedRoles.includes(extendedUser.role_id)) {
       return { success: false, error: 'No tienes permisos para editar trabajadores.' }
     }
@@ -117,7 +120,7 @@ export async function updateWorker(prevState: any, formData: FormData) {
     const position = formData.get('position') as string
     const phone = (formData.get('phone') as string) || null
     const hireDate = (formData.get('hire_date') as string) || null
-    const status = (formData.get('status') as string) || 'active'
+    const status = (formData.get('status') as string) || 'ACTIVO'
     
     // Photo handling
     const photoFile = formData.get('photo') as File | null
@@ -183,7 +186,7 @@ export async function deleteWorker(id: string) {
   try {
     const { extendedUser } = await getUserSession()
     const companyId = await getStrictCompanyId()
-    const allowedRoles = ['admin', 'operaciones']
+    const allowedRoles = ['admin', 'operaciones', 'super_admin', 'superadmin']
     if (!extendedUser.role_id || !allowedRoles.includes(extendedUser.role_id)) {
       return { success: false, error: 'No tienes permisos.' }
     }
@@ -214,14 +217,16 @@ export async function deleteWorker(id: string) {
 // --- DOCUMENT ACTIONS ---
 
 export async function getWorkerById(id: string) {
+  const { extendedUser } = await getUserSession()
   const companyId = await getStrictCompanyId()
 
   const supabase = await createAdminClient()
-  const { data, error } = await supabase
-    .from('workers')
-    .select('*, worker_financial(*), worker_personal(*)')
+  const { data, error } = await applyIsolation(
+    supabase.from('workers').select('*, worker_financial(*), worker_personal(*)'),
+    companyId,
+    extendedUser.role_id
+  )
     .eq('id', id)
-    .eq('company_id', companyId)
     .single()
 
   if (error) {
@@ -241,14 +246,15 @@ export async function getWorkerById(id: string) {
 }
 
 export async function getWorkerDocuments(workerId: string) {
+  const { extendedUser } = await getUserSession()
   const companyId = await getStrictCompanyId()
 
   const supabase = await createAdminClient()
-  const { data, error } = await supabase
-    .from('worker_documents')
-    .select('*')
-    .eq('worker_id', workerId)
-    .eq('company_id', companyId)
+  const { data, error } = await applyIsolation(
+    supabase.from('worker_documents').select('*'),
+    companyId,
+    extendedUser.role_id
+  ).eq('worker_id', workerId)
     .order('created_at', { ascending: false })
 
   if (error) return []
@@ -281,7 +287,7 @@ export async function uploadWorkerDocument(formData: FormData) {
 
     const companyId = await getStrictCompanyId()
 
-    const allowedRoles = ['admin', 'operaciones']
+    const allowedRoles = ['admin', 'operaciones', 'super_admin', 'superadmin']
     if (!extendedUser.role_id || !allowedRoles.includes(extendedUser.role_id)) {
       return { success: false, error: `Tu rol (${extendedUser.role_id}) no tiene permisos para subir documentos.` }
     }
@@ -347,7 +353,7 @@ export async function deleteWorkerDocument(id: string, workerId: string, filePat
   try {
     const { extendedUser } = await getUserSession()
     const companyId = await getStrictCompanyId()
-    const allowedRoles = ['admin', 'operaciones']
+    const allowedRoles = ['admin', 'operaciones', 'super_admin', 'superadmin']
     if (!extendedUser.role_id || !allowedRoles.includes(extendedUser.role_id)) {
       return { success: false, error: 'No tienes permisos.' }
     }
@@ -398,7 +404,7 @@ export async function importWorkers(workersData: any[]) {
     phone: worker.phone?.toString(),
     hire_date: worker.hire_date || new Date().toISOString().split('T')[0],
     company_id: companyId,
-    status: 'active'
+    status: 'ACTIVO'
   }))
 
   const { data, error } = await supabase
@@ -424,7 +430,7 @@ export async function updateWorkerFullProfile(id: string, payload: {
   try {
     const { extendedUser } = await getUserSession()
     const companyId = await getStrictCompanyId()
-    const allowedRoles = ['admin', 'operaciones']
+    const allowedRoles = ['admin', 'operaciones', 'super_admin', 'superadmin']
     if (!extendedUser.role_id || !allowedRoles.includes(extendedUser.role_id)) {
       return { success: false, error: 'No tienes permisos.' }
     }
@@ -432,14 +438,21 @@ export async function updateWorkerFullProfile(id: string, payload: {
     const supabase = await createAdminClient()
     const failedFields: string[] = []
 
-    // 1. Update basic workers table - Safe Blocks
+    // 1. Update basic workers table
     const { error: errA } = await supabase
       .from('workers')
       .update({
         name: payload.laboral.name,
+        last_name: payload.laboral.last_name,
         dni: payload.laboral.document_number || payload.laboral.dni,
+        document_number: payload.laboral.document_number || payload.laboral.dni,
+        cod: payload.laboral.cod,
         position: payload.laboral.position,
+        guardia: payload.laboral.guardia,
+        condition: payload.laboral.condition,
+        work_system: payload.laboral.work_system,
         hire_date: payload.laboral.hire_date,
+        termination_date: payload.laboral.termination_date,
         status: payload.laboral.current_status || payload.laboral.status || 'ACTIVO',
         updated_at: new Date().toISOString()
       })
@@ -447,28 +460,6 @@ export async function updateWorkerFullProfile(id: string, payload: {
       .eq('company_id', companyId)
     
     if (errA) throw new Error(`Fallo crítico en tabla trabajadores: ${errA.message}`)
-
-    const extendedFields = {
-      last_name: payload.laboral.last_name,
-      cod: payload.laboral.cod,
-      guardia: payload.laboral.guardia,
-      condition: payload.laboral.condition,
-      work_system: payload.laboral.work_system,
-      termination_date: payload.laboral.termination_date
-    }
-
-    for (const [key, value] of Object.entries(extendedFields)) {
-      if (!value) continue;
-      const { error: errB } = await supabase
-        .from('workers')
-        .update({ [key]: value })
-        .eq('id', id)
-      
-      if (errB) {
-        failedFields.push(key)
-        console.warn(`[SCHEMA_LIMITATION] Column '${key}' missing in root 'workers' table.`)
-      }
-    }
 
     // 2. Upsert financial
     const { error: err2 } = await supabase
@@ -519,14 +510,16 @@ export async function updateWorkerFullProfile(id: string, payload: {
 // --- WORKER CHILDREN ACTIONS ---
 
 export async function getWorkerChildren(workerId: string) {
+  const { extendedUser } = await getUserSession()
   const companyId = await getStrictCompanyId()
 
   const supabase = await createAdminClient()
-  const { data, error } = await supabase
-    .from('worker_children')
-    .select('*')
+  const { data, error } = await applyIsolation(
+    supabase.from('worker_children').select('*'),
+    companyId,
+    extendedUser.role_id
+  )
     .eq('worker_id', workerId)
-    .eq('company_id', companyId)
     .order('fecha_nacimiento', { ascending: true })
 
   if (error) {
@@ -541,7 +534,7 @@ export async function upsertWorkerChild(formData: FormData) {
   try {
     const { extendedUser } = await getUserSession()
     const companyId = await getStrictCompanyId()
-    const allowedRoles = ['admin', 'operaciones']
+    const allowedRoles = ['admin', 'operaciones', 'super_admin', 'superadmin']
     if (!extendedUser.role_id || !allowedRoles.includes(extendedUser.role_id)) {
       return { success: false, error: 'No tienes permisos para gestionar hijos.' }
     }
@@ -604,7 +597,7 @@ export async function deleteWorkerChild(id: string, workerId: string) {
   try {
     const { extendedUser } = await getUserSession()
     const companyId = await getStrictCompanyId()
-    const allowedRoles = ['admin', 'operaciones']
+    const allowedRoles = ['admin', 'operaciones', 'super_admin', 'superadmin']
     if (!extendedUser.role_id || !allowedRoles.includes(extendedUser.role_id)) {
       return { success: false, error: 'No tienes permisos para eliminar.' }
     }

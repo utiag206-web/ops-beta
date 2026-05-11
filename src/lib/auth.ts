@@ -1,105 +1,130 @@
 import { cache } from 'react'
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { getPermissionsByRole, hasPermission } from './permissions'
+import { cookies } from 'next/headers'
 
 export const getUserSession = cache(async () => {
   try {
+    const cookieStore = await cookies()
+    const activeCompanyId = cookieStore.get('active_company_id')?.value
+    
     const supabase = await createClient()
-    
-    // Debug cookies in Vercel
-    if (process.env.NODE_ENV === 'production') {
-      const { cookies } = await import('next/headers')
-      const cookieStore = await cookies()
-      const hasSession = cookieStore.getAll().some(c => c.name.includes('supabase-auth-token') || c.name.includes('sb-'))
-      console.log("[AUTH_DEBUG] Has Supabase cookies:", hasSession)
-    }
-    
-    const {
-      data: { user },
-      error: authError
-    } = await supabase.auth.getUser()
-
-    console.log("[AUTH_DEBUG] Supabase User:", user?.id, user?.email)
-    if (user) {
-      console.log("[AUTH_DEBUG] App Metadata:", user.app_metadata)
-      console.log("[AUTH_DEBUG] User Metadata:", user.user_metadata)
-    }
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
 
     if (authError || !user) {
-      console.warn("[AUTH] No active session or auth error:", authError?.message)
       redirect('/login')
     }
 
-    const { data: userData, error: userError } = await supabase
+    const adminSupabase = await createAdminClient()
+    const { data: userData, error: userError } = await adminSupabase
         .from('users')
-        .select('id, name, email, role_id, area, company_id, worker_id')
+        .select('*, companies(id, name), workers(id, status)')
         .eq('id', user.id)
-        .single()
-
-    console.log("[AUTH_DEBUG] DB User Data:", userData?.id, "Company:", userData?.company_id)
+        .maybeSingle()
 
     if (userError || !userData) {
-      console.error("[AUTH_DEBUG] Error fetching userData or user not found:", userError?.message)
-      redirect('/login')
+      console.error(`[AUTH] 🚨 ORPHAN USER: Auth exists but profile missing for ${user.id}`)
+      return { user, extendedUser: null }
     }
 
-    const rbacRole: string | null = userData?.role_id || null
+    // Role Resolution
+    const rawRoleId = String(userData?.role_id || userData?.role || '').toLowerCase()
+    let rbacRole: string = 'trabajador'
 
-    if (!rbacRole) {
-      console.error("[AUTH_DENIED] No role_id found for user:", userData.email)
-      throw new Error(`Acceso denegado: El usuario '${userData.email}' no tiene un rol asignado.`)
+    if (rawRoleId === 'super_admin' || rawRoleId === 'superadmin') {
+      rbacRole = 'super_admin'
+    } else {
+      rbacRole = rawRoleId || 'trabajador'
     }
 
-    if (!userData.company_id) {
-      console.error("[AUTH_DENIED] No company_id found for user:", userData.email)
-      throw new Error(`Acceso denegado: El usuario '${userData.email}' no tiene una empresa asignada.`)
-    }
-
-    // Fetch company data
-    const { data: companyData, error: compError } = await supabase
-      .from('companies')
-      .select('name')
-      .eq('id', userData.company_id)
-      .single()
+    const isSuperAdmin = rbacRole === 'super_admin'
     
-    if (compError) {
-      console.error("[AUTH_DEBUG] Error fetching companyData:", compError.message)
+    // CRITICAL: Super Admin is GLOBAL by default. 
+    // Only use a company context if explicitly impersonating via cookie.
+    const finalCompanyId = isSuperAdmin ? (activeCompanyId || null) : userData.company_id
+    const impersonating = !!(isSuperAdmin && activeCompanyId)
+    
+    const isUuid = (val: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(val)
+
+    // Company Data Fetching (Only if impersonating, otherwise use joined data)
+    let companyData = userData.companies
+    if (impersonating && finalCompanyId && isUuid(finalCompanyId) && finalCompanyId !== userData.company_id) {
+      const { data: comp } = await adminSupabase
+        .from('companies')
+        .select('id, name')
+        .eq('id', finalCompanyId)
+        .single()
+      companyData = comp
     }
 
-    const finalExtendedUser = {
-      ...userData,
-      companies: companyData,
+    const extendedUser = {
+      id: user.id,
+      email: userData.email || user.email || '',
+      name: userData.name || 'Usuario',
       role_id: rbacRole,
-      area: userData?.area || null,
-      permissions: rbacRole ? getPermissionsByRole(rbacRole, userData?.area) : []
+      area: (userData as any)?.area || null,
+      company_id: (userData as any)?.company_id || null,
+      worker_id: (userData as any)?.worker_id || null,
+      worker_status: (userData as any)?.workers?.status || null,
+      permissions: getPermissionsByRole(rbacRole, (userData as any)?.area),
+      active_company_id: finalCompanyId,
+      companies: companyData,
+      is_impersonating: impersonating,
+      display_name: '',
+      display_email: '',
+      is_view_only: false
     }
 
-    return {
-      user,
-      extendedUser: finalExtendedUser as any,
+    // Identity Masking for Super Admin
+    if (impersonating) {
+      const safeName = companyData?.name || 'Sistema'
+      const maskedName = `Administrador (${safeName})`
+      const maskedEmail = `soporte@${safeName.toLowerCase().replace(/\s+/g, '')}.com`
+      
+      extendedUser.display_name = maskedName
+      extendedUser.display_email = maskedEmail
+      // Overwrite base fields for consistent form pre-filling
+      extendedUser.name = maskedName
+      extendedUser.email = maskedEmail
+    } else {
+      extendedUser.display_name = extendedUser.name
+      extendedUser.display_email = extendedUser.email
     }
+
+    return { user, extendedUser }
+
   } catch (error: any) {
     if (error.digest?.startsWith('NEXT_REDIRECT')) throw error
-    console.error("[CRITICAL_AUTH_ERROR]:", error)
+    console.error("[AUTH_CRITICAL_ERROR]:", error.message)
     throw error
   }
 })
 
-export async function getStrictCompanyId(): Promise<string> {
+export async function getStrictCompanyId(): Promise<string | null> {
   const { extendedUser } = await getUserSession()
-  console.log("[STRICT_DEBUG] Company ID from session:", extendedUser?.company_id)
-  if (!extendedUser?.company_id) {
-    console.error("[STRICT_AUTH] missing company_id for session:", extendedUser?.email)
-    throw new Error("Sesión inválida: No se encontró el ID de la empresa.")
+  if (extendedUser?.role_id === 'super_admin' && !extendedUser.is_impersonating) return null
+
+  const cid = extendedUser?.active_company_id || extendedUser?.company_id
+  if (!cid || cid === 'undefined' || cid === 'null') {
+    throw new Error("Contexto de empresa no encontrado.")
   }
-  return extendedUser.company_id
+  return cid
 }
 
 export async function requirePermission(moduleName: string) {
   const { extendedUser } = await getUserSession()
-  if (!extendedUser || !hasPermission(extendedUser.role_id as string, moduleName, extendedUser.area)) {
-    throw new Error(`Acceso Denegado: No tienes permiso para ejecutar acciones en '${moduleName}'`)
+  if (!extendedUser || !hasPermission(extendedUser.role_id, moduleName, extendedUser.area)) {
+    throw new Error(`Acceso Denegado a '${moduleName}'`)
   }
   return extendedUser
+}
+
+export function applyIsolation(query: any, companyId: string | null, role: string) {
+  const normalizedRole = role?.toLowerCase()
+  if (!companyId && normalizedRole !== 'super_admin') {
+    throw new Error('Aislamiento requerido.')
+  }
+  if (!companyId || companyId === 'undefined' || companyId === 'null') return query
+  return query.eq('company_id', companyId)
 }
