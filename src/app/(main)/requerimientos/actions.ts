@@ -49,8 +49,8 @@ export async function getRequirements(filters?: { status?: string, priority?: st
   const productIds = [...new Set(data.map(r => r.product_id).filter(Boolean))]
 
   const [{ data: users }, { data: products }] = await Promise.all([
-    supabase.from('users').select('id, name').in('id', userIds),
-    supabase.from('products').select('id, name, code, unit').in('id', productIds)
+    supabase.from('users').select('id, name').in('id', userIds).eq('company_id', extendedUser.company_id),
+    supabase.from('products').select('id, name, code, unit').in('id', productIds).eq('company_id', extendedUser.company_id)
   ])
 
   const enrichedData = data.map(req => ({
@@ -111,7 +111,12 @@ export async function updateRequirementStatus(id: string, status: string) {
 
   // Si es JEFE_AREA, solo puede actualizar si el área coincide (validación extra)
   if (extendedUser?.role_id === 'jefe_area') {
-    const { data: req } = await supabase.from('requirements').select('area').eq('id', id).single()
+    const { data: req } = await supabase
+      .from('requirements')
+      .select('area')
+      .eq('id', id)
+      .eq('company_id', extendedUser.company_id)
+      .single()
     if (req?.area !== extendedUser.area) {
       return { error: 'No puedes gestionar requerimientos fuera de tu área.' }
     }
@@ -148,6 +153,7 @@ export async function approveRequirementWithMovement(reqId: string, warehouseId:
     .from('requirements')
     .select('*')
     .eq('id', reqId)
+    .eq('company_id', extendedUser.company_id)
     .single()
 
   if (reqError || !req) return { error: 'Requerimiento no encontrado.' }
@@ -193,6 +199,7 @@ export async function approveRequirementWithMovement(reqId: string, warehouseId:
       movement_id: movement.id
     })
     .eq('id', reqId)
+    .eq('company_id', extendedUser.company_id)
 
   if (updateError) {
     return { error: 'Error al marcar como aprobado, pero la salida se generó.' }

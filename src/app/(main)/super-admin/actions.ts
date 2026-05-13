@@ -197,20 +197,42 @@ export async function createCompany(payload: {
 
     // 4. Sincronizar user_roles (Formal RBAC)
     // Buscamos el ID del rol 'admin' en la tabla roles
+    let roleId: string | null = null
     const { data: roleData } = await supabase
       .from('roles')
       .select('id')
       .eq('name', 'admin')
-      .single()
+      .maybeSingle()
     
-    if (roleData) {
-      await supabase
+    if (!roleData) {
+      console.warn(`[BOOTSTRAP] Rol 'admin' no encontrado. Intentando crear rol maestro...`)
+      const { data: newRole, error: newRoleError } = await supabase
+        .from('roles')
+        .insert([{ name: 'admin', description: 'Administrador de Empresa' }])
+        .select()
+        .single()
+      
+      if (newRoleError) {
+        console.error(`[BOOTSTRAP_CRITICAL] No se pudo crear el rol 'admin':`, newRoleError.message)
+      } else {
+        roleId = newRole.id
+      }
+    } else {
+      roleId = roleData.id
+    }
+
+    if (roleId) {
+      const { error: rbacError } = await supabase
         .from('user_roles')
         .insert([{
           user_id: authUserId,
           company_id: companyId,
-          role_id: roleData.id
+          role_id: roleId
         }])
+      
+      if (rbacError) {
+        console.error(`[BOOTSTRAP_CRITICAL] Error al vincular rol administrativo:`, rbacError.message)
+      }
     }
 
     // 5-8. Inicialización Automática en Paralelo (Optimización PRE-DEPLOY)

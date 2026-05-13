@@ -31,7 +31,7 @@ export async function getIncidencias(filters?: { status?: string }) {
   // MANUAL JOIN for reporter name
   const reporterIds = [...new Set(data.map(inc => inc.reported_by).filter(Boolean))]
   if (reporterIds.length > 0) {
-    const { data: users } = await supabase.from('users').select('id, name').in('id', reporterIds)
+    const { data: users } = await supabase.from('users').select('id, name').in('id', reporterIds).eq('company_id', extendedUser.company_id)
     const enrichedData = data.map(inc => ({
       ...inc,
       reporter: users?.find(u => u.id === inc.reported_by)

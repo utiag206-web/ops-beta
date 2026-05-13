@@ -45,7 +45,7 @@ export async function getBonuses(workerId?: string) {
     ])).filter(id => id && UUID_REGEX.test(id))
 
     const { data: workersList } = wIds.length > 0 
-      ? await supabase.from('workers').select('id, name').in('id', wIds)
+      ? await supabase.from('workers').select('id, name').in('id', wIds).eq('company_id', companyId)
       : { data: [] }
 
     const workerMap = new Map((workersList || []).map(w => [w.id, w]))

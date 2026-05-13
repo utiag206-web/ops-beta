@@ -49,6 +49,10 @@ export async function login(prevState: any, formData: FormData) {
 }
 
 export async function logout() {
+  const { cookies } = await import('next/headers')
+  const cookieStore = await cookies()
+  cookieStore.delete('active_company_id')
+  
   const supabase = await createClient()
   await supabase.auth.signOut()
   
