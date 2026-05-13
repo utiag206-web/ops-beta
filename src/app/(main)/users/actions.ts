@@ -5,11 +5,7 @@ import { createClient } from '@supabase/supabase-js'
 import { createClient as createServerClient, createAdminClient } from '@/lib/supabase/server'
 import { getUserSession, getStrictCompanyId, applyIsolation } from '@/lib/auth'
 
-// Administrative client for user creation (bypasses regular Auth restrictions)
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+// Removed static supabaseAdmin initialization to use dynamic createAdminClient instead
 
 export async function getUsers() {
   const { extendedUser } = await getUserSession()
@@ -73,6 +69,8 @@ export async function createUser(prevState: any, formData: FormData) {
     if (!email || !password || !name || !roleId || !area) {
       return { success: false, error: 'Todos los campos son obligatorios.' }
     }
+
+    const supabaseAdmin = await createAdminClient()
 
     // 0. Verificar si el trabajador ya está vinculado
     if (workerId && workerId !== 'none') {
@@ -166,6 +164,7 @@ export async function updateUserStatus(userId: string, status: 'active' | 'inact
       return { success: false, error: 'Permiso denegado.' }
     }
 
+    const supabaseAdmin = await createAdminClient()
     // PROTECCIÓN: No se puede desactivar al último administrador de la empresa
     if (status === 'inactive') {
       const { data: adminCount } = await supabaseAdmin
@@ -209,6 +208,7 @@ export async function updateUserRole(userId: string, role_id: string) {
       return { success: false, error: 'Permiso denegado.' }
     }
 
+    const supabaseAdmin = await createAdminClient()
     // PROTECCIÓN: No se puede quitar el rol de administrador si es el último
     if (!['admin', 'gerente'].includes(role_id)) {
       const { data: adminCount } = await supabaseAdmin
@@ -265,6 +265,7 @@ export async function updateUserArea(userId: string, area: string) {
       return { success: false, error: 'Permiso denegado.' }
     }
 
+    const supabaseAdmin = await createAdminClient()
     const { error } = await applyIsolation(
       supabaseAdmin.from('users').update({ area }),
       companyId,
@@ -291,6 +292,8 @@ export async function deleteUser(userId: string) {
     if (extendedUser.role_id !== 'admin' && extendedUser.role_id !== 'super_admin') {
       return { success: false, error: 'No tienes permisos para eliminar usuarios.' }
     }
+
+    const supabaseAdmin = await createAdminClient()
 
     // PROTECCIÓN: No se puede eliminar al último administrador
     const { data: adminCount } = await supabaseAdmin

@@ -79,8 +79,8 @@ export function AddTransactionModal({ isOpen, onClose, onSuccess, area }: AddTra
       const base64 = await base64Promise
       const result = await uploadFilesAction(
         [{ name: file.name, type: file.type, base64 }],
-        'worker_documents',
         'petty-cash',
+        'transacciones',
         area.toLowerCase().replace(/\s+/g, '_')
       )
 

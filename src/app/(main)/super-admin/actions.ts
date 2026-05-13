@@ -245,13 +245,23 @@ export async function createCompany(payload: {
       { company_id: companyId, topic: 'Primeros Auxilios', description: 'Atención de emergencias' }
     ]
 
-    await Promise.all([
+    // 5-8. Inicialización Automática (Optimización Estabilizada)
+    const initPromises = [
       supabase.from('movement_types').insert(movementDefaults),
       supabase.from('warehouses').insert(warehouseDefaults),
       supabase.from('categories').insert(categoryDefaults),
       supabase.from('units').insert(unitDefaults),
-      supabase.from('soma_talks').insert(somaDefaults).catch(() => null) // Silent catch for optional SOMA
-    ])
+      supabase.from('soma_talks').insert(somaDefaults)
+    ]
+
+    const results = await Promise.all(initPromises)
+    
+    // Logueamos errores de inicialización pero no bloqueamos la creación de la empresa
+    results.forEach((res, idx) => {
+      if (res.error) {
+        console.warn(`[INIT_WARN] Failed initialization step ${idx}:`, res.error.message)
+      }
+    })
 
     return { success: true, data: company, password } // Devolvemos el password por si fue generado
   } catch (error: any) {

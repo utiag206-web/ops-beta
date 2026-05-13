@@ -409,7 +409,10 @@ export async function importWorkers(workersData: any[]) {
 
   const { data, error } = await supabase
     .from('workers')
-    .insert(workersToInsert)
+    .upsert(workersToInsert, { 
+      onConflict: 'company_id, dni',
+      ignoreDuplicates: false // We want to update names/positions if they changed in the Excel
+    })
     .select()
 
   if (error) {
