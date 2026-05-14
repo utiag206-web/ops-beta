@@ -1,18 +1,19 @@
 'use server'
 
-import { createClient } from '@/lib/supabase/server'
-import { getUserSession } from '@/lib/auth'
+import { createClient, createAdminClient } from '@/lib/supabase/server'
+import { getUserSession, getStrictCompanyId, applyIsolation } from '@/lib/auth'
 import { revalidatePath } from 'next/cache'
 
 export async function getAttendance(workerId?: string, date?: string) {
   const { extendedUser } = await getUserSession()
-  if (!extendedUser?.company_id) return []
+  const companyId = await getStrictCompanyId()
 
   const supabase = await createClient()
-  let query = supabase
-    .from('attendance')
-    .select('*, worker:workers(name)')
-    .eq('company_id', extendedUser.company_id)
+  let query = applyIsolation(
+    supabase.from('attendance').select('*, worker:workers(name)'),
+    companyId,
+    extendedUser.role_id
+  )
     .order('date', { ascending: false })
 
   // [BLINDAJE_UUID]
@@ -23,7 +24,12 @@ export async function getAttendance(workerId?: string, date?: string) {
     query = query.eq('worker_id', workerId)
   }
 
-  if (date && date !== 'undefined') {
+  // OPTIMIZATION: Only fetch last 30 days for general view
+  if (!date || date === 'undefined') {
+    const thirtyDaysAgo = new Date()
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
+    query = query.gte('date', thirtyDaysAgo.toISOString().split('T')[0])
+  } else {
     query = query.eq('date', date)
   }
 
@@ -38,8 +44,9 @@ export async function getAttendance(workerId?: string, date?: string) {
 
 export async function checkIn() {
   const { extendedUser } = await getUserSession()
-  if (!extendedUser?.worker_id || !extendedUser?.company_id) {
-    return { success: false, error: 'No autorizado como trabajador' }
+  const companyId = await getStrictCompanyId()
+  if (!extendedUser?.worker_id || !companyId) {
+    return { success: false, error: 'No autorizado como trabajador o sin contexto de empresa' }
   }
 
   const supabase = await createClient()
@@ -50,7 +57,7 @@ export async function checkIn() {
     .from('attendance')
     .insert([{
       worker_id: extendedUser.worker_id,
-      company_id: extendedUser.company_id,
+      company_id: companyId,
       date: today,
       check_in: now
     }])

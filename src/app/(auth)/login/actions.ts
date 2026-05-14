@@ -12,32 +12,38 @@ export async function login(prevState: any, formData: FormData) {
 
   console.log(`[AUTH] Intentando login para: ${email}`)
 
-  const { error } = await supabase.auth.signInWithPassword({
+  const { data, error } = await supabase.auth.signInWithPassword({
     email,
     password,
   })
 
   if (error) {
-    // Audit logs for specific security signals
     console.error(`[AUTH_ERROR] Código: ${error.code}, Mensaje: ${error.message}`)
-    
-    // Si es un error de seguridad (como contraseña comprometida o débil),
-    // devolvemos un mensaje que no bloquee al usuario.
     if (error.message.toLowerCase().includes('password') || error.code === 'weak_password') {
       return { 
         error: 'Seguridad: Tu contraseña es muy débil o ha sido comprometida en otros sitios. Por favor, contacta al administrador.',
         code: error.code 
       }
     }
-
     return { error: 'Credenciales inválidas. Verifica tu correo y contraseña.' }
   }
 
+  const authUser = data.user
+  if (!authUser) return { error: 'No se pudo recuperar la información del usuario.' }
+
   console.log(`[AUTH_SUCCESS] Login exitoso para: ${email}`)
   
-  // Dynamic Redirection based on role
-  const { extendedUser } = await (await import('@/lib/auth')).getUserSession()
-  const role = extendedUser?.role_id?.toLowerCase()
+  // Direct DB Query to avoid getUserSession cookie race condition
+  const { createAdminClient } = await import('@/lib/supabase/server')
+  const adminSupabase = await createAdminClient()
+  const { data: userData } = await adminSupabase
+    .from('users')
+    .select('role_id')
+    .eq('id', authUser.id)
+    .maybeSingle()
+
+  const role = userData?.role_id?.toLowerCase()
+  console.log(`[AUTH] Rol detectado para redirect: ${role}`)
 
   revalidatePath('/', 'layout')
 
@@ -49,10 +55,6 @@ export async function login(prevState: any, formData: FormData) {
 }
 
 export async function logout() {
-  const { cookies } = await import('next/headers')
-  const cookieStore = await cookies()
-  cookieStore.delete('active_company_id')
-  
   const supabase = await createClient()
   await supabase.auth.signOut()
   

@@ -5,7 +5,7 @@ export async function createClient() {
   const cookieStore = await cookies()
 
   const anonKey = process.env.NEXT_PUBLIC_SB_PUB || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-  
+
   return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     anonKey!,

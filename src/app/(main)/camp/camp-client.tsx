@@ -30,7 +30,7 @@ export default function CampClient({ initialRooms, workers, userRole }: CampPage
     worker_id: '' as string | null
   })
 
-  const canManage = ['admin', 'gerente', 'operaciones'].includes(userRole)
+  const canManage = ['admin', 'gerente', 'operaciones', 'super_admin', 'superadmin'].includes(userRole)
 
   const handleAssign = async (e: React.FormEvent) => {
     e.preventDefault()

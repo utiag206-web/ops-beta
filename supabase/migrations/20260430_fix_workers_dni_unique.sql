@@ -24,4 +24,9 @@ UPDATE public.users
 SET role_id = 'almacen' 
 WHERE role_id IS NULL AND (LOWER(role) = 'almacén' OR LOWER(role) = 'almacen' OR LOWER(role) = 'logistica' OR LOWER(role) = 'logística');
 
+-- 4. Asegurar que todos los usuarios tengan company_id (si el sistema es multi-empresa)
+-- Si hay usuarios huérfanos, esto podría ser un problema de permisos.
+-- (No podemos asignar una empresa al azar, pero podemos reportarlo o asegurar que no haya nulos si es obligatorio)
+-- ALTER TABLE public.users ALTER COLUMN company_id SET NOT NULL; -- Solo si estamos seguros
+
 COMMIT;

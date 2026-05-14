@@ -1,17 +1,19 @@
 'use server'
 
 import { createClient, createAdminClient } from '@/lib/supabase/server'
-import { getUserSession, getStrictCompanyId } from '@/lib/auth'
+import { getUserSession, getStrictCompanyId, applyIsolation } from '@/lib/auth'
 import { revalidatePath } from 'next/cache'
 
 export async function getTransportPayments(workerId?: string) {
+  const { extendedUser } = await getUserSession()
   const companyId = await getStrictCompanyId()
 
   const supabase = await createAdminClient()
-  let query = supabase
-    .from('transport_payments')
-    .select('*, worker:workers(name)')
-    .eq('company_id', companyId)
+  let query = applyIsolation(
+    supabase.from('transport_payments').select('*, worker:workers(name)'),
+    companyId,
+    extendedUser.role_id
+  )
     .order('date', { ascending: false })
 
   if (workerId) {

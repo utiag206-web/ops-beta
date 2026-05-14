@@ -1,18 +1,19 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
-import { getUserSession } from '@/lib/auth'
+import { getUserSession, getStrictCompanyId } from '@/lib/auth'
 import { revalidatePath } from 'next/cache'
 
 export async function getCompanyProfile() {
   const { extendedUser } = await getUserSession()
-  if (!extendedUser?.company_id) return null
+  const companyId = await getStrictCompanyId()
+  if (!companyId) return null
 
   const supabase = await createClient()
   const { data, error } = await supabase
     .from('companies')
     .select('*')
-    .eq('id', extendedUser.company_id)
+    .eq('id', companyId)
     .single()
 
   if (error) {
@@ -35,9 +36,10 @@ export async function updateCompanyProfile(formData: {
   logo_url?: string
 }) {
   const { extendedUser } = await getUserSession()
-  const isAdmin = extendedUser?.role_id === 'admin' || extendedUser?.role_id === 'gerente'
+  const companyId = await getStrictCompanyId()
+  const isAdmin = extendedUser?.role_id === 'admin' || extendedUser?.role_id === 'gerente' || extendedUser?.role_id === 'super_admin'
   
-  if (!extendedUser?.company_id || !isAdmin) {
+  if (!companyId || !isAdmin) {
     return { success: false, error: 'No autorizado para editar el perfil de la empresa.' }
   }
 
@@ -55,21 +57,22 @@ export async function updateCompanyProfile(formData: {
       working_hours: formData.working_hours,
       logo_url: formData.logo_url
     })
-    .eq('id', extendedUser.company_id)
+    .eq('id', companyId)
 
   if (error) {
     console.error('Error updating company profile:', error)
     return { success: false, error: error.message }
   }
 
-  revalidatePath('/', 'layout')
+  revalidatePath('/company')
   return { success: true }
 }
 
 export async function uploadCompanyLogo(formData: FormData) {
   try {
     const { extendedUser } = await getUserSession()
-    if (!extendedUser?.company_id) return { success: false, error: 'No autorizado' }
+    const companyId = await getStrictCompanyId()
+    if (!companyId) return { success: false, error: 'No autorizado' }
 
     const file = formData.get('file') as File
     if (!file) return { success: false, error: 'No se envió ningún archivo' }
@@ -77,7 +80,7 @@ export async function uploadCompanyLogo(formData: FormData) {
     const { uploadFile } = await import('@/lib/storage')
     const fileExt = file.name.split('.').pop()
     const fileName = `logo-${Date.now()}.${fileExt}`
-    const storagePath = `${extendedUser.company_id}/${fileName}`
+    const storagePath = `${companyId}/${fileName}`
 
     const { createClient } = await import('@/lib/supabase/server')
     const supabase = await createClient()
@@ -88,13 +91,14 @@ export async function uploadCompanyLogo(formData: FormData) {
     const { error: updateError } = await supabase
       .from('companies')
       .update({ logo_url: publicUrl })
-      .eq('id', extendedUser.company_id)
+      .eq('id', companyId)
 
     if (updateError) throw updateError
 
     revalidatePath('/company')
     return { success: true, url: publicUrl }
   } catch (err: any) {
+    if (err.digest?.startsWith('NEXT_REDIRECT')) throw err
     console.error('[LOGO_UPLOAD_ERROR]', err)
     return { success: false, error: err.message }
   }

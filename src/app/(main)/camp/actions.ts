@@ -1,22 +1,20 @@
 'use server'
 
-import { createClient, createAdminClient } from '@/lib/supabase/server'
-import { getUserSession } from '@/lib/auth'
+import { createAdminClient } from '@/lib/supabase/server'
+import { getUserSession, getStrictCompanyId, applyIsolation } from '@/lib/auth'
 import { revalidatePath } from 'next/cache'
 
 export async function getCampRooms() {
   const { extendedUser } = await getUserSession()
-  if (!extendedUser) return []
+  const companyId = await getStrictCompanyId()
 
   const supabase = await createAdminClient()
 
-  console.log("--- AUDIT: CAMP FETCH INICIO ---")
-  console.log("QUERY ALIASED: supabase.from('camp_rooms').select('*, worker:workers!fk_camp_rooms_worker(...)')")
-
-  let query = supabase
-    .from('camp_rooms')
-    .select(`*, worker:workers(name)`)
-    .eq('company_id', extendedUser.company_id)
+  let query = applyIsolation(
+    supabase.from('camp_rooms').select(`*, worker:workers(name)`),
+    companyId,
+    extendedUser.role_id
+  )
     .order('module', { ascending: true })
 
   if (extendedUser.role_id === 'trabajador') {
@@ -33,7 +31,7 @@ export async function getCampRooms() {
     return []
   }
 
-  console.log(`[CAMP] Fetched ${data?.length ?? 0} rooms for company ${extendedUser.company_id}`)
+  console.log(`[CAMP] Fetched ${data?.length ?? 0} rooms for company ${companyId}`)
   return data || []
 }
 
@@ -45,8 +43,11 @@ export async function assignCampRoom(payload: {
 }) {
   try {
     const { extendedUser } = await getUserSession()
-    if (!extendedUser || extendedUser.role_id === 'trabajador') {
-      return { success: false, error: 'No autorizado' }
+    const companyId = await getStrictCompanyId()
+    const isAuthorized = extendedUser && (extendedUser.role_id !== 'trabajador' || extendedUser.role_id === 'super_admin')
+
+    if (!isAuthorized || !companyId) {
+      return { success: false, error: 'No autorizado o sin contexto de empresa' }
     }
 
     const supabase = await createAdminClient()
@@ -56,7 +57,7 @@ export async function assignCampRoom(payload: {
       room_number: payload.room_number,
       bed_number: payload.bed_number,
       worker_id: payload.worker_id || null,
-      company_id: extendedUser.company_id,
+      company_id: companyId,
       status: payload.worker_id ? 'Ocupada' : 'Disponible'
     }
 
@@ -90,8 +91,11 @@ export async function updateRoomAssignment(id: string, payload: {
 }) {
   try {
     const { extendedUser } = await getUserSession()
-    if (!extendedUser || extendedUser.role_id === 'trabajador') {
-      return { success: false, error: 'No autorizado' }
+    const companyId = await getStrictCompanyId()
+    const isAuthorized = extendedUser && (extendedUser.role_id !== 'trabajador' || extendedUser.role_id === 'super_admin')
+
+    if (!isAuthorized || !companyId) {
+      return { success: false, error: 'No autorizado o sin contexto de empresa' }
     }
 
     const supabase = await createAdminClient()
@@ -104,11 +108,11 @@ export async function updateRoomAssignment(id: string, payload: {
     if (payload.room_number) updateData.room_number = payload.room_number
     if (payload.bed_number) updateData.bed_number = payload.bed_number
 
-    const { error } = await supabase
-      .from('camp_rooms')
-      .update(updateData)
-      .eq('id', id)
-      .eq('company_id', extendedUser.company_id)
+    const { error } = await applyIsolation(
+      supabase.from('camp_rooms').update(updateData),
+      companyId,
+      extendedUser.role_id
+    ).eq('id', id)
 
     if (error) {
       console.error('[CAMP] Update error:', JSON.stringify(error))
@@ -127,16 +131,19 @@ export async function updateRoomAssignment(id: string, payload: {
 export async function deleteCampRoom(id: string) {
   try {
     const { extendedUser } = await getUserSession()
-    if (!extendedUser || extendedUser.role_id === 'trabajador') {
-      return { success: false, error: 'No autorizado' }
+    const companyId = await getStrictCompanyId()
+    const isAuthorized = extendedUser && (extendedUser.role_id !== 'trabajador' || extendedUser.role_id === 'super_admin')
+
+    if (!isAuthorized || !companyId) {
+      return { success: false, error: 'No autorizado o sin contexto de empresa' }
     }
 
     const supabase = await createAdminClient()
-    const { error } = await supabase
-      .from('camp_rooms')
-      .delete()
-      .eq('id', id)
-      .eq('company_id', extendedUser.company_id)
+    const { error } = await applyIsolation(
+      supabase.from('camp_rooms').delete(),
+      companyId,
+      extendedUser.role_id
+    ).eq('id', id)
 
     if (error) {
       console.error('[CAMP] Delete error:', JSON.stringify(error))

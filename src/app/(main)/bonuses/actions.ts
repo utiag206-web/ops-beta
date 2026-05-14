@@ -1,7 +1,7 @@
 'use server'
 
 import { createClient, createAdminClient } from '@/lib/supabase/server'
-import { getUserSession } from '@/lib/auth'
+import { getUserSession, getStrictCompanyId, applyIsolation } from '@/lib/auth'
 import { revalidatePath } from 'next/cache'
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -9,14 +9,13 @@ const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12
 export async function getBonuses(workerId?: string) {
   try {
     const { extendedUser } = await getUserSession()
-    const companyId = extendedUser?.company_id;
-    if (!companyId || !UUID_REGEX.test(companyId)) return []
+    const companyId = await getStrictCompanyId()
 
     const supabase = await createAdminClient()
     
     // Base queries sin join automático para evitar conflicto UUID vs TEXT
-    let bQuery = supabase.from('bonuses').select('*').eq('company_id', companyId)
-    let tQuery = supabase.from('transport_payments').select('*').eq('company_id', companyId)
+    let bQuery = applyIsolation(supabase.from('bonuses').select('*'), companyId, extendedUser.role_id)
+    let tQuery = applyIsolation(supabase.from('transport_payments').select('*'), companyId, extendedUser.role_id)
 
     // UUID context filters
     if (extendedUser.role_id === 'trabajador') {
@@ -85,9 +84,9 @@ export async function createBonus(formData: {
 }) {
   try {
     const { extendedUser } = await getUserSession()
-    const companyId = extendedUser?.company_id
+    const companyId = await getStrictCompanyId()
     const role = (extendedUser?.role_id || '').toLowerCase()
-    const authorized = ['admin', 'gerente', 'operaciones', 'administracion'].includes(role)
+    const authorized = ['admin', 'gerente', 'operaciones', 'administracion', 'super_admin', 'superadmin'].includes(role)
 
     if (!companyId || !UUID_REGEX.test(companyId) || !authorized) {
       return { success: false, error: 'No autorizado o sesión inválida' }
@@ -140,30 +139,33 @@ export async function createBonus(formData: {
 export async function updateBonusStatus(id: string, status: 'paid' | 'pending') {
   try {
     const { extendedUser } = await getUserSession()
+    const companyId = await getStrictCompanyId()
     const role = (extendedUser?.role_id || '').toLowerCase()
-    const authorized = ['admin', 'gerente', 'operaciones', 'administracion'].includes(role)
+    const authorized = ['admin', 'gerente', 'operaciones', 'administracion', 'super_admin', 'superadmin'].includes(role)
 
-    if (!extendedUser?.company_id || !authorized) {
+    if (!companyId || !authorized) {
       return { success: false, error: 'No autorizado' }
     }
 
     const supabase = await createAdminClient()
     
     // Intentar actualizar en bonos
-    const { data: bData, error: bError } = await supabase
-      .from('bonuses')
-      .update({ status })
+    const { data: bData, error: bError } = await applyIsolation(
+      supabase.from('bonuses').update({ status }),
+      companyId,
+      extendedUser.role_id
+    )
       .eq('id', id)
-      .eq('company_id', extendedUser.company_id)
       .select('id')
 
     // Si no se encontró en bonos, intentar en pasajes
     if (bError || !bData || bData.length === 0) {
-      const { error: tError } = await supabase
-        .from('transport_payments')
-        .update({ status })
+      const { error: tError } = await applyIsolation(
+        supabase.from('transport_payments').update({ status }),
+        companyId,
+        extendedUser.role_id
+      )
         .eq('id', id)
-        .eq('company_id', extendedUser.company_id)
       
       if (tError) {
         console.error('Error updating transport status:', tError)

@@ -2,23 +2,22 @@
 
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
-import { getUserSession } from '@/lib/auth'
+import { getUserSession, getStrictCompanyId, applyIsolation } from '@/lib/auth'
 
 export async function getRequirements(filters?: { status?: string, priority?: string }) {
-  const supabase = await createAdminClient()
+  const companyId = await getStrictCompanyId()
   const { extendedUser } = await getUserSession()
+  const supabase = await createAdminClient()
   
-  if (!extendedUser?.company_id) return { error: 'Acceso denegado: No se encontró empresa vinculada.' }
-
   // Scoping: JEFE_AREA solo ve su área
-  const isJefeArea = extendedUser.role_id === 'jefe_area'
-  const userArea = extendedUser.area
+  const isJefeArea = extendedUser?.role_id === 'jefe_area'
+  const userArea = extendedUser?.area
 
-  let query = supabase
-    .from('requirements')
-    .select('*')
-    .eq('company_id', extendedUser.company_id)
-    .order('created_at', { ascending: false })
+  let query = applyIsolation(
+    supabase.from('requirements').select('*'),
+    companyId,
+    extendedUser.role_id
+  ).order('created_at', { ascending: false })
 
   if (filters?.status && filters.status !== 'todos') {
     query = query.eq('status', filters.status)
@@ -48,15 +47,25 @@ export async function getRequirements(filters?: { status?: string, priority?: st
   const userIds = [...new Set(data.map(r => r.created_by).filter(Boolean))]
   const productIds = [...new Set(data.map(r => r.product_id).filter(Boolean))]
 
-  const [{ data: users }, { data: products }] = await Promise.all([
-    supabase.from('users').select('id, name').in('id', userIds).eq('company_id', extendedUser.company_id),
-    supabase.from('products').select('id, name, code, unit').in('id', productIds).eq('company_id', extendedUser.company_id)
-  ])
+  const adminSupabase = await createAdminClient()
+  
+  const fetchUsers = userIds.length > 0 
+    ? applyIsolation(adminSupabase.from('users').select('id, name'), companyId, extendedUser.role_id).in('id', userIds)
+    : Promise.resolve({ data: [] })
+  
+  const fetchProducts = productIds.length > 0
+    ? applyIsolation(adminSupabase.from('products').select('id, name, code, unit'), companyId, extendedUser.role_id).in('id', productIds)
+    : Promise.resolve({ data: [] })
+
+  const [resUsers, resProducts] = await Promise.all([fetchUsers, fetchProducts])
+  
+  const users = resUsers.data || []
+  const products = resProducts.data || []
 
   const enrichedData = data.map(req => ({
     ...req,
-    user: users?.find(u => u.id === req.created_by),
-    products: products?.find(p => p.id === req.product_id)
+    user: users.find((u: any) => u.id === req.created_by),
+    products: products.find((p: any) => p.id === req.product_id)
   }))
 
   return { data: enrichedData }
@@ -70,18 +79,19 @@ export async function createRequirement(payload: {
   product_id?: string
   quantity?: number
 }) {
+  const companyId = await getStrictCompanyId()
   const supabase = await createAdminClient()
   const { extendedUser } = await getUserSession()
 
-  if (!extendedUser?.id || !extendedUser?.company_id) {
-    return { error: 'Sesión inválida o sin empresa vinculada.' }
+  if (!extendedUser?.id) {
+    return { error: 'Sesión inválida.' }
   }
 
   const { data, error } = await supabase
     .from('requirements')
     .insert([{
       ...payload,
-      company_id: extendedUser.company_id,
+      company_id: companyId || (payload as any).company_id,
       created_by: extendedUser.id,
       area: extendedUser.area, // Capturar área del creador
       status: 'pendiente'
@@ -99,10 +109,11 @@ export async function createRequirement(payload: {
 }
 
 export async function updateRequirementStatus(id: string, status: string) {
-  const supabase = await createAdminClient()
   const { extendedUser } = await getUserSession()
+  const companyId = await getStrictCompanyId()
+  const supabase = await createAdminClient()
 
-  const allowedRoles = ['admin', 'gerente', 'operaciones', 'almacen', 'jefe_area']
+  const allowedRoles = ['admin', 'gerente', 'operaciones', 'almacen', 'jefe_area', 'super_admin']
   const userRole = extendedUser?.role_id || ''
   
   if (!allowedRoles.includes(userRole) || userRole === 'trabajador') {
@@ -111,21 +122,21 @@ export async function updateRequirementStatus(id: string, status: string) {
 
   // Si es JEFE_AREA, solo puede actualizar si el área coincide (validación extra)
   if (extendedUser?.role_id === 'jefe_area') {
-    const { data: req } = await supabase
-      .from('requirements')
-      .select('area')
-      .eq('id', id)
-      .eq('company_id', extendedUser.company_id)
-      .single()
+    const { data: req } = await applyIsolation(
+      supabase.from('requirements').select('area'),
+      companyId,
+      extendedUser.role_id
+    ).eq('id', id).single()
     if (req?.area !== extendedUser.area) {
       return { error: 'No puedes gestionar requerimientos fuera de tu área.' }
     }
   }
 
-  const { error } = await supabase
-    .from('requirements')
-    .update({ status })
-    .eq('id', id)
+  const { error } = await applyIsolation(
+    supabase.from('requirements').update({ status }),
+    companyId,
+    extendedUser.role_id
+  ).eq('id', id)
 
   if (error) {
     console.error('Error updating status:', error)
@@ -138,10 +149,11 @@ export async function updateRequirementStatus(id: string, status: string) {
 }
 
 export async function approveRequirementWithMovement(reqId: string, warehouseId: string) {
-  const supabase = await createAdminClient()
   const { extendedUser } = await getUserSession()
+  const companyId = await getStrictCompanyId()
+  const supabase = await createAdminClient()
 
-  const allowedRoles = ['admin', 'operaciones', 'almacen']
+  const allowedRoles = ['admin', 'operaciones', 'almacen', 'super_admin']
   const userRole = extendedUser?.role_id || ''
 
   if (!allowedRoles.includes(userRole) || userRole === 'trabajador') {
@@ -149,11 +161,12 @@ export async function approveRequirementWithMovement(reqId: string, warehouseId:
   }
 
   // 1. Obtener el requerimiento
-  const { data: req, error: reqError } = await supabase
-    .from('requirements')
-    .select('*')
+  const { data: req, error: reqError } = await applyIsolation(
+    supabase.from('requirements').select('*'),
+    companyId,
+    extendedUser.role_id
+  )
     .eq('id', reqId)
-    .eq('company_id', extendedUser.company_id)
     .single()
 
   if (reqError || !req) return { error: 'Requerimiento no encontrado.' }
@@ -161,10 +174,11 @@ export async function approveRequirementWithMovement(reqId: string, warehouseId:
   if (!req.product_id || req.quantity <= 0) return { error: 'Requerimiento inválido para generación de movimiento.' }
 
   // 2. Obtener tipo de movimiento de salida (SAL)
-  const { data: mType } = await supabase
-    .from('movement_types')
-    .select('id')
-    .eq('company_id', extendedUser.company_id)
+  const { data: mType } = await applyIsolation(
+    supabase.from('movement_types').select('id'),
+    companyId,
+    extendedUser.role_id
+  )
     .eq('code', 'SAL')
     .maybeSingle()
 
@@ -172,7 +186,7 @@ export async function approveRequirementWithMovement(reqId: string, warehouseId:
   const { data: movement, error: movError } = await supabase
     .from('inventory_movements')
     .insert([{
-      company_id: extendedUser.company_id,
+      company_id: companyId || req.company_id, // Inherit from req if super_admin
       product_id: req.product_id,
       user_id: extendedUser.id,
       movement_type_id: mType?.id || null,
@@ -192,14 +206,14 @@ export async function approveRequirementWithMovement(reqId: string, warehouseId:
   }
 
   // 3. Actualizar el requerimiento a aprobado y vincularlo
-  const { error: updateError } = await supabase
-    .from('requirements')
-    .update({ 
+  const { error: updateError } = await applyIsolation(
+    supabase.from('requirements').update({ 
       status: 'aprobado',
       movement_id: movement.id
-    })
-    .eq('id', reqId)
-    .eq('company_id', extendedUser.company_id)
+    }),
+    companyId,
+    extendedUser.role_id
+  ).eq('id', reqId)
 
   if (updateError) {
     return { error: 'Error al marcar como aprobado, pero la salida se generó.' }

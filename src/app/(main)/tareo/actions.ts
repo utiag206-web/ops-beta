@@ -1,19 +1,19 @@
 'use server'
 
-import { createClient } from '@/lib/supabase/server'
-import { getUserSession } from '@/lib/auth'
+import { createClient, createAdminClient } from '@/lib/supabase/server'
+import { getUserSession, getStrictCompanyId, applyIsolation } from '@/lib/auth'
 import { revalidatePath } from 'next/cache'
 
 export async function getWorkCycles() {
   const { extendedUser } = await getUserSession()
-  if (!extendedUser) return []
-
-  const supabase = await createClient()
+  const companyId = await getStrictCompanyId()
+  const supabase = await createAdminClient()
   
-  let query = supabase
-    .from('work_cycles')
-    .select(`id, worker_id, work_days, rest_days, cycle_start_date, worker:workers(name)`)
-    .eq('company_id', extendedUser.company_id)
+  let query = applyIsolation(
+    supabase.from('work_cycles').select(`id, worker_id, work_days, rest_days, cycle_start_date, worker:workers(name)`),
+    companyId,
+    extendedUser.role_id
+  )
 
   if (extendedUser.role_id === 'trabajador') {
     query = query.eq('worker_id', extendedUser.worker_id)
@@ -37,17 +37,19 @@ export async function assignWorkCycle(payload: {
 }) {
   try {
     const { extendedUser } = await getUserSession()
-    if (!extendedUser || extendedUser.role_id === 'trabajador') {
+    const allowedRoles = ['admin', 'gerente', 'operaciones', 'super_admin', 'superadmin']
+    if (!extendedUser || !allowedRoles.includes(extendedUser.role_id)) {
       return { success: false, error: 'No autorizado' }
     }
 
-    const supabase = await createClient()
+    const companyId = await getStrictCompanyId()
+    const supabase = await createAdminClient()
 
     const { data, error } = await supabase
       .from('work_cycles')
       .insert({
         ...payload,
-        company_id: extendedUser.company_id
+        company_id: companyId || (payload as any).company_id
       })
       .select()
 
@@ -66,16 +68,18 @@ export async function assignWorkCycle(payload: {
 export async function deleteWorkCycle(id: string) {
   try {
     const { extendedUser } = await getUserSession()
-    if (!extendedUser || extendedUser.role_id === 'trabajador') {
+    const allowedRoles = ['admin', 'gerente', 'operaciones', 'super_admin', 'superadmin']
+    if (!extendedUser || !allowedRoles.includes(extendedUser.role_id)) {
       return { success: false, error: 'No autorizado' }
     }
 
-    const supabase = await createClient()
-    const { error } = await supabase
-      .from('work_cycles')
-      .delete()
-      .eq('id', id)
-      .eq('company_id', extendedUser.company_id)
+    const companyId = await getStrictCompanyId()
+    const supabase = await createAdminClient()
+    const { error } = await applyIsolation(
+      supabase.from('work_cycles').delete(),
+      companyId,
+      extendedUser.role_id
+    ).eq('id', id)
 
     if (error) {
       console.error('[TAREO] Delete error:', error.message)
@@ -91,13 +95,13 @@ export async function deleteWorkCycle(id: string) {
 
 export async function getTareoRecords(startDate: string, endDate: string) {
   const { extendedUser } = await getUserSession()
-  if (!extendedUser?.company_id) return []
-
-  const supabase = await createClient()
-  const { data, error } = await supabase
-    .from('tareo_records')
-    .select('worker_id, date, status')
-    .eq('company_id', extendedUser.company_id)
+  const companyId = await getStrictCompanyId()
+  const supabase = await createAdminClient()
+  const { data, error } = await applyIsolation(
+    supabase.from('tareo_records').select('worker_id, date, status'),
+    companyId,
+    extendedUser.role_id
+  )
     .gte('date', startDate)
     .lte('date', endDate)
   
@@ -114,19 +118,22 @@ export async function upsertTareoRecord(payload: {
   status: string | null
 }) {
   try {
+    const companyId = await getStrictCompanyId()
     const { extendedUser } = await getUserSession()
-    if (!extendedUser?.company_id) return { success: false, error: 'No autorizado' }
-
-    const supabase = await createClient()
+    const allowedRoles = ['admin', 'gerente', 'operaciones', 'super_admin', 'superadmin']
+    if (!extendedUser || !allowedRoles.includes(extendedUser.role_id)) {
+       return { success: false, error: 'No autorizado' }
+    }
+    const supabase = await createAdminClient()
 
     if (!payload.status) {
-      const { error } = await supabase
-        .from('tareo_records')
-        .delete()
-        .match({
+      const { error } = await applyIsolation(
+        supabase.from('tareo_records').delete(),
+        companyId,
+        extendedUser.role_id
+      ).match({
           worker_id: payload.worker_id,
-          date: payload.date,
-          company_id: extendedUser.company_id
+          date: payload.date
         })
       
       if (error) throw error
@@ -135,7 +142,7 @@ export async function upsertTareoRecord(payload: {
         .from('tareo_records')
         .upsert({
           worker_id: payload.worker_id,
-          company_id: extendedUser.company_id,
+          company_id: companyId || (payload as any).company_id,
           date: payload.date,
           status: payload.status,
           updated_at: new Date().toISOString()
@@ -156,14 +163,13 @@ export async function upsertTareoRecord(payload: {
 
 export async function getTareoConfig(month: string) {
   const { extendedUser } = await getUserSession()
-  if (!extendedUser?.company_id) return null
-
-  const supabase = await createClient()
-  const { data, error } = await supabase
-    .from('tareo_config')
-    .select('daily_hours')
-    .eq('company_id', extendedUser.company_id)
-    .eq('month', month)
+  const companyId = await getStrictCompanyId()
+  const supabase = await createAdminClient()
+  const { data, error } = await applyIsolation(
+    supabase.from('tareo_config').select('daily_hours'),
+    companyId,
+    extendedUser.role_id
+  ).eq('month', month)
     .maybeSingle()
 
   if (error && error.code !== 'PGRST116') {
@@ -174,14 +180,17 @@ export async function getTareoConfig(month: string) {
 
 export async function upsertTareoConfig(month: string, daily_hours: number) {
   try {
+    const companyId = await getStrictCompanyId()
     const { extendedUser } = await getUserSession()
-    if (!extendedUser?.company_id) return { success: false, error: 'No autorizado' }
-
-    const supabase = await createClient()
+    const allowedRoles = ['admin', 'gerente', 'operaciones', 'super_admin', 'superadmin']
+    if (!extendedUser || !allowedRoles.includes(extendedUser.role_id)) {
+       return { success: false, error: 'No autorizado' }
+    }
+    const supabase = await createAdminClient()
     const { error } = await supabase
       .from('tareo_config')
       .upsert({
-        company_id: extendedUser.company_id,
+        company_id: companyId || (month as any).company_id, // month is string, just an example
         month,
         daily_hours,
         updated_at: new Date().toISOString()
@@ -199,13 +208,13 @@ export async function upsertTareoConfig(month: string, daily_hours: number) {
 
 export async function getTareoNotes(month: string) {
   const { extendedUser } = await getUserSession()
-  if (!extendedUser?.company_id) return []
-
-  const supabase = await createClient()
-  const { data, error } = await supabase
-    .from('tareo_monthly_notes')
-    .select('worker_id, note')
-    .eq('company_id', extendedUser.company_id)
+  const companyId = await getStrictCompanyId()
+  const supabase = await createAdminClient()
+  const { data, error } = await applyIsolation(
+    supabase.from('tareo_monthly_notes').select('worker_id, note'),
+    companyId,
+    extendedUser.role_id
+  )
     .eq('month', month)
 
   if (error) {
@@ -217,26 +226,29 @@ export async function getTareoNotes(month: string) {
 
 export async function upsertTareoNote(worker_id: string, month: string, note: string) {
   try {
-    const { extendedUser } = await getUserSession()
-    if (!extendedUser?.company_id) return { success: false, error: 'No autorizado' }
+  const { extendedUser } = await getUserSession()
+  const allowedRoles = ['admin', 'gerente', 'operaciones', 'super_admin', 'superadmin']
+  if (!extendedUser || !allowedRoles.includes(extendedUser.role_id)) {
+     return { success: false, error: 'No autorizado' }
+  }
+  const companyId = await getStrictCompanyId()
+  const supabase = await createAdminClient()
 
-    const supabase = await createClient()
-
-    if (!note || note.trim() === '') {
-       const { error } = await supabase
-        .from('tareo_monthly_notes')
-        .delete()
-        .match({
+  if (!note || note.trim() === '') {
+     const { error } = await applyIsolation(
+      supabase.from('tareo_monthly_notes').delete(),
+      companyId,
+      extendedUser.role_id
+    ).match({
           worker_id,
-          month,
-          company_id: extendedUser.company_id
+          month
         })
        if (error) throw error
     } else {
        const { error } = await supabase
         .from('tareo_monthly_notes')
         .upsert({
-          company_id: extendedUser.company_id,
+          company_id: companyId || (worker_id as any).company_id,
           worker_id,
           month,
           note,
@@ -256,13 +268,13 @@ export async function upsertTareoNote(worker_id: string, month: string, note: st
 
 export async function getAttendancePunches(startDate: string, endDate: string) {
   const { extendedUser } = await getUserSession()
-  if (!extendedUser?.company_id) return []
-
-  const supabase = await createClient()
-  const { data, error } = await supabase
-    .from('attendance_logs')
-    .select('id, worker_id, date_local, type, timestamp')
-    .eq('company_id', extendedUser.company_id)
+  const companyId = await getStrictCompanyId()
+  const supabase = await createAdminClient()
+  const { data, error } = await applyIsolation(
+    supabase.from('attendance_logs').select('id, worker_id, date_local, type, timestamp'),
+    companyId,
+    extendedUser.role_id
+  )
     .gte('date_local', startDate)
     .lte('date_local', endDate)
     .order('timestamp', { ascending: true })
@@ -281,17 +293,20 @@ export async function syncAttendancePunches(payload: {
 }) {
   try {
     const { extendedUser } = await getUserSession()
-    if (!extendedUser?.company_id) return { success: false, error: 'No autorizado' }
+    const allowedRoles = ['admin', 'gerente', 'operaciones', 'super_admin', 'superadmin']
+    if (!extendedUser || !allowedRoles.includes(extendedUser.role_id)) {
+       return { success: false, error: 'No autorizado' }
+    }
+    const companyId = await getStrictCompanyId()
+    const supabase = await createAdminClient()
 
-    const supabase = await createClient()
-
-    const { error: delError } = await supabase
-      .from('attendance_logs')
-      .delete()
-      .match({
+    const { error: delError } = await applyIsolation(
+      supabase.from('attendance_logs').delete(),
+      companyId,
+      extendedUser.role_id
+    ).match({
         worker_id: payload.worker_id,
-        date_local: payload.date_local,
-        company_id: extendedUser.company_id
+        date_local: payload.date_local
       })
     
     if (delError) throw delError
@@ -302,7 +317,7 @@ export async function syncAttendancePunches(payload: {
         const timestamp = `${payload.date_local}T${tStr}-05:00`
         
         return {
-          company_id: extendedUser.company_id,
+          company_id: companyId || (payload as any).company_id,
           worker_id: payload.worker_id,
           date_local: payload.date_local,
           type: p.type,

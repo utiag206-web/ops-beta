@@ -22,7 +22,7 @@ export default async function WorkerDetailPage({
 }) {
   const { id } = await params
   const { extendedUser } = await getUserSession()
-  const canManage = ['admin', 'operaciones'].includes(extendedUser?.role_id || '')
+  const canManage = ['admin', 'operaciones', 'super_admin', 'superadmin'].includes(extendedUser?.role_id || '')
   
   const worker = await getWorkerById(id)
 

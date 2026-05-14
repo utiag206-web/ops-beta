@@ -826,7 +826,8 @@ export async function createWarehouse(payload: { name: string, code?: string }) 
   const { extendedUser } = await getUserSession()
   const supabase = await createAdminClient()
 
-  if (extendedUser.role_id !== 'admin' && extendedUser.role_id !== 'company_admin') {
+  const allowedRoles = ['admin', 'company_admin', 'super_admin', 'superadmin', 'gerente']
+  if (!allowedRoles.includes(extendedUser.role_id)) {
     return { error: 'No tienes permisos para crear almacenes.' }
   }
   
@@ -861,7 +862,8 @@ export async function updateWarehouse(id: string, payload: { name: string, code?
   const { extendedUser } = await getUserSession()
   const supabase = await createAdminClient()
 
-  if (extendedUser.role_id !== 'admin' && extendedUser.role_id !== 'company_admin') {
+  const allowedRoles = ['admin', 'company_admin', 'super_admin', 'superadmin', 'gerente']
+  if (!allowedRoles.includes(extendedUser.role_id)) {
     return { error: 'No tienes permisos para editar almacenes.' }
   }
   
@@ -901,7 +903,8 @@ export async function deleteWarehouse(id: string) {
   const { extendedUser } = await getUserSession()
   const supabase = await createAdminClient()
 
-  if (extendedUser.role_id !== 'admin' && extendedUser.role_id !== 'company_admin') {
+  const allowedRoles = ['admin', 'company_admin', 'super_admin', 'superadmin', 'gerente']
+  if (!allowedRoles.includes(extendedUser.role_id)) {
     return { error: 'No tienes permisos para eliminar almacenes.' }
   }
 

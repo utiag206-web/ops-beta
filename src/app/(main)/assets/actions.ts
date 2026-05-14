@@ -1,19 +1,22 @@
 'use server'
 
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
-import { getUserSession } from '@/lib/auth'
+import { getUserSession, getStrictCompanyId, applyIsolation } from '@/lib/auth'
 
 export async function getAssets() {
-  const supabase = await createClient()
   const { extendedUser } = await getUserSession()
+  const companyId = await getStrictCompanyId()
   
-  if (!extendedUser?.company_id) return { error: 'Acceso denegado.' }
+  if (!companyId) return { error: 'Acceso denegado.' }
 
-  const { data, error } = await supabase
-    .from('assets')
-    .select('*')
-    .eq('company_id', extendedUser.company_id)
+  const supabase = await createAdminClient()
+
+  const { data, error } = await applyIsolation(
+    supabase.from('assets').select('*'),
+    companyId,
+    extendedUser.role_id
+  )
     .order('created_at', { ascending: false })
 
   if (error) {
@@ -21,7 +24,7 @@ export async function getAssets() {
     return { error: error.message }
   }
 
-  return { data }
+  return { data: data || [] }
 }
 
 export async function createAsset(payload: {
@@ -30,19 +33,21 @@ export async function createAsset(payload: {
   type: string
   status: string
   location: string
+  camp_name?: string
 }) {
-  const supabase = await createClient()
+  const supabase = await createAdminClient()
   const { extendedUser } = await getUserSession()
+  const companyId = await getStrictCompanyId()
 
-  if (!extendedUser?.id || !extendedUser?.company_id) {
-    return { error: 'Sesión inválida.' }
+  if (!extendedUser?.id || !companyId) {
+    return { error: 'Sesión inválida o sin contexto de empresa.' }
   }
 
   const { data, error } = await supabase
     .from('assets')
     .insert([{
       ...payload,
-      company_id: extendedUser.company_id
+      company_id: companyId
     }])
     .select()
 
@@ -60,13 +65,15 @@ export async function updateAsset(id: string, payload: any) {
   try {
     const supabase = await createClient()
     const { extendedUser } = await getUserSession()
-    if (!extendedUser?.company_id) return { error: 'No autorizado' }
+    const companyId = await getStrictCompanyId()
+    if (!companyId) return { error: 'No autorizado' }
 
-    const { data, error } = await supabase
-      .from('assets')
-      .update(payload)
+    const { data, error } = await applyIsolation(
+      supabase.from('assets').update(payload),
+      companyId,
+      extendedUser.role_id
+    )
       .eq('id', id)
-      .eq('company_id', extendedUser.company_id)
       .select()
 
     if (error) throw error
@@ -83,13 +90,14 @@ export async function deleteAsset(id: string) {
   try {
     const supabase = await createClient()
     const { extendedUser } = await getUserSession()
-    if (!extendedUser?.company_id) return { error: 'No autorizado' }
+    const companyId = await getStrictCompanyId()
+    if (!companyId) return { error: 'No autorizado' }
 
-    const { error } = await supabase
-      .from('assets')
-      .delete()
-      .eq('id', id)
-      .eq('company_id', extendedUser.company_id)
+    const { error } = await applyIsolation(
+      supabase.from('assets').delete(),
+      companyId,
+      extendedUser.role_id
+    ).eq('id', id)
 
     if (error) throw error
 

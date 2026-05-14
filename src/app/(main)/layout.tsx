@@ -15,34 +15,63 @@ export default async function DashboardLayout({
 }) {
   const session = await getUserSession()
   const extendedUser = session?.extendedUser
+  
   const headersList = await headers()
-  // RBAC Gateway
   const pathname = (headersList.get('x-pathname') || '').split('?')[0]
+  
+  // 1. Mandatory Session Guard
+  if (!extendedUser) {
+    if (pathname !== '/dashboard' && pathname !== '/login') {
+       redirect('/login')
+    }
+    if (pathname !== '/dashboard') return null
+  }
+
   const moduleName = pathname.split('/')[1]
   const userRole = extendedUser?.role_id?.toLowerCase()
   
-  if (userRole === 'trabajador') {
-    const isForbiddenPath = 
-      pathname.includes('/global') || 
-      pathname.includes('/admin') ||
-      pathname === '/users' ||
-      pathname === '/workers' ||
-      pathname.startsWith('/company') ||
-      pathname.startsWith('/inventory') ||
-      pathname.startsWith('/movements') ||
-      pathname.startsWith('/caja-chica') ||
-      pathname.startsWith('/configuracion') ||
-      pathname.startsWith('/users')
+  console.log(`[LAYOUT] 🏁 Path: ${pathname} | User: ${extendedUser?.email || 'ANONYMOUS'} | Role: ${userRole}`)
+  
+  // 1. Mandatory Session Guard
+  if (!extendedUser) {
+    console.log(`[LAYOUT] 🛑 No extendedUser found. Redirecting to /login. (Auth user might exist but DB profile is missing)`)
+    redirect('/login')
+  }
 
-    if (isForbiddenPath) {
-      console.warn(`[SECURITY_LOCKDOWN] Acceso prohibido detectado para trabajador: ${pathname}`)
-      redirect('/dashboard')
+  // 2. Variables for Guards
+  const isSuperAdmin = userRole === 'super_admin' || userRole === 'superadmin'
+  const isImpersonating = !!extendedUser?.is_impersonating
+
+  // 3. Super Admin Global Guard
+  if (isSuperAdmin && !isImpersonating && !pathname.startsWith('/super-admin')) {
+    console.log(`[LAYOUT] 🛡️ SuperAdmin detected outside /super-admin. Redirecting to /super-admin`)
+    redirect('/super-admin')
+  }
+
+  // 4. Access Control Block for non-SuperAdmins
+  if (!isSuperAdmin && pathname.startsWith('/super-admin')) {
+    console.log(`[LAYOUT] ⛔ Non-SuperAdmin tried to access /super-admin. Redirecting to /dashboard`)
+    redirect('/dashboard')
+  }
+
+  // 5. Worker Specific Guards (Optimized PRE-DEPLOY: No redundant DB fetch)
+  if (userRole === 'trabajador') {
+    if (extendedUser.worker_id && !extendedUser.worker_status) {
+       console.warn(`[LAYOUT] ⚠️ Worker profile missing or inactive for ${extendedUser.email}`)
+       redirect('/login')
+    }
+
+    const forbiddenSegments = ['/global', '/admin', '/users', '/workers', '/company', '/inventory', '/movements', '/caja-chica', '/configuracion']
+    if (forbiddenSegments.some(segment => pathname.startsWith(segment))) {
+       redirect('/dashboard')
     }
   }
 
-  if (moduleName && userRole) {
-    if (moduleName !== 'dashboard' && !hasPermission(userRole as string, moduleName, extendedUser?.area)) {
-      console.warn(`[RBAC_GATEWAY] Acceso Denegado: Rol ${userRole} intentó acceder a /${moduleName}. Redirigiendo a Dashboard.`)
+  // 6. Generic RBAC Guard
+  const cleanModule = moduleName || 'dashboard'
+  if (cleanModule !== 'dashboard' && cleanModule !== 'profile') {
+    if (!hasPermission(userRole as string, cleanModule, extendedUser?.area)) {
+      console.warn(`[RBAC_GATEWAY] Access Denied: ${userRole} to /${cleanModule}`)
       redirect('/dashboard')
     }
   }
@@ -57,9 +86,11 @@ export default async function DashboardLayout({
         <div className="flex h-screen bg-slate-50 overflow-hidden relative">
           <Sidebar />
           <div className="flex-1 flex flex-col h-screen overflow-hidden relative">
+            {console.log("[LAYOUT_TRACE] 6. Rendering Header")}
             <Header />
             <main className="flex-1 overflow-y-auto p-4 md:p-8 bg-slate-50/50">
               <div className="max-w-7xl mx-auto">
+                {console.log("[LAYOUT_TRACE] 7. Rendering Children")}
                 {children}
               </div>
             </main>

@@ -1,25 +1,32 @@
 'use server'
 
 import { createClient, createAdminClient } from '@/lib/supabase/server'
-import { getUserSession } from '@/lib/auth'
+import { getUserSession, applyIsolation } from '@/lib/auth'
 
 export async function getDashboardStats() {
   try {
     const session = await getUserSession()
     const user = session?.extendedUser
-    if (!user?.company_id) return null
+    
+    if (!user) return null
+
+    // Usamos el ID activo (que puede ser el de impersonación) directamente de la sesión optimizada
+    const companyId = user.active_company_id || user.company_id
+    
+    if (!companyId && user.role_id !== 'super_admin' && user.role_id !== 'superadmin') {
+      return null
+    }
 
     const supabase = await createAdminClient()
-    const companyId = user.company_id
     const today = new Date().toISOString().split('T')[0]
 
     let stats: any = {
       role_id: user.role_id,
-      company_name: user.companies?.name || 'Empresa'
+      company_name: user.companies?.name || 'Sistema'
     }
 
     // 1. PRIORIDAD ESTRICTA PARA DATA FETCHING
-    const isAdmin = ['admin', 'gerente', 'administracion'].includes(user.role_id)
+    const isAdmin = ['admin', 'gerente', 'administracion', 'super_admin', 'superadmin'].includes(user.role_id?.toLowerCase())
     const isSoma = !isAdmin && (user.role_id === 'soma' || (user.role_id === 'jefe_area' && user.area === 'Seguridad SOMA'))
     const isCocina = !isAdmin && !isSoma && (user.role_id === 'jefe_area' && user.area === 'Cocina')
     const isOperaciones = !isAdmin && !isSoma && !isCocina && (user.role_id === 'operaciones' || user.role_id === 'jefe_area')
@@ -32,20 +39,23 @@ export async function getDashboardStats() {
       sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
       const sevenDaysAgoStr = sevenDaysAgo.toISOString().split('T')[0]
 
-      const [u, w, p, cashTotal, inc, reqs, movsToday, critical, weekly, comps, pendingBonuses, pendingTransport] = await Promise.all([
-        supabase.from('users').select('id', { count: 'exact', head: true }).eq('company_id', companyId),
-        supabase.from('workers').select('id', { count: 'exact', head: true }).eq('company_id', companyId),
-        supabase.from('products').select('id', { count: 'exact', head: true }).eq('company_id', companyId),
-        supabase.from('petty_cash_transactions').select('amount, type').eq('company_id', companyId),
-        supabase.from('incidencias').select('id', { count: 'exact', head: true }).eq('company_id', companyId).eq('status', 'abierta'),
-        supabase.from('requirements').select('id', { count: 'exact', head: true }).eq('company_id', companyId).eq('status', 'pendiente'),
-        supabase.from('inventory_movements').select('id', { count: 'exact', head: true }).eq('company_id', companyId).gte('created_at', today),
-        supabase.from('inventory_stock').select('id', { count: 'exact', head: true }).eq('company_id', companyId).lt('quantity', 5),
-        supabase.from('inventory_movements').select('created_at, type').eq('company_id', companyId).gte('created_at', sevenDaysAgoStr),
+      const [u, w, p, cashTotal, inc, reqs, movsToday, critical, weekly, comps, pendingBonuses, pendingTransport, assets] = await Promise.all([
+        applyIsolation(supabase.from('users').select('id', { count: 'exact', head: true }), companyId, user.role_id),
+        applyIsolation(supabase.from('workers').select('id', { count: 'exact', head: true }), companyId, user.role_id),
+        applyIsolation(supabase.from('products').select('id', { count: 'exact', head: true }), companyId, user.role_id),
+        applyIsolation(supabase.from('petty_cash_transactions').select('amount, type'), companyId, user.role_id),
+        applyIsolation(supabase.from('incidencias').select('id', { count: 'exact', head: true }), companyId, user.role_id).eq('status', 'abierta'),
+        applyIsolation(supabase.from('requirements').select('id', { count: 'exact', head: true }), companyId, user.role_id).eq('status', 'pendiente'),
+        applyIsolation(supabase.from('worker_movements').select('id', { count: 'exact', head: true }), companyId, user.role_id).gte('created_at', today),
+        applyIsolation(supabase.from('inventory_stock').select('id', { count: 'exact', head: true }), companyId, user.role_id).lt('quantity', 5),
+        applyIsolation(supabase.from('inventory_movements').select('created_at, type, effect, quantity'), companyId, user.role_id).gte('created_at', sevenDaysAgoStr),
         supabase.from('companies').select('id', { count: 'exact', head: true }).eq('status', 'active'),
-        supabase.from('bonuses').select('id', { count: 'exact', head: true }).eq('company_id', companyId).eq('status', 'pendiente'),
-        supabase.from('transport_payments').select('id', { count: 'exact', head: true }).eq('company_id', companyId).eq('status', 'pendiente')
+        applyIsolation(supabase.from('bonuses').select('id', { count: 'exact', head: true }), companyId, user.role_id).eq('status', 'pendiente'),
+        applyIsolation(supabase.from('transport_payments').select('id', { count: 'exact', head: true }), companyId, user.role_id).eq('status', 'pendiente'),
+        applyIsolation(supabase.from('assets').select('id', { count: 'exact', head: true }), companyId, user.role_id)
       ])
+
+      const isSuperAdmin = user.role_id === 'super_admin' || user.role_id === 'superadmin'
 
       const balance = (cashTotal.data || []).reduce((acc, t) => {
         const val = Number(t.amount) || 0
@@ -53,16 +63,24 @@ export async function getDashboardStats() {
       }, 0)
 
       const activityMap: Record<string, number> = {}
+      stats.weeklyMovements = {}
       for (let i = 0; i < 7; i++) {
         const d = new Date()
         d.setDate(d.getDate() - i)
-        activityMap[d.toISOString().split('T')[0]] = 0
+        const dateStr = d.toISOString().split('T')[0]
+        activityMap[dateStr] = 0
+        stats.weeklyMovements[dateStr] = { in: 0, out: 0 }
       }
       
-      (weekly.data || []).forEach(m => {
-        const date = m.created_at.split('T')[0]
-        if (activityMap[date] !== undefined) activityMap[date]++
-      })
+      if (weekly.data) {
+        weekly.data.forEach(m => {
+          if (!m.created_at) return
+          const date = m.created_at.split('T')[0]
+          if (!stats.weeklyMovements[date]) return
+          if (m.effect === 'IN') stats.weeklyMovements[date].in += Number(m.quantity) || 0
+          if (m.effect === 'OUT') stats.weeklyMovements[date].out += Number(m.quantity) || 0
+        })
+      }
 
       const weeklyActivity = Object.entries(activityMap)
         .sort((a, b) => a[0].localeCompare(b[0]))
@@ -74,21 +92,22 @@ export async function getDashboardStats() {
         totalCajaChicaBalance: balance,
         openIncidents: inc.count || 0,
         movementsToday: movsToday.count || 0,
-        activeCompanies: comps.count || 1,
+        activeCompanies: isSuperAdmin ? (comps.count || 1) : 1, // El admin solo ve su propia empresa
         pendingRequirementsCount: reqs.count || 0,
         criticalProductsCount: critical.count || 0,
         pendingBonusesCount: pendingBonuses.count || 0,
         pendingTransportCount: pendingTransport.count || 0,
+        assetsCount: assets?.count || 0,
         weeklyActivity
       }
     } 
     else if (isSoma) {
       const [trains, talks, inc, ppe, stops] = await Promise.all([
-        supabase.from('soma_trainings').select('id, expiry_date').eq('company_id', companyId),
-        supabase.from('soma_talks').select('id', { count: 'exact', head: true }).eq('company_id', companyId),
-        supabase.from('incidencias').select('*').eq('company_id', companyId),
-        supabase.from('ppe_deliveries').select('id, equipment_name, worker:workers(name)').eq('company_id', companyId).eq('status', 'pending_signature').limit(5),
-        supabase.from('soma_hsec_stop').select('id', { count: 'exact', head: true }).eq('company_id', companyId).eq('status', 'abierta')
+        applyIsolation(supabase.from('soma_trainings').select('id, expiry_date'), companyId, user.role_id),
+        applyIsolation(supabase.from('soma_talks').select('id', { count: 'exact', head: true }), companyId, user.role_id),
+        applyIsolation(supabase.from('incidencias').select('*'), companyId, user.role_id),
+        applyIsolation(supabase.from('ppe_deliveries').select('id, equipment_name, worker:workers(name)'), companyId, user.role_id).eq('status', 'pending_signature').limit(5),
+        applyIsolation(supabase.from('soma_hsec_stop').select('id', { count: 'exact', head: true }), companyId, user.role_id).eq('status', 'abierta')
       ])
       const incidentData = inc.data || []
       const criticalCount = incidentData.filter(i => ['fatal', 'crítico', 'grave'].includes(i.severity?.toLowerCase())).length
@@ -108,10 +127,10 @@ export async function getDashboardStats() {
     }
     else if (isCocina) {
       const [cash, stock, movs, reqs] = await Promise.all([
-        supabase.from('petty_cash_transactions').select('amount, type').eq('company_id', companyId).ilike('area', 'Cocina'),
-        supabase.from('inventory_stock').select('quantity, warehouses!inner(area)').eq('company_id', companyId).ilike('warehouses.area', 'Cocina'),
-        supabase.from('inventory_movements').select('quantity, type, warehouses!inner(area), products(name)').eq('company_id', companyId).gte('created_at', today).ilike('warehouses.area', 'Cocina'),
-        supabase.from('requirements').select('*').eq('company_id', companyId).ilike('area', 'Cocina').eq('status', 'pendiente')
+        applyIsolation(supabase.from('petty_cash_transactions').select('amount, type'), companyId, user.role_id).ilike('area', 'Cocina'),
+        applyIsolation(supabase.from('inventory_stock').select('quantity, warehouses!inner(area)'), companyId, user.role_id).ilike('warehouses.area', 'Cocina'),
+        applyIsolation(supabase.from('inventory_movements').select('quantity, type, warehouses!inner(area), products(name)'), companyId, user.role_id).gte('created_at', today).ilike('warehouses.area', 'Cocina'),
+        applyIsolation(supabase.from('requirements').select('*'), companyId, user.role_id).ilike('area', 'Cocina').eq('status', 'pendiente')
       ])
 
       stats.kitchen = {
@@ -125,13 +144,13 @@ export async function getDashboardStats() {
     }
     else if (isOperaciones) {
       const [reqs, wrks, movs, inc, prod, trs, att] = await Promise.all([
-        supabase.from('requirements').select('id', { count: 'exact', head: true }).eq('company_id', companyId).eq('status', 'pendiente'),
-        supabase.from('workers').select('id', { count: 'exact', head: true }).eq('company_id', companyId).eq('status', 'active'),
-        supabase.from('inventory_movements').select('id', { count: 'exact', head: true }).eq('company_id', companyId).gte('created_at', today),
-        supabase.from('incidencias').select('id', { count: 'exact', head: true }).eq('company_id', companyId).eq('status', 'abierta'),
-        supabase.from('tareo_records').select('id', { count: 'exact', head: true }).eq('company_id', companyId).eq('date', today),
-        supabase.from('inventory_movements').select('id', { count: 'exact', head: true }).eq('company_id', companyId).eq('document_type', 'TRS').gte('created_at', today),
-        supabase.from('attendance').select('id', { count: 'exact', head: true }).eq('company_id', companyId).eq('date', today)
+        applyIsolation(supabase.from('requirements').select('id', { count: 'exact', head: true }), companyId, user.role_id).eq('status', 'pendiente'),
+        applyIsolation(supabase.from('workers').select('id', { count: 'exact', head: true }), companyId, user.role_id).eq('status', 'active'),
+        applyIsolation(supabase.from('worker_movements').select('id', { count: 'exact', head: true }), companyId, user.role_id).gte('created_at', today),
+        applyIsolation(supabase.from('incidencias').select('id', { count: 'exact', head: true }), companyId, user.role_id).eq('status', 'abierta'),
+        applyIsolation(supabase.from('tareo_records').select('id', { count: 'exact', head: true }), companyId, user.role_id).eq('date', today),
+        applyIsolation(supabase.from('worker_movements').select('id', { count: 'exact', head: true }), companyId, user.role_id).or(`subida_date.not.is.null,bajada_date.not.is.null`).gte('created_at', today),
+        applyIsolation(supabase.from('attendance').select('id', { count: 'exact', head: true }), companyId, user.role_id).eq('date', today)
       ])
       
       const prodScore = prod.count || 0
@@ -150,11 +169,11 @@ export async function getDashboardStats() {
     }
     else if (isAlmacen) {
       const [prods, crit, movs, reqs, trs] = await Promise.all([
-        supabase.from('products').select('id', { count: 'exact', head: true }).eq('company_id', companyId),
-        supabase.from('inventory_stock').select('id', { count: 'exact', head: true }).eq('company_id', companyId).lt('quantity', 5),
-        supabase.from('inventory_movements').select('type').eq('company_id', companyId).gte('created_at', today),
-        supabase.from('requirements').select('id', { count: 'exact', head: true }).eq('company_id', companyId).eq('status', 'pendiente'),
-        supabase.from('inventory_movements').select('id', { count: 'exact', head: true }).eq('company_id', companyId).eq('document_type', 'TRS').eq('observation', 'PENDIENTE')
+        applyIsolation(supabase.from('products').select('id', { count: 'exact', head: true }), companyId, user.role_id),
+        applyIsolation(supabase.from('inventory_stock').select('id', { count: 'exact', head: true }), companyId, user.role_id).lt('quantity', 5),
+        applyIsolation(supabase.from('inventory_movements').select('type'), companyId, user.role_id).gte('created_at', today),
+        applyIsolation(supabase.from('requirements').select('id', { count: 'exact', head: true }), companyId, user.role_id).eq('status', 'pendiente'),
+        applyIsolation(supabase.from('inventory_movements').select('id', { count: 'exact', head: true }), companyId, user.role_id).eq('document_type', 'TRS').eq('observation', 'PENDIENTE')
       ])
       
       const movsData = movs.data || []
@@ -175,8 +194,8 @@ export async function getDashboardStats() {
         supabase.from('ppe_deliveries').select('id', { count: 'exact', head: true }).eq('worker_id', user.worker_id).or('status.eq.pending_signature,signature_url.is.null'),
         supabase.from('worker_documents').select('id', { count: 'exact', head: true }).eq('worker_id', user.worker_id),
         supabase.from('bonuses').select('id', { count: 'exact', head: true }).eq('worker_id', user.worker_id),
-        supabase.from('soma_trainings').select('title, date').eq('company_id', companyId).gte('date', today).order('date', { ascending: true }).limit(1).maybeSingle(),
-        supabase.from('soma_talks').select('topic, date').eq('company_id', companyId).gte('date', today).order('date', { ascending: true }).limit(1).maybeSingle()
+        applyIsolation(supabase.from('soma_trainings').select('title, date'), companyId, user.role_id).gte('date', today).order('date', { ascending: true }).limit(1).maybeSingle(),
+        applyIsolation(supabase.from('soma_talks').select('topic, date'), companyId, user.role_id).gte('date', today).order('date', { ascending: true }).limit(1).maybeSingle()
       ])
 
       const { data: workerData } = await supabase.from('workers').select('status').eq('id', user.worker_id).maybeSingle()
@@ -194,8 +213,8 @@ export async function getDashboardStats() {
 
     // 3. FETCH TRANSVERSAL SOMA PARA TODOS
     const [lastTalk, lastTrain] = await Promise.all([
-      supabase.from('soma_talks').select('topic, date').eq('company_id', companyId).order('date', { ascending: false }).limit(1).maybeSingle(),
-      supabase.from('soma_trainings').select('title, date').eq('company_id', companyId).order('date', { ascending: false }).limit(1).maybeSingle()
+      applyIsolation(supabase.from('soma_talks').select('topic, date'), companyId, user.role_id).order('date', { ascending: false }).limit(1).maybeSingle(),
+      applyIsolation(supabase.from('soma_trainings').select('title, date'), companyId, user.role_id).order('date', { ascending: false }).limit(1).maybeSingle()
     ])
     stats.transversalSoma = {
       lastTalk: lastTalk.data,
@@ -215,6 +234,7 @@ export async function getDashboardStats() {
 
     return stats
   } catch (err: any) {
+    if (err.digest?.startsWith('NEXT_REDIRECT')) throw err
     console.error("[DASHBOARD_STATS_ERROR]:", err.message)
     return null
   }

@@ -1,22 +1,22 @@
 'use server'
 
 import { createClient, createAdminClient } from '@/lib/supabase/server'
-import { getUserSession } from '@/lib/auth'
+import { getUserSession, getStrictCompanyId, applyIsolation } from '@/lib/auth'
 import { revalidatePath } from 'next/cache'
 
 export async function getHsecStops() {
   const { extendedUser } = await getUserSession()
-  if (!extendedUser?.company_id) return []
+  const companyId = await getStrictCompanyId()
 
   const supabase = await createAdminClient()
-  const { data, error } = await supabase
-    .from('soma_hsec_stop')
-    .select(`
+  const { data, error } = await applyIsolation(
+    supabase.from('soma_hsec_stop').select(`
       *,
       observer:users!observer_id(name)
-    `)
-    .eq('company_id', extendedUser.company_id)
-    .order('created_at', { ascending: false })
+    `),
+    companyId,
+    extendedUser.role_id
+  ).order('created_at', { ascending: false })
 
   if (error) {
     console.error('Error fetching HSEC stops:', error)
@@ -33,7 +33,8 @@ export async function createHsecStop(payload: {
   photo_url?: string
 }) {
   const { extendedUser } = await getUserSession()
-  if (!extendedUser?.company_id) return { error: 'No autorizado' }
+  const companyId = await getStrictCompanyId()
+  if (!companyId) return { error: 'No autorizado o sin contexto de empresa' }
 
   const supabase = await createAdminClient()
 
@@ -42,7 +43,7 @@ export async function createHsecStop(payload: {
     .from('soma_hsec_stop')
     .insert([{
       ...payload,
-      company_id: extendedUser.company_id,
+      company_id: companyId,
       observer_id: extendedUser.id,
       status: 'abierta'
     }])
@@ -60,17 +61,18 @@ export async function createHsecStop(payload: {
 
 export async function closeHsecStop(id: string) {
     const { extendedUser } = await getUserSession()
-    if (!extendedUser?.company_id) return { error: 'No autorizado' }
+    const companyId = await getStrictCompanyId()
+    if (!companyId) return { error: 'No autorizado' }
   
     const supabase = await createAdminClient()
-    const { error } = await supabase
-      .from('soma_hsec_stop')
-      .update({ 
+    const { error } = await applyIsolation(
+      supabase.from('soma_hsec_stop').update({ 
         status: 'cerrada', 
         closed_at: new Date().toISOString() 
-      })
-      .eq('id', id)
-      .eq('company_id', extendedUser.company_id)
+      }),
+      companyId,
+      extendedUser.role_id
+    ).eq('id', id)
   
     if (error) return { error: error.message }
   
@@ -80,22 +82,25 @@ export async function closeHsecStop(id: string) {
 
 export async function getSomaStats() {
     const { extendedUser } = await getUserSession()
-    if (!extendedUser?.company_id) return null
+    const companyId = await getStrictCompanyId()
+    if (!companyId) return null
 
     const supabase = await createAdminClient()
     
     // Fetch count of open stops
-    const { count: openStops } = await supabase
-        .from('soma_hsec_stop')
-        .select('id', { count: 'exact', head: true })
-        .eq('company_id', extendedUser.company_id)
+    const { count: openStops } = await applyIsolation(
+        supabase.from('soma_hsec_stop').select('id', { count: 'exact', head: true }),
+        companyId,
+        extendedUser.role_id
+    )
         .eq('status', 'abierta')
 
     // Fetch alerts
-    const { data: alerts } = await supabase
-        .from('soma_alerts')
-        .select('*')
-        .eq('company_id', extendedUser.company_id)
+    const { data: alerts } = await applyIsolation(
+        supabase.from('soma_alerts').select('*'),
+        companyId,
+        extendedUser.role_id
+    )
         .eq('is_read', false)
         .order('created_at', { ascending: false })
         .limit(5)

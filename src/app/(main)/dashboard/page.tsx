@@ -1,3 +1,4 @@
+import { redirect } from 'next/navigation'
 import { Suspense } from 'react'
 import Link from 'next/link'
 import { AlertCircle, ShieldAlert } from 'lucide-react'
@@ -11,6 +12,11 @@ export const dynamic = 'force-dynamic'
 export default async function DashboardPage() {
   const { extendedUser } = await getUserSession()
   
+  const role = extendedUser?.role_id?.toLowerCase()
+  if ((role === 'super_admin' || role === 'superadmin') && !extendedUser?.is_impersonating) {
+    redirect('/super-admin')
+  }
+
   if (!extendedUser?.role_id) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] text-center p-8 bg-white rounded-[2.5rem] border border-dashed border-slate-200 shadow-sm">

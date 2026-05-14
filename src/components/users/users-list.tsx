@@ -2,8 +2,9 @@
 
 import { useState } from 'react'
 import { AddUserModal } from './add-user-modal'
+import { EditUserModal } from './edit-user-modal'
 import { updateUserStatus, updateUserRole, updateUserArea, deleteUser } from '@/app/(main)/users/actions'
-import { Search, Shield, UserX, UserCheck, MoreVertical, ShieldAlert, BadgeCheck, UserPlus, Building, Trash2 } from 'lucide-react'
+import { Search, Shield, UserX, UserCheck, MoreVertical, ShieldAlert, BadgeCheck, UserPlus, Building, Trash2, Edit } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 
 type User = {
@@ -19,6 +20,7 @@ type User = {
 export function UsersList({ initialUsers, availableWorkers, currentUserRole }: { initialUsers: User[], availableWorkers: any[], currentUserRole?: string }) {
   const router = useRouter()
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)
+  const [editingUser, setEditingUser] = useState<User | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
   const canManage = ['admin', 'gerente', 'super_admin', 'administracion'].includes(currentUserRole?.toLowerCase() || '')
 
@@ -204,6 +206,14 @@ export function UsersList({ initialUsers, availableWorkers, currentUserRole }: {
                       {canManage && item.type === 'user' && (
                         <>
                           <button 
+                            onClick={() => setEditingUser(item)}
+                            className="p-2.5 rounded-xl border border-slate-100 text-blue-600 bg-white hover:bg-blue-50 hover:border-blue-100 transition-all shadow-sm"
+                            title="Editar Detalles"
+                          >
+                            <Edit size={18} />
+                          </button>
+
+                          <button 
                             onClick={() => handleStatusToggle(item.id, item.status)}
                             className={`p-2.5 rounded-xl border transition-all shadow-sm ${
                               item.status === 'active' 
@@ -255,6 +265,16 @@ export function UsersList({ initialUsers, availableWorkers, currentUserRole }: {
         isOpen={isAddModalOpen} 
         onClose={() => setIsAddModalOpen(false)} 
         availableWorkers={availableWorkers}
+      />
+
+      <EditUserModal 
+        isOpen={!!editingUser} 
+        onClose={() => setEditingUser(null)} 
+        onSuccess={() => {
+          router.refresh()
+          setEditingUser(null)
+        }} 
+        user={editingUser}
       />
     </div>
   )

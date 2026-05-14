@@ -92,7 +92,7 @@ export default function WarehousesPage() {
           </div>
         </div>
 
-        {['admin', 'gerente', 'almacen', 'logistica', 'operaciones', 'administracion'].includes(role_id || '') && (
+        {['admin', 'gerente', 'almacen', 'logistica', 'operaciones', 'administracion', 'super_admin', 'superadmin'].includes(role_id || '') && (
           <button 
             onClick={() => {
               setEditingWarehouse(null)
@@ -134,7 +134,7 @@ export default function WarehousesPage() {
                 <div className="bg-slate-50 p-3 rounded-2xl text-slate-400 group-hover:bg-indigo-50 group-hover:text-indigo-600 transition-colors">
                   <MapPin size={24} />
                 </div>
-                {['admin', 'gerente', 'almacen', 'logistica', 'operaciones', 'administracion'].includes(role_id || '') && (
+                {['admin', 'gerente', 'almacen', 'logistica', 'operaciones', 'administracion', 'super_admin', 'superadmin'].includes(role_id || '') && (
                   <div className="flex gap-2">
                     <button 
                       onClick={() => {

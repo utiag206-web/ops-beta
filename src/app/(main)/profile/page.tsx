@@ -37,31 +37,63 @@ export default async function ProfilePage() {
       {/* Header Premium */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
         <div>
-          <h1 className="text-4xl font-black text-slate-800 tracking-tight">Mi Cuenta</h1>
-          <p className="text-slate-500 font-medium text-lg mt-1">Gestiona tu identidad y seguridad en el sistema.</p>
+          <h1 className="text-4xl font-bold text-slate-800 tracking-tight">Mi Cuenta</h1>
+          <p className="text-slate-500 font-medium text-lg mt-1">Configuración de identidad y seguridad operacional.</p>
         </div>
-        <div className="flex items-center gap-3 bg-blue-50 px-5 py-2.5 rounded-2xl border border-blue-100">
-          <div className="w-2.5 h-2.5 bg-blue-600 rounded-full animate-pulse" />
-          <span className="text-blue-700 font-black text-xs tracking-widest uppercase">Sesión Protegida</span>
+        <div className="flex flex-col items-end gap-2">
+          {extendedUser.is_impersonating ? (
+            <div className="flex items-center gap-3 bg-amber-50 px-5 py-2.5 rounded-2xl border border-amber-100 shadow-sm">
+              <div className="w-2.5 h-2.5 bg-amber-600 rounded-full animate-pulse" />
+              <div className="flex flex-col">
+                <span className="text-amber-700 font-bold text-xs tracking-widest uppercase">Modo Auditoría</span>
+                <span className="text-[10px] font-bold text-amber-600/70">CONTEXTO DE EMPRESA ACTIVO</span>
+              </div>
+            </div>
+          ) : (
+            <div className="flex items-center gap-3 bg-blue-50 px-5 py-2.5 rounded-2xl border border-blue-100">
+              <div className="w-2.5 h-2.5 bg-blue-600 rounded-full animate-pulse" />
+              <span className="text-blue-700 font-bold text-xs tracking-widest uppercase">Sesión Protegida</span>
+            </div>
+          )}
         </div>
       </div>
 
+      {extendedUser.is_impersonating && (
+        <div className="bg-slate-900 p-8 rounded-[2rem] text-white shadow-2xl relative overflow-hidden group">
+          <div className="absolute top-0 right-0 p-8 opacity-10 scale-150">
+            <ShieldAlert size={120} />
+          </div>
+          <div className="relative z-10 flex flex-col md:flex-row items-center gap-8">
+            <div className="w-16 h-16 bg-white/10 rounded-2xl flex items-center justify-center backdrop-blur-md border border-white/20">
+              <Shield size={32} className="text-amber-400" />
+            </div>
+            <div>
+              <h3 className="text-xl font-bold">Control Operativo de Infraestructura</h3>
+              <p className="text-slate-400 font-medium mt-1 max-w-2xl">
+                Has iniciado sesión con privilegios globales en <span className="text-white font-bold">{companyName}</span>. 
+                Para garantizar la integridad de los registros, la edición de datos maestros de cuenta está restringida en este modo.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Perfil Banner */}
-      <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-100 overflow-hidden">
-        <div className="bg-gradient-to-r from-blue-700 to-blue-600 h-40 px-10 flex items-end">
+      <div className="bg-white rounded-[2rem] shadow-sm border border-slate-100 overflow-hidden">
+        <div className="bg-gradient-to-r from-blue-700 to-blue-900 h-40 px-10 flex items-end">
           <div className="translate-y-12 flex items-end gap-6 pb-2">
             <div className="w-32 h-32 rounded-[2rem] bg-white p-2 shadow-2xl">
-              <div className="w-full h-full rounded-[1.5rem] bg-gradient-to-br from-blue-50 to-blue-100 text-blue-700 flex items-center justify-center text-4xl font-black border border-blue-200">
-                {extendedUser.name?.charAt(0).toUpperCase()}
+              <div className="w-full h-full rounded-[1.5rem] bg-slate-50 text-slate-700 flex items-center justify-center text-4xl font-bold border border-slate-200">
+                {extendedUser.name?.charAt(0).toUpperCase() || 'U'}
               </div>
             </div>
              <div className="mb-4">
-                <h2 className="text-3xl font-black text-white drop-shadow-md">
+                <h2 className="text-3xl font-bold text-white tracking-tight">
                   {extendedUser.name}
                 </h2>
-                <p className="text-slate-800 font-bold flex items-center gap-2 mt-1.5 text-sm">
-                  <Mail size={16} className="text-indigo-600" />
-                  {extendedUser.email} {extendedUser.area ? <span className="mx-1 text-slate-300">|</span> : ''} {extendedUser.area}
+                <p className="text-white font-medium flex items-center gap-2 mt-1.5 text-sm uppercase tracking-widest">
+                  <Mail size={14} className="text-blue-300" />
+                  {extendedUser.email}
                 </p>
              </div>
           </div>
@@ -107,7 +139,9 @@ export default async function ProfilePage() {
       {/* Formulario de Cuenta */}
       <div className="space-y-6">
         <h3 className="text-2xl font-black text-slate-800 px-2">Configuración Detallada</h3>
-        <AccountForm user={extendedUser} />
+        <div className={extendedUser.is_impersonating ? "opacity-60 pointer-events-none grayscale-[0.5]" : ""}>
+          <AccountForm user={extendedUser} />
+        </div>
       </div>
 
     </div>

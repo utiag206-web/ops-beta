@@ -15,7 +15,7 @@ export default async function WorkersPage({
   const { extendedUser } = await getUserSession()
   if (!extendedUser) redirect('/login')
 
-  const canManage = ['admin', 'operaciones', 'administracion'].includes(extendedUser?.role_id || '')
+  const canManage = ['admin', 'operaciones', 'administracion', 'super_admin', 'superadmin'].includes(extendedUser?.role_id || '')
 
   return (
     <Suspense fallback={<OperationsDashboardSkeleton />}>

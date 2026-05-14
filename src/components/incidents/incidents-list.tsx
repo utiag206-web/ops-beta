@@ -15,6 +15,17 @@ export function IncidentsList({ initialData = [], user, forcedCategory }: { init
 
   const isWorker = user?.role_id === 'trabajador'
 
+  const getSeverityStyle = (severity: string) => {
+    switch (severity?.toLowerCase()) {
+      case 'leve': return 'bg-emerald-50 text-emerald-600 border-emerald-100'
+      case 'moderado': return 'bg-blue-50 text-blue-600 border-blue-100'
+      case 'grave': return 'bg-orange-50 text-orange-600 border-orange-100'
+      case 'critico': return 'bg-rose-50 text-rose-600 border-rose-100'
+      case 'fatal': return 'bg-slate-900 text-white border-slate-900'
+      default: return 'bg-slate-50 text-slate-600 border-slate-100'
+    }
+  }
+
   const fetchData = async () => {
     setLoading(true)
     try {
@@ -22,9 +33,13 @@ export function IncidentsList({ initialData = [], user, forcedCategory }: { init
         status: statusFilter !== 'all' ? statusFilter : undefined,
         category: forcedCategory
       })
-      if (res.data) {
+      if (res && res.data) {
         setIncidents(res.data)
+      } else if (res && res.error) {
+        console.error('Error fetching incidents:', res.error)
       }
+    } catch (err) {
+      console.error('Unexpected error fetching incidents:', err)
     } finally {
       setLoading(false)
     }
@@ -35,6 +50,10 @@ export function IncidentsList({ initialData = [], user, forcedCategory }: { init
       fetchData()
     } else {
       setHasMounted(true)
+      // Call fetchData on first mount too if initialData is empty
+      if (initialData.length === 0) {
+        fetchData()
+      }
     }
   }, [statusFilter])
 
@@ -207,6 +226,7 @@ export function IncidentsList({ initialData = [], user, forcedCategory }: { init
         initialCategory={forcedCategory}
         onClose={() => setIsModalOpen(false)} 
         onSuccess={() => {
+          router.refresh()
           fetchData()
           setIsModalOpen(false)
         }}

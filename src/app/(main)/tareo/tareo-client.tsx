@@ -63,7 +63,7 @@ export default function TareoClient({ initialCycles, workers, userRole }: TareoP
   const [activePunches, setActivePunches] = useState<{ time: string, type: 'in' | 'out' }[]>([])
   const [savingLog, setSavingLog] = useState(false)
 
-  const canWrite = userRole === 'admin' || userRole === 'gerente' || userRole === 'operaciones'
+  const canWrite = ['admin', 'gerente', 'operaciones', 'super_admin', 'superadmin'].includes(userRole?.toLowerCase() || '')
 
   const monthNames = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"]
   

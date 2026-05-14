@@ -30,7 +30,7 @@ export default function CapacitacionesSomaPage() {
     try {
       const [tData, wData] = await Promise.all([
         getSomaTrainings(),
-        getWorkers('active')
+        getWorkers('ACTIVO')
       ])
       setTrainings(tData)
       setWorkers(wData)
@@ -65,14 +65,14 @@ export default function CapacitacionesSomaPage() {
             <GraduationCap size={32} />
           </div>
           <div>
-            <h1 className="text-4xl font-black text-slate-800 tracking-tight">Capacitaciones SOMA</h1>
+            <h1 className="text-4xl font-bold text-slate-800 tracking-tight">Capacitaciones SOMA</h1>
             <p className="text-slate-500 font-bold text-lg">Registro de cursos, certificaciones y vencimientos</p>
           </div>
         </div>
-        {['admin', 'soma', 'operaciones', 'jefe_area'].includes(role_id || '') && (
+        {['admin', 'soma', 'operaciones', 'jefe_area', 'super_admin', 'superadmin'].includes(role_id || '') && (
           <button 
             onClick={() => setIsModalOpen(true)}
-            className="flex items-center gap-3 px-8 py-4 bg-indigo-600 hover:bg-indigo-700 text-white font-black rounded-[2rem] shadow-xl shadow-indigo-200 transition-all hover:scale-105 active:scale-95"
+            className="flex items-center gap-3 px-8 py-4 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-[2rem] shadow-xl shadow-indigo-200 transition-all hover:scale-105 active:scale-95"
           >
             <Plus size={20} />
             Registrar Curso
@@ -82,31 +82,31 @@ export default function CapacitacionesSomaPage() {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-        <div className="bg-white p-8 rounded-[3rem] shadow-xl shadow-slate-200/50 border border-slate-100 flex items-center gap-6">
+        <div className="bg-white p-8 rounded-[2rem] shadow-xl shadow-slate-200/50 border border-slate-100 flex items-center gap-6">
           <div className="bg-blue-50 p-4 rounded-2xl text-blue-600"><FileVideo size={28} /></div>
           <div>
-            <div className="text-3xl font-black text-slate-800">{stats.total}</div>
+            <div className="text-3xl font-bold text-slate-800">{stats.total}</div>
             <div className="text-slate-400 font-bold text-sm uppercase tracking-wider">Total Cursos</div>
           </div>
         </div>
-        <div className="bg-white p-8 rounded-[3rem] shadow-xl shadow-slate-200/50 border border-slate-100 flex items-center gap-6">
+        <div className="bg-white p-8 rounded-[2rem] shadow-xl shadow-slate-200/50 border border-slate-100 flex items-center gap-6">
           <div className="bg-amber-50 p-4 rounded-2xl text-amber-600"><Clock size={28} /></div>
           <div>
-            <div className="text-3xl font-black text-slate-800">{stats.proximos}</div>
+            <div className="text-3xl font-bold text-slate-800">{stats.proximos}</div>
             <div className="text-slate-400 font-bold text-sm uppercase tracking-wider">Prox. Vencimientos</div>
           </div>
         </div>
-        <div className="bg-white p-8 rounded-[3rem] shadow-xl shadow-slate-200/50 border border-slate-100 flex items-center gap-6">
+        <div className="bg-white p-8 rounded-[2rem] shadow-xl shadow-slate-200/50 border border-slate-100 flex items-center gap-6">
           <div className="bg-rose-50 p-4 rounded-2xl text-rose-600"><AlertTriangle size={28} /></div>
           <div>
-            <div className="text-3xl font-black text-slate-800">{stats.vencidos}</div>
+            <div className="text-3xl font-bold text-slate-800">{stats.vencidos}</div>
             <div className="text-slate-400 font-bold text-sm uppercase tracking-wider">Cursos Vencidos</div>
           </div>
         </div>
       </div>
 
       {/* Search & List */}
-      <div className="bg-white rounded-[3rem] shadow-2xl shadow-slate-200/50 border border-slate-100 overflow-hidden">
+      <div className="bg-white rounded-[2rem] shadow-2xl shadow-slate-200/50 border border-slate-100 overflow-hidden">
         <div className="p-10 border-b border-slate-50 flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div className="relative flex-1 max-w-md">
             <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
@@ -124,12 +124,12 @@ export default function CapacitacionesSomaPage() {
           <table className="w-full border-collapse">
             <thead>
               <tr className="bg-slate-50/50">
-                <th className="px-10 py-6 text-left text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Capacitación</th>
-                <th className="px-10 py-6 text-left text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Instructor</th>
-                <th className="px-10 py-6 text-left text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Fecha / Exp</th>
-                <th className="px-10 py-6 text-left text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Participantes</th>
-                <th className="px-10 py-6 text-left text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Estado</th>
-                <th className="px-10 py-6 text-right text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Acciones</th>
+                <th className="px-10 py-6 text-left text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em]">Capacitación</th>
+                <th className="px-10 py-6 text-left text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em]">Instructor</th>
+                <th className="px-10 py-6 text-left text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em]">Fecha / Exp</th>
+                <th className="px-10 py-6 text-left text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em]">Participantes</th>
+                <th className="px-10 py-6 text-left text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em]">Estado</th>
+                <th className="px-10 py-6 text-right text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em]">Acciones</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
@@ -168,7 +168,7 @@ export default function CapacitacionesSomaPage() {
                           <FileText size={20} />
                         </div>
                         <div>
-                          <div className="font-black text-slate-800 text-lg tracking-tight">{t.title}</div>
+                          <div className="font-bold text-slate-800 text-lg tracking-tight">{t.title}</div>
                           <div className="text-slate-400 font-bold text-xs">{t.description || 'Sin descripción'}</div>
                         </div>
                       </div>
@@ -183,20 +183,20 @@ export default function CapacitacionesSomaPage() {
                           {format(new Date(t.date), 'dd MMM, yyyy', { locale: es })}
                         </div>
                         {t.expiry_date && (
-                          <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-5">
+                          <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest pl-5">
                             EXP: {format(new Date(t.expiry_date), 'dd MMM, yyyy', { locale: es })}
                           </div>
                         )}
                       </div>
                     </td>
                     <td className="px-10 py-8">
-                      <div className="flex items-center gap-2 font-black text-slate-600 bg-slate-100 self-start px-3 py-1 rounded-lg">
+                      <div className="flex items-center gap-2 font-bold text-slate-600 bg-slate-100 self-start px-3 py-1 rounded-lg">
                         <Users size={14} />
                         {t.participants?.length || 0}
                       </div>
                     </td>
                     <td className="px-10 py-8">
-                      <span className={`px-4 py-2 rounded-xl text-xs font-black tracking-tight ${statusColor}`}>
+                      <span className={`px-4 py-2 rounded-xl text-xs font-bold tracking-tight ${statusColor}`}>
                         {expiryStatus}
                       </span>
                     </td>
@@ -271,14 +271,14 @@ function AddTrainingModal({ isOpen, onClose, workers, onSuccess }: any) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
-      <div className="bg-white w-full max-w-4xl max-h-[90vh] overflow-hidden rounded-[3rem] shadow-2xl flex flex-col scale-in-center">
+      <div className="bg-white w-full max-w-4xl max-h-[90vh] overflow-hidden rounded-[2rem] shadow-2xl flex flex-col scale-in-center">
         <div className="p-10 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 bg-indigo-600 text-white rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-200">
               <Plus size={24} />
             </div>
             <div>
-              <h2 className="text-2xl font-black text-slate-800 tracking-tight">Nueva Capacitación</h2>
+              <h2 className="text-2xl font-bold text-slate-800 tracking-tight">Nueva Capacitación</h2>
               <p className="text-slate-400 font-bold text-sm tracking-tight text-indigo-400">FASE SEGURIDADES SOMA</p>
             </div>
           </div>
@@ -292,7 +292,7 @@ function AddTrainingModal({ isOpen, onClose, workers, onSuccess }: any) {
             {/* Left side: Basic Info */}
             <div className="space-y-8">
               <div className="space-y-3">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-2">Título del Curso</label>
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] ml-2">Título del Curso</label>
                 <input 
                   required
                   type="text" 
@@ -304,7 +304,7 @@ function AddTrainingModal({ isOpen, onClose, workers, onSuccess }: any) {
               </div>
 
               <div className="space-y-3">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-2">Instructor / Entrenador</label>
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] ml-2">Instructor / Entrenador</label>
                 <input 
                   type="text" 
                   value={formData.trainer}
@@ -316,7 +316,7 @@ function AddTrainingModal({ isOpen, onClose, workers, onSuccess }: any) {
 
               <div className="grid grid-cols-2 gap-6">
                 <div className="space-y-3">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-2">Fecha Realización</label>
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] ml-2">Fecha Realización</label>
                   <input 
                     required
                     type="date" 
@@ -326,7 +326,7 @@ function AddTrainingModal({ isOpen, onClose, workers, onSuccess }: any) {
                   />
                 </div>
                 <div className="space-y-3">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-2">Vencimiento</label>
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] ml-2">Vencimiento</label>
                   <input 
                     type="date" 
                     value={formData.expiry_date}
@@ -337,7 +337,7 @@ function AddTrainingModal({ isOpen, onClose, workers, onSuccess }: any) {
               </div>
 
               <div className="space-y-3">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-2">Descripción</label>
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] ml-2">Descripción</label>
                 <textarea 
                   value={formData.description}
                   onChange={e => setFormData({...formData, description: e.target.value})}
@@ -349,15 +349,15 @@ function AddTrainingModal({ isOpen, onClose, workers, onSuccess }: any) {
             </div>
 
             {/* Right side: Participant Selection */}
-            <div className="flex flex-col h-full bg-slate-50/50 rounded-[2.5rem] p-8 border border-slate-100/50">
+            <div className="flex flex-col h-full bg-slate-50/50 rounded-[2rem] p-8 border border-slate-100/50">
               <div className="flex items-center justify-between mb-6">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] flex items-center gap-2">
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] flex items-center gap-2">
                   <Users size={14} /> Asistentes ({formData.participants.length})
                 </label>
                 <button 
                   type="button" 
                   onClick={selectAll}
-                  className="text-[10px] font-black text-indigo-600 hover:text-indigo-700 uppercase tracking-widest bg-indigo-50 px-3 py-1.5 rounded-lg transition-all"
+                  className="text-[10px] font-bold text-indigo-600 hover:text-indigo-700 uppercase tracking-widest bg-indigo-50 px-3 py-1.5 rounded-lg transition-all"
                 >
                   {formData.participants.length === workers.length ? 'Deseleccionar todos' : 'Seleccionar todos'}
                 </button>
@@ -376,7 +376,7 @@ function AddTrainingModal({ isOpen, onClose, workers, onSuccess }: any) {
                     }`}
                   >
                     <div className="flex items-center gap-3">
-                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-black ${
+                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold ${
                         formData.participants.includes(w.id) ? 'bg-white/20' : 'bg-slate-100'
                       }`}>
                         {w.name.charAt(0)}
@@ -399,14 +399,14 @@ function AddTrainingModal({ isOpen, onClose, workers, onSuccess }: any) {
             <button
               type="button"
               onClick={onClose}
-              className="px-10 py-4 font-black text-slate-400 hover:text-slate-600 transition-colors"
+              className="px-10 py-4 font-bold text-slate-400 hover:text-slate-600 transition-colors"
             >
               Cancelar
             </button>
             <button
               disabled={loading}
               type="submit"
-              className="flex items-center gap-3 px-12 py-4 bg-indigo-600 text-white font-black rounded-2xl shadow-xl shadow-indigo-200 hover:bg-indigo-700 transition-all disabled:opacity-50"
+              className="flex items-center gap-3 px-12 py-4 bg-indigo-600 text-white font-bold rounded-2xl shadow-xl shadow-indigo-200 hover:bg-indigo-700 transition-all disabled:opacity-50"
             >
               {loading && <Loader2 className="w-5 h-5 animate-spin" />}
               Guardar Registro

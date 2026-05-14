@@ -1,18 +1,19 @@
 'use server'
 
 import { createClient, createAdminClient } from '@/lib/supabase/server'
-import { getUserSession } from '@/lib/auth'
+import { getUserSession, getStrictCompanyId, applyIsolation } from '@/lib/auth'
 import { revalidatePath } from 'next/cache'
 
 export async function getPPEDeliveries(workerId?: string) {
   const { extendedUser } = await getUserSession()
-  if (!extendedUser?.company_id) return []
+  const companyId = await getStrictCompanyId()
 
   const supabase = await createAdminClient()
-  let query = supabase
-    .from('ppe_deliveries')
-    .select('*, worker:workers(name)')
-    .eq('company_id', extendedUser.company_id)
+  let query = applyIsolation(
+    supabase.from('ppe_deliveries').select('*, worker:workers(name)'),
+    companyId,
+    extendedUser.role_id
+  )
     .order('delivery_date', { ascending: false })
 
   if (extendedUser.role_id === 'trabajador') {
@@ -36,11 +37,12 @@ export async function createPPEDelivery(formData: {
   delivery_date: string
 }) {
   const { extendedUser } = await getUserSession()
+  const companyId = await getStrictCompanyId()
   const userRole = extendedUser?.role_id || ''
-  const allowedRoles = ['admin', 'gerente', 'operaciones']
+  const allowedRoles = ['admin', 'gerente', 'operaciones', 'super_admin']
   
-  if (!extendedUser?.company_id || !allowedRoles.includes(userRole) || userRole === 'trabajador') {
-    return { success: false, error: 'Acceso Denegado (403): No autorizado para registrar entregas globales.' }
+  if (!companyId || !allowedRoles.includes(userRole)) {
+    return { success: false, error: 'Acceso Denegado (403): No autorizado para registrar entregas.' }
   }
 
   const supabase = await createAdminClient()
@@ -48,7 +50,7 @@ export async function createPPEDelivery(formData: {
     .from('ppe_deliveries')
     .insert([{
       ...formData,
-      company_id: extendedUser.company_id,
+      company_id: companyId,
       status: 'pending_signature'
     }])
     .select()
@@ -67,16 +69,18 @@ export async function createPPEDelivery(formData: {
 export async function signPPEDelivery(deliveryId: string, signatureBase64: string) {
   try {
     const { extendedUser } = await getUserSession()
-    if (!extendedUser) return { success: false, error: 'No autenticado' }
+    const companyId = await getStrictCompanyId()
+    if (!companyId || !extendedUser) return { success: false, error: 'No autorizado' }
 
     const supabase = await createClient()
     
     // 0. Verify record exists and belongs to company
-    const { data: existing, error: fetchErr } = await supabase
-      .from('ppe_deliveries')
-      .select('id, worker_id, status')
+    const { data: existing, error: fetchErr } = await applyIsolation(
+      supabase.from('ppe_deliveries').select('id, worker_id, status'),
+      companyId,
+      extendedUser.role_id
+    )
       .eq('id', deliveryId)
-      .eq('company_id', extendedUser.company_id)
       .single()
 
     if (fetchErr || !existing) {
@@ -91,7 +95,7 @@ export async function signPPEDelivery(deliveryId: string, signatureBase64: strin
     const { uploadFile, generateStoragePath } = await import('@/lib/storage')
     const fileName = `signature_${deliveryId}.png`
     const storagePath = generateStoragePath(
-      extendedUser.company_id,
+      companyId,
       'ppe',
       extendedUser.worker_id || extendedUser.id,
       fileName
@@ -106,12 +110,14 @@ export async function signPPEDelivery(deliveryId: string, signatureBase64: strin
     // Use Admin Client to bypass RLS for status update
     const adminClient = await createAdminClient()
 
-    const { data: updateData, error: updateError } = await adminClient
-      .from('ppe_deliveries')
-      .update({
+    const { data: updateData, error: updateError } = await applyIsolation(
+      adminClient.from('ppe_deliveries').update({
         status: 'signed',
         signature_url: fileName
-      })
+      }),
+      companyId,
+      extendedUser.role_id
+    )
       .eq('id', deliveryId)
       .select()
 

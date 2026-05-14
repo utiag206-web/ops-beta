@@ -29,7 +29,7 @@ export default function CharlasSomaPage() {
     try {
       const [tData, wData, userData] = await Promise.all([
         getSomaTalks(),
-        getWorkers('active'),
+        getWorkers('ACTIVO'),
         getCurrentUser()
       ])
       setTalks(tData)
@@ -42,7 +42,7 @@ export default function CharlasSomaPage() {
     }
   }
 
-  const isSomaRole = ['admin', 'soma', 'operaciones'].includes(user?.role_id) || user?.role_id === 'jefe_area'
+  const isSomaRole = ['admin', 'soma', 'operaciones', 'super_admin', 'superadmin'].includes(user?.role_id) || user?.role_id === 'jefe_area'
 
   const handleConfirm = async (talkId: string) => {
     try {
@@ -57,7 +57,11 @@ export default function CharlasSomaPage() {
 
   const filteredTalks = talks.filter(t => 
     t.topic.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    t.leader?.name?.toLowerCase().includes(searchTerm.toLowerCase())
+    t.leader?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    t.participants?.some((p: any) => 
+      p.worker?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      p.worker?.last_name?.toLowerCase().includes(searchTerm.toLowerCase())
+    )
   )
 
   return (
@@ -69,14 +73,14 @@ export default function CharlasSomaPage() {
             <MessageSquare size={32} />
           </div>
           <div>
-            <h1 className="text-4xl font-black text-slate-800 tracking-tight">Charlas 5 Minutos</h1>
+            <h1 className="text-4xl font-bold text-slate-800 tracking-tight">Charlas 5 Minutos</h1>
             <p className="text-slate-500 font-bold text-lg">Registro diario de seguridad y salud ocupacional</p>
           </div>
         </div>
         {isSomaRole && (
           <button 
             onClick={() => setIsModalOpen(true)}
-            className="flex items-center gap-3 px-8 py-4 bg-emerald-600 hover:bg-emerald-700 text-white font-black rounded-[2rem] shadow-xl shadow-emerald-200 transition-all hover:scale-105 active:scale-95"
+            className="flex items-center gap-3 px-8 py-4 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-[2rem] shadow-xl shadow-emerald-200 transition-all hover:scale-105 active:scale-95"
           >
             <Plus size={20} />
             Nueva Charla
@@ -85,14 +89,14 @@ export default function CharlasSomaPage() {
       </div>
 
       {/* Monthly Summary Card */}
-      <div className="bg-white p-10 rounded-[3rem] shadow-xl shadow-slate-200/50 border border-slate-100 flex flex-col md:flex-row items-center justify-between gap-8">
+      <div className="bg-white p-10 rounded-[2rem] shadow-xl shadow-slate-200/50 border border-slate-100 flex flex-col md:flex-row items-center justify-between gap-8">
         <div className="flex items-center gap-6">
           <div className="w-14 h-14 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center">
             <Calendar size={28} />
           </div>
           <div>
-            <div className="text-sm font-black text-slate-400 uppercase tracking-widest">Charlas registradas</div>
-            <div className="text-4xl font-black text-slate-800">{talks.length}</div>
+            <div className="text-sm font-bold text-slate-400 uppercase tracking-widest">Charlas registradas</div>
+            <div className="text-4xl font-bold text-slate-800">{talks.length}</div>
           </div>
         </div>
         <div className="h-px w-full md:w-px md:h-12 bg-slate-100" />
@@ -100,15 +104,15 @@ export default function CharlasSomaPage() {
           <div className="bg-blue-50 px-6 py-4 rounded-3xl flex items-center gap-4">
             <Users className="text-blue-500" size={20} />
             <div>
-              <div className="text-[10px] font-black text-blue-400 uppercase tracking-widest leading-none mb-1">Total Asistentes</div>
-              <div className="text-xl font-black text-blue-700">{talks.reduce((acc, t) => acc + (t.participants?.length || 0), 0)}</div>
+              <div className="text-[10px] font-bold text-blue-400 uppercase tracking-widest leading-none mb-1">Total Asistentes</div>
+              <div className="text-xl font-bold text-blue-700">{talks.reduce((acc, t) => acc + (t.participants?.length || 0), 0)}</div>
             </div>
           </div>
           <div className="bg-emerald-50 px-6 py-4 rounded-3xl flex items-center gap-4">
             <CheckCircle2 className="text-emerald-500" size={20} />
             <div>
-              <div className="text-[10px] font-black text-emerald-400 uppercase tracking-widest leading-none mb-1">Tu Estado</div>
-              <div className="text-xl font-black text-emerald-700 uppercase">
+              <div className="text-[10px] font-bold text-emerald-400 uppercase tracking-widest leading-none mb-1">Tu Estado</div>
+              <div className="text-xl font-bold text-emerald-700 uppercase">
                 {user?.role_id === 'soma' ? 'SOMA' : talks.some(t => t.participants?.some((p: any) => p.worker?.id === user?.worker_id)) ? 'ACTIVO' : 'PENDIENTE'}
               </div>
             </div>
@@ -117,7 +121,7 @@ export default function CharlasSomaPage() {
       </div>
 
       {/* Search & List */}
-      <div className="bg-white rounded-[3rem] shadow-2xl shadow-slate-200/50 border border-slate-100 overflow-hidden">
+      <div className="bg-white rounded-[2rem] shadow-2xl shadow-slate-200/50 border border-slate-100 overflow-hidden">
         <div className="p-10 border-b border-slate-50 flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div className="relative flex-1 max-w-md">
             <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
@@ -144,14 +148,14 @@ export default function CharlasSomaPage() {
             const hasConfirmed = t.participants?.some((p: any) => p.worker?.id === user?.worker_id)
             
             return (
-              <div key={t.id} className="group flex flex-col bg-slate-50/50 hover:bg-white p-8 rounded-[2.5rem] border border-transparent hover:border-emerald-100 hover:shadow-2xl hover:shadow-emerald-100 transition-all">
+              <div key={t.id} className="group flex flex-col bg-slate-50/50 hover:bg-white p-8 rounded-[2rem] border border-transparent hover:border-emerald-100 hover:shadow-2xl hover:shadow-emerald-100 transition-all">
                 <div className="flex items-center justify-between mb-6">
                   <div className="flex gap-2">
-                    <div className="px-4 py-2 bg-white rounded-xl text-[10px] font-black text-slate-400 uppercase tracking-widest shadow-sm">
+                    <div className="px-4 py-2 bg-white rounded-xl text-[10px] font-bold text-slate-400 uppercase tracking-widest shadow-sm">
                       {format(new Date(t.date), 'dd MMM, yyyy', { locale: es })}
                     </div>
                     {t.target_area && (
-                      <div className="px-4 py-2 bg-emerald-50 text-emerald-600 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-sm">
+                      <div className="px-4 py-2 bg-emerald-50 text-emerald-600 rounded-xl text-[10px] font-bold uppercase tracking-widest shadow-sm">
                         {t.target_area}
                       </div>
                     )}
@@ -167,7 +171,7 @@ export default function CharlasSomaPage() {
                   )}
                 </div>
                 
-                <h3 className="text-xl font-black text-slate-800 mb-4 tracking-tight group-hover:text-emerald-700 transition-colors">
+                <h3 className="text-xl font-bold text-slate-800 mb-4 tracking-tight group-hover:text-emerald-700 transition-colors">
                   {t.topic}
                 </h3>
 
@@ -185,14 +189,14 @@ export default function CharlasSomaPage() {
                 {!isSomaRole && !hasConfirmed && (
                   <button 
                     onClick={() => handleConfirm(t.id)}
-                    className="w-full mb-6 py-4 bg-emerald-600 hover:bg-emerald-700 text-white font-black rounded-2xl shadow-xl shadow-emerald-100 transition-all hover:scale-105 active:scale-95"
+                    className="w-full mb-6 py-4 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-2xl shadow-xl shadow-emerald-100 transition-all hover:scale-105 active:scale-95"
                   >
                     Confirmar Asistencia
                   </button>
                 )}
 
                 <div className="mt-auto pt-6 border-t border-slate-100 flex items-center justify-between">
-                  <div className="flex items-center gap-3 text-xs font-black text-slate-400 uppercase tracking-widest">
+                  <div className="flex items-center gap-3 text-xs font-bold text-slate-400 uppercase tracking-widest">
                     Por: <span className="text-slate-600">{t.leader?.name || 'Sistema'}</span>
                   </div>
                   <div className="flex gap-2">
@@ -201,7 +205,7 @@ export default function CharlasSomaPage() {
                         href={t.material_url} 
                         target="_blank" 
                         rel="noopener noreferrer"
-                        className="p-3 bg-emerald-50 hover:bg-emerald-100 rounded-xl text-emerald-600 transition-all text-xs font-black uppercase tracking-widest"
+                        className="p-3 bg-emerald-50 hover:bg-emerald-100 rounded-xl text-emerald-600 transition-all text-xs font-bold uppercase tracking-widest"
                       >
                         Material
                       </a>
@@ -280,14 +284,14 @@ function AddTalkModal({ isOpen, onClose, workers, onSuccess }: any) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
-      <div className="bg-white w-full max-w-4xl max-h-[90vh] overflow-hidden rounded-[3rem] shadow-2xl flex flex-col scale-in-center border border-white/20">
+      <div className="bg-white w-full max-w-4xl max-h-[90vh] overflow-hidden rounded-[2rem] shadow-2xl flex flex-col scale-in-center border border-white/20">
         <div className="p-10 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 bg-emerald-600 text-white rounded-2xl flex items-center justify-center shadow-lg shadow-emerald-200">
               <Plus size={24} />
             </div>
             <div>
-              <h2 className="text-2xl font-black text-slate-800 tracking-tight">Nueva Charla de 5 Minutos</h2>
+              <h2 className="text-2xl font-bold text-slate-800 tracking-tight">Nueva Charla de 5 Minutos</h2>
               <p className="text-slate-400 font-bold text-sm tracking-tight text-emerald-500 uppercase">Seguridad Preventiva Diaria</p>
             </div>
           </div>
@@ -300,7 +304,7 @@ function AddTalkModal({ isOpen, onClose, workers, onSuccess }: any) {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
             <div className="space-y-10">
               <div className="space-y-4">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-2">Tema de la Charla</label>
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] ml-2">Tema de la Charla</label>
                 <input 
                   required
                   type="text" 
@@ -313,7 +317,7 @@ function AddTalkModal({ isOpen, onClose, workers, onSuccess }: any) {
 
               <div className="grid grid-cols-2 gap-8">
                 <div className="space-y-4">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-2">Fecha</label>
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] ml-2">Fecha</label>
                   <input 
                     required
                     type="date" 
@@ -323,7 +327,7 @@ function AddTalkModal({ isOpen, onClose, workers, onSuccess }: any) {
                   />
                 </div>
                 <div className="space-y-4">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-2">Lugar / Frente</label>
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] ml-2">Lugar / Frente</label>
                   <input 
                     type="text" 
                     value={formData.location}
@@ -336,7 +340,7 @@ function AddTalkModal({ isOpen, onClose, workers, onSuccess }: any) {
 
               <div className="grid grid-cols-1 gap-8">
                 <div className="space-y-4">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-2">Área Asignada (Transversal)</label>
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] ml-2">Área Asignada (Transversal)</label>
                   <select 
                     value={formData.target_area}
                     onChange={e => setFormData({...formData, target_area: e.target.value})}
@@ -350,7 +354,7 @@ function AddTalkModal({ isOpen, onClose, workers, onSuccess }: any) {
                   </select>
                 </div>
                 <div className="space-y-4">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-2">URL Material de Apoyo (Opcional)</label>
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] ml-2">URL Material de Apoyo (Opcional)</label>
                   <input 
                     type="url" 
                     value={formData.material_url}
@@ -364,7 +368,7 @@ function AddTalkModal({ isOpen, onClose, workers, onSuccess }: any) {
               <div className="bg-emerald-50/50 p-8 rounded-3xl border border-emerald-100 flex items-start gap-4">
                 <Info size={24} className="text-emerald-500 mt-1" />
                 <div>
-                  <h4 className="font-black text-emerald-800 text-sm mb-2 uppercase tracking-wider">Recordatorio SOMA</h4>
+                  <h4 className="font-bold text-emerald-800 text-sm mb-2 uppercase tracking-wider">Recordatorio SOMA</h4>
                   <p className="text-emerald-700/70 text-sm font-medium leading-relaxed">
                     Asegúrate de registrar a todos los asistentes y capturar una fotografía grupal como evidencia de la charla de seguridad periódica.
                   </p>
@@ -373,15 +377,15 @@ function AddTalkModal({ isOpen, onClose, workers, onSuccess }: any) {
             </div>
 
             {/* Selection Column */}
-            <div className="flex flex-col h-full bg-slate-50/80 rounded-[3rem] p-10 border border-slate-100 shadow-inner">
+            <div className="flex flex-col h-full bg-slate-50/80 rounded-[2rem] p-10 border border-slate-100 shadow-inner">
                <div className="flex items-center justify-between mb-8">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] flex items-center gap-2">
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] flex items-center gap-2">
                   <Users size={14} /> Asistentes ({formData.participants.length})
                 </label>
                 <button 
                   type="button" 
                   onClick={selectAll}
-                  className="text-[10px] font-black text-emerald-600 hover:text-emerald-700 uppercase tracking-widest bg-emerald-50 px-3 py-1.5 rounded-lg transition-all"
+                  className="text-[10px] font-bold text-emerald-600 hover:text-emerald-700 uppercase tracking-widest bg-emerald-50 px-3 py-1.5 rounded-lg transition-all"
                 >
                   {formData.participants.length === workers.length ? 'Deseleccionar todos' : 'Seleccionar todos'}
                 </button>
@@ -400,13 +404,13 @@ function AddTalkModal({ isOpen, onClose, workers, onSuccess }: any) {
                     }`}
                   >
                     <div className="flex items-center gap-4">
-                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-sm ${
+                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold text-sm ${
                         formData.participants.includes(w.id) ? 'bg-white/20' : 'bg-slate-100'
                       }`}>
                         {w.name.charAt(0)}
                       </div>
                       <div className="text-left">
-                        <div className="font-black text-sm tracking-tight">{w.name}</div>
+                        <div className="font-bold text-sm tracking-tight">{w.name} {w.last_name || ''}</div>
                         <div className={`text-[10px] font-bold uppercase tracking-widest ${formData.participants.includes(w.id) ? 'text-white/60' : 'text-slate-400'}`}>
                           {w.position}
                         </div>
@@ -423,14 +427,14 @@ function AddTalkModal({ isOpen, onClose, workers, onSuccess }: any) {
             <button
               type="button"
               onClick={onClose}
-              className="px-10 py-4 font-black text-slate-400 hover:text-rose-500 transition-colors"
+              className="px-10 py-4 font-bold text-slate-400 hover:text-rose-500 transition-colors"
             >
               Cancelar
             </button>
             <button
               disabled={loading}
               type="submit"
-              className="flex items-center gap-4 px-14 py-5 bg-emerald-600 text-white font-black rounded-3xl shadow-2xl shadow-emerald-100 hover:bg-emerald-700 hover:scale-105 active:scale-95 transition-all disabled:opacity-50"
+              className="flex items-center gap-4 px-14 py-5 bg-emerald-600 text-white font-bold rounded-3xl shadow-2xl shadow-emerald-100 hover:bg-emerald-700 hover:scale-105 active:scale-95 transition-all disabled:opacity-50"
             >
               {loading && <Loader2 className="w-6 h-6 animate-spin" />}
               Enviar Registro

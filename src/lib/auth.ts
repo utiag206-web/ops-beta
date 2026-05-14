@@ -4,7 +4,7 @@ import { redirect } from 'next/navigation'
 import { getPermissionsByRole, hasPermission } from './permissions'
 import { cookies } from 'next/headers'
 
-export async function getUserSession() {
+export const getUserSession = cache(async function getUserSession() {
   try {
     const cookieStore = await cookies()
     const activeCompanyId = cookieStore.get('active_company_id')?.value
@@ -24,7 +24,6 @@ export async function getUserSession() {
         .maybeSingle()
 
     if (userError || !userData) {
-      console.error(`[AUTH] 🚨 ORPHAN USER: Auth exists but profile missing for ${user.id}`)
       return { user, extendedUser: null }
     }
 
@@ -64,7 +63,8 @@ export async function getUserSession() {
       name: userData.name || 'Usuario',
       role_id: rbacRole,
       area: (userData as any)?.area || null,
-      company_id: (userData as any)?.company_id || null,
+      company_id: finalCompanyId, // SWAP: Use active/final ID
+      native_company_id: (userData as any)?.company_id || null, // Reference to original
       worker_id: (userData as any)?.worker_id || null,
       worker_status: (userData as any)?.workers?.status || null,
       permissions: getPermissionsByRole(rbacRole, (userData as any)?.area),
@@ -80,7 +80,7 @@ export async function getUserSession() {
     if (impersonating) {
       const safeName = companyData?.name || 'Sistema'
       extendedUser.display_name = `Administrador (${safeName})`
-      extendedUser.display_email = `soporte@${safeName.toLowerCase().replace(/\s+/g, '')}.com`
+      extendedUser.display_email = extendedUser.email
     } else {
       extendedUser.display_name = extendedUser.name
       extendedUser.display_email = extendedUser.email
@@ -90,10 +90,9 @@ export async function getUserSession() {
 
   } catch (error: any) {
     if (error.digest?.startsWith('NEXT_REDIRECT')) throw error
-    console.error("[AUTH_CRITICAL_ERROR]:", error.message)
-    throw error
+    return { user: null, extendedUser: null }
   }
-}
+})
 
 export async function getStrictCompanyId(): Promise<string> {
   const { extendedUser } = await getUserSession()

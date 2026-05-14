@@ -1,15 +1,15 @@
 'use server'
 
-import { createClient } from '@/lib/supabase/server'
-import { getUserSession } from '@/lib/auth'
+import { createClient, createAdminClient } from '@/lib/supabase/server'
+import { getUserSession, getStrictCompanyId } from '@/lib/auth'
 import { revalidatePath } from 'next/cache'
 
 export async function updateProfile(formData: { name: string, email: string }) {
   try {
     const supabase = await createClient()
-    const { user } = await getUserSession()
+    const { user, extendedUser } = await getUserSession()
 
-    if (!user) return { success: false, error: 'No autorizado' }
+    if (!user || !extendedUser) return { success: false, error: 'No autorizado' }
 
     // 1. Update Auth Email (this might require verification)
     if (formData.email !== user.email) {
@@ -18,10 +18,13 @@ export async function updateProfile(formData: { name: string, email: string }) {
     }
 
     // 2. Update public.users record
-    const { error: dbError } = await supabase
+    const companyId = await getStrictCompanyId()
+    const adminSupabase = await createAdminClient()
+    const { error: dbError } = await adminSupabase
       .from('users')
       .update({ name: formData.name, email: formData.email })
-      .eq('id', user.id)
+      .eq('id', extendedUser.id)
+      .eq('company_id', companyId)
 
     if (dbError) return { success: false, error: dbError.message }
 

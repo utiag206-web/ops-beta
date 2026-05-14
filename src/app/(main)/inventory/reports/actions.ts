@@ -1,23 +1,24 @@
 'use server'
 
-import { createClient } from '@/lib/supabase/server'
-import { getUserSession } from '@/lib/auth'
+import { createAdminClient } from '@/lib/supabase/server'
+import { getUserSession, getStrictCompanyId, applyIsolation } from '@/lib/auth'
 
 // 1. Stock actual por almacén
 export async function getStockByWarehouse() {
-  const supabase = await createClient()
+  const supabase = await createAdminClient()
   const { extendedUser } = await getUserSession()
-  if (!extendedUser?.company_id) return { error: 'Acceso denegado' }
+  const companyId = await getStrictCompanyId()
 
     // Buscamos productos y agrupamos sus stocks
-  const { data, error } = await supabase
-    .from('inventory_stock')
-    .select(`
+  const { data, error } = await applyIsolation(
+    supabase.from('inventory_stock').select(`
       quantity,
       warehouses!inner (name),
       products!inner (name, code, unit, category)
-    `)
-    .eq('company_id', extendedUser.company_id)
+    `),
+    companyId,
+    extendedUser.role_id
+  )
     .gt('quantity', 0) // Solo mostrar si hay stock
 
   if (error) return { error: error.message }
@@ -26,16 +27,17 @@ export async function getStockByWarehouse() {
 
 // 2. Productos bajo stock mínimo
 export async function getLowStockProducts() {
-  const supabase = await createClient()
+  const supabase = await createAdminClient()
   const { extendedUser } = await getUserSession()
-  if (!extendedUser?.company_id) return { error: 'Acceso denegado' }
+  const companyId = await getStrictCompanyId()
 
   // Usar query nativa estructurada
   // Traer stock total de cada producto y filtrar
-  const { data: products, error: pError } = await supabase
-    .from('products')
-    .select('id, name, code, min_stock, unit, category, inventory_stock(quantity)')
-    .eq('company_id', extendedUser.company_id)
+  const { data: products, error: pError } = await applyIsolation(
+    supabase.from('products').select('id, name, code, min_stock, unit, category, inventory_stock(quantity)'),
+    companyId,
+    extendedUser.role_id
+  )
 
   if (pError) return { error: pError.message }
 
@@ -49,19 +51,20 @@ export async function getLowStockProducts() {
 
 // 3. Productos sin movimiento (últimos 30 días)
 export async function getDormantProducts() {
-  const supabase = await createClient()
+  const supabase = await createAdminClient()
   const { extendedUser } = await getUserSession()
-  if (!extendedUser?.company_id) return { error: 'Acceso denegado' }
+  const companyId = await getStrictCompanyId()
 
   const thirtyDaysAgo = new Date()
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
   const isoDate = thirtyDaysAgo.toISOString()
 
   // Obtenemos los IDs de productos que SÍ han tenido movimiento en 30 días
-  const { data: recentMoves, error: mError } = await supabase
-    .from('inventory_movements')
-    .select('product_id')
-    .eq('company_id', extendedUser.company_id)
+  const { data: recentMoves, error: mError } = await applyIsolation(
+    supabase.from('inventory_movements').select('product_id'),
+    companyId,
+    extendedUser.role_id
+  )
     .gte('created_at', isoDate)
 
   if (mError) return { error: mError.message }
@@ -69,10 +72,11 @@ export async function getDormantProducts() {
   const activeProductIds = new Set(recentMoves?.map(m => m.product_id))
 
   // Traer stock de productos que NO están en los recientes pero que tienen existencia > 0
-  const { data: products, error: pError } = await supabase
-    .from('products')
-    .select('id, name, code, category, unit, inventory_stock(quantity)')
-    .eq('company_id', extendedUser.company_id)
+  const { data: products, error: pError } = await applyIsolation(
+    supabase.from('products').select('id, name, code, category, unit, inventory_stock(quantity)'),
+    companyId,
+    extendedUser.role_id
+  )
 
   if (pError) return { error: pError.message }
 
@@ -88,18 +92,19 @@ export async function getDormantProducts() {
 
 // 4. Top productos más consumidos (Solo OUT, excluir ajustes)
 export async function getTopConsumedProducts() {
-  const supabase = await createClient()
+  const supabase = await createAdminClient()
   const { extendedUser } = await getUserSession()
-  if (!extendedUser?.company_id) return { error: 'Acceso denegado' }
+  const companyId = await getStrictCompanyId()
 
   const thirtyDaysAgo = new Date()
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
 
   // type 'salida' representa las salidas operativas reales. Ajustes decremento son 'ajuste'
-  const { data: movements, error } = await supabase
-    .from('inventory_movements')
-    .select('quantity, products (name, code, unit, category)')
-    .eq('company_id', extendedUser.company_id)
+  const { data: movements, error } = await applyIsolation(
+    supabase.from('inventory_movements').select('quantity, products (name, code, unit, category)'),
+    companyId,
+    extendedUser.role_id
+  )
     .eq('type', 'salida')
     .gte('created_at', thirtyDaysAgo.toISOString())
 

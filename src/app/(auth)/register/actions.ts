@@ -19,37 +19,39 @@ export async function register(prevState: any, formData: FormData) {
 
   console.log(`[AUTH] Iniciando registro para: ${email} con empresa: ${companyName}`)
 
-  // 1. Registrar usuario en Supabase Auth
-  const { data: authData, error: authError } = await supabase.auth.signUp({
+  // 1. Registrar usuario usando el cliente Admin para saltar límites de rate-limit y confirmación
+  const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
     email,
     password,
-    options: {
-      data: {
-        name: name,
-      },
-    },
+    email_confirm: true,
+    user_metadata: { name }
   })
 
   if (authError) {
-    console.error(`[AUTH_ERROR] Error en signUp: ${authError.message}`)
-    if (authError.message.includes('already registered')) {
+    console.error(`[AUTH_ERROR] Error en admin.createUser: ${authError.message}`)
+    if (authError.message.includes('already registered') || authError.message.includes('exists')) {
         return { error: 'Este correo ya está registrado. Intenta iniciar sesión.' }
     }
-    return { error: `Error de registro: ${authError.message}` }
+    return { error: `Error de registro (Admin): ${authError.message}` }
   }
 
   const authUserId = authData.user?.id
   if (!authUserId) {
-    return { error: 'No se pudo crear el usuario en el sistema de autenticación.' }
+    return { error: 'No se pudo crear el usuario.' }
   }
 
   try {
     // 2. Crear la Empresa
     const { data: companyData, error: companyError } = await supabaseAdmin
       .from('companies')
-      .insert({
+      .insert([{
         name: companyName,
-      })
+        contact_email: email,
+        address: 'Av. Principal 123 (Por actualizar)',
+        phone: '999999999',
+        industry: 'Servicios',
+        timezone: 'UTC-5'
+      }])
       .select('id')
       .single()
 
@@ -61,11 +63,6 @@ export async function register(prevState: any, formData: FormData) {
 
     const companyId = companyData.id
 
-    // 2.1 Inicializar tipos de movimiento automáticamente
-    console.log(`[AUTH] Inicializando maestros para empresa: ${companyId}`)
-    const { seedMovementTypes } = await import('@/app/(main)/inventory/actions')
-    await seedMovementTypes(companyId)
-
     // 3. Crear el registro en public.users como ADMIN de esa empresa
     const { error: userError } = await supabaseAdmin
       .from('users')
@@ -75,7 +72,8 @@ export async function register(prevState: any, formData: FormData) {
         email: email,
         company_id: companyId,
         role_id: 'admin',
-        status: 'active',
+        role: 'admin', // Consistency with observed schema
+        status: 'active', // Changed from 'ACTIVO' to 'active'
         area: 'Administración'
       })
 
@@ -87,32 +85,46 @@ export async function register(prevState: any, formData: FormData) {
     // 4. Sincronizar RBAC (si existe la tabla user_roles)
     const { error: rbacError } = await supabaseAdmin
       .from('user_roles')
-      .insert({
+      .upsert({ 
         user_id: authUserId,
         company_id: companyId,
         role_id: 'admin'
-      })
+      }, { onConflict: 'user_id, company_id' })
     
     if (rbacError) {
         console.warn(`[RBAC_WARN] No se pudo sincronizar user_roles: ${rbacError.message}`)
-        // No bloqueamos el flujo por esto si ya se creó en la tabla 'users'
     }
 
     console.log(`[AUTH_SUCCESS] Registro completo para: ${email}`)
+
+    // 5. Bootstrap Company Data (Movement types, Warehouses, etc.)
+    try {
+      const { bootstrapCompany } = await import('@/lib/bootstrap')
+      await bootstrapCompany(companyId)
+      console.log(`[BOOTSTRAP_SUCCESS] Tenant ${companyId} initialized.`)
+    } catch (bootstrapErr: any) {
+      console.warn(`[BOOTSTRAP_WARN] No se pudo inicializar los datos base: ${bootstrapErr.message}`)
+    }
+
+    revalidatePath('/', 'layout')
+    revalidatePath('/dashboard')
     
   } catch (err: any) {
     console.error(`[FATAL_ERROR] Error inesperado en registro: ${err.message}`)
     return { error: 'Ocurrió un error inesperado al configurar tu cuenta.' }
   }
 
-  revalidatePath('/', 'layout')
-  
-  // Dynamic Redirection based on role
-  const role = 'admin' // Registration always creates an admin by default here
-  
-  if (role === 'super_admin' || role === 'superadmin') {
-    redirect('/super-admin')
+  // 6. Iniciar sesión automáticamente
+  const { error: loginError } = await supabase.auth.signInWithPassword({
+    email,
+    password,
+  })
+
+  if (loginError) {
+    console.warn(`[AUTH_WARN] Registro exitoso pero auto-login falló: ${loginError.message}`)
+    redirect('/login?message=Registro exitoso. Por favor inicia sesión.')
   }
 
+  revalidatePath('/', 'layout')
   redirect('/dashboard')
 }

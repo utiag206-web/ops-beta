@@ -160,39 +160,40 @@ export function InventoryMovementsList({
             </thead>
             <tbody className="divide-y divide-slate-50">
               {(() => {
-                // Lógica de Kardex: Calcular saldos acumulados (Orden Cronológico)
-                // Nota: Esto asume que el initialMovements viene ordenado DESC por fecha.
-                // Para el cálculo de saldo, necesitamos procesar de la más antigua a la más reciente.
-                const sortedMovements = [...filteredMovements].sort((a, b) => 
-                  new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+                // Lógica de Kardex: Calcular saldos acumulados (Orden Cronológico Inverso)
+                // Para que el saldo sea consistente, empezamos desde el saldo ACTUAL y restamos/sumamos hacia atrás.
+                
+                let currentRunningBalances: Record<string, number> = { ...initialBalances }
+                
+                // 1. Ordenar por fecha DESC (lo más reciente primero)
+                const sortedDesc = [...filteredMovements].sort((a, b) => 
+                  new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
                 )
-                
-                let runningBalances: Record<string, number> = {}
-                
-                // Inicializar saldos con los valores base del servidor (basados en historia previa)
-                Object.entries(initialBalances).forEach(([key, val]) => {
-                  runningBalances[key] = val
-                })
 
-                const movementsWithBalance = sortedMovements.map(m => {
+                const displayMovements = sortedDesc.map(m => {
                   const key = `${m.product_id}|${m.warehouse_id}`
-                  const currentBalance = runningBalances[key] || 0
+                  
+                  // El saldo mostrado en esta fila es el saldo que quedó DESPUÉS del movimiento.
+                  // Para la fila más reciente, ese saldo es el inicial (actual).
+                  const balanceAfter = currentRunningBalances[key] || 0
                   
                   const effect = m.movement_types?.effect
                   const type = (m.type || '').toLowerCase()
                   const qty = Math.abs(Number(m.quantity))
 
-                  let newBalance = currentBalance
-                  if (effect === 'IN' || type === 'ingreso') newBalance += qty
-                  else if (effect === 'OUT' || type === 'salida') newBalance -= qty
-                  else newBalance -= qty // Default legacy behavior
+                  // Ahora calculamos cuál era el saldo ANTES de este movimiento para la siguiente iteración (hacia atrás)
+                  // Si fue ingreso (+), el saldo anterior era menor.
+                  // Si fue salida (-), el saldo anterior era mayor.
+                  if (effect === 'IN' || type === 'ingreso') {
+                    currentRunningBalances[key] = (currentRunningBalances[key] || 0) - qty
+                  } else if (effect === 'OUT' || type === 'salida') {
+                    currentRunningBalances[key] = (currentRunningBalances[key] || 0) + qty
+                  } else {
+                    currentRunningBalances[key] = (currentRunningBalances[key] || 0) + qty // Default legacy
+                  }
 
-                  runningBalances[key] = newBalance
-                  return { ...m, running_balance: newBalance }
+                  return { ...m, running_balance: balanceAfter }
                 }).filter(m => !!m.products)
-
-                // Volver a ordenar DESC para mostrar lo más reciente arriba
-                const displayMovements = movementsWithBalance.reverse()
 
                 return displayMovements.length > 0 ? displayMovements.map((m) => {
                   if (!m.products) return null;

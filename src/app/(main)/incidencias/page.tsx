@@ -10,8 +10,8 @@ export const metadata = {
   description: 'Reporte y seguimiento de incidencias en campo.',
 }
 
-async function IncidenciasFetcher({ user }: { user: any }) {
-  const res = await getIncidencias()
+async function IncidenciasFetcher({ user, category }: { user: any, category?: string }) {
+  const res = await getIncidencias({ category })
   
   if (res.error) {
     return (
@@ -27,11 +27,13 @@ async function IncidenciasFetcher({ user }: { user: any }) {
     )
   }
 
-  return <IncidentsList initialData={res.data || []} user={user} />
+  return <IncidentsList initialData={res.data || []} user={user} forcedCategory={category} />
 }
 
-export default async function IncidenciasPage() {
+export default async function IncidenciasPage(props: { searchParams: Promise<{ category?: string }> }) {
   const { extendedUser } = await getUserSession()
+  const searchParams = await props.searchParams
+  const category = searchParams.category
 
   if (!extendedUser) {
     redirect('/login')
@@ -40,7 +42,7 @@ export default async function IncidenciasPage() {
   return (
     <div className="container mx-auto px-4 py-8">
       <Suspense fallback={<OperationsDashboardSkeleton />}>
-        <IncidenciasFetcher user={extendedUser} />
+        <IncidenciasFetcher user={extendedUser} category={category} />
       </Suspense>
     </div>
   )

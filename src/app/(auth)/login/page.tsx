@@ -4,9 +4,12 @@ import { Lock, Mail, AlertCircle, Loader2 } from 'lucide-react'
 import { useActionState } from 'react'
 import { login } from './actions'
 import Link from 'next/link'
+import { useSearchParams } from 'next/navigation'
 
 export default function LoginPage() {
   const [state, formAction, isPending] = useActionState(login, { error: null })
+  const searchParams = useSearchParams()
+  const message = searchParams.get('message')
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-slate-50 p-4">
@@ -21,6 +24,13 @@ export default function LoginPage() {
         
         <div className="p-8">
           <form action={formAction} className="space-y-5">
+            {message && (
+              <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg flex items-center gap-2 text-sm text-blue-700">
+                <AlertCircle size={18} />
+                <span>{message}</span>
+              </div>
+            )}
+
             {state?.error && (
               <div className={`p-3 border rounded-lg flex items-center gap-2 text-sm ${
                 (state as any).code === 'weak_password' ? 'bg-amber-50 border-amber-200 text-amber-700' : 'bg-red-50 border-red-200 text-red-600'

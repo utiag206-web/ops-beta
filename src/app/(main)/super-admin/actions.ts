@@ -235,55 +235,13 @@ export async function createCompany(payload: {
       }
     }
 
-    // 5-8. Inicialización Automática en Paralelo (Optimización PRE-DEPLOY)
-    const movementDefaults = [
-      { company_id: companyId, name: 'Ingreso Almacén', code: 'ING', effect: 'IN' },
-      { company_id: companyId, name: 'Salida Consumo', code: 'SAL', effect: 'OUT' },
-      { company_id: companyId, name: 'Transferencia', code: 'TRF', effect: 'BOTH' },
-      { company_id: companyId, name: 'Ajuste de Stock', code: 'ADJUST', effect: 'IN' }
-    ]
-
-    const warehouseDefaults = [
-      { company_id: companyId, name: 'Almacén General', code: 'GEN' },
-      { company_id: companyId, name: 'Almacén Cocina', code: 'COC', area: 'COCINA' }
-    ]
-
-    const categoryDefaults = [
-      { company_id: companyId, name: 'EPP', description: 'Equipos de Protección Personal' },
-      { company_id: companyId, name: 'Herramientas', description: 'Herramientas y Equipos' },
-      { company_id: companyId, name: 'Insumos', description: 'Insumos generales' },
-      { company_id: companyId, name: 'Cocina', description: 'Insumos para cocina' }
-    ]
-
-    const unitDefaults = [
-      { company_id: companyId, name: 'Unidad', abbreviation: 'UND' },
-      { company_id: companyId, name: 'Paquete', abbreviation: 'PQT' },
-      { company_id: companyId, name: 'Caja', abbreviation: 'CJ' },
-      { company_id: companyId, name: 'Kilogramo', abbreviation: 'KG' }
-    ]
-
-    const somaDefaults = [
-      { company_id: companyId, topic: 'Inducción de Seguridad', description: 'Capacitación inicial' },
-      { company_id: companyId, topic: 'Primeros Auxilios', description: 'Atención de emergencias' }
-    ]
-
-    // 5-8. Inicialización Automática (Optimización Estabilizada)
-    const initPromises = [
-      supabase.from('movement_types').insert(movementDefaults),
-      supabase.from('warehouses').insert(warehouseDefaults),
-      supabase.from('categories').insert(categoryDefaults),
-      supabase.from('units').insert(unitDefaults),
-      supabase.from('soma_talks').insert(somaDefaults)
-    ]
-
-    const results = await Promise.all(initPromises)
+    // 5-8. Inicialización Automática (Uso de Utility Centralizada)
+    const { bootstrapCompany } = await import('@/lib/bootstrap')
+    const { success: bootSuccess, error: bootError } = await bootstrapCompany(companyId)
     
-    // Logueamos errores de inicialización pero no bloqueamos la creación de la empresa
-    results.forEach((res, idx) => {
-      if (res.error) {
-        console.warn(`[INIT_WARN] Failed initialization step ${idx}:`, res.error.message)
-      }
-    })
+    if (!bootSuccess) {
+      console.warn(`[BOOTSTRAP_WARN] La inicialización parcial falló: ${bootError}`)
+    }
 
     return { success: true, data: company, password } // Devolvemos el password por si fue generado
   } catch (error: any) {

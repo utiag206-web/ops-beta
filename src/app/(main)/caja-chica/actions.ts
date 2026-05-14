@@ -1,32 +1,34 @@
 'use server'
 
-import { createClient } from '@/lib/supabase/server'
-import { getUserSession, requirePermission, getStrictCompanyId } from '@/lib/auth'
+import { createClient, createAdminClient } from '@/lib/supabase/server'
+import { getUserSession, requirePermission, getStrictCompanyId, applyIsolation } from '@/lib/auth'
 import { revalidatePath } from 'next/cache'
 
 export async function getPettyCashStats(area: string) {
+  const { extendedUser } = await getUserSession()
   const companyId = await getStrictCompanyId()
   
-  const supabase = await createClient()
+  const supabase = await createAdminClient()
   const today = new Date()
   const firstDayOfMonth = `${today.getFullYear()}-${(today.getMonth() + 1).toString().padStart(2, '0')}-01`
 
   // 1. Obtener todas las transacciones para Saldo Actual (Total histórico de la caja)
-  const { data: allTransactions } = await supabase
-    .from('petty_cash_transactions')
-    .select('amount, type')
-    .eq('company_id', companyId)
-    .ilike('area', area)
+  const { data: allTransactions } = await applyIsolation(
+    supabase.from('petty_cash_transactions').select('amount, type'),
+    companyId,
+    extendedUser.role_id
+  ).ilike('area', area)
 
   const balance = (allTransactions || []).reduce((acc, t) => {
     return t.type === 'ingreso' ? acc + Number(t.amount) : acc - Number(t.amount)
   }, 0)
 
   // 2. Obtener estadísticas del mes actual
-  const { data: monthTransactions } = await supabase
-    .from('petty_cash_transactions')
-    .select('amount, type')
-    .eq('company_id', companyId)
+  const { data: monthTransactions } = await applyIsolation(
+    supabase.from('petty_cash_transactions').select('amount, type'),
+    companyId,
+    extendedUser.role_id
+  )
     .ilike('area', area)
     .gte('date', firstDayOfMonth)
 
@@ -47,13 +49,15 @@ export async function getPettyCashStats(area: string) {
 }
 
 export async function getPettyCashTransactions(area: string) {
+  const { extendedUser } = await getUserSession()
   const companyId = await getStrictCompanyId()
 
-  const supabase = await createClient()
-  const { data, error } = await supabase
-    .from('petty_cash_transactions')
-    .select('*, responsible:users!responsible_id(name)')
-    .eq('company_id', companyId)
+  const supabase = await createAdminClient()
+  const { data, error } = await applyIsolation(
+    supabase.from('petty_cash_transactions').select('*, responsible:users!responsible_id(name)'),
+    companyId,
+    extendedUser.role_id
+  )
     .ilike('area', area) // [SYNC_NORMALIZATION]
     .order('date', { ascending: false })
     .order('created_at', { ascending: false })
@@ -77,6 +81,20 @@ export async function registerPettyCashTransaction(payload: {
   const { extendedUser } = await getUserSession()
   const companyId = await getStrictCompanyId()
 
+  // [BLINDAJE_ESTRICTO] El área se determina por el rol si no es administrador
+  let finalArea = payload.area
+  const role = extendedUser.role_id?.toLowerCase()
+  
+  if (role !== 'admin' && role !== 'gerente') {
+    if (role === 'operaciones') {
+      finalArea = 'Operaciones'
+    } else if (role === 'administracion') {
+      finalArea = 'Administración'
+    } else if (extendedUser.area === 'Cocina') {
+      finalArea = 'Cocina'
+    }
+  }
+
   let finalType = payload.type
   let finalCategory = payload.category
   
@@ -92,13 +110,13 @@ export async function registerPettyCashTransaction(payload: {
     finalCategory = 'fondo_inicial'
   }
 
-  const supabase = await createClient()
+  const supabase = await createAdminClient()
 
-  // Si es un egreso, validar saldo disponible (excepto para admin/gerente)
-  if (finalType === 'egreso' && extendedUser.role_id !== 'admin' && extendedUser.role_id !== 'gerente') {
-    const stats = await getPettyCashStats(payload.area)
+  // Si es un egreso, validar saldo disponible (excepto para admin/gerente/super_admin)
+  if (finalType === 'egreso' && !['admin', 'gerente', 'super_admin'].includes(role || '')) {
+    const stats = await getPettyCashStats(finalArea)
     if (stats && payload.amount > stats.balance) {
-      return { error: `Saldo insuficiente. Saldo disponible: S/ ${stats.balance.toFixed(2)}` }
+      return { error: `Saldo insuficiente en ${finalArea}. Saldo disponible: S/ ${stats.balance.toFixed(2)}` }
     }
   }
 
@@ -106,6 +124,7 @@ export async function registerPettyCashTransaction(payload: {
     .from('petty_cash_transactions')
     .insert([{
       ...payload,
+      area: finalArea,
       type: finalType,
       category: finalCategory,
       company_id: companyId,

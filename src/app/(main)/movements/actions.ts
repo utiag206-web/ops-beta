@@ -1,23 +1,20 @@
 'use server'
 
-import { createClient } from '@/lib/supabase/server'
-import { getUserSession, getStrictCompanyId } from '@/lib/auth'
+import { createClient, createAdminClient } from '@/lib/supabase/server'
+import { getUserSession, getStrictCompanyId, applyIsolation } from '@/lib/auth'
 import { revalidatePath } from 'next/cache'
 
 export async function getMovements() {
   const companyId = await getStrictCompanyId()
   const { extendedUser } = await getUserSession()
 
-  const supabase = await createClient()
+  const supabase = await createAdminClient()
 
-  console.log("--- AUDIT: MOVEMENTS FETCH INICIO ---")
-  console.log("QUERY ALIASED: supabase.from('worker_movements').select('*, worker:workers!fk_worker_movements_worker(...)')")
-
-  let query = supabase
-    .from('worker_movements')
-    .select(`*, worker:workers(name)`)
-    .eq('company_id', companyId)
-    .order('created_at', { ascending: false })
+  let query = applyIsolation(
+    supabase.from('worker_movements').select(`*, worker:workers(name)`),
+    companyId,
+    extendedUser.role_id
+  ).order('created_at', { ascending: false })
 
   if (extendedUser.role_id === 'trabajador') {
     query = query.eq('worker_id', extendedUser.worker_id)
@@ -25,15 +22,11 @@ export async function getMovements() {
 
   const { data, error } = await query
 
-  console.log("FETCH RESULT MOVEMENTS:", data, error)
-  console.log("--- AUDIT: MOVEMENTS FETCH FIN ---")
-
   if (error) {
     console.error('[MOVEMENTS] Error fetching movements:', JSON.stringify(error))
     return []
   }
 
-  console.log(`[MOVEMENTS] Fetched ${data?.length ?? 0} movements for company ${extendedUser.company_id}`)
   return data || []
 }
 
@@ -41,29 +34,37 @@ export async function registerMovement(payload: {
   worker_id: string
   type: 'subida' | 'bajada'
   date: string
+  location?: string
+  observations?: string
 }) {
   try {
     const companyId = await getStrictCompanyId()
     const { extendedUser } = await getUserSession()
-    if (extendedUser.role_id === 'trabajador') {
+    
+    const role = extendedUser.role_id?.toLowerCase()
+    const isAuthorized = ['admin', 'gerente', 'operaciones', 'super_admin', 'superadmin'].includes(role)
+    
+    if (!isAuthorized) {
       return { success: false, error: 'No autorizado' }
     }
 
-    const supabase = await createClient()
+    const supabase = await createAdminClient()
 
     const movementData: any = {
       worker_id: payload.worker_id,
       company_id: companyId,
-      status: payload.type === 'subida' ? 'En mina' : 'En descanso'
+      status: payload.type === 'subida' ? 'En mina' : 'En descanso',
+      location: payload.location || null,
+      observations: payload.observations || null
     }
 
     if (payload.type === 'subida') {
       movementData.subida_date = payload.date
+      movementData.bajada_date = null
     } else {
       movementData.bajada_date = payload.date
+      movementData.subida_date = null
     }
-
-    console.log('[MOVEMENTS] Inserting:', JSON.stringify(movementData))
 
     const { data, error } = await supabase
       .from('worker_movements')
@@ -80,7 +81,77 @@ export async function registerMovement(payload: {
     revalidatePath('/dashboard')
     return { success: true, error: null }
   } catch (e: any) {
+    if (e.digest?.startsWith('NEXT_REDIRECT')) throw e
     console.error('[MOVEMENTS] Unexpected error:', e.message)
     return { success: false, error: e.message }
+  }
+}
+
+export async function updateMovement(id: string, payload: {
+  date: string
+  location?: string
+  observations?: string
+  status?: string
+}) {
+  try {
+    const companyId = await getStrictCompanyId()
+    const { extendedUser } = await getUserSession()
+    
+    if (!['admin', 'gerente', 'operaciones', 'super_admin', 'superadmin'].includes(extendedUser.role_id)) {
+      return { success: false, error: 'No autorizado' }
+    }
+
+    const supabase = await createAdminClient()
+    
+    // Identificar si es subida o bajada para actualizar la columna correcta
+    const { data: current } = await supabase.from('worker_movements').select('*').eq('id', id).single()
+    if (!current) throw new Error('Movimiento no encontrado')
+
+    const updateData: any = {
+      location: payload.location,
+      observations: payload.observations,
+      status: payload.status || current.status
+    }
+
+    if (current.subida_date) updateData.subida_date = payload.date
+    else updateData.bajada_date = payload.date
+
+    const { error } = await applyIsolation(
+      supabase.from('worker_movements').update(updateData),
+      companyId,
+      extendedUser.role_id
+    ).eq('id', id)
+
+    if (error) throw error
+    revalidatePath('/movements')
+    return { success: true }
+  } catch (error: any) {
+    console.error('[MOVEMENTS_UPDATE] Error:', error.message)
+    return { success: false, error: error.message }
+  }
+}
+
+export async function deleteMovement(id: string) {
+  try {
+    const companyId = await getStrictCompanyId()
+    const { extendedUser } = await getUserSession()
+
+    if (!['admin', 'gerente', 'super_admin'].includes(extendedUser.role_id)) {
+      throw new Error('No tienes permisos para eliminar registros.')
+    }
+
+    const supabase = await createAdminClient()
+    const { error } = await applyIsolation(
+      supabase.from('worker_movements').delete(),
+      companyId,
+      extendedUser.role_id
+    ).eq('id', id)
+
+    if (error) throw error
+    revalidatePath('/movements')
+    return { success: true }
+  } catch (error: any) {
+    console.error('[MOVEMENTS_DELETE] Error:', error.message)
+    return { success: false, error: error.message }
   }
 }

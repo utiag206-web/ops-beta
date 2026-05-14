@@ -49,31 +49,17 @@ export default function DocumentsClient({ initialDocuments, workers, userRole }:
     setSaving(true)
     setErrorMsg(null)
     try {
-      let file_url = ''
-      let file_path = ''
-
+      const formDataToSend = new FormData()
+      formDataToSend.append('worker_id', formData.worker_id)
+      formDataToSend.append('name', formData.name)
+      formDataToSend.append('file_type', formData.file_type)
+      formDataToSend.append('issue_date', formData.issue_date)
+      formDataToSend.append('expiry_date', formData.expiry_date)
       if (file) {
-        const fileExt = file.name.split('.').pop()
-        const fileName = `${Math.random().toString(36).substring(2)}.${fileExt}`
-        const filePath = `${formData.worker_id}/${fileName}`
-
-        const { data: uploadData, error: uploadError } = await supabase.storage
-          .from('worker_documents')
-          .upload(filePath, file)
-
-        if (uploadError) {
-          throw new Error(`Error subiendo archivo: ${uploadError.message}`)
-        }
-
-        const { data: { publicUrl } } = supabase.storage
-          .from('worker_documents')
-          .getPublicUrl(filePath)
-
-        file_url = publicUrl
-        file_path = filePath
+        formDataToSend.append('file', file)
       }
 
-      const result = await addWorkerDocument({ ...formData, file_url, file_path })
+      const result = await addWorkerDocument(formDataToSend)
       if (result?.success === false) {
         setErrorMsg(result.error || 'Error al registrar documento')
       } else {
@@ -96,7 +82,7 @@ export default function DocumentsClient({ initialDocuments, workers, userRole }:
           <h1 className="text-3xl font-black text-slate-800 tracking-tight">Documentos y Vencimientos</h1>
           <p className="text-slate-500 font-medium">Registro y control de documentos de trabajadores.</p>
         </div>
-        {(userRole === 'admin' || userRole === 'company_admin') && (
+        {(userRole === 'admin' || userRole === 'company_admin' || userRole === 'super_admin' || userRole === 'superadmin') && (
           <button 
             onClick={() => setShowForm(!showForm)}
             className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-2xl font-bold flex items-center gap-2 transition-all shadow-lg"
@@ -177,7 +163,9 @@ export default function DocumentsClient({ initialDocuments, workers, userRole }:
               const Icon = status.icon
               return (
                 <tr key={doc.id} className="hover:bg-slate-50/30 transition-colors">
-                  <td className="px-8 py-5 font-bold text-slate-800">{doc.worker?.name}</td>
+                  <td className="px-8 py-5 font-bold text-slate-800">
+                    {doc.worker?.name} {doc.worker?.last_name}
+                  </td>
                   <td className="px-8 py-5">
                     <div className="flex items-center gap-2">
                       <FileText size={16} className="text-slate-400" />
@@ -204,7 +192,7 @@ export default function DocumentsClient({ initialDocuments, workers, userRole }:
                         <Download size={18} />
                       </a>
                     )}
-                    {(userRole === 'admin' || userRole === 'company_admin') && (
+                    {(userRole === 'admin' || userRole === 'company_admin' || userRole === 'super_admin' || userRole === 'superadmin') && (
                       <button onClick={() => deleteDocument(doc.id).then(() => router.refresh())} className="p-2 text-slate-300 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all" title="Eliminar registro">
                         <Trash2 size={18} />
                       </button>

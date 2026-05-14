@@ -2,7 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
-import { getUserSession } from '@/lib/auth'
+import { getUserSession, getStrictCompanyId, applyIsolation } from '@/lib/auth'
 
 export async function createIncident(payload: {
   area_location: string
@@ -13,15 +13,16 @@ export async function createIncident(payload: {
 }) {
   const supabase = await createClient()
   const { extendedUser } = await getUserSession()
+  const companyId = await getStrictCompanyId()
 
-  if (!extendedUser?.id || !extendedUser?.company_id) {
+  if (!extendedUser?.id || !companyId) {
     return { error: 'Sesión inválida o sin empresa vinculada.' }
   }
 
   const { data, error } = await supabase
     .from('incidencias')
     .insert([{
-      company_id: extendedUser.company_id,
+      company_id: companyId,
       reported_by: extendedUser.id,
       area_location: payload.area_location || payload.type || 'General',
       description: payload.description,
