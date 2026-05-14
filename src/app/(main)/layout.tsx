@@ -32,12 +32,6 @@ export default async function DashboardLayout({
   
   console.log(`[LAYOUT] 🏁 Path: ${pathname} | User: ${extendedUser?.email || 'ANONYMOUS'} | Role: ${userRole}`)
   
-  // 1. Mandatory Session Guard
-  if (!extendedUser) {
-    console.log(`[LAYOUT] 🛑 No extendedUser found. Redirecting to /login. (Auth user might exist but DB profile is missing)`)
-    redirect('/login')
-  }
-
   // 2. Variables for Guards
   const isSuperAdmin = userRole === 'super_admin' || userRole === 'superadmin'
   const isImpersonating = !!extendedUser?.is_impersonating
