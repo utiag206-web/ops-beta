@@ -31,9 +31,9 @@ export function EditUserModal({ isOpen, onClose, onSuccess, user }: EditUserModa
   useEffect(() => {
     if (user) {
       setFormData({
-        name: user.name,
-        area: user.area,
-        email: user.email,
+        name: user.name || '',
+        area: user.area || '',
+        email: user.email || '',
         password: ''
       })
     }

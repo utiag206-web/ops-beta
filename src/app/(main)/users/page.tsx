@@ -5,18 +5,20 @@ export const dynamic = 'force-dynamic'
 
 export default async function UsersPage() {
   try {
-    const [users, workers, { extendedUser }] = await Promise.all([
-      getUsers(),
-      getAvailableWorkers(),
-      import('@/lib/auth').then(m => m.getUserSession())
+    const sessionResult = await import('@/lib/auth').then(m => m.getUserSession())
+    const extendedUser = sessionResult?.extendedUser
+
+    const [users, workers] = await Promise.all([
+      getUsers().catch(e => { console.error(e); return [] }),
+      getAvailableWorkers().catch(e => { console.error(e); return [] })
     ])
 
     return (
       <div className="max-w-6xl mx-auto">
         <UsersList 
-          initialUsers={users} 
-          availableWorkers={workers} 
-          currentUserRole={extendedUser?.role_id}
+          initialUsers={Array.isArray(users) ? users : []} 
+          availableWorkers={Array.isArray(workers) ? workers : []} 
+          currentUserRole={extendedUser?.role_id || ''}
         />
       </div>
     )

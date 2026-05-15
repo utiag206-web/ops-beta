@@ -25,13 +25,16 @@ export function UsersList({ initialUsers, availableWorkers, currentUserRole }: {
   const canManage = ['admin', 'gerente', 'super_admin', 'administracion'].includes(currentUserRole?.toLowerCase() || '')
 
   // Combine users and unlinked workers for a unified view
+  const safeUsers = Array.isArray(initialUsers) ? initialUsers : []
+  const safeWorkers = Array.isArray(availableWorkers) ? availableWorkers : []
+
   const unifiedList = [
-    ...initialUsers.map(u => ({ ...u, type: 'user' })),
-    ...availableWorkers
-      .filter(w => !initialUsers.some(u => (u as any).worker_id === w.id))
+    ...safeUsers.map(u => ({ ...u, type: 'user' })),
+    ...safeWorkers
+      .filter(w => w && !safeUsers.some(u => u && (u as any).worker_id === w.id))
       .map(w => ({
         id: w.id,
-        name: w.name,
+        name: w.name || 'Trabajador sin nombre',
         email: 'Sin cuenta',
         role_id: 'trabajador',
         area: '',
@@ -41,10 +44,12 @@ export function UsersList({ initialUsers, availableWorkers, currentUserRole }: {
       }))
   ]
 
-  const filteredItems = unifiedList.filter(item => 
-    item.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-    item.email.toLowerCase().includes(searchTerm.toLowerCase())
-  )
+  const filteredItems = unifiedList.filter(item => {
+    const s = searchTerm.toLowerCase()
+    const name = (item.name || '').toLowerCase()
+    const email = (item.email || '').toLowerCase()
+    return name.includes(s) || email.includes(s)
+  })
 
   const handleStatusToggle = async (id: string, currentStatus: string) => {
     const newStatus = currentStatus === 'active' ? 'inactive' : 'active'
