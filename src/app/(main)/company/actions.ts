@@ -64,7 +64,7 @@ export async function updateCompanyProfile(formData: {
     return { success: false, error: error.message }
   }
 
-  revalidatePath('/company')
+  revalidatePath('/', 'layout')
   return { success: true }
 }
 
@@ -95,6 +95,7 @@ export async function uploadCompanyLogo(formData: FormData) {
 
     if (updateError) throw updateError
 
+    revalidatePath('/', 'layout')
     revalidatePath('/company')
     return { success: true, url: publicUrl }
   } catch (err: any) {

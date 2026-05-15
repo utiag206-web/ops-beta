@@ -132,20 +132,41 @@ export function DashboardShell({ user, stats }: DashboardShellProps) {
                        </div>
                        <h3 className="text-2xl font-bold text-white tracking-tight">Acciones Rápidas</h3>
                     </div>
-                    <div className="space-y-4">
+                    <div className="space-y-3">
                        <Link href="/workers" className="flex items-center justify-between p-4 bg-white/10 hover:bg-white/20 border border-white/10 rounded-2xl transition-all group">
                           <div className="flex items-center gap-3">
                             <Users className="text-blue-300" size={18} />
-                            <span className="text-sm font-bold text-white uppercase tracking-tight">Gestión Personal</span>
+                            <span className="text-[10px] font-black text-white uppercase tracking-widest">Registrar Trabajador</span>
                           </div>
-                          <ArrowRight className="text-white/40 group-hover:translate-x-1 transition-transform" size={16} />
+                          <Plus className="text-white/40 group-hover:rotate-90 transition-transform" size={16} />
                        </Link>
-                       <Link href="/caja-chica" className="flex items-center justify-between p-4 bg-white/10 hover:bg-white/20 border border-white/10 rounded-2xl transition-all group">
+                       <Link href="/movements" className="flex items-center justify-between p-4 bg-white/10 hover:bg-white/20 border border-white/10 rounded-2xl transition-all group">
                           <div className="flex items-center gap-3">
-                            <Coins className="text-emerald-300" size={18} />
-                            <span className="text-sm font-bold text-white uppercase tracking-tight">Cargar Caja</span>
+                            <Truck className="text-indigo-300" size={18} />
+                            <span className="text-[10px] font-black text-white uppercase tracking-widest">Nuevo Movimiento</span>
                           </div>
-                          <ArrowRight className="text-white/40 group-hover:translate-x-1 transition-transform" size={16} />
+                          <Plus className="text-white/40 group-hover:rotate-90 transition-transform" size={16} />
+                       </Link>
+                       <Link href="/incidencias" className="flex items-center justify-between p-4 bg-white/10 hover:bg-white/20 border border-white/10 rounded-2xl transition-all group">
+                          <div className="flex items-center gap-3">
+                            <ShieldAlert className="text-rose-300" size={18} />
+                            <span className="text-[10px] font-black text-white uppercase tracking-widest">Registrar Incidencia</span>
+                          </div>
+                          <Plus className="text-white/40 group-hover:rotate-90 transition-transform" size={16} />
+                       </Link>
+                       <Link href="/requerimientos" className="flex items-center justify-between p-4 bg-white/10 hover:bg-white/20 border border-white/10 rounded-2xl transition-all group">
+                          <div className="flex items-center gap-3">
+                            <FileText className="text-amber-300" size={18} />
+                            <span className="text-[10px] font-black text-white uppercase tracking-widest">Crear Requerimiento</span>
+                          </div>
+                          <Plus className="text-white/40 group-hover:rotate-90 transition-transform" size={16} />
+                       </Link>
+                       <Link href="/inventory" className="flex items-center justify-between p-4 bg-white/10 hover:bg-white/20 border border-white/10 rounded-2xl transition-all group">
+                          <div className="flex items-center gap-3">
+                            <Package className="text-emerald-300" size={18} />
+                            <span className="text-[10px] font-black text-white uppercase tracking-widest">Ingreso Inventario</span>
+                          </div>
+                          <Plus className="text-white/40 group-hover:rotate-90 transition-transform" size={16} />
                        </Link>
                     </div>
                   </div>

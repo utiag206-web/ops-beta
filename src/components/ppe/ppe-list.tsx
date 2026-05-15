@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Shield, Calendar, CheckCircle2, PenTool, Loader2, Clock } from 'lucide-react'
 import { SignaturePad } from './signature-pad'
@@ -14,6 +14,10 @@ interface PPEListProps {
 export function PPEList({ deliveries: initialDeliveries, isWorker = false }: PPEListProps) {
   const router = useRouter()
   const [deliveries, setDeliveries] = useState(initialDeliveries)
+
+  useEffect(() => {
+    setDeliveries(initialDeliveries)
+  }, [initialDeliveries])
   const [signingId, setSigningId] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
 

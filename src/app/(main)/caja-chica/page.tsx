@@ -25,13 +25,17 @@ import {
   TrendingUp,
   TrendingDown,
   Loader2,
-  Hash
+  Hash,
+  Edit2,
+  Trash2,
+  MoreVertical
 } from 'lucide-react'
-import { getPettyCashStats, getPettyCashTransactions } from './actions'
+import { getPettyCashStats, getPettyCashTransactions, deletePettyCashTransaction } from './actions'
 import { useRbac } from '@/components/providers/rbac-provider'
 import { AddTransactionModal } from '@/components/caja-chica/add-transaction-modal'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
+import { toast } from 'sonner'
 
 const CATEGORY_MAP: any = {
   alimentos: { label: 'Alimentos', icon: '🍎' },
@@ -52,6 +56,7 @@ export default function CajaChicaPage() {
   const [transactions, setTransactions] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [selectedTransaction, setSelectedTransaction] = useState<any>(null)
   const [filter, setFilter] = useState('all')
   const [area, setArea] = useState(user?.area || 'Cocina')
 
@@ -87,6 +92,21 @@ export default function CajaChicaPage() {
   useEffect(() => {
     loadData()
   }, [area])
+
+  async function handleDelete(id: string) {
+    if (!confirm('¿Estás seguro de eliminar este movimiento?')) return
+    const res = await deletePettyCashTransaction(id)
+    if (res.error) toast.error(res.error)
+    else {
+      toast.success('Movimiento eliminado')
+      loadData()
+    }
+  }
+
+  function handleEdit(t: any) {
+    setSelectedTransaction(t)
+    setIsModalOpen(true)
+  }
 
   const filteredTransactions = transactions.filter(t => 
     filter === 'all' || t.type === filter
@@ -131,7 +151,10 @@ export default function CajaChicaPage() {
         </div>
         
         <button 
-          onClick={() => setIsModalOpen(true)}
+          onClick={() => {
+            setSelectedTransaction(null)
+            setIsModalOpen(true)
+          }}
           className="flex items-center gap-3 px-8 py-4 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-[1.5rem] transition-all shadow-xl shadow-blue-200 hover:scale-[1.02] active:scale-[0.98] relative z-10"
         >
           <Plus className="w-5 h-5" />
@@ -234,7 +257,8 @@ export default function CajaChicaPage() {
                 <th className="py-5 text-[11px] font-bold text-slate-400 uppercase tracking-widest">Responsable / Categoría</th>
                 <th className="py-5 text-[11px] font-bold text-slate-400 uppercase tracking-widest">Motivo / Concepto</th>
                 <th className="py-5 text-[11px] font-bold text-slate-400 uppercase tracking-widest text-center">Referencia</th>
-                <th className="py-5 text-[11px] font-bold text-slate-400 uppercase tracking-widest text-right px-8">Monto</th>
+                <th className="py-5 text-[11px] font-bold text-slate-400 uppercase tracking-widest text-right">Monto</th>
+                <th className="py-5 px-8 text-[11px] font-bold text-slate-400 uppercase tracking-widest text-center">Acciones</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
@@ -325,6 +349,26 @@ export default function CajaChicaPage() {
                       </span>
                     </div>
                   </td>
+                  <td className="py-7 px-8">
+                    <div className="flex items-center justify-center gap-2">
+                       <button 
+                        onClick={() => handleEdit(t)}
+                        className="p-2.5 bg-slate-50 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all border border-transparent hover:border-blue-100"
+                        title="Editar / Subir Comprobante"
+                       >
+                         <Edit2 size={16} />
+                       </button>
+                       {isAdmin && (
+                         <button 
+                          onClick={() => handleDelete(t.id)}
+                          className="p-2.5 bg-slate-50 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-all border border-transparent hover:border-rose-100"
+                          title="Eliminar"
+                         >
+                           <Trash2 size={16} />
+                         </button>
+                       )}
+                    </div>
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -334,12 +378,17 @@ export default function CajaChicaPage() {
 
       <AddTransactionModal 
         isOpen={isModalOpen} 
-        onClose={() => setIsModalOpen(false)} 
+        onClose={() => {
+          setIsModalOpen(false)
+          setSelectedTransaction(null)
+        }} 
         onSuccess={() => {
           setIsModalOpen(false)
+          setSelectedTransaction(null)
           loadData()
         }}
         area={area}
+        initialData={selectedTransaction}
       />
     </div>
   )

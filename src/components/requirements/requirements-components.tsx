@@ -52,7 +52,10 @@ export function CreateRequirementModal({ isOpen, onClose, onSuccess }: CreateReq
     type: 'insumo',
     priority: 'media',
     product_id: '',
-    quantity: 0
+    quantity: 0,
+    tool_type: '',
+    specialty: '',
+    people_count: 1
   })
 
   const [searchQuery, setSearchQuery] = useState('')
@@ -89,12 +92,27 @@ export function CreateRequirementModal({ isOpen, onClose, onSuccess }: CreateReq
     setLoading(true)
     
     try {
-      // payload cleans up product ID if it's not an insumo
       const payload: any = { ...form }
+      
+      // Enriquecer descripción si no es insumo para no perder datos si no hay columnas en DB
+      if (form.type === 'herramienta') {
+        payload.description = `[HERRAMIENTA: ${form.tool_type} | CANT: ${form.quantity}] ${form.description}`
+      } else if (form.type === 'personal') {
+        payload.description = `[PERSONAL: ${form.specialty} | CANT: ${form.people_count}] ${form.description}`
+      }
+
       if (form.type !== 'insumo') {
         delete payload.product_id
-        delete payload.quantity
+        // Si no es insumo, quantity se usa para herramientas, pero para personal usamos people_count
+        if (form.type === 'personal') {
+           payload.quantity = form.people_count
+        }
       }
+
+      // LIMPIEZA DE PAYLOAD: Eliminar campos que NO existen en la tabla de la BD
+      delete payload.people_count
+      delete payload.specialty
+      delete payload.tool_type
 
       const res = await createRequirement(payload)
       if (res.error) {
@@ -124,7 +142,7 @@ export function CreateRequirementModal({ isOpen, onClose, onSuccess }: CreateReq
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="px-6 py-2 space-y-4">
+        <form onSubmit={handleSubmit} className="px-6 py-2 space-y-4 max-h-[80vh] overflow-y-auto custom-scrollbar pb-6">
           <div className="grid grid-cols-2 gap-4 pt-2">
             <div className="space-y-2">
               <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 px-1">Tipo de Pedido</label>
@@ -238,12 +256,62 @@ export function CreateRequirementModal({ isOpen, onClose, onSuccess }: CreateReq
             </div>
           )}
 
+          {form.type === 'herramienta' && (
+            <div className="bg-amber-50/50 p-4 rounded-3xl border border-amber-100/50 space-y-4">
+              <div className="space-y-2">
+                <label className="text-[10px] font-black uppercase tracking-widest text-amber-700 px-1 text-xs">Especificación de Herramienta</label>
+                <input 
+                  type="text"
+                  placeholder="Ej: Taladro Percutor, Amoladora..."
+                  className="w-full bg-white border-2 border-transparent focus:border-amber-500 rounded-2xl p-3 text-sm font-bold transition-all outline-none"
+                  value={form.tool_type}
+                  onChange={e => setForm({...form, tool_type: e.target.value})}
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-[10px] font-black uppercase tracking-widest text-amber-700 px-1 text-xs">Cantidad</label>
+                <input 
+                  type="number"
+                  min="1"
+                  className="w-full bg-white border-2 border-transparent focus:border-amber-500 rounded-2xl p-3 text-sm font-bold transition-all outline-none"
+                  value={form.quantity}
+                  onChange={e => setForm({...form, quantity: Number(e.target.value)})}
+                />
+              </div>
+            </div>
+          )}
+
+          {form.type === 'personal' && (
+            <div className="bg-emerald-50/50 p-4 rounded-3xl border border-emerald-100/50 space-y-4">
+              <div className="space-y-2">
+                <label className="text-[10px] font-black uppercase tracking-widest text-emerald-700 px-1 text-xs">Especialidad Requerida</label>
+                <input 
+                  type="text"
+                  placeholder="Ej: Mecánico Hércules, Electricista..."
+                  className="w-full bg-white border-2 border-transparent focus:border-emerald-500 rounded-2xl p-3 text-sm font-bold transition-all outline-none"
+                  value={form.specialty}
+                  onChange={e => setForm({...form, specialty: e.target.value})}
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-[10px] font-black uppercase tracking-widest text-emerald-700 px-1 text-xs">Nro. de Personas</label>
+                <input 
+                  type="number"
+                  min="1"
+                  className="w-full bg-white border-2 border-transparent focus:border-emerald-500 rounded-2xl p-3 text-sm font-bold transition-all outline-none"
+                  value={form.people_count}
+                  onChange={e => setForm({...form, people_count: Number(e.target.value)})}
+                />
+              </div>
+            </div>
+          )}
+
           <div className="space-y-2">
             <label className="text-[11px] font-black uppercase tracking-widest text-slate-400 px-1">Título / Asunto</label>
             <input 
               required
               type="text"
-              placeholder={form.type === 'insumo' ? "Ej: Urgente para parada de planta" : "Ej: Repuesto para retroexcavadora"}
+              placeholder={form.type === 'insumo' ? "Ej: Urgente para parada de planta" : "Ej: Solicitud de equipo adicional"}
               className="w-full bg-slate-50 border-2 border-transparent focus:border-indigo-500 focus:bg-white rounded-2xl p-4 text-sm font-bold transition-all outline-none"
               value={form.title}
               onChange={e => setForm({...form, title: e.target.value})}
@@ -498,8 +566,8 @@ export function ReportIncidentModal({
   }
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="bg-white w-full max-w-2xl rounded-[2.5rem] shadow-2xl border border-slate-100 animate-in zoom-in-95 duration-200 flex flex-col max-h-[90vh]">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
+      <div className="bg-white w-full max-w-2xl rounded-[2.5rem] shadow-[0_20px_50px_rgba(0,0,0,0.3)] overflow-hidden animate-in zoom-in-95 duration-200 flex flex-col max-h-[90vh]">
         <div className="p-8 border-b border-slate-50 flex justify-between items-center bg-orange-50/30">
           <div>
             <h2 className="text-2xl font-black text-slate-800 tracking-tight">

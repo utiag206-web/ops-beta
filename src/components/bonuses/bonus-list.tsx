@@ -1,6 +1,7 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { Coins, Calendar, Clock, CheckCircle2, AlertCircle, DollarSign, User } from 'lucide-react'
 import { updateBonusStatus } from '@/app/(main)/bonuses/actions'
 
@@ -11,7 +12,13 @@ interface BonusListProps {
 }
 
 export function BonusList({ bonuses: initialBonuses, isWorker = false, isAdmin = false }: BonusListProps) {
+  const router = useRouter()
   const [bonuses, setBonuses] = useState(initialBonuses)
+
+  // Sync with server data
+  useEffect(() => {
+    setBonuses(initialBonuses)
+  }, [initialBonuses])
   const [loadingId, setLoadingId] = useState<string | null>(null)
 
   const handleToggleStatus = async (id: string, currentStatus: string) => {
@@ -23,6 +30,7 @@ export function BonusList({ bonuses: initialBonuses, isWorker = false, isAdmin =
       const result = await updateBonusStatus(id, newStatus as 'paid' | 'pending')
       if (result.success) {
         setBonuses(prev => prev.map(b => b.id === id ? { ...b, status: newStatus } : b))
+        router.refresh()
       }
     } catch (err) {
       console.error(err)

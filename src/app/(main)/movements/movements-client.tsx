@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { 
   Ship, Plus, ArrowUpRight, ArrowDownRight, 
@@ -25,6 +25,7 @@ interface MovementsPageProps {
 
 export default function MovementsClient({ initialMovements, workers, userRole }: MovementsPageProps) {
   const router = useRouter()
+  const [hasMounted, setHasMounted] = useState(false)
   const [showModal, setShowModal] = useState(false)
   const [editingItem, setEditingItem] = useState<any>(null)
   const [saving, setSaving] = useState(false)
@@ -37,15 +38,18 @@ export default function MovementsClient({ initialMovements, workers, userRole }:
     return new Date(date.getTime() - tzOffset).toISOString().slice(0, 16)
   }
 
-  const initialFormState = {
+  const [formData, setFormData] = useState({
     worker_id: '',
     type: 'subida' as 'subida' | 'bajada',
-    date: getLocalISOString(),
+    date: '',
     location: '',
     observations: ''
-  }
+  })
 
-  const [formData, setFormData] = useState(initialFormState)
+  useEffect(() => {
+    setHasMounted(true)
+    setFormData(prev => ({ ...prev, date: getLocalISOString() }))
+  }, [])
 
   const openEdit = (item: any) => {
     setEditingItem(item)
@@ -63,7 +67,13 @@ export default function MovementsClient({ initialMovements, workers, userRole }:
   const closeModal = () => {
     setShowModal(false)
     setEditingItem(null)
-    setFormData(initialFormState)
+    setFormData({
+      worker_id: '',
+      type: 'subida',
+      date: getLocalISOString(),
+      location: '',
+      observations: ''
+    })
     setErrorMsg(null)
   }
 
@@ -123,18 +133,18 @@ export default function MovementsClient({ initialMovements, workers, userRole }:
         <div>
           <h1 className="text-4xl font-black text-slate-900 tracking-tight flex items-center gap-3">
             <div className="p-2 bg-blue-600 rounded-xl text-white shadow-lg shadow-blue-200">
-              <History size={28} />
+              <Ship size={28} />
             </div>
-            Gestión de Movimientos
+            Gestión de Personal
           </h1>
-          <p className="text-slate-500 font-medium mt-1">Control logístico de personal: Subidas, Bajadas y Rotaciones.</p>
+          <p className="text-slate-500 font-bold mt-1 uppercase tracking-widest text-[10px] opacity-70">Control de Subidas y Bajadas de Mina</p>
         </div>
         {isManager && (
           <button 
             onClick={() => setShowModal(true)}
-            className="bg-slate-900 hover:bg-black text-white px-8 py-4 rounded-2xl font-bold flex items-center gap-2 transition-all shadow-xl hover:scale-105 active:scale-95"
+            className="bg-slate-900 hover:bg-black text-white px-8 py-4 rounded-2xl font-black text-xs uppercase tracking-widest flex items-center gap-2 transition-all shadow-xl hover:scale-105 active:scale-95"
           >
-            <Plus size={20} />
+            <Plus size={20} strokeWidth={3} />
             Nuevo Registro
           </button>
         )}

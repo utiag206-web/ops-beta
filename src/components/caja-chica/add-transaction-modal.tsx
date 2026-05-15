@@ -27,6 +27,7 @@ interface AddTransactionModalProps {
   onClose: () => void
   onSuccess: () => void
   area: string
+  initialData?: any
 }
 
 const CATEGORIES = [
@@ -41,19 +42,46 @@ const CATEGORIES = [
   { id: 'reembolso', label: 'Reembolso', icon: '💰' },
 ]
 
-export function AddTransactionModal({ isOpen, onClose, onSuccess, area }: AddTransactionModalProps) {
+export function AddTransactionModal({ isOpen, onClose, onSuccess, area, initialData }: AddTransactionModalProps) {
   const [loading, setLoading] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [formData, setFormData] = useState({
-    type: 'egreso' as 'ingreso' | 'egreso',
-    category: 'otros',
-    reason: '',
-    amount: '',
-    payment_method: 'efectivo' as const,
-    operation_number: '',
-    date: new Date().toISOString().split('T')[0],
-    voucher_url: ''
+    type: initialData?.type || 'egreso' as 'ingreso' | 'egreso',
+    category: initialData?.category || 'otros',
+    reason: initialData?.reason || '',
+    amount: initialData?.amount?.toString() || '',
+    payment_method: (initialData?.payment_method || 'efectivo') as 'efectivo' | 'transferencia' | 'yape',
+    operation_number: initialData?.operation_number || '',
+    date: initialData?.date || new Date().toISOString().split('T')[0],
+    voucher_url: initialData?.voucher_url || ''
   })
+
+  // Sync state when initialData changes (for Edit mode)
+  React.useEffect(() => {
+    if (initialData) {
+      setFormData({
+        type: initialData.type,
+        category: initialData.category,
+        reason: initialData.reason,
+        amount: initialData.amount.toString(),
+        payment_method: initialData.payment_method,
+        operation_number: initialData.operation_number || '',
+        date: initialData.date,
+        voucher_url: initialData.voucher_url || ''
+      })
+    } else {
+      setFormData({
+        type: 'egreso',
+        category: 'otros',
+        reason: '',
+        amount: '',
+        payment_method: 'efectivo',
+        operation_number: '',
+        date: new Date().toISOString().split('T')[0],
+        voucher_url: ''
+      })
+    }
+  }, [initialData, isOpen])
 
   if (!isOpen) return null
 
@@ -105,20 +133,40 @@ export function AddTransactionModal({ isOpen, onClose, onSuccess, area }: AddTra
     }
 
     setLoading(true)
-    const result = await registerPettyCashTransaction({
-      ...formData,
-      amount: Number(formData.amount),
-      area,
-      category: formData.category
-    })
-
-    if (result.error) {
-      toast.error(result.error)
-    } else {
-      toast.success('Movimiento registrado correctamente')
-      onSuccess()
+    
+    try {
+      if (initialData?.id) {
+        // Mode: EDIT
+        const { updatePettyCashTransaction } = await import('@/app/(main)/caja-chica/actions')
+        const result = await updatePettyCashTransaction(initialData.id, {
+          ...formData,
+          amount: Number(formData.amount)
+        })
+        if (result.error) toast.error(result.error)
+        else {
+          toast.success('Movimiento actualizado correctamente')
+          onSuccess()
+        }
+      } else {
+        // Mode: CREATE
+        const { registerPettyCashTransaction } = await import('@/app/(main)/caja-chica/actions')
+        const result = await registerPettyCashTransaction({
+          ...formData,
+          amount: Number(formData.amount),
+          area,
+          category: formData.category
+        })
+        if (result.error) toast.error(result.error)
+        else {
+          toast.success('Movimiento registrado correctamente')
+          onSuccess()
+        }
+      }
+    } catch (err: any) {
+      toast.error('Error al procesar: ' + err.message)
+    } finally {
+      setLoading(false)
     }
-    setLoading(false)
   }
 
   return (

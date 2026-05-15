@@ -89,6 +89,7 @@ export async function registerMovement(payload: {
 
 export async function updateMovement(id: string, payload: {
   date: string
+  type: 'subida' | 'bajada'
   location?: string
   observations?: string
   status?: string
@@ -100,30 +101,32 @@ export async function updateMovement(id: string, payload: {
     if (!['admin', 'gerente', 'operaciones', 'super_admin', 'superadmin'].includes(extendedUser.role_id)) {
       return { success: false, error: 'No autorizado' }
     }
-
+ 
     const supabase = await createAdminClient()
     
-    // Identificar si es subida o bajada para actualizar la columna correcta
-    const { data: current } = await supabase.from('worker_movements').select('*').eq('id', id).single()
-    if (!current) throw new Error('Movimiento no encontrado')
-
     const updateData: any = {
       location: payload.location,
       observations: payload.observations,
-      status: payload.status || current.status
+      status: payload.type === 'subida' ? 'En mina' : 'En descanso'
     }
-
-    if (current.subida_date) updateData.subida_date = payload.date
-    else updateData.bajada_date = payload.date
-
+ 
+    if (payload.type === 'subida') {
+      updateData.subida_date = payload.date
+      updateData.bajada_date = null
+    } else {
+      updateData.bajada_date = payload.date
+      updateData.subida_date = null
+    }
+ 
     const { error } = await applyIsolation(
       supabase.from('worker_movements').update(updateData),
       companyId,
       extendedUser.role_id
     ).eq('id', id)
-
+ 
     if (error) throw error
     revalidatePath('/movements')
+    revalidatePath('/dashboard')
     return { success: true }
   } catch (error: any) {
     console.error('[MOVEMENTS_UPDATE] Error:', error.message)

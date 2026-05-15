@@ -81,18 +81,18 @@ export default async function ProfilePage() {
       {/* Perfil Banner */}
       <div className="bg-white rounded-[2rem] shadow-sm border border-slate-100 overflow-hidden">
         <div className="bg-gradient-to-r from-blue-700 to-blue-900 h-40 px-10 flex items-end">
-          <div className="translate-y-12 flex items-end gap-6 pb-2">
-            <div className="w-32 h-32 rounded-[2rem] bg-white p-2 shadow-2xl">
+          <div className="flex items-end gap-6 pb-2 px-10">
+            <div className="w-32 h-32 rounded-[2rem] bg-white p-2 shadow-2xl translate-y-12">
               <div className="w-full h-full rounded-[1.5rem] bg-slate-50 text-slate-700 flex items-center justify-center text-4xl font-bold border border-slate-200">
                 {extendedUser.name?.charAt(0).toUpperCase() || 'U'}
               </div>
             </div>
-             <div className="mb-4">
+             <div className="mb-6">
                 <h2 className="text-3xl font-bold text-white tracking-tight">
                   {extendedUser.name}
                 </h2>
-                <p className="text-white font-medium flex items-center gap-2 mt-1.5 text-sm uppercase tracking-widest">
-                  <Mail size={14} className="text-blue-300" />
+                <p className="text-blue-100/80 font-bold flex items-center gap-2 mt-1 text-xs uppercase tracking-widest">
+                  <Mail size={12} className="text-blue-300" />
                   {extendedUser.email}
                 </p>
              </div>

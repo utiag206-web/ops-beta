@@ -52,6 +52,17 @@ export async function deleteFile(bucket: StorageBucket, path: string) {
 export function generateStoragePath(companyId: string, module: string, identifier: string, fileName: string) {
   const fileExt = fileName.split('.').pop()
   const timestamp = Date.now()
-  const cleanName = fileName.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase()
-  return `${companyId}/${module}/${identifier}/${timestamp}_${cleanName}.${fileExt}`
+  
+  // Sanitización profunda para evitar "Invalid key" en Supabase
+  const sanitize = (text: string) => text
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "") // Quitar acentos
+    .replace(/[^a-zA-Z0-9]/g, '_') // Cambiar caracteres especiales por guiones
+    .toLowerCase()
+
+  const sModule = sanitize(module)
+  const sIdentifier = sanitize(identifier)
+  const sFileName = sanitize(fileName.replace(`.${fileExt}`, ''))
+
+  return `${companyId}/${sModule}/${sIdentifier}/${timestamp}_${sFileName}.${fileExt}`
 }

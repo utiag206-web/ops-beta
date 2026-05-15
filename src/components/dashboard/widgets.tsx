@@ -105,43 +105,43 @@ export function WelcomeHero({ userName, roleName, area, companyName, viewMode }:
     switch (viewMode) {
       case 'ADMIN':
         return {
-          title: "Administración Operativa",
-          text: "Gestión estratégica y supervisión integral de las operaciones empresariales."
+          title: "Centro de Control Administrativo",
+          text: "Supervisa el rendimiento global, gestiona el personal y controla los recursos estratégicos de la empresa."
         }
       case 'FINANCE':
         return {
-          title: "Gestión Administrativa y Finanzas",
-          text: "Control presupuestario, flujo de caja y supervisión de reportes financieros."
+          title: "Gestión de Finanzas y Tesorería",
+          text: "Controla los flujos de caja, bonificaciones y reportes administrativos en tiempo real."
         }
       case 'SOMA':
         return {
-          title: "Gestión de Seguridad (SOMA)",
-          text: "Control preventivo, gestión de incidentes y cumplimiento de estándares HSEC."
+          title: "Seguridad y Salud Ocupacional (HSEC)",
+          text: "Garantiza un entorno seguro reportando incidentes y supervisando el cumplimiento de normas de seguridad."
         }
       case 'OPERACIONES':
         return {
-          title: "Centro de Control Operativo",
-          text: "Supervisión de producción diaria, gestión de personal y flujos operativos en tiempo real."
+          title: "Gestión Operativa de Campo",
+          text: "Monitorea la producción, movimientos de personal y requerimientos logísticos del día."
         }
       case 'COCINA':
         return {
-          title: "Administración de Servicios (Cocina)",
-          text: "Gestión de insumos, raciones diarias y control de recursos locales."
+          title: "Control de Servicios de Alimentación",
+          text: "Administra el inventario de insumos, raciones diarias y presupuesto de cocina local."
         }
       case 'ALMACEN':
         return {
-          title: "Centro de Gestión Logística",
-          text: "Control de stock, trazabilidad de movimientos y transferencias entre almacenes."
+          title: "Gestión Logística e Inventarios",
+          text: "Controla el stock, registra ingresos y salidas, y gestiona transferencias entre almacenes."
         }
       case 'WORKER':
         return {
-          title: "Panel Personal",
-          text: "Consulta tus beneficios, asistencia, documentos y comunicaciones de la empresa."
+          title: "Mi Espacio Personal",
+          text: "Revisa tu asistencia, descarga tus documentos y mantente al día con las comunicaciones internas."
         }
       default:
         return {
-          title: "Centro de Control",
-          text: "Supervisión y gestión operativa del ERP Inthaly."
+          title: "Panel de Gestión Inthaly",
+          text: "Bienvenido al ecosistema operativo para la gestión integral de trabajadores y recursos."
         }
     }
   }
@@ -167,10 +167,12 @@ export function WelcomeHero({ userName, roleName, area, companyName, viewMode }:
             </span>
           </div>
           
-          <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-3 tracking-tighter leading-none text-white">
+          <h1 className="text-3xl md:text-4xl lg:text-5xl font-black mb-3 tracking-tighter leading-none text-white">
             {content.title} 👋
             <br />
-            <span className="text-xl md:text-2xl lg:text-3xl text-blue-100 mt-2 block font-bold">Hola, {userName}</span>
+            <span className="text-xl md:text-2xl lg:text-3xl text-blue-100 mt-2 block font-medium opacity-90">
+              ¡Qué bueno verte de nuevo, <span className="text-white font-black">{userName}</span>!
+            </span>
           </h1>
           <p className="text-blue-50 text-sm md:text-lg font-bold leading-relaxed max-w-lg mt-4 md:mt-6">
             {content.text}

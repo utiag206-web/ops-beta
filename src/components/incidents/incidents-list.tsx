@@ -1,12 +1,19 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { AlertCircle, Search, Filter, Activity, Clock, User, CheckCircle2, ChevronRight, Hash } from 'lucide-react'
 import { getIncidencias } from '@/app/(main)/incidencias/actions'
 import { ReportIncidentModal } from '@/components/requirements/requirements-components'
 
 export function IncidentsList({ initialData = [], user, forcedCategory }: { initialData?: any[], user?: any, forcedCategory?: string }) {
+  const router = useRouter()
   const [incidents, setIncidents] = useState<any[]>(initialData)
+  
+  // Sync state with props when server-side refresh happens
+  useEffect(() => {
+    setIncidents(initialData)
+  }, [initialData])
   const [loading, setLoading] = useState(false)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')

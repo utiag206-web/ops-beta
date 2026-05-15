@@ -19,7 +19,7 @@ export const getUserSession = cache(async function getUserSession() {
     const adminSupabase = await createAdminClient()
     const { data: userData, error: userError } = await adminSupabase
         .from('users')
-        .select('*, companies(id, name), workers(id, status)')
+        .select('*, companies(id, name, logo_url), workers(id, status)')
         .eq('id', user.id)
         .maybeSingle()
 
@@ -51,7 +51,7 @@ export const getUserSession = cache(async function getUserSession() {
     if (impersonating && finalCompanyId && isUuid(finalCompanyId) && finalCompanyId !== userData.company_id) {
       const { data: comp } = await adminSupabase
         .from('companies')
-        .select('id, name')
+        .select('id, name, logo_url')
         .eq('id', finalCompanyId)
         .single()
       companyData = comp
@@ -70,6 +70,8 @@ export const getUserSession = cache(async function getUserSession() {
       permissions: getPermissionsByRole(rbacRole, (userData as any)?.area),
       active_company_id: finalCompanyId,
       companies: companyData,
+      company_name: (Array.isArray(companyData) ? companyData[0] : companyData)?.name || 'Empresa',
+      company_logo: (Array.isArray(companyData) ? companyData[0] : companyData)?.logo_url || null,
       is_impersonating: impersonating,
       display_name: '',
       display_email: '',

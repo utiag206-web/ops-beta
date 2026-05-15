@@ -76,9 +76,17 @@ export async function getDashboardStats() {
         weekly.data.forEach(m => {
           if (!m.created_at) return
           const date = m.created_at.split('T')[0]
-          if (!stats.weeklyMovements[date]) return
-          if (m.effect === 'IN') stats.weeklyMovements[date].in += Number(m.quantity) || 0
-          if (m.effect === 'OUT') stats.weeklyMovements[date].out += Number(m.quantity) || 0
+          
+          // Sumamos a la actividad global (puntos en el gráfico)
+          if (activityMap[date] !== undefined) {
+            activityMap[date] += 1
+          }
+
+          // Sumamos volúmenes de inventario (opcional para el detalle)
+          if (stats.weeklyMovements[date]) {
+            if (m.effect === 'IN') stats.weeklyMovements[date].in += Number(m.quantity) || 0
+            if (m.effect === 'OUT') stats.weeklyMovements[date].out += Number(m.quantity) || 0
+          }
         })
       }
 

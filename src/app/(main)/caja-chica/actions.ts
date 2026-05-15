@@ -138,3 +138,51 @@ export async function registerPettyCashTransaction(payload: {
   revalidatePath('/caja-chica')
   return { success: true }
 }
+
+export async function deletePettyCashTransaction(id: string) {
+  const { extendedUser } = await getUserSession()
+  const companyId = await getStrictCompanyId()
+  const supabase = await createAdminClient()
+
+  // Solo admin, gerente o super_admin pueden borrar
+  const role = extendedUser.role_id?.toLowerCase()
+  if (!['admin', 'gerente', 'super_admin', 'superadmin'].includes(role || '')) {
+    return { error: 'No tienes permisos para eliminar movimientos de caja.' }
+  }
+
+  const { error } = await applyIsolation(
+    supabase.from('petty_cash_transactions').delete(),
+    companyId,
+    extendedUser.role_id
+  ).eq('id', id)
+
+  if (error) return { error: error.message }
+  
+  revalidatePath('/caja-chica')
+  return { success: true }
+}
+
+export async function updatePettyCashTransaction(id: string, payload: Partial<{
+  reason: string
+  amount: number
+  payment_method: string
+  category: string
+  operation_number: string
+  date: string
+  voucher_url: string
+}>) {
+  const { extendedUser } = await getUserSession()
+  const companyId = await getStrictCompanyId()
+  const supabase = await createAdminClient()
+
+  const { error } = await applyIsolation(
+    supabase.from('petty_cash_transactions').update(payload),
+    companyId,
+    extendedUser.role_id
+  ).eq('id', id)
+
+  if (error) return { error: error.message }
+  
+  revalidatePath('/caja-chica')
+  return { success: true }
+}
