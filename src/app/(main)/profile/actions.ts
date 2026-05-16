@@ -11,20 +11,31 @@ export async function updateProfile(formData: { name: string, email: string }) {
 
     if (!user || !extendedUser) return { success: false, error: 'No autorizado' }
 
-    // 1. Update Auth Email (this might require verification)
+    // 1. Validar unicidad de email antes de proceder
     if (formData.email !== user.email) {
+      const adminSupabase = await createAdminClient()
+      const { data: existingUser } = await adminSupabase
+        .from('users')
+        .select('id')
+        .eq('email', formData.email)
+        .neq('id', extendedUser.id) // Buscar otro usuario con ese email
+        .maybeSingle()
+
+      if (existingUser) {
+        return { success: false, error: 'email already in use' }
+      }
+
+      // Update Auth Email (this might require verification)
       const { error: authError } = await supabase.auth.updateUser({ email: formData.email })
       if (authError) return { success: false, error: authError.message }
     }
 
     // 2. Update public.users record
-    const companyId = await getStrictCompanyId()
     const adminSupabase = await createAdminClient()
     const { error: dbError } = await adminSupabase
       .from('users')
       .update({ name: formData.name, email: formData.email })
       .eq('id', extendedUser.id)
-      .eq('company_id', companyId)
 
     if (dbError) return { success: false, error: dbError.message }
 

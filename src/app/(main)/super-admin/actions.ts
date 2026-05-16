@@ -488,3 +488,75 @@ export async function toggleTestStatus(companyId: string, isTest: boolean) {
   revalidatePath('/super-admin')
   return { success: true }
 }
+
+export async function forensicIdentityAudit(email: string) {
+  try {
+    const supabase = await createAdminClient()
+    
+    // 1. Capa Auth
+    const { data: authUsers } = await supabase.auth.admin.listUsers()
+    const authRecord = authUsers?.users?.filter(u => u.email === email)
+
+    // 2. Capa Public Users
+    const { data: publicRecords } = await supabase
+      .from('users')
+      .select('*, companies(name)')
+      .eq('email', email)
+
+    // 3. Capa RBAC
+    let rbacRecords: any[] = []
+    if (publicRecords && publicRecords.length > 0) {
+      const { data: roles } = await supabase
+        .from('user_roles')
+        .select('*, companies(name)')
+        .in('user_id', publicRecords.map(p => p.id))
+      rbacRecords = roles || []
+    }
+
+    return {
+      success: true,
+      data: {
+        auth: authRecord || [],
+        public: publicRecords || [],
+        rbac: rbacRecords
+      }
+    }
+  } catch (error: any) {
+    return { success: false, error: error.message }
+  }
+}
+
+export async function repairIdentity(targetId: string, correctName: string) {
+  try {
+    const supabase = await createAdminClient()
+    
+    // 1. Restaurar Nombre en Perfil
+    const { error: profileError } = await supabase
+      .from('users')
+      .update({ name: correctName, role_id: 'super_admin' })
+      .eq('id', targetId)
+
+    if (profileError) throw profileError
+
+    // 2. Asegurar Rol Global
+    const { data: existingRole } = await supabase
+      .from('user_roles')
+      .select('*')
+      .eq('user_id', targetId)
+      .eq('role_id', 'super_admin')
+      .maybeSingle()
+
+    if (!existingRole) {
+      await supabase.from('user_roles').insert({
+        user_id: targetId,
+        role_id: 'super_admin',
+        company_id: null // Global
+      })
+    }
+
+    revalidatePath('/', 'layout')
+    return { success: true }
+  } catch (error: any) {
+    return { success: false, error: error.message }
+  }
+}

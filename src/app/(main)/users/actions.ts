@@ -14,24 +14,48 @@ const supabaseAdmin = createClient(
 export async function getUsers() {
   const { extendedUser } = await getUserSession()
   const companyId = await getStrictCompanyId()
-
   const supabase = await createAdminClient()
+
   console.log(`[USERS_DEBUG] getUsers. Company: ${companyId}, Role: ${extendedUser.role_id}`)
 
-  const { data: users, error } = await applyIsolation(
-    supabase.from('users').select('*, workers(name, position)'),
-    companyId,
-    extendedUser.role_id
-  ).order('created_at', { ascending: false })
+  // 1. Obtener los IDs de usuarios vinculados a esta empresa desde user_roles
+  const { data: roleEntries, error: roleError } = await supabase
+    .from('user_roles')
+    .select('user_id, role_id')
+    .eq('company_id', companyId)
+
+  if (roleError) {
+    console.error('[USERS_CRITICAL] Error fetching roles:', roleError)
+    return []
+  }
+
+  if (!roleEntries || roleEntries.length === 0) return []
+
+  const userIds = roleEntries.map(r => r.user_id)
+
+  // 2. Obtener los perfiles de esos usuarios
+  const { data: users, error } = await supabase
+    .from('users')
+    .select('*, workers(name, position)')
+    .in('id', userIds)
+    .order('created_at', { ascending: false })
 
   if (error) {
     console.error('[USERS_CRITICAL] Error fetching users:', error)
     return []
   }
 
-  console.log(`[USERS_DEBUG] getUsers success. Found ${users?.length || 0} users.`)
+  // 3. Inyectar el rol específico de la empresa si es necesario
+  const hydratedUsers = users.map(user => {
+    const roleEntry = roleEntries.find(r => r.user_id === user.id)
+    return {
+      ...user,
+      role_id: roleEntry?.role_id || user.role_id
+    }
+  })
 
-  return users || []
+  console.log(`[USERS_DEBUG] getUsers success. Found ${hydratedUsers.length} users.`)
+  return hydratedUsers
 }
 
 export async function getAvailableWorkers() {
