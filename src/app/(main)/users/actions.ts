@@ -59,8 +59,14 @@ export async function getUsers() {
   if (!isPresent && (extendedUser.role_id === 'super_admin' || extendedUser.role_id === 'superadmin')) {
     console.log(`[USERS_DEBUG] Forcing SuperAdmin inclusion for: ${extendedUser.email}`)
     hydratedUsers.unshift({
-      ...extendedUser,
+      id: extendedUser.id,
+      name: extendedUser.name || 'Geison Utia',
+      email: extendedUser.email,
       role_id: 'admin', // Se muestra como admin local
+      area: 'SISTEMA',
+      status: 'active',
+      created_at: new Date().toISOString(),
+      worker_id: null,
       is_global_admin: true
     })
   }
