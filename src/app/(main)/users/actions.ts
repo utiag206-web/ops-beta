@@ -45,8 +45,8 @@ export async function getUsers() {
     return []
   }
 
-  // 3. Inyectar el rol específico de la empresa si es necesario
-  const hydratedUsers = users.map(user => {
+  // 3. Inyectar el rol específico de la empresa y asegurar presencia de Super Admin
+  let hydratedUsers = users.map(user => {
     const roleEntry = roleEntries.find(r => r.user_id === user.id)
     return {
       ...user,
@@ -54,7 +54,18 @@ export async function getUsers() {
     }
   })
 
-  console.log(`[USERS_DEBUG] getUsers success. Found ${hydratedUsers.length} users.`)
+  // 4. SI EL USUARIO ACTUAL ES SUPER_ADMIN Y NO ESTÁ EN LA LISTA, FORZAR SU INCLUSIÓN
+  const isPresent = hydratedUsers.some(u => u.id === extendedUser.id)
+  if (!isPresent && (extendedUser.role_id === 'super_admin' || extendedUser.role_id === 'superadmin')) {
+    console.log(`[USERS_DEBUG] Forcing SuperAdmin inclusion for: ${extendedUser.email}`)
+    hydratedUsers.unshift({
+      ...extendedUser,
+      role_id: 'admin', // Se muestra como admin local
+      is_global_admin: true
+    })
+  }
+
+  console.log(`[USERS_DEBUG] getUsers success. Returning ${hydratedUsers.length} users.`)
   return hydratedUsers
 }
 
