@@ -13,10 +13,17 @@ export default async function DashboardLayout({
 }: {
   children: React.ReactNode
 }) {
-  const session = await getUserSession()
+  let session;
+  let headersList;
+  try {
+    session = await getUserSession()
+    headersList = await headers()
+  } catch (err) {
+    console.error('[LAYOUT_CRITICAL_ERROR] Error fetching session or headers:', err)
+    redirect('/login?message=Error+de+sesion')
+  }
+
   const extendedUser = session?.extendedUser
-  
-  const headersList = await headers()
   const pathname = (headersList.get('x-pathname') || '').split('?')[0]
   
   // 1. Mandatory Session Guard

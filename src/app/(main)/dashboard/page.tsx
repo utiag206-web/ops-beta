@@ -10,7 +10,13 @@ import { AdminDashboardSkeleton } from '@/components/dashboard/dashboard-skeleto
 export const dynamic = 'force-dynamic'
 
 export default async function DashboardPage() {
-  const { extendedUser } = await getUserSession()
+  let extendedUser = null;
+  try {
+    const session = await getUserSession()
+    extendedUser = session.extendedUser
+  } catch (error) {
+    console.error('[DASHBOARD_PAGE_ERROR] Failed to fetch user session:', error)
+  }
   
   const role = extendedUser?.role_id?.toLowerCase()
   if ((role === 'super_admin' || role === 'superadmin') && !extendedUser?.is_impersonating) {
@@ -42,7 +48,12 @@ export default async function DashboardPage() {
 }
 
 async function DashboardContent({ user }: { user: any }) {
-  const stats = await getDashboardStats()
+  let stats = null;
+  try {
+    stats = await getDashboardStats()
+  } catch (error) {
+    console.error('[DASHBOARD_CONTENT_ERROR] Failed to fetch stats:', error)
+  }
   
   if (!stats) {
     return (
