@@ -5,23 +5,31 @@ import { getUserSession, getStrictCompanyId } from '@/lib/auth'
 import { revalidatePath } from 'next/cache'
 
 export async function getCompanyProfile() {
-  const { extendedUser } = await getUserSession()
-  const companyId = await getStrictCompanyId()
-  if (!companyId) return null
+  try {
+    const { extendedUser } = await getUserSession()
+    const companyId = await getStrictCompanyId()
+    if (!companyId) return null
 
-  const supabase = await createClient()
-  const { data, error } = await supabase
-    .from('companies')
-    .select('*')
-    .eq('id', companyId)
-    .single()
+    const supabase = await createClient()
+    const { data, error } = await supabase
+      .from('companies')
+      .select('*')
+      .eq('id', companyId)
+      .maybeSingle()
 
-  if (error) {
-    console.error('Error fetching company profile:', error)
+    if (error) {
+      console.error('Error fetching company profile:', error)
+      return null
+    }
+
+    return data
+  } catch (error: any) {
+    if (error.digest?.startsWith('NEXT_REDIRECT') || error.message?.includes('NEXT_REDIRECT')) {
+      throw error
+    }
+    console.error('[COMPANY_ACTIONS] Error in getCompanyProfile:', error)
     return null
   }
-
-  return data
 }
 
 export async function updateCompanyProfile(formData: {

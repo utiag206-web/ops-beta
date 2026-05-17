@@ -20,14 +20,24 @@ export default async function ProfilePage() {
 
   let companyName = (extendedUser.companies as any)?.name || 'Empresa'
   
-  const [ppeDeliveries, bonuses, transportPayments, attendanceHistory] = extendedUser.worker_id 
-    ? await Promise.all([
-        getPPEDeliveries(extendedUser.worker_id),
-        getBonuses(extendedUser.worker_id),
-        getTransportPayments(extendedUser.worker_id),
-        getAttendance(extendedUser.worker_id)
+  let ppeDeliveries = [], bonuses = [], transportPayments = [], attendanceHistory = [];
+  
+  if (extendedUser.worker_id) {
+    try {
+      const results = await Promise.all([
+          getPPEDeliveries(extendedUser.worker_id),
+          getBonuses(extendedUser.worker_id),
+          getTransportPayments(extendedUser.worker_id),
+          getAttendance(extendedUser.worker_id)
       ])
-    : [[], [], [], []]
+      ppeDeliveries = results[0] || []
+      bonuses = results[1] || []
+      transportPayments = results[2] || []
+      attendanceHistory = results[3] || []
+    } catch (error) {
+      console.error('[PROFILE_PAGE_ERROR] Failed to fetch worker data:', error)
+    }
+  }
 
   const today = new Date().toISOString().split('T')[0]
   const todayRecord = attendanceHistory.find((r: any) => r.date === today)

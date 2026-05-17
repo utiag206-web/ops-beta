@@ -11,6 +11,8 @@ import Link from 'next/link'
 import { CompaniesList } from '@/components/super-admin/companies-list'
 import { SuperAdminActions } from '@/components/super-admin/super-admin-actions'
 
+export const dynamic = 'force-dynamic'
+
 export default async function SuperAdminPage() {
   const { extendedUser } = await getUserSession()
 

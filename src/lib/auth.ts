@@ -70,7 +70,7 @@ export const getUserSession = cache(async function getUserSession() {
         .from('companies')
         .select('id, name, logo_url')
         .eq('id', finalCompanyId)
-        .single()
+        .maybeSingle()
       companyData = comp
     }
 

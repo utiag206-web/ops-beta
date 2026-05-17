@@ -14,7 +14,10 @@ export default async function DashboardPage() {
   try {
     const session = await getUserSession()
     extendedUser = session.extendedUser
-  } catch (error) {
+  } catch (error: any) {
+    if (error.digest?.startsWith('NEXT_REDIRECT') || error.message?.includes('NEXT_REDIRECT')) {
+      throw error
+    }
     console.error('[DASHBOARD_PAGE_ERROR] Failed to fetch user session:', error)
   }
   

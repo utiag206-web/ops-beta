@@ -18,7 +18,10 @@ export default async function DashboardLayout({
   try {
     session = await getUserSession()
     headersList = await headers()
-  } catch (err) {
+  } catch (err: any) {
+    if (err.digest?.startsWith('NEXT_REDIRECT') || err.message?.includes('NEXT_REDIRECT')) {
+      throw err
+    }
     console.error('[LAYOUT_CRITICAL_ERROR] Error fetching session or headers:', err)
     redirect('/login?message=Error+de+sesion')
   }
