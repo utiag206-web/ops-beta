@@ -35,6 +35,15 @@ export default async function SuperAdminPage() {
     users = usersRes
     stats = statsRes
   } catch (error: any) {
+    if (
+      error.digest?.startsWith('NEXT_REDIRECT') || 
+      error.message?.includes('NEXT_REDIRECT') ||
+      error.digest === 'DYNAMIC_SERVER_USAGE' ||
+      error.message?.includes('DYNAMIC_SERVER_USAGE') ||
+      error.message?.includes('Dynamic server usage')
+    ) {
+      throw error
+    }
     console.error("[SUPER_ADMIN_PAGE_CRITICAL] Failed to load global data:", error.message)
   }
 

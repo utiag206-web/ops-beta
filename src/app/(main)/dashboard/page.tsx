@@ -15,7 +15,13 @@ export default async function DashboardPage() {
     const session = await getUserSession()
     extendedUser = session.extendedUser
   } catch (error: any) {
-    if (error.digest?.startsWith('NEXT_REDIRECT') || error.message?.includes('NEXT_REDIRECT')) {
+    if (
+      error.digest?.startsWith('NEXT_REDIRECT') || 
+      error.message?.includes('NEXT_REDIRECT') ||
+      error.digest === 'DYNAMIC_SERVER_USAGE' ||
+      error.message?.includes('DYNAMIC_SERVER_USAGE') ||
+      error.message?.includes('Dynamic server usage')
+    ) {
       throw error
     }
     console.error('[DASHBOARD_PAGE_ERROR] Failed to fetch user session:', error)

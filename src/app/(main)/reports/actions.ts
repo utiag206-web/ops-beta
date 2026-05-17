@@ -118,6 +118,13 @@ export async function getReportsData(month?: number, year?: number) {
       period: { month: targetMonth, year: targetYear }
     }
   } catch (error: any) {
+    if (
+      error.digest === 'DYNAMIC_SERVER_USAGE' ||
+      error.message?.includes('DYNAMIC_SERVER_USAGE') ||
+      error.message?.includes('Dynamic server usage')
+    ) {
+      throw error
+    }
     console.error('[REPORTS_ERROR] Critical failure in analytics engine:', error.message)
     return {
       workers: { active: 0, inactive: 0, total: 0 },

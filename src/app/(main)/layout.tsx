@@ -19,7 +19,13 @@ export default async function DashboardLayout({
     session = await getUserSession()
     headersList = await headers()
   } catch (err: any) {
-    if (err.digest?.startsWith('NEXT_REDIRECT') || err.message?.includes('NEXT_REDIRECT')) {
+    if (
+      err.digest?.startsWith('NEXT_REDIRECT') || 
+      err.message?.includes('NEXT_REDIRECT') ||
+      err.digest === 'DYNAMIC_SERVER_USAGE' ||
+      err.message?.includes('DYNAMIC_SERVER_USAGE') ||
+      err.message?.includes('Dynamic server usage')
+    ) {
       throw err
     }
     console.error('[LAYOUT_CRITICAL_ERROR] Error fetching session or headers:', err)

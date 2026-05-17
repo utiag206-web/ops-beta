@@ -22,7 +22,16 @@ export default async function UsersPage() {
         />
       </div>
     )
-  } catch (err) {
+  } catch (err: any) {
+    if (
+      err.digest?.startsWith('NEXT_REDIRECT') || 
+      err.message?.includes('NEXT_REDIRECT') ||
+      err.digest === 'DYNAMIC_SERVER_USAGE' ||
+      err.message?.includes('DYNAMIC_SERVER_USAGE') ||
+      err.message?.includes('Dynamic server usage')
+    ) {
+      throw err
+    }
     console.error('Error loading Users page:', err)
     return (
       <div className="p-8 bg-red-50 text-red-700 rounded-xl border border-red-200">
