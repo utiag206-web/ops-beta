@@ -5,11 +5,7 @@ import { createClient } from '@supabase/supabase-js'
 import { createClient as createServerClient, createAdminClient } from '@/lib/supabase/server'
 import { getUserSession, getStrictCompanyId, applyIsolation } from '@/lib/auth'
 
-// Administrative client for user creation (bypasses regular Auth restrictions)
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+// Administrative client will be created per-request using createAdminClient
 
 export async function getUsers() {
   const { extendedUser } = await getUserSession()
@@ -54,23 +50,6 @@ export async function getUsers() {
     }
   })
 
-  // 4. SI EL USUARIO ACTUAL ES SUPER_ADMIN Y NO ESTÁ EN LA LISTA, FORZAR SU INCLUSIÓN
-  const isPresent = hydratedUsers.some(u => u.id === extendedUser.id)
-  if (!isPresent && (extendedUser.role_id === 'super_admin' || extendedUser.role_id === 'superadmin')) {
-    console.log(`[USERS_DEBUG] Forcing SuperAdmin inclusion for: ${extendedUser.email}`)
-    hydratedUsers.unshift({
-      id: extendedUser.id,
-      name: extendedUser.name || 'Geison Utia',
-      email: extendedUser.email,
-      role_id: 'admin', // Se muestra como admin local
-      area: 'SISTEMA',
-      status: 'active',
-      created_at: new Date().toISOString(),
-      worker_id: null,
-      is_global_admin: true
-    })
-  }
-
   console.log(`[USERS_DEBUG] getUsers success. Returning ${hydratedUsers.length} users.`)
   return hydratedUsers
 }
@@ -103,6 +82,8 @@ export async function createUser(prevState: any, formData: FormData) {
     if (extendedUser.role_id !== 'admin' && extendedUser.role_id !== 'super_admin') {
       return { success: false, error: 'No tienes permisos para crear usuarios.' }
     }
+
+    const supabaseAdmin = await createAdminClient()
 
     const email = formData.get('email') as string
     const password = formData.get('password') as string
@@ -206,6 +187,7 @@ export async function updateUserStatus(userId: string, status: 'active' | 'inact
     if (extendedUser.role_id !== 'admin' && extendedUser.role_id !== 'super_admin') {
       return { success: false, error: 'Permiso denegado.' }
     }
+    const supabaseAdmin = await createAdminClient()
 
     // PROTECCIÓN: No se puede desactivar al último administrador de la empresa
     if (status === 'inactive') {
@@ -249,6 +231,7 @@ export async function updateUserRole(userId: string, role_id: string) {
     if (extendedUser.role_id !== 'admin' && extendedUser.role_id !== 'super_admin') {
       return { success: false, error: 'Permiso denegado.' }
     }
+    const supabaseAdmin = await createAdminClient()
 
     // PROTECCIÓN: No se puede quitar el rol de administrador si es el último
     if (!['admin', 'gerente'].includes(role_id)) {
@@ -305,6 +288,7 @@ export async function updateUserArea(userId: string, area: string) {
     if (extendedUser.role_id !== 'admin' && extendedUser.role_id !== 'super_admin') {
       return { success: false, error: 'Permiso denegado.' }
     }
+    const supabaseAdmin = await createAdminClient()
 
     const { error } = await applyIsolation(
       supabaseAdmin.from('users').update({ area }),
@@ -332,6 +316,8 @@ export async function deleteUser(userId: string) {
     if (extendedUser.role_id !== 'admin' && extendedUser.role_id !== 'super_admin') {
       return { success: false, error: 'No tienes permisos para eliminar usuarios.' }
     }
+
+    const supabaseAdmin = await createAdminClient()
 
     // PROTECCIÓN: No se puede eliminar al último administrador
     const { data: adminCount } = await supabaseAdmin
@@ -385,6 +371,7 @@ export async function updateUserProfile(userId: string, data: { name?: string, a
     if (extendedUser.role_id !== 'admin' && extendedUser.role_id !== 'super_admin') {
       return { success: false, error: 'Permiso denegado.' }
     }
+    const supabaseAdmin = await createAdminClient()
 
     const { error } = await applyIsolation(
       supabaseAdmin.from('users').update(data),
@@ -407,6 +394,7 @@ export async function updateUserEmail(userId: string, email: string) {
     if (extendedUser.role_id !== 'admin' && extendedUser.role_id !== 'super_admin') {
       return { success: false, error: 'Permiso denegado.' }
     }
+    const supabaseAdmin = await createAdminClient()
 
     // 1. Update in Auth
     const { error: authError } = await supabaseAdmin.auth.admin.updateUserById(userId, { email })
@@ -429,6 +417,7 @@ export async function updateUserPassword(userId: string, password: string) {
     if (extendedUser.role_id !== 'admin' && extendedUser.role_id !== 'super_admin') {
       return { success: false, error: 'Permiso denegado.' }
     }
+    const supabaseAdmin = await createAdminClient()
 
     const { error } = await supabaseAdmin.auth.admin.updateUserById(userId, { password })
     if (error) throw error

@@ -39,10 +39,27 @@ export const getUserSession = cache(async function getUserSession() {
 
     const isSuperAdmin = rbacRole === 'super_admin'
     
-    // CRITICAL: Super Admin is GLOBAL by default. 
-    // Only use a company context if explicitly impersonating via cookie.
     const finalCompanyId = isSuperAdmin ? (activeCompanyId || null) : userData.company_id
     const impersonating = !!(isSuperAdmin && activeCompanyId)
+    
+    // FETCH TENANT MEMBERSHIP
+    let tenantRole = rbacRole
+    let tenantArea = (userData as any)?.area || null
+    
+    if (finalCompanyId) {
+      const { data: membership } = await adminSupabase
+        .from('user_roles')
+        .select('role_id')
+        .eq('user_id', user.id)
+        .eq('company_id', finalCompanyId)
+        .maybeSingle()
+        
+      if (membership) {
+        tenantRole = membership.role_id || tenantRole
+        // Area is currently in users table, but conceptually belongs to membership.
+        // We'll keep it as is for now unless there's a specific company_members table.
+      }
+    }
     
     const isUuid = (val: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(val)
 
@@ -61,8 +78,8 @@ export const getUserSession = cache(async function getUserSession() {
       id: user.id,
       email: userData.email || user.email || '',
       name: userData.name || 'Usuario',
-      role_id: rbacRole,
-      area: (userData as any)?.area || null,
+      role_id: tenantRole,
+      area: tenantArea,
       company_id: finalCompanyId, // SWAP: Use active/final ID
       native_company_id: (userData as any)?.company_id || null, // Reference to original
       worker_id: (userData as any)?.worker_id || null,
@@ -81,8 +98,8 @@ export const getUserSession = cache(async function getUserSession() {
     // Identity Masking for Super Admin (Display Only)
     if (impersonating) {
       const safeName = companyData?.name || 'Sistema'
-      extendedUser.display_name = `Administrador (${safeName})`
-      extendedUser.display_email = extendedUser.email
+      extendedUser.display_name = `Admin Sistema`
+      extendedUser.display_email = 'auditoria@sistema.local'
     } else {
       extendedUser.display_name = extendedUser.name
       extendedUser.display_email = extendedUser.email

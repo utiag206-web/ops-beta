@@ -166,6 +166,7 @@ export async function createCompany(payload: {
     // Si no viene password, generamos uno temporal
     const password = payload.adminPassword || Math.random().toString(36).slice(-10)
     
+    let authUserId: string | null = null
     const { data: authData, error: authError } = await supabase.auth.admin.createUser({
       email: payload.adminEmail,
       password: password,
@@ -174,65 +175,50 @@ export async function createCompany(payload: {
     })
 
     if (authError) {
-      // Si el usuario ya existe, podríamos intentar vincularlo, pero por ahora fallamos
-      throw new Error(`Error al crear usuario auth: ${authError.message}`)
+      if (authError.message.includes('already') || authError.message.includes('exists')) {
+        // User already exists, fetch their ID
+        const { data: listData } = await supabase.auth.admin.listUsers()
+        const existing = listData.users.find(u => u.email === payload.adminEmail)
+        if (existing) {
+          authUserId = existing.id
+        } else {
+          throw new Error(`Error al vincular usuario existente: no encontrado.`)
+        }
+      } else {
+        throw new Error(`Error al crear usuario auth: ${authError.message}`)
+      }
+    } else {
+      authUserId = authData.user.id
     }
 
-    const authUserId = authData.user.id
+    if (!authUserId) throw new Error('No se pudo resolver el ID de usuario.')
 
     // 3. Vincular usuario en tabla 'users'
     const { error: userError } = await supabase
       .from('users')
-      .insert([{
+      .upsert([{
         id: authUserId,
-        company_id: companyId,
+        company_id: companyId, // Default company
         name: payload.adminName,
         email: payload.adminEmail,
-        role_id: 'admin', // Legacy string-based role
+        role_id: 'admin',
         status: 'active',
         area: 'Administración'
-      }])
+      }], { onConflict: 'id' })
 
     if (userError) throw new Error(`Error al crear registro de usuario: ${userError.message}`)
 
-    // 4. Sincronizar user_roles (Formal RBAC)
-    // Buscamos el ID del rol 'admin' en la tabla roles
-    let roleId: string | null = null
-    const { data: roleData } = await supabase
-      .from('roles')
-      .select('id')
-      .eq('name', 'admin')
-      .maybeSingle()
+    // Sincronizar user_roles directamente con el string para evitar problemas de foreign key nulos
+    const { error: rbacError } = await supabase
+      .from('user_roles')
+      .upsert([{
+        user_id: authUserId,
+        company_id: companyId,
+        role_id: 'admin'
+      }], { onConflict: 'user_id, company_id' })
     
-    if (!roleData) {
-      console.warn(`[BOOTSTRAP] Rol 'admin' no encontrado. Intentando crear rol maestro...`)
-      const { data: newRole, error: newRoleError } = await supabase
-        .from('roles')
-        .insert([{ name: 'admin', description: 'Administrador de Empresa' }])
-        .select()
-        .single()
-      
-      if (newRoleError) {
-        console.error(`[BOOTSTRAP_CRITICAL] No se pudo crear el rol 'admin':`, newRoleError.message)
-      } else {
-        roleId = newRole.id
-      }
-    } else {
-      roleId = roleData.id
-    }
-
-    if (roleId) {
-      const { error: rbacError } = await supabase
-        .from('user_roles')
-        .insert([{
-          user_id: authUserId,
-          company_id: companyId,
-          role_id: roleId
-        }])
-      
-      if (rbacError) {
-        console.error(`[BOOTSTRAP_CRITICAL] Error al vincular rol administrativo:`, rbacError.message)
-      }
+    if (rbacError) {
+      console.error(`[BOOTSTRAP_CRITICAL] Error al vincular rol administrativo:`, rbacError.message)
     }
 
     // 5-8. Inicialización Automática (Uso de Utility Centralizada)

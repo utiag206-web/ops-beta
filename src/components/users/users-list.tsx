@@ -149,6 +149,8 @@ export function UsersList({ initialUsers, availableWorkers, currentUserRole }: {
                             onChange={(e) => handleRoleChange(item.id, e.target.value)}
                             className="bg-transparent border-none text-blue-600 text-sm font-bold uppercase tracking-tighter focus:ring-0 cursor-pointer p-0"
                           >
+                            <option value="super_admin">Super Admin</option>
+                            <option value="superadmin">Super Admin</option>
                             <option value="admin">Administrador</option>
                             <option value="gerente">Gerente</option>
                             <option value="operaciones">Operaciones</option>
