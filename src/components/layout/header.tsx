@@ -35,17 +35,21 @@ export async function Header() {
 
   // FALLBACK CRÍTICO: Si el nombre está pero el logo no, intentamos un fetch directo para romper caché
   if (extendedUser?.company_id && !companyLogo) {
-    const { createAdminClient } = await import('@/lib/supabase/server')
-    const supabase = await createAdminClient()
-    const { data: directComp } = await supabase
-      .from('companies')
-      .select('name, logo_url')
-      .eq('id', extendedUser.company_id)
-      .single()
-    
-    if (directComp) {
-      companyName = directComp.name || companyName
-      companyLogo = directComp.logo_url || null
+    try {
+      const { createAdminClient } = await import('@/lib/supabase/server')
+      const supabase = await createAdminClient()
+      const { data: directComp } = await supabase
+        .from('companies')
+        .select('name, logo_url')
+        .eq('id', extendedUser.company_id)
+        .maybeSingle()
+      
+      if (directComp) {
+        companyName = directComp.name || companyName
+        companyLogo = directComp.logo_url || null
+      }
+    } catch (error) {
+      console.error("[HEADER_ERROR] Failed to fetch company logo:", error)
     }
   }
 
