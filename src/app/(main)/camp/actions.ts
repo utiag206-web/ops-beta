@@ -8,6 +8,8 @@ export async function getCampRooms() {
   const { extendedUser } = await getUserSession()
   const companyId = await getStrictCompanyId()
 
+  if (!extendedUser || !companyId) return []
+
   const supabase = await createAdminClient()
 
   let query = applyIsolation(
@@ -44,9 +46,9 @@ export async function assignCampRoom(payload: {
   try {
     const { extendedUser } = await getUserSession()
     const companyId = await getStrictCompanyId()
-    const isAuthorized = extendedUser && (extendedUser.role_id !== 'trabajador' || extendedUser.role_id === 'super_admin')
+    const isAuthorized = extendedUser && extendedUser.role_id !== 'trabajador'
 
-    if (!isAuthorized || !companyId) {
+    if (!extendedUser || !isAuthorized || !companyId) {
       return { success: false, error: 'No autorizado o sin contexto de empresa' }
     }
 
@@ -92,9 +94,9 @@ export async function updateRoomAssignment(id: string, payload: {
   try {
     const { extendedUser } = await getUserSession()
     const companyId = await getStrictCompanyId()
-    const isAuthorized = extendedUser && (extendedUser.role_id !== 'trabajador' || extendedUser.role_id === 'super_admin')
+    const isAuthorized = extendedUser && extendedUser.role_id !== 'trabajador'
 
-    if (!isAuthorized || !companyId) {
+    if (!extendedUser || !isAuthorized || !companyId) {
       return { success: false, error: 'No autorizado o sin contexto de empresa' }
     }
 
@@ -132,9 +134,9 @@ export async function deleteCampRoom(id: string) {
   try {
     const { extendedUser } = await getUserSession()
     const companyId = await getStrictCompanyId()
-    const isAuthorized = extendedUser && (extendedUser.role_id !== 'trabajador' || extendedUser.role_id === 'super_admin')
+    const isAuthorized = extendedUser && extendedUser.role_id !== 'trabajador'
 
-    if (!isAuthorized || !companyId) {
+    if (!extendedUser || !isAuthorized || !companyId) {
       return { success: false, error: 'No autorizado o sin contexto de empresa' }
     }
 

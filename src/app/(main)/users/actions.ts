@@ -5,53 +5,52 @@ import { createClient } from '@supabase/supabase-js'
 import { createClient as createServerClient, createAdminClient } from '@/lib/supabase/server'
 import { getUserSession, getStrictCompanyId, applyIsolation } from '@/lib/auth'
 
-// Administrative client will be created per-request using createAdminClient
+// Administrative client for user creation (bypasses regular Auth restrictions)
+const supabaseAdmin = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+)
 
 export async function getUsers() {
   const { extendedUser } = await getUserSession()
   const companyId = await getStrictCompanyId()
-  const supabase = await createAdminClient()
 
+  const supabase = await createAdminClient()
   console.log(`[USERS_DEBUG] getUsers. Company: ${companyId}, Role: ${extendedUser.role_id}`)
 
-  // 1. Obtener los IDs de usuarios vinculados a esta empresa o globales (Super Admin) desde user_roles
-  const { data: roleEntries, error: roleError } = await supabase
+  // 1. Obtener IDs de usuarios vinculados a esta empresa vía user_roles de forma explícita
+  const { data: userRoles, error: rbacError } = await supabase
     .from('user_roles')
-    .select('user_id, role_id')
-    .or(`company_id.eq.${companyId},company_id.is.null`)
+    .select('user_id')
+    .eq('company_id', companyId)
 
-  if (roleError) {
-    console.error('[USERS_CRITICAL] Error fetching roles:', roleError)
-    return []
+  if (rbacError) {
+    console.warn('[USERS_WARN] Error fetching user roles:', rbacError.message)
   }
 
-  if (!roleEntries || roleEntries.length === 0) return []
+  const mappedUserIds = (userRoles || []).map((ur: any) => ur.user_id).filter(Boolean)
 
-  const userIds = roleEntries.map(r => r.user_id)
-
-  // 2. Obtener los perfiles de esos usuarios
-  const { data: users, error } = await supabase
+  // 2. Obtener usuarios que pertenecen nativamente o están vinculados vía RBAC explícito
+  let query = supabase
     .from('users')
     .select('*, workers(name, position)')
-    .in('id', userIds)
-    .order('created_at', { ascending: false })
+
+  if (mappedUserIds.length > 0) {
+    query = query.or(`company_id.eq.${companyId},id.in.(${mappedUserIds.join(',')})`)
+  } else {
+    query = query.eq('company_id', companyId)
+  }
+
+  const { data: users, error } = await query.order('created_at', { ascending: false })
 
   if (error) {
     console.error('[USERS_CRITICAL] Error fetching users:', error)
     return []
   }
 
-  // 3. Inyectar el rol específico de la empresa y asegurar presencia de Super Admin
-  let hydratedUsers = users.map(user => {
-    const roleEntry = roleEntries.find(r => r.user_id === user.id)
-    return {
-      ...user,
-      role_id: roleEntry?.role_id || user.role_id
-    }
-  })
+  console.log(`[USERS_DEBUG] getUsers success. Found ${users?.length || 0} users.`)
 
-  console.log(`[USERS_DEBUG] getUsers success. Returning ${hydratedUsers.length} users.`)
-  return hydratedUsers
+  return users || []
 }
 
 export async function getAvailableWorkers() {
@@ -82,8 +81,6 @@ export async function createUser(prevState: any, formData: FormData) {
     if (extendedUser.role_id !== 'admin' && extendedUser.role_id !== 'super_admin') {
       return { success: false, error: 'No tienes permisos para crear usuarios.' }
     }
-
-    const supabaseAdmin = await createAdminClient()
 
     const email = formData.get('email') as string
     const password = formData.get('password') as string
@@ -140,6 +137,36 @@ export async function createUser(prevState: any, formData: FormData) {
 
     if (!authUserId) return { success: false, error: 'No se pudo obtener el ID del usuario.' }
 
+    let finalWorkerId = (workerId && workerId !== 'none') ? workerId : null
+
+    if (roleId === 'trabajador' && !finalWorkerId) {
+      const nameParts = name.trim().split(' ')
+      const firstName = nameParts[0]
+      const lastName = nameParts.slice(1).join(' ') || 'Trabajador'
+      const tempDni = String(Math.floor(10000000 + Math.random() * 90000000))
+
+      const { data: newWorker, error: wError } = await supabaseAdmin
+        .from('workers')
+        .insert({
+          company_id: companyId,
+          name: firstName,
+          last_name: lastName,
+          dni: tempDni,
+          cod: `W-${tempDni.substring(4)}`,
+          position: 'Trabajador',
+          email: email,
+          status: 'ACTIVO'
+        })
+        .select()
+        .single()
+
+      if (!wError && newWorker) {
+        finalWorkerId = newWorker.id
+      } else {
+        console.error('[CREATE_USER_WORKER_AUTO] Error auto-creating worker profile:', wError)
+      }
+    }
+
     // 2. Link/Upsert to our public.users table
     const { error: dbError } = await supabaseAdmin
       .from('users')
@@ -150,7 +177,7 @@ export async function createUser(prevState: any, formData: FormData) {
         email,
         role_id: roleId,
         area,
-        worker_id: (workerId && workerId !== 'none') ? workerId : null,
+        worker_id: finalWorkerId,
         status: 'active'
       }, { onConflict: 'id' })
 
@@ -187,13 +214,6 @@ export async function updateUserStatus(userId: string, status: 'active' | 'inact
     if (extendedUser.role_id !== 'admin' && extendedUser.role_id !== 'super_admin') {
       return { success: false, error: 'Permiso denegado.' }
     }
-    const supabaseAdmin = await createAdminClient()
-
-    // PROTECCIÓN: No se puede modificar a un Super Administrador por un usuario que no lo sea
-    const { data: targetUserCheck } = await supabaseAdmin.from('users').select('role_id').eq('id', userId).maybeSingle()
-    if (targetUserCheck?.role_id === 'super_admin' && extendedUser.role_id !== 'super_admin') {
-      return { success: false, error: 'No tienes permisos para modificar a un Super Administrador.' }
-    }
 
     // PROTECCIÓN: No se puede desactivar al último administrador de la empresa
     if (status === 'inactive') {
@@ -212,11 +232,34 @@ export async function updateUserStatus(userId: string, status: 'active' | 'inact
       }
     }
 
-    const { error } = await applyIsolation(
-      supabaseAdmin.from('users').update({ status }),
-      companyId,
-      extendedUser.role_id
-    ).eq('id', userId)
+    // Secure Multi-Tenant Link Validation
+    const { data: userLink } = await supabaseAdmin
+      .from('users')
+      .select('id, company_id')
+      .eq('id', userId)
+      .maybeSingle()
+
+    if (!userLink) {
+      return { success: false, error: 'Usuario no encontrado.' }
+    }
+
+    const { data: rbacLink } = await supabaseAdmin
+      .from('user_roles')
+      .select('id')
+      .eq('user_id', userId)
+      .eq('company_id', companyId)
+      .maybeSingle()
+
+    const isLinked = userLink.company_id === companyId || !!rbacLink
+
+    if (!isLinked) {
+      return { success: false, error: 'No autorizado para modificar este usuario.' }
+    }
+
+    const { error } = await supabaseAdmin
+      .from('users')
+      .update({ status })
+      .eq('id', userId)
 
     if (error) {
       console.error('Update Status Error:', error)
@@ -237,13 +280,6 @@ export async function updateUserRole(userId: string, role_id: string) {
     if (extendedUser.role_id !== 'admin' && extendedUser.role_id !== 'super_admin') {
       return { success: false, error: 'Permiso denegado.' }
     }
-    const supabaseAdmin = await createAdminClient()
-
-    // PROTECCIÓN: No se puede modificar a un Super Administrador por un usuario que no lo sea
-    const { data: targetUserCheck } = await supabaseAdmin.from('users').select('role_id').eq('id', userId).maybeSingle()
-    if (targetUserCheck?.role_id === 'super_admin' && extendedUser.role_id !== 'super_admin') {
-      return { success: false, error: 'No tienes permisos para modificar a un Super Administrador.' }
-    }
 
     // PROTECCIÓN: No se puede quitar el rol de administrador si es el último
     if (!['admin', 'gerente'].includes(role_id)) {
@@ -262,12 +298,35 @@ export async function updateUserRole(userId: string, role_id: string) {
       }
     }
 
+    // Secure Multi-Tenant Link Validation
+    const { data: userLink } = await supabaseAdmin
+      .from('users')
+      .select('id, company_id')
+      .eq('id', userId)
+      .maybeSingle()
+
+    if (!userLink) {
+      return { success: false, error: 'Usuario no encontrado.' }
+    }
+
+    const { data: rbacLink } = await supabaseAdmin
+      .from('user_roles')
+      .select('id')
+      .eq('user_id', userId)
+      .eq('company_id', companyId)
+      .maybeSingle()
+
+    const isLinked = userLink.company_id === companyId || !!rbacLink
+
+    if (!isLinked) {
+      return { success: false, error: 'No autorizado para modificar este usuario.' }
+    }
+
     // 1. Actualizar tabla 'users'
-    const { error: userError } = await applyIsolation(
-      supabaseAdmin.from('users').update({ role_id }),
-      companyId,
-      extendedUser.role_id
-    ).eq('id', userId)
+    const { error: userError } = await supabaseAdmin
+      .from('users')
+      .update({ role_id })
+      .eq('id', userId)
 
     if (userError) {
       console.error('User Role Update Error:', userError)
@@ -300,19 +359,35 @@ export async function updateUserArea(userId: string, area: string) {
     if (extendedUser.role_id !== 'admin' && extendedUser.role_id !== 'super_admin') {
       return { success: false, error: 'Permiso denegado.' }
     }
-    const supabaseAdmin = await createAdminClient()
 
-    // PROTECCIÓN: No se puede modificar a un Super Administrador por un usuario que no lo sea
-    const { data: targetUserCheck } = await supabaseAdmin.from('users').select('role_id').eq('id', userId).maybeSingle()
-    if (targetUserCheck?.role_id === 'super_admin' && extendedUser.role_id !== 'super_admin') {
-      return { success: false, error: 'No tienes permisos para modificar a un Super Administrador.' }
+    // Secure Multi-Tenant Link Validation
+    const { data: userLink } = await supabaseAdmin
+      .from('users')
+      .select('id, company_id')
+      .eq('id', userId)
+      .maybeSingle()
+
+    if (!userLink) {
+      return { success: false, error: 'Usuario no encontrado.' }
     }
 
-    const { error } = await applyIsolation(
-      supabaseAdmin.from('users').update({ area }),
-      companyId,
-      extendedUser.role_id
-    ).eq('id', userId)
+    const { data: rbacLink } = await supabaseAdmin
+      .from('user_roles')
+      .select('id')
+      .eq('user_id', userId)
+      .eq('company_id', companyId)
+      .maybeSingle()
+
+    const isLinked = userLink.company_id === companyId || !!rbacLink
+
+    if (!isLinked) {
+      return { success: false, error: 'No autorizado para modificar este usuario.' }
+    }
+
+    const { error } = await supabaseAdmin
+      .from('users')
+      .update({ area })
+      .eq('id', userId)
 
     if (error) {
       console.error('User Area Update Error:', error)
@@ -333,14 +408,6 @@ export async function deleteUser(userId: string) {
     
     if (extendedUser.role_id !== 'admin' && extendedUser.role_id !== 'super_admin') {
       return { success: false, error: 'No tienes permisos para eliminar usuarios.' }
-    }
-
-    const supabaseAdmin = await createAdminClient()
-
-    // PROTECCIÓN: No se puede eliminar a un Super Administrador por un usuario que no lo sea
-    const { data: targetUserCheck } = await supabaseAdmin.from('users').select('role_id').eq('id', userId).maybeSingle()
-    if (targetUserCheck?.role_id === 'super_admin' && extendedUser.role_id !== 'super_admin') {
-      return { success: false, error: 'No tienes permisos para eliminar a un Super Administrador.' }
     }
 
     // PROTECCIÓN: No se puede eliminar al último administrador
@@ -395,13 +462,35 @@ export async function updateUserProfile(userId: string, data: { name?: string, a
     if (extendedUser.role_id !== 'admin' && extendedUser.role_id !== 'super_admin') {
       return { success: false, error: 'Permiso denegado.' }
     }
-    const supabaseAdmin = await createAdminClient()
 
-    const { error } = await applyIsolation(
-      supabaseAdmin.from('users').update(data),
-      companyId,
-      extendedUser.role_id
-    ).eq('id', userId)
+    // Secure Multi-Tenant Link Validation
+    const { data: userLink } = await supabaseAdmin
+      .from('users')
+      .select('id, company_id')
+      .eq('id', userId)
+      .maybeSingle()
+
+    if (!userLink) {
+      return { success: false, error: 'Usuario no encontrado.' }
+    }
+
+    const { data: rbacLink } = await supabaseAdmin
+      .from('user_roles')
+      .select('id')
+      .eq('user_id', userId)
+      .eq('company_id', companyId)
+      .maybeSingle()
+
+    const isLinked = userLink.company_id === companyId || !!rbacLink
+
+    if (!isLinked) {
+      return { success: false, error: 'No autorizado para modificar este usuario.' }
+    }
+
+    const { error } = await supabaseAdmin
+      .from('users')
+      .update(data)
+      .eq('id', userId)
 
     if (error) throw error
 
@@ -418,7 +507,21 @@ export async function updateUserEmail(userId: string, email: string) {
     if (extendedUser.role_id !== 'admin' && extendedUser.role_id !== 'super_admin') {
       return { success: false, error: 'Permiso denegado.' }
     }
-    const supabaseAdmin = await createAdminClient()
+
+    // 0. Bloqueador estricto para evitar re-asignación a correos ya existentes en el sistema
+    const { data: existingEmail } = await supabaseAdmin
+      .from('users')
+      .select('id, email')
+      .eq('email', email)
+      .neq('id', userId)
+      .maybeSingle()
+
+    if (existingEmail) {
+      return { 
+        success: false, 
+        error: 'El correo electrónico ya está registrado por otro usuario en la plataforma. Cambio denegado por seguridad multiempresa.' 
+      }
+    }
 
     // 1. Update in Auth
     const { error: authError } = await supabaseAdmin.auth.admin.updateUserById(userId, { email })
@@ -441,7 +544,6 @@ export async function updateUserPassword(userId: string, password: string) {
     if (extendedUser.role_id !== 'admin' && extendedUser.role_id !== 'super_admin') {
       return { success: false, error: 'Permiso denegado.' }
     }
-    const supabaseAdmin = await createAdminClient()
 
     const { error } = await supabaseAdmin.auth.admin.updateUserById(userId, { password })
     if (error) throw error

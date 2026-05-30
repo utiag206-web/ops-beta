@@ -47,6 +47,7 @@ const CATEGORY_MAP: any = {
   fondo_inicial: { label: 'Fondo Inicial', icon: '🏦' },
   reposicion: { label: 'Reposición', icon: '🔄' },
   reembolso: { label: 'Reembolso', icon: '💰' },
+  transferencia: { label: 'Transferencia Interna', icon: '💸' },
 }
 
 export default function CajaChicaPage() {

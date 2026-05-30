@@ -6,7 +6,7 @@ import { getUserSession, requirePermission, getStrictCompanyId, applyIsolation }
 
 export async function deleteProduct(id: string) {
   try {
-    const extendedUser = await requirePermission('admin')
+    const extendedUser = await requirePermission('inventory')
     const companyId = await getStrictCompanyId()
 
     const supabase = await createAdminClient()
@@ -28,7 +28,7 @@ export async function deleteProduct(id: string) {
   }
 }
 
-export async function getWarehouses() {
+export async function getWarehouses(allWarehouses?: boolean) {
   const companyId = await getStrictCompanyId()
   const { extendedUser } = await getUserSession()
   const supabase = await createAdminClient()
@@ -40,7 +40,7 @@ export async function getWarehouses() {
   )
 
   // [BLINDAJE_AREA]
-  if (extendedUser?.area === 'Cocina') {
+  if (extendedUser?.area === 'Cocina' && !allWarehouses) {
     query = query.or('area.eq.COCINA,name.ilike.%Cocina%')
   }
 
@@ -69,8 +69,8 @@ export async function getMovementTypes() {
 
     // Validar integridad básica
     const requiredEffects = ['IN', 'OUT', 'BOTH']
-    const existingEffects = (data || []).map(t => t.effect)
-    const missingAny = !data || data.length === 0 || requiredEffects.some(eff => !existingEffects.includes(eff))
+    const existingEffects = (data || []).map((t: any) => t.effect)
+    const missingAny = !data || data.length === 0 || requiredEffects.some((eff: any) => !existingEffects.includes(eff))
 
     if (missingAny) {
       const seedResult = await seedMovementTypes(companyId)
@@ -111,7 +111,7 @@ async function seedMovementTypes(companyId: string): Promise<{ data?: any[], err
       return { error: fetchError.message }
     }
 
-    const existingCodes = (existing || []).map(t => t.code)
+    const existingCodes = (existing || []).map((t: any) => t.code)
     const defaults = [
       { company_id: companyId, name: 'Ingreso Almacén', code: 'ING', effect: 'IN' },
       { company_id: companyId, name: 'Salida Consumo', code: 'SAL', effect: 'OUT' },
@@ -120,7 +120,7 @@ async function seedMovementTypes(companyId: string): Promise<{ data?: any[], err
     ]
 
     // 2. Filtrar solo los que NO existen
-    const missing = defaults.filter(d => !existingCodes.includes(d.code))
+    const missing = defaults.filter((d: any) => !existingCodes.includes(d.code))
 
     if (missing.length === 0) {
       console.log(`[INVENTORY_SEED] All default types already exist for company ${companyId}.`)
@@ -156,7 +156,7 @@ export async function getProductsMinimal() {
 
   // Solo traemos lo estrictamente necesario para el selector de búsqueda
   const { data, error } = await applyIsolation(
-    supabase.from('products').select('id, name, unit'),
+    supabase.from('products').select('id, name, unit, code'),
     companyId,
     extendedUser.role_id
   ).order('name', { ascending: true })
@@ -191,9 +191,9 @@ export async function getProducts() {
     return { error: error.message }
   }
 
-  const enrichedProducts = data?.map(p => {
+  const enrichedProducts = data?.map((p: any) => {
     const stockItems = (p.inventory_stock as any[]) || []
-    const total_stock = stockItems.reduce((acc, s) => acc + (s.quantity || 0), 0) || 0
+    const total_stock = stockItems.reduce((acc: number, s: any) => acc + (s.quantity || 0), 0) || 0
     return {
       ...p,
       total_stock
@@ -463,8 +463,8 @@ export async function getInventoryMovements(limit = 100) {
   const initialBalances: Record<string, number> = {}
   
   try {
-    const productIds = [...new Set(data.map(m => m.product_id))]
-    const warehouseIds = [...new Set(data.map(m => m.warehouse_id))]
+    const productIds = [...new Set(data.map((m: any) => m.product_id))]
+    const warehouseIds = [...new Set(data.map((m: any) => m.warehouse_id))]
 
     const { data: currentStocks } = await applyIsolation(
       supabase.from('inventory_stock').select('product_id, warehouse_id, quantity'),
@@ -474,7 +474,7 @@ export async function getInventoryMovements(limit = 100) {
 
     // Mapa de stock actual por par producto|almacén
     const stockMap: Record<string, number> = {}
-    currentStocks?.forEach(s => {
+    currentStocks?.forEach((s: any) => {
       stockMap[`${s.product_id}|${s.warehouse_id}`] = s.quantity || 0
     })
 
@@ -484,7 +484,7 @@ export async function getInventoryMovements(limit = 100) {
     // calcular el saldo en el punto exacto donde termina este lote.
     
     // Por ahora, para el Historial rápido, usaremos el mapeo de pares para marcar el punto de partida.
-    data.forEach(m => {
+    data.forEach((m: any) => {
       const pair = `${m.product_id}|${m.warehouse_id}`
       if (initialBalances[pair] === undefined) {
         initialBalances[pair] = stockMap[pair] || 0
@@ -759,7 +759,7 @@ export async function syncInventoryStock() {
 
     // 2. Agrupar por Producto + Almacén
     const stockMap: Record<string, number> = {}
-    movements?.forEach(m => {
+    movements?.forEach((m: any) => {
       const key = `${m.product_id}|${m.warehouse_id}`
       const type = (m.type || '').toLowerCase()
       const effect = (m.movement_types as any)?.effect
@@ -782,7 +782,7 @@ export async function syncInventoryStock() {
       extendedUser.role_id
     )
 
-    const existingKeys = new Set(currentStock?.map(s => `${s.product_id}|${s.warehouse_id}`))
+    const existingKeys = new Set<string>((currentStock || []).map((s: any) => `${s.product_id}|${s.warehouse_id}`))
 
     // 4. Ejecutar UPSERTs
     
@@ -821,13 +821,13 @@ function capitalizeName(str: string) {
   return str.trim().toLowerCase().replace(/(^\w|\s\w)/g, m => m.toUpperCase());
 }
 
-export async function createWarehouse(payload: { name: string, code?: string }) {
+export async function createWarehouse(payload: { name: string, code?: string, company_id?: string }) {
   const companyId = await getStrictCompanyId()
   const { extendedUser } = await getUserSession()
   const supabase = await createAdminClient()
 
-  const allowedRoles = ['admin', 'company_admin', 'super_admin', 'superadmin', 'gerente']
-  if (!allowedRoles.includes(extendedUser.role_id)) {
+  const role = (extendedUser.role_id || '').toLowerCase()
+  if (['trabajador', 'worker'].includes(role)) {
     return { error: 'No tienes permisos para crear almacenes.' }
   }
   
@@ -862,8 +862,8 @@ export async function updateWarehouse(id: string, payload: { name: string, code?
   const { extendedUser } = await getUserSession()
   const supabase = await createAdminClient()
 
-  const allowedRoles = ['admin', 'company_admin', 'super_admin', 'superadmin', 'gerente']
-  if (!allowedRoles.includes(extendedUser.role_id)) {
+  const role = (extendedUser.role_id || '').toLowerCase()
+  if (['trabajador', 'worker'].includes(role)) {
     return { error: 'No tienes permisos para editar almacenes.' }
   }
   
@@ -903,8 +903,8 @@ export async function deleteWarehouse(id: string) {
   const { extendedUser } = await getUserSession()
   const supabase = await createAdminClient()
 
-  const allowedRoles = ['admin', 'company_admin', 'super_admin', 'superadmin', 'gerente']
-  if (!allowedRoles.includes(extendedUser.role_id)) {
+  const role = (extendedUser.role_id || '').toLowerCase()
+  if (['trabajador', 'worker'].includes(role)) {
     return { error: 'No tienes permisos para eliminar almacenes.' }
   }
 
@@ -1010,9 +1010,7 @@ export async function getPurchaseOrderItems(poId: string) {
   return { data }
 }
 
-export async function processInboundFromPO(payload: {
-  // ...
-}) {
+export async function processInboundFromPO(payload: any) {
   const companyId = await getStrictCompanyId()
   const { extendedUser } = await getUserSession()
   const supabase = await createAdminClient()

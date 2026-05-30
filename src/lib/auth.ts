@@ -19,49 +19,71 @@ export const getUserSession = cache(async function getUserSession() {
     const adminSupabase = await createAdminClient()
     const { data: userData, error: userError } = await adminSupabase
         .from('users')
-        .select('*, companies(id, name, logo_url), workers(id, status)')
+        .select('*, companies(id, name, logo_url)')
         .eq('id', user.id)
         .maybeSingle()
 
     if (userError || !userData) {
-      return { user, extendedUser: null }
+      return { user, extendedUser: null as any }
     }
 
-    // Role Resolution
+    // Natively registered role and helper flags
     const rawRoleId = String(userData?.role_id || userData?.role || '').toLowerCase()
+    const isSuperAdminUser = rawRoleId === 'super_admin' || rawRoleId === 'superadmin'
+    
+    // Determine active company context
+    const finalCompanyId = isSuperAdminUser ? (activeCompanyId || null) : userData.company_id
+    const impersonating = !!(isSuperAdminUser && activeCompanyId)
+    
+    const isUuid = (val: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(val)
+
+    // Dynamic Role Resolution: Query user_roles based on final active company context
     let rbacRole: string = 'trabajador'
-
-    if (rawRoleId === 'super_admin' || rawRoleId === 'superadmin') {
-      rbacRole = 'super_admin'
-    } else {
-      rbacRole = rawRoleId || 'trabajador'
-    }
-
-    const isSuperAdmin = rbacRole === 'super_admin'
-    
-    const finalCompanyId = isSuperAdmin ? (activeCompanyId || null) : userData.company_id
-    const impersonating = !!(isSuperAdmin && activeCompanyId)
-    
-    // FETCH TENANT MEMBERSHIP
-    let tenantRole = rbacRole
-    let tenantArea = (userData as any)?.area || null
-    
-    if (finalCompanyId) {
-      const { data: membership } = await adminSupabase
+    if (finalCompanyId && isUuid(finalCompanyId)) {
+      const { data: activeRoleData } = await adminSupabase
         .from('user_roles')
         .select('role_id')
         .eq('user_id', user.id)
         .eq('company_id', finalCompanyId)
         .maybeSingle()
-        
-      if (membership) {
-        tenantRole = membership.role_id || tenantRole
-        // Area is currently in users table, but conceptually belongs to membership.
-        // We'll keep it as is for now unless there's a specific company_members table.
+
+      if (activeRoleData?.role_id) {
+        rbacRole = activeRoleData.role_id.toLowerCase()
+      } else {
+        rbacRole = isSuperAdminUser ? 'super_admin' : (rawRoleId || 'trabajador')
+      }
+    } else {
+      rbacRole = isSuperAdminUser ? 'super_admin' : (rawRoleId || 'trabajador')
+    }
+
+    // Dynamic Worker Context Resolution based on active company
+    let activeWorkerId: string | null = null
+    let activeWorkerStatus: string | null = null
+
+    if (finalCompanyId && isUuid(finalCompanyId)) {
+      const { data: companyWorker } = await adminSupabase
+        .from('workers')
+        .select('id, status')
+        .eq('company_id', finalCompanyId)
+        .eq('id', userData.worker_id || '00000000-0000-0000-0000-000000000000')
+        .maybeSingle()
+
+      if (companyWorker) {
+        activeWorkerId = companyWorker.id
+        activeWorkerStatus = companyWorker.status
+      }
+    } else {
+      const { data: nativeWorker } = await adminSupabase
+        .from('workers')
+        .select('id, status')
+        .eq('id', userData.worker_id || '00000000-0000-0000-0000-000000000000')
+        .maybeSingle()
+      
+      if (nativeWorker) {
+        activeWorkerId = nativeWorker.id
+        activeWorkerStatus = nativeWorker.status
       }
     }
-    
-    const isUuid = (val: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(val)
 
     // Company Data Fetching (Only if impersonating, otherwise use joined data)
     let companyData = userData.companies
@@ -70,25 +92,42 @@ export const getUserSession = cache(async function getUserSession() {
         .from('companies')
         .select('id, name, logo_url')
         .eq('id', finalCompanyId)
-        .maybeSingle()
+        .single()
       companyData = comp
     }
+
+    // Helper function to slugify company name in JS as fallback
+    const slugify = (text: string) => {
+      return text
+        .toString()
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-z0-9\s-]/g, '')
+        .trim()
+        .replace(/\s+/g, '-')
+        .replace(/-+/g, '-');
+    }
+
+    const companyObj = Array.isArray(companyData) ? companyData[0] : companyData
+    const companySlug = companyObj?.slug || (companyObj?.name ? slugify(companyObj.name) : 'empresa')
 
     const extendedUser = {
       id: user.id,
       email: userData.email || user.email || '',
       name: userData.name || 'Usuario',
-      role_id: tenantRole,
-      area: tenantArea,
-      company_id: finalCompanyId, // SWAP: Use active/final ID
-      native_company_id: (userData as any)?.company_id || null, // Reference to original
-      worker_id: (userData as any)?.worker_id || null,
-      worker_status: (userData as any)?.workers?.status || null,
+      role_id: rbacRole, // Dynamic active role context
+      area: (userData as any)?.area || null,
+      company_id: finalCompanyId, // Dynamic active company context
+      native_company_id: (userData as any)?.company_id || null, 
+      worker_id: activeWorkerId, // Dynamic worker context
+      worker_status: activeWorkerStatus, // Dynamic worker status
       permissions: getPermissionsByRole(rbacRole, (userData as any)?.area),
       active_company_id: finalCompanyId,
       companies: companyData,
-      company_name: (Array.isArray(companyData) ? companyData[0] : companyData)?.name || 'Empresa',
-      company_logo: (Array.isArray(companyData) ? companyData[0] : companyData)?.logo_url || null,
+      company_name: companyObj?.name || 'Empresa',
+      company_logo: companyObj?.logo_url || null,
+      company_slug: companySlug,
       is_impersonating: impersonating,
       display_name: '',
       display_email: '',
@@ -98,18 +137,18 @@ export const getUserSession = cache(async function getUserSession() {
     // Identity Masking for Super Admin (Display Only)
     if (impersonating) {
       const safeName = companyData?.name || 'Sistema'
-      extendedUser.display_name = `Admin Sistema`
-      extendedUser.display_email = 'auditoria@sistema.local'
+      extendedUser.display_name = `Administrador (${safeName})`
+      extendedUser.display_email = extendedUser.email
     } else {
       extendedUser.display_name = extendedUser.name
       extendedUser.display_email = extendedUser.email
     }
 
-    return { user, extendedUser }
+    return { user, extendedUser: extendedUser as any }
 
   } catch (error: any) {
     if (error.digest?.startsWith('NEXT_REDIRECT')) throw error
-    return { user: null, extendedUser: null }
+    return { user: null, extendedUser: null as any }
   }
 })
 
@@ -139,6 +178,21 @@ export async function requirePermission(moduleName: string) {
     throw new Error(`Acceso Denegado a '${moduleName}'`)
   }
   return extendedUser
+}
+
+export async function getActiveViewMode(): Promise<'OPERATIONAL' | 'WORKER'> {
+  try {
+    const { extendedUser } = await getUserSession()
+    if (!extendedUser || !extendedUser.worker_id) return 'OPERATIONAL'
+    
+    const role = extendedUser.role_id?.toLowerCase()
+    if (['admin', 'super_admin', 'superadmin'].includes(role)) return 'OPERATIONAL'
+    
+    const cookieStore = await cookies()
+    return cookieStore.get('view_mode')?.value === 'WORKER' ? 'WORKER' : 'OPERATIONAL'
+  } catch {
+    return 'OPERATIONAL'
+  }
 }
 
 export function applyIsolation(query: any, companyId: string | null, role: string) {

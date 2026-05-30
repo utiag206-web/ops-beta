@@ -64,7 +64,7 @@ export function InventoryStockList({
 }) {
   const router = useRouter()
   const role_id = user?.role_id
-  const canWrite = ['admin', 'almacen', 'cocina', 'operaciones', 'logistica', 'administracion', 'gerente'].includes(role_id || '')
+  const canWrite = !!(role_id && !['trabajador', 'worker'].includes(role_id.toLowerCase()))
   const [stock, setStock] = useState<StockItem[]>(initialStock)
   
   // Sync internal state when props change (Reactive Sync)
@@ -371,6 +371,7 @@ function StockGroup({
 function TraceabilityCard({ productId, unit }: { productId: string, unit: string }) {
   const [movements, setMovements] = useState<Movement[]>([])
   const [loading, setLoading] = useState(true)
+  const [selectedMovement, setSelectedMovement] = useState<Movement | null>(null)
 
   useEffect(() => {
     async function load() {
@@ -393,39 +394,196 @@ function TraceabilityCard({ productId, unit }: { productId: string, unit: string
           <p className="text-xs font-bold uppercase tracking-widest">Cargando historial...</p>
         </div>
       ) : movements.length > 0 ? (
-        <div className="space-y-3 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
-          {movements.map(m => (
-            <div key={m.id} className="p-3 bg-slate-50 rounded-2xl border border-slate-50 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className={`p-2 rounded-xl border ${
-                  m.type === 'ingreso' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 
-                  m.type === 'salida' ? 'bg-rose-50 text-rose-600 border-rose-100' : 
-                  'bg-amber-50 text-amber-600 border-amber-100'
-                }`}>
-                  {m.type === 'ingreso' ? <ArrowUpRight size={14} /> : 
-                   m.type === 'salida' ? <ArrowDownLeft size={14} /> : 
-                   <Settings2 size={14} />}
+        <>
+          <div className="space-y-3 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
+            {movements.map(m => (
+              <div 
+                key={m.id} 
+                onClick={() => setSelectedMovement(m)}
+                className="p-3 bg-slate-50 hover:bg-slate-100/70 active:scale-[0.99] transition-all cursor-pointer rounded-2xl border border-slate-50 flex items-center justify-between group"
+              >
+                <div className="flex items-center gap-3">
+                  <div className={`p-2 rounded-xl border transition-all group-hover:scale-105 ${
+                    m.type === 'ingreso' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 
+                    m.type === 'salida' ? 'bg-rose-50 text-rose-600 border-rose-100' : 
+                    'bg-amber-50 text-amber-600 border-amber-100'
+                  }`}>
+                    {m.type === 'ingreso' ? <ArrowUpRight size={14} /> : 
+                     m.type === 'salida' ? <ArrowDownLeft size={14} /> : 
+                     <Settings2 size={14} />}
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-bold text-slate-700 uppercase leading-none mb-1 group-hover:text-indigo-600 transition-colors">
+                      {m.movement_types?.name || m.type}
+                      {m.document_number && <span className="ml-2 text-slate-400 font-bold border-l pl-2 border-slate-200"># {m.document_number}</span>}
+                    </p>
+                    <p className="text-[9px] font-bold text-slate-400 uppercase">{new Date(m.created_at).toLocaleDateString()} {new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-[10px] font-bold text-slate-700 uppercase leading-none mb-1">
-                    {m.movement_types?.name || m.type}
-                    {m.document_number && <span className="ml-2 text-slate-400 font-bold border-l pl-2 border-slate-200"># {m.document_number}</span>}
+                <div className="text-right">
+                  <p className={`text-sm font-bold ${m.type === 'ingreso' ? 'text-emerald-600' : 'text-rose-600'}`}>
+                    {m.type === 'salida' ? '-' : '+'}{m.quantity}
                   </p>
-                  <p className="text-[9px] font-bold text-slate-400 uppercase">{new Date(m.created_at).toLocaleDateString()} {new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
+                  <p className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">{m.warehouses?.name || m.location}</p>
                 </div>
               </div>
-              <div className="text-right">
-                <p className={`text-sm font-bold ${m.type === 'ingreso' ? 'text-emerald-600' : 'text-rose-600'}`}>
-                  {m.type === 'salida' ? '-' : '+'}{m.quantity}
-                </p>
-                <p className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">{m.warehouses?.name || m.location}</p>
-              </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+
+          <MovementDetailModal 
+            movement={selectedMovement} 
+            unit={unit} 
+            onClose={() => setSelectedMovement(null)} 
+          />
+        </>
       ) : (
         <div className="py-12 text-center text-slate-400 italic text-sm">Sin movimientos registrados</div>
       )}
+    </div>
+  )
+}
+
+function MovementDetailModal({ 
+  movement, 
+  unit, 
+  onClose 
+}: { 
+  movement: Movement | null, 
+  unit: string, 
+  onClose: () => void 
+}) {
+  if (!movement) return null
+
+  const isIngreso = movement.type === 'ingreso'
+  const isSalida = movement.type === 'salida'
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
+      <div className="bg-white rounded-3xl w-full max-w-lg border border-slate-100 shadow-2xl p-6 md:p-8 flex flex-col max-h-[90vh] overflow-y-auto animate-in zoom-in-95 duration-200">
+        {/* Header with Type Ribbon */}
+        <div className="flex justify-between items-start mb-6">
+          <div className="space-y-1">
+            <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${
+              isIngreso ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' :
+              isSalida ? 'bg-rose-50 text-rose-700 border border-rose-100' :
+              'bg-amber-50 text-amber-700 border border-amber-100'
+            }`}>
+              {isIngreso ? 'Ingreso de Stock' : isSalida ? 'Salida de Stock' : 'Ajuste de Stock'}
+            </span>
+            <h3 className="text-xl font-bold text-slate-800 tracking-tight mt-2">
+              Detalle del Movimiento
+            </h3>
+          </div>
+          <button 
+            onClick={onClose}
+            className="p-2 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-50 transition-all font-bold"
+          >
+            ✕
+          </button>
+        </div>
+
+        {/* Big Quantity Indicator */}
+        <div className={`p-6 rounded-2xl border-2 flex items-center justify-between mb-6 ${
+          isIngreso ? 'bg-emerald-50/30 border-emerald-100 text-emerald-800' :
+          isSalida ? 'bg-rose-50/30 border-rose-100 text-rose-800' :
+          'bg-amber-50/30 border-amber-100 text-amber-800'
+        }`}>
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Cantidad Registrada</p>
+            <p className="text-3xl font-extrabold tracking-tight mt-1">
+              {isSalida ? '-' : '+'}{movement.quantity}
+              <span className="text-sm font-bold opacity-75 ml-2 uppercase">{unit || 'UND'}</span>
+            </p>
+          </div>
+          <div className={`p-4 rounded-xl ${
+            isIngreso ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-200' :
+            isSalida ? 'bg-rose-500 text-white shadow-lg shadow-rose-200' :
+            'bg-amber-500 text-white shadow-lg shadow-amber-200'
+          }`}>
+            {isIngreso ? <ArrowUpRight size={24} /> :
+             isSalida ? <ArrowDownLeft size={24} /> :
+             <Settings2 size={24} />}
+          </div>
+        </div>
+
+        {/* Detailed Fields Grid */}
+        <div className="space-y-4 flex-1">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Concepto / Tipo</p>
+              <p className="text-sm font-bold text-slate-700 uppercase">
+                {movement.movement_types?.name || movement.type || 'N/A'}
+              </p>
+            </div>
+            <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Almacén / Ubicación</p>
+              <p className="text-sm font-bold text-slate-700 uppercase font-mono">
+                {movement.warehouses?.name || movement.location || 'N/A'}
+              </p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Tipo de Documento</p>
+              <p className="text-sm font-bold text-slate-700 uppercase">
+                {movement.document_type || 'SIN DOCUMENTO'}
+              </p>
+            </div>
+            <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Número de Documento</p>
+              <p className="text-sm font-bold text-slate-700 uppercase">
+                {movement.document_number || 'S/N'}
+              </p>
+            </div>
+          </div>
+
+          <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 space-y-3">
+            <div className="flex justify-between items-center pb-2 border-b border-slate-200/50">
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Fecha y Hora</span>
+              <span className="text-xs font-bold text-slate-600 uppercase">
+                {new Date(movement.created_at).toLocaleDateString()} {new Date(movement.created_at).toLocaleTimeString()}
+              </span>
+            </div>
+            <div className="flex justify-between items-center pb-2 border-b border-slate-200/50">
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Registrado Por</span>
+              <span className="text-xs font-bold text-slate-600 uppercase flex items-center gap-1.5">
+                <User size={12} className="text-indigo-500" />
+                {movement.responsible_name || movement.users?.name || 'Sistema / Desconocido'}
+              </span>
+            </div>
+            {movement.reference && (
+              <div className="flex justify-between items-center">
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Referencia</span>
+                <span className="text-xs font-bold text-slate-600 uppercase font-mono">
+                  {movement.reference}
+                </span>
+              </div>
+            )}
+          </div>
+
+          {/* Observations */}
+          <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+              <MessageSquare size={12} className="text-indigo-500" />
+              Observaciones / Comentarios
+            </p>
+            <p className="text-sm font-medium text-slate-600 whitespace-pre-wrap italic">
+              {movement.observation || 'Sin observaciones registradas.'}
+            </p>
+          </div>
+        </div>
+
+        {/* Footer Actions */}
+        <div className="mt-6 pt-4 border-t border-slate-100 flex justify-end">
+          <button 
+            onClick={onClose}
+            className="w-full bg-slate-900 hover:bg-slate-800 text-white py-3.5 rounded-2xl font-bold transition-all active:scale-[0.98] text-sm shadow-lg shadow-slate-100"
+          >
+            Cerrar Detalle
+          </button>
+        </div>
+      </div>
     </div>
   )
 }

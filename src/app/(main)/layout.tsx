@@ -13,26 +13,10 @@ export default async function DashboardLayout({
 }: {
   children: React.ReactNode
 }) {
-  let session;
-  let headersList;
-  try {
-    session = await getUserSession()
-    headersList = await headers()
-  } catch (err: any) {
-    if (
-      err.digest?.startsWith('NEXT_REDIRECT') || 
-      err.message?.includes('NEXT_REDIRECT') ||
-      err.digest === 'DYNAMIC_SERVER_USAGE' ||
-      err.message?.includes('DYNAMIC_SERVER_USAGE') ||
-      err.message?.includes('Dynamic server usage')
-    ) {
-      throw err
-    }
-    console.error('[LAYOUT_CRITICAL_ERROR] Error fetching session or headers:', err)
-    redirect('/login?message=Error+de+sesion')
-  }
-
+  const session = await getUserSession()
   const extendedUser = session?.extendedUser
+  
+  const headersList = await headers()
   const pathname = (headersList.get('x-pathname') || '').split('?')[0]
   
   // 1. Mandatory Session Guard
@@ -48,6 +32,12 @@ export default async function DashboardLayout({
   
   console.log(`[LAYOUT] 🏁 Path: ${pathname} | User: ${extendedUser?.email || 'ANONYMOUS'} | Role: ${userRole}`)
   
+  // 1. Mandatory Session Guard
+  if (!extendedUser) {
+    console.log(`[LAYOUT] 🛑 No extendedUser found. Redirecting to /login. (Auth user might exist but DB profile is missing)`)
+    redirect('/login')
+  }
+
   // 2. Variables for Guards
   const isSuperAdmin = userRole === 'super_admin' || userRole === 'superadmin'
   const isImpersonating = !!extendedUser?.is_impersonating
@@ -96,11 +86,9 @@ export default async function DashboardLayout({
         <div className="flex h-screen bg-slate-50 overflow-hidden relative">
           <Sidebar />
           <div className="flex-1 flex flex-col h-screen overflow-hidden relative">
-            {console.log("[LAYOUT_TRACE] 6. Rendering Header")}
             <Header />
             <main className="flex-1 overflow-y-auto p-4 md:p-8 bg-slate-50/50">
               <div className="max-w-7xl mx-auto">
-                {console.log("[LAYOUT_TRACE] 7. Rendering Children")}
                 {children}
               </div>
             </main>

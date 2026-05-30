@@ -260,7 +260,7 @@ export async function getWorkerDocuments(workerId: string) {
   if (error) return []
 
   // Enhance documents with signed URLs for secure access
-  const docsWithUrls = await Promise.all((data || []).map(async (doc) => {
+  const docsWithUrls = await Promise.all((data || []).map(async (doc: any) => {
     if (!doc.file_path) return doc;
 
     const { data: signedData, error: signedError } = await supabase.storage
@@ -397,7 +397,7 @@ export async function importWorkers(workersData: any[]) {
   const supabase = await createAdminClient()
   
   // Prepare data with company_id
-  const workersToInsert = workersData.map(worker => ({
+  const workersToInsert = workersData.map((worker: any) => ({
     name: worker.name,
     dni: worker.dni?.toString(),
     position: worker.position,

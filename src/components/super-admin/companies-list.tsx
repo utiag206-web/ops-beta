@@ -13,12 +13,15 @@ import {
 } from '@/app/(main)/super-admin/actions'
 import { useRouter } from 'next/navigation'
 import { Trash2, FlaskConical, Globe2 } from 'lucide-react'
+import { CompanyDetailsModal } from './company-details-modal'
 
 export function CompaniesList({ companies }: { companies: any[] }) {
   const router = useRouter()
   const [searchTerm, setSearchTerm] = useState('')
   const [filter, setFilter] = useState<'all' | 'real' | 'test'>('all')
   const [loadingId, setLoadingId] = useState<string | null>(null)
+  const [selectedDetailsId, setSelectedDetailsId] = useState<string | null>(null)
+
 
   const filteredCompanies = companies.filter(c => {
     const matchesSearch = c.name.toLowerCase().includes(searchTerm.toLowerCase())
@@ -203,6 +206,7 @@ export function CompaniesList({ companies }: { companies: any[] }) {
                     </button>
                     
                     <button 
+                      onClick={() => setSelectedDetailsId(company.id)}
                       className="p-2 border border-slate-100 text-slate-400 bg-white hover:text-slate-900 hover:bg-slate-50 rounded-xl transition-all shadow-sm"
                       title="Ver Detalles"
                     >
@@ -251,6 +255,12 @@ export function CompaniesList({ companies }: { companies: any[] }) {
           </tbody>
         </table>
       </div>
+
+      <CompanyDetailsModal 
+        isOpen={!!selectedDetailsId} 
+        onClose={() => setSelectedDetailsId(null)} 
+        companyId={selectedDetailsId} 
+      />
     </div>
   )
 }

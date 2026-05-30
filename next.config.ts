@@ -1,26 +1,19 @@
 import type { NextConfig } from "next";
+// import withPWAInit from "@ducanh2912/next-pwa";
+
+// const withPWA = withPWAInit({
+//   dest: "public",
+//   disable: process.env.NODE_ENV === "development",
+//   cacheOnFrontEndNav: true,
+//   aggressiveFrontEndNavCaching: true,
+// });
 
 const nextConfig: NextConfig = {
-  /* config options here */
-  reactStrictMode: true,
-  output: "standalone",
+  output: 'standalone',
   eslint: {
-    // Warning: This allows production builds to successfully complete even if
-    // your project has ESLint errors.
     ignoreDuringBuilds: true,
   },
-  typescript: {
-    // Warning: This allows production builds to successfully complete even if
-    // your project has type errors.
-    ignoreBuildErrors: true,
-  },
   images: {
-    remotePatterns: [
-      {
-        protocol: "https",
-        hostname: "**",
-      },
-    ],
     unoptimized: true,
   },
   experimental: {
@@ -30,4 +23,5 @@ const nextConfig: NextConfig = {
   },
 };
 
+// export default withPWA(nextConfig);
 export default nextConfig;

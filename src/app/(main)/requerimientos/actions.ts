@@ -44,13 +44,13 @@ export async function getRequirements(filters?: { status?: string, priority?: st
   }
 
   // MANUAL JOIN: Fetch users and products to avoid schema relationship errors
-  const userIds = [...new Set(data.map(r => r.created_by).filter(Boolean))]
-  const productIds = [...new Set(data.map(r => r.product_id).filter(Boolean))]
+  const userIds = [...new Set(data.map((r: any) => r.created_by).filter(Boolean))]
+  const productIds = [...new Set(data.map((r: any) => r.product_id).filter(Boolean))]
 
   const adminSupabase = await createAdminClient()
   
   const fetchUsers = userIds.length > 0 
-    ? applyIsolation(adminSupabase.from('users').select('id, name'), companyId, extendedUser.role_id).in('id', userIds)
+    ? adminSupabase.from('users').select('id, name').in('id', userIds)
     : Promise.resolve({ data: [] })
   
   const fetchProducts = productIds.length > 0
@@ -62,11 +62,47 @@ export async function getRequirements(filters?: { status?: string, priority?: st
   const users = resUsers.data || []
   const products = resProducts.data || []
 
-  const enrichedData = data.map(req => ({
-    ...req,
-    user: users.find((u: any) => u.id === req.created_by),
-    products: products.find((p: any) => p.id === req.product_id)
-  }))
+  const enrichedData = data.map((req: any) => {
+    let type = req.type
+    let virtualProducts = products.find((p: any) => p.id === req.product_id)
+    
+    // Try to parse description brackets to enrich products virtual column
+    if (req.description?.startsWith('[SOLICITUD DE FONDOS:')) {
+      type = 'fondos'
+      virtualProducts = {
+        name: 'CAJA CHICA (FONDOS)',
+        code: 'CAJA',
+        unit: 'S/'
+      }
+    } else if (req.description?.startsWith('[HERRAMIENTA:')) {
+      type = 'herramienta'
+      const match = req.description.match(/^\[HERRAMIENTA:\s*([^|]*?)\s*\|\s*CANT:\s*([^\]]*?)\]/)
+      if (match) {
+        virtualProducts = {
+          name: match[1].toUpperCase(),
+          code: 'HERR',
+          unit: 'UND'
+        }
+      }
+    } else if (req.description?.startsWith('[PERSONAL:')) {
+      type = 'personal'
+      const match = req.description.match(/^\[PERSONAL:\s*([^|]*?)\s*\|\s*CANT:\s*([^\]]*?)\]/)
+      if (match) {
+        virtualProducts = {
+          name: `PERSONAL: ${match[1].toUpperCase()}`,
+          code: 'PERS',
+          unit: 'PERS'
+        }
+      }
+    }
+
+    return {
+      ...req,
+      type,
+      user: users.find((u: any) => u.id === req.created_by),
+      products: virtualProducts
+    }
+  })
 
   return { data: enrichedData }
 }
@@ -87,10 +123,18 @@ export async function createRequirement(payload: {
     return { error: 'Sesión inválida.' }
   }
 
+  // Workaround: Database check constraint only allows insumo, herramienta, personal.
+  // We save funds/Caja Chica as insumo.
+  let dbType = payload.type
+  if (dbType === 'fondos') {
+    dbType = 'insumo'
+  }
+
   const { data, error } = await supabase
     .from('requirements')
     .insert([{
       ...payload,
+      type: dbType,
       company_id: companyId || (payload as any).company_id,
       created_by: extendedUser.id,
       area: extendedUser.area, // Capturar área del creador
@@ -203,6 +247,20 @@ export async function approveRequirementWithMovement(reqId: string, warehouseId:
   if (movError) {
     console.error('Error creating movement on approval:', movError)
     return { error: 'Error al generar salida de inventario: ' + movError.message }
+  }
+
+  // 3.5 Sincronizar stock (Descontar de forma atómica relativa)
+  const { error: stockErr } = await supabase.rpc('upsert_inventory_stock', {
+    p_product_id: req.product_id,
+    p_warehouse_id: warehouseId,
+    p_company_id: companyId || req.company_id,
+    p_quantity: -req.quantity
+  })
+
+  if (stockErr) {
+    console.error('Error updating stock on requirement approval:', stockErr)
+    await supabase.from('inventory_movements').delete().eq('id', movement.id)
+    return { error: 'Error al actualizar el stock físico en base de datos: ' + stockErr.message }
   }
 
   // 3. Actualizar el requerimiento a aprobado y vincularlo

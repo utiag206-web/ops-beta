@@ -29,12 +29,7 @@ interface Product {
 export function ProductsList({ initialProducts }: { initialProducts: Product[] }) {
   const router = useRouter()
   const { role_id, isAdmin } = useUserRole()
-  const isAlmacen = role_id === 'almacen'
-  const isLogistica = role_id === 'logistica'
-  const isOperaciones = role_id === 'operaciones'
-  const isAdministracion = role_id === 'administracion'
-  const isGerente = role_id === 'gerente'
-  const canModifyProducts = isAdmin || isLogistica || isAlmacen || isOperaciones || isAdministracion || isGerente
+  const canModifyProducts = !!(role_id && !['trabajador', 'worker'].includes(role_id.toLowerCase()))
 
   const [products, setProducts] = useState<Product[]>(initialProducts)
 

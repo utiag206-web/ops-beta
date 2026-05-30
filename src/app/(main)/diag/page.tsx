@@ -22,7 +22,10 @@ export default async function DiagPage() {
         }, null, 2)}</pre>
       </div>
       <div className="flex gap-4">
-        <form action={stopImpersonation}>
+        <form action={async () => {
+          'use server'
+          await stopImpersonation()
+        }}>
           <button type="submit" className="px-6 py-3 bg-rose-600 text-white font-bold rounded-xl shadow-lg hover:bg-rose-700 transition-all">
             Restaurar Contexto Global (Limpiar Cookies)
           </button>

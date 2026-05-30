@@ -2,13 +2,14 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { AlertCircle, Search, Filter, Activity, Clock, User, CheckCircle2, ChevronRight, Hash } from 'lucide-react'
+import { AlertCircle, Search, Filter, Activity, Clock, User, CheckCircle2, ChevronRight, Hash, X } from 'lucide-react'
 import { getIncidencias } from '@/app/(main)/incidencias/actions'
 import { ReportIncidentModal } from '@/components/requirements/requirements-components'
 
 export function IncidentsList({ initialData = [], user, forcedCategory }: { initialData?: any[], user?: any, forcedCategory?: string }) {
   const router = useRouter()
   const [incidents, setIncidents] = useState<any[]>(initialData)
+  const [selectedIncident, setSelectedIncident] = useState<any | null>(null)
   
   // Sync state with props when server-side refresh happens
   useEffect(() => {
@@ -160,7 +161,7 @@ export function IncidentsList({ initialData = [], user, forcedCategory }: { init
                 }
 
                 return (
-                  <tr key={inc.id} className="hover:bg-slate-50/50 transition-colors group">
+                  <tr key={inc.id} onClick={() => setSelectedIncident(inc)} className="hover:bg-slate-50/50 transition-colors group cursor-pointer">
                     <td className="py-6 px-8">
                       <div className="flex items-center gap-2">
                         <div className="bg-slate-100 p-2 rounded-lg group-hover:bg-white transition-colors">
@@ -184,7 +185,7 @@ export function IncidentsList({ initialData = [], user, forcedCategory }: { init
                         {Array.isArray(urls) && urls.length > 0 && (
                           <div className="flex items-center gap-1.5 mt-2">
                             {urls.map((url: string, i: number) => (
-                              <a key={i} href={url} target="_blank" rel="noreferrer" className="block hover:scale-110 transition-transform" title="Ver imagen">
+                              <a key={i} href={url} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()} className="block hover:scale-110 transition-transform" title="Ver imagen">
                                 <div className="w-10 h-10 rounded-lg overflow-hidden border-2 border-slate-100 bg-slate-50 shadow-sm">
                                   <img src={url} alt={`Evidencia ${i+1}`} className="w-full h-full object-cover" />
                                 </div>
@@ -238,6 +239,119 @@ export function IncidentsList({ initialData = [], user, forcedCategory }: { init
           setIsModalOpen(false)
         }}
       />
+
+      {selectedIncident && (
+        <IncidentDetailModal 
+          isOpen={!!selectedIncident}
+          onClose={() => setSelectedIncident(null)}
+          incident={selectedIncident}
+        />
+      )}
+    </div>
+  )
+}
+
+function IncidentDetailModal({ isOpen, onClose, incident }: { isOpen: boolean, onClose: () => void, incident: any }) {
+  if (!isOpen || !incident) return null
+  
+  let urls: string[] = []
+  try {
+    urls = typeof incident.photo_urls === 'string' ? JSON.parse(incident.photo_urls) : incident.photo_urls
+  } catch (e) {
+    urls = []
+  }
+
+  const getSeverityStyle = (severity: string) => {
+    switch (severity?.toLowerCase()) {
+      case 'leve': return 'bg-emerald-50 text-emerald-600 border-emerald-100'
+      case 'moderado': return 'bg-blue-50 text-blue-600 border-blue-100'
+      case 'grave': return 'bg-orange-50 text-orange-600 border-orange-100'
+      case 'critico': return 'bg-rose-50 text-rose-600 border-rose-100'
+      case 'fatal': return 'bg-slate-900 text-white border-slate-900'
+      default: return 'bg-slate-50 text-slate-600 border-slate-100'
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+      <div className="bg-white w-full max-w-lg rounded-[2.5rem] shadow-2xl overflow-hidden border border-slate-100 animate-in zoom-in-95 duration-200 max-h-[90vh] flex flex-col">
+        {/* Header */}
+        <div className="px-8 py-6 border-b border-slate-50 flex justify-between items-center bg-slate-50/50">
+          <div>
+            <h2 className="text-2xl font-black text-slate-800 tracking-tight">Detalle de Incidencia</h2>
+            <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest">Reporte detallado del evento.</p>
+          </div>
+          <button onClick={onClose} className="p-2 hover:bg-slate-100 rounded-full transition-colors text-slate-400">
+            <X size={24} />
+          </button>
+        </div>
+
+        {/* Content */}
+        <div className="p-8 space-y-6 overflow-y-auto flex-1 custom-scrollbar">
+          {/* Main Info */}
+          <div className="flex justify-between items-start border-b border-slate-100 pb-6">
+            <div>
+              <span className="bg-orange-50 text-orange-700 text-[9px] font-black px-2.5 py-1 rounded shadow-sm border border-orange-100 uppercase tracking-wider">
+                #{incident.id.slice(0, 8)}
+              </span>
+              <h3 className="text-lg font-black text-slate-800 uppercase tracking-tight mt-3 leading-tight text-left">
+                {incident.area_location || 'Ubicación General'}
+              </h3>
+              <p className="text-[10px] font-bold text-slate-400 mt-1 uppercase text-left">Categoría: {incident.category || 'Operativa'}</p>
+            </div>
+            <div className="text-right shrink-0">
+              <span className={`text-[10px] font-black px-3 py-1 rounded-lg uppercase border shadow-sm ${
+                incident.status === 'abierta' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-slate-50 text-slate-400 border-slate-100'
+              }`}>
+                {incident.status}
+              </span>
+              <div className="mt-2">
+                <span className={`text-[10px] font-black px-3 py-1 rounded-lg uppercase border shadow-sm ${getSeverityStyle(incident.severity)}`}>
+                  {incident.severity}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Details Grid */}
+          <div className="grid grid-cols-2 gap-4 bg-slate-50 p-5 rounded-3xl border border-slate-100 text-left">
+            <div>
+              <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Reportado Por</p>
+              <p className="text-xs font-black text-slate-700 uppercase mt-1">{incident.reporter?.name || 'Sistema'}</p>
+            </div>
+            <div>
+              <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Fecha y Hora</p>
+              <p className="text-xs font-black text-slate-700 uppercase mt-1">
+                {incident.created_at ? `${new Date(incident.created_at).toLocaleDateString()} ${new Date(incident.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : '—'}
+              </p>
+            </div>
+          </div>
+
+          {/* Description */}
+          <div className="space-y-2 text-left">
+            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest px-1">Descripción del Reporte</p>
+            <div className="p-5 bg-slate-50/50 rounded-2xl border border-slate-100">
+              <p className="text-sm text-slate-600 font-bold leading-relaxed">{incident.description}</p>
+            </div>
+          </div>
+
+          {/* Evidencia Fotográfica */}
+          {Array.isArray(urls) && urls.length > 0 && (
+            <div className="space-y-2 text-left">
+              <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest px-1">Evidencia Adjunta</p>
+              <div className="grid grid-cols-2 gap-3">
+                {urls.map((url: string, i: number) => (
+                  <a key={i} href={url} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()} className="block hover:scale-98 transition-transform">
+                    <div className="rounded-2xl overflow-hidden border-2 border-slate-100 bg-slate-50 shadow-sm aspect-video flex items-center justify-center">
+                      <img src={url} alt={`Evidencia ${i+1}`} className="w-full h-full object-cover" />
+                    </div>
+                  </a>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   )
 }

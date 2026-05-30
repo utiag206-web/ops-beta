@@ -1,3 +1,5 @@
+'use client'
+
 import Link from 'next/link'
 import { 
   Users, UserCheck, ShieldAlert, BadgeDollarSign, 
@@ -5,8 +7,9 @@ import {
   Clock, CheckCircle2, ArrowRight, FileText,
   Mountain, Bed, Construction, MountainSnow,
   Bus, Coins, Calendar, Shield, GraduationCap, MessageSquare, Eye,
-  ArrowDownLeft, ArrowUpRight, AlertTriangle, Building2, ShoppingCart, Truck, Plus,
-  LayoutDashboard, LayoutGrid, Box, TrendingUp, TrendingDown, ArrowUpDown, ClipboardList, ShieldCheck
+  ArrowDownLeft, ArrowUpRight, AlertTriangle, Building2, ShoppingCart, Truck, Plus, AlertCircle,
+  LayoutDashboard, LayoutGrid, Box, TrendingUp, TrendingDown, ArrowUpDown, ClipboardList, ShieldCheck,
+  UserCircle
 } from 'lucide-react'
 import { StatWidget, AlertWidget, ListWidget, WelcomeHero } from './widgets'
 import { AttendanceMarker } from '@/components/attendance/attendance-marker'
@@ -19,29 +22,143 @@ import { ROLE_NAMES } from '@/lib/constants'
 interface DashboardShellProps {
   user: any
   stats: any
+  localIp?: string
 }
 
 // Lógica de prioridad estricta (Espejo de Sidebar y Actions)
 // Lógica de prioridad estricta (Espejo de Sidebar y Actions)
 function getViewMode(role_id: string, area: string | null) {
   const role = role_id?.toLowerCase()
-  if (['admin', 'gerente', 'super_admin', 'superadmin'].includes(role)) return 'ADMIN'
-  if (role_id === 'administracion') return 'FINANCE'
-  if (role_id === 'soma' || (role_id === 'jefe_area' && area === 'Seguridad SOMA')) return 'SOMA'
-  if (role_id === 'jefe_area' && area === 'Cocina') return 'COCINA'
-  if (role_id === 'operaciones' || (role_id === 'jefe_area' && area === 'Operaciones')) return 'OPERACIONES'
-  if (role_id === 'almacen') return 'ALMACEN'
-  if (role_id === 'trabajador') return 'WORKER'
+  const cleanArea = area?.toLowerCase() || ''
+  if (role === 'gerente') return 'GERENTE'
+  if (['admin', 'super_admin', 'superadmin'].includes(role)) return 'ADMIN'
+  if (role === 'administracion') return 'FINANCE'
+  if (role === 'soma' || (role === 'jefe_area' && cleanArea === 'seguridad soma')) return 'SOMA'
+  if (role === 'jefe_area' && cleanArea === 'cocina') return 'COCINA'
+  if (role === 'operaciones' || (role === 'jefe_area' && cleanArea === 'operaciones')) return 'OPERACIONES'
+  if (role === 'almacen' || role === 'logistica' || (role === 'jefe_area' && ['almacén y mantenimiento', 'mecánica'].includes(cleanArea))) return 'ALMACEN'
+  if (role === 'trabajador') return 'WORKER'
   return 'DEFAULT'
 }
-export function DashboardShell({ user, stats }: DashboardShellProps) {
+export function DashboardShell({ user, stats, localIp }: DashboardShellProps) {
   const roleName = ROLE_NAMES[user.role_id] || "Usuario"
-  const companyName = user.companies?.name || "Empresa"
-  const viewMode = getViewMode(user.role_id, user.area)
+  const companyName = user.company_name || "Empresa"
+  const viewMode = stats.activeView === 'WORKER' ? 'WORKER' : getViewMode(user.role_id, user.area)
+
 
 
   const renderDashboardWidgets = () => {
     switch (viewMode) {
+      case 'GERENTE':
+        return (
+          <div className="space-y-12">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
+              <StatWidget 
+                title="Personal Total" value={stats.admin?.totalWorkers?.toString() || '0'} 
+                icon={UserCheck} color="text-indigo-600" bg="bg-indigo-50" href="/workers"
+              />
+              <StatWidget 
+                title="Caja Chica Central" value={`S/ ${stats.admin?.totalCajaChicaBalance?.toLocaleString(undefined, { minimumFractionDigits: 2 }) || '0.00'}`} 
+                icon={Coins} color="text-emerald-600" bg="bg-emerald-50" href="/caja-chica"
+              />
+              <StatWidget 
+                title="Requerimientos" value={stats.admin?.pendingRequirementsCount?.toString() || '0'} 
+                icon={FileText} color="text-rose-500" bg="bg-rose-50" href="/requerimientos"
+              />
+               <StatWidget 
+                title="Bonificaciones Pend." value={stats.admin?.pendingBonusesCount?.toString() || '0'} 
+                icon={BadgeDollarSign} color="text-amber-600" bg="bg-amber-50" href="/bonuses"
+              />
+              <StatWidget 
+                title="Incidentes Abiertos" value={stats.admin?.openIncidents?.toString() || '0'} 
+                icon={ShieldAlert} color="text-rose-600" bg="bg-rose-50" href="/incidencias"
+              />
+            </div>
+
+            <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
+              <div className="xl:col-span-2 bg-white rounded-2xl md:rounded-[2rem] p-6 md:p-10 shadow-xl shadow-slate-200/50 border border-slate-100">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8 md:mb-10">
+                  <div>
+                    <h3 className="text-2xl font-bold text-slate-800 tracking-tight">Supervisión Semanal</h3>
+                    <p className="text-slate-400 font-bold text-sm mt-1 uppercase tracking-widest">Actividad General Operativa</p>
+                  </div>
+                  <div className="bg-indigo-50 px-5 py-2 rounded-2xl text-indigo-600 font-bold text-xs border border-indigo-100 uppercase">Monitoreo</div>
+                </div>
+                <div className="h-[200px] md:h-[300px] w-full flex items-end justify-between gap-2 md:gap-4 px-2 md:px-4">
+                  {(stats.admin?.weeklyActivity || []).map((day: any) => {
+                    const maxWeekly = Math.max(...(stats.admin?.weeklyActivity || []).map((d:any) => d.count || 0), 1)
+                    const height = Math.min((day.count / maxWeekly) * 100, 100)
+                    return (
+                      <div key={day.day} className="flex-1 flex flex-col items-center gap-4 group">
+                        <div className="relative w-full flex flex-col items-center">
+                          <div className="absolute -top-10 opacity-0 group-hover:opacity-100 transition-all bg-slate-900 text-white text-[10px] font-bold px-3 py-1.5 rounded-lg shadow-xl translate-y-2 group-hover:translate-y-0">
+                            {day.count} movs.
+                          </div>
+                          <div 
+                            className="w-full max-w-[40px] bg-gradient-to-t from-indigo-600 to-blue-400 rounded-2xl transition-all duration-1000 ease-out shadow-lg shadow-indigo-200 group-hover:shadow-indigo-300"
+                            style={{ height: `${height}%`, minHeight: '8px' }}
+                          />
+                        </div>
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">
+                          {(() => {
+                            const [y, m, d] = day.day.split('-').map(Number)
+                            return new Date(y, m - 1, d).toLocaleDateString(undefined, { weekday: 'short' })
+                          })()}
+                        </span>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+
+              <div className="xl:col-span-1 space-y-8">
+                <div className="bg-gradient-to-br from-slate-900 to-indigo-950 rounded-2xl md:rounded-[2rem] p-8 md:p-10 text-white shadow-2xl relative overflow-hidden group">
+                  <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl" />
+                  <h3 className="text-xl font-bold text-white tracking-tight mb-6 flex items-center gap-3">
+                    <ShieldCheck size={24} className="text-emerald-400 animate-pulse" />
+                    Consola de Aprobaciones
+                  </h3>
+                  <div className="space-y-4">
+                    <div className="p-4 bg-white/5 rounded-2xl border border-white/10 flex items-center justify-between">
+                      <div>
+                        <h4 className="text-xs font-bold text-slate-300 uppercase tracking-wider">Requerimientos</h4>
+                        <p className="text-lg font-black text-white">{stats.admin?.pendingRequirementsCount} Pendientes</p>
+                      </div>
+                      <Link href="/requerimientos" className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-[10px] font-bold rounded-xl uppercase tracking-widest transition-all">Ver</Link>
+                    </div>
+
+                    <div className="p-4 bg-white/5 rounded-2xl border border-white/10 flex items-center justify-between">
+                      <div>
+                        <h4 className="text-xs font-bold text-slate-300 uppercase tracking-wider">Bonificaciones</h4>
+                        <p className="text-lg font-black text-white">{stats.admin?.pendingBonusesCount} En Espera</p>
+                      </div>
+                      <Link href="/bonuses" className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-[10px] font-bold rounded-xl uppercase tracking-widest transition-all">Ver</Link>
+                    </div>
+
+                    <div className="p-4 bg-white/5 rounded-2xl border border-white/10 flex items-center justify-between">
+                      <div>
+                        <h4 className="text-xs font-bold text-slate-300 uppercase tracking-wider">Pasajes / Transportes</h4>
+                        <p className="text-lg font-black text-white">{stats.admin?.pendingTransportCount} Pendientes</p>
+                      </div>
+                      <Link href="/bonuses" className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-[10px] font-bold rounded-xl uppercase tracking-widest transition-all">Ver</Link>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-white rounded-[2rem] p-8 border border-slate-100 shadow-sm">
+                   <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                     <AlertCircle size={14} className="text-rose-500 animate-pulse" /> Incidentes de Seguridad
+                   </h4>
+                   <div className="p-4 bg-rose-50 rounded-2xl border border-rose-100 flex items-center justify-between">
+                     <span className="text-xs font-bold text-slate-800 uppercase tracking-tight">Incidencias Reportadas</span>
+                     <span className="text-lg font-bold text-rose-600">{stats.admin?.openIncidents}</span>
+                   </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )
+
       case 'ADMIN':
         return (
           <div className="space-y-12">
@@ -114,7 +231,10 @@ export function DashboardShell({ user, stats }: DashboardShellProps) {
                           />
                         </div>
                         <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">
-                          {new Date(day.day).toLocaleDateString(undefined, { weekday: 'short' })}
+                          {(() => {
+                            const [y, m, d] = day.day.split('-').map(Number)
+                            return new Date(y, m - 1, d).toLocaleDateString(undefined, { weekday: 'short' })
+                          })()}
                         </span>
                       </div>
                     )
@@ -363,6 +483,10 @@ export function DashboardShell({ user, stats }: DashboardShellProps) {
                     title="Salidas Hoy" value={stats.logistics?.outgoingToday?.toString() || '0'} 
                     icon={ArrowUpRight} color="text-rose-600" bg="bg-rose-50" href="/movements"
                   />
+                  <StatWidget 
+                    title="Activos Controlados" value={stats.admin?.assetsCount?.toString() || '0'} 
+                    icon={Package} color="text-slate-600" bg="bg-slate-50" href="/assets"
+                  />
                    <StatWidget 
                     title="Transferencias Pend." value={stats.logistics?.pendingTransfers?.toString() || '0'} 
                     icon={Truck} color="text-indigo-400" bg="bg-indigo-50"
@@ -427,7 +551,11 @@ export function DashboardShell({ user, stats }: DashboardShellProps) {
         area={user.area}
         companyName={companyName} 
         viewMode={viewMode}
+        companySlug={user.company_slug}
+        localIp={localIp}
       />
+
+      {/* Switcher de Vista removed for unified experience */}
 
       {/* Attendance for Workers */}
       {viewMode === 'WORKER' && (
@@ -479,7 +607,7 @@ export function DashboardShell({ user, stats }: DashboardShellProps) {
 
       {/* Listas Secundarias Dinámicas */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
-        {stats.recentIncidents && (['ADMIN', 'SOMA', 'OPERACIONES'].includes(viewMode)) && (
+        {stats.recentIncidents && (['ADMIN', 'SOMA', 'OPERACIONES', 'GERENTE'].includes(viewMode)) && (
           <ListWidget 
             title="Siguimiento de Incidencias"
             icon={Activity}
@@ -494,7 +622,7 @@ export function DashboardShell({ user, stats }: DashboardShellProps) {
           />
         )}
 
-        {stats.pendingRequirements && (['ADMIN', 'OPERACIONES', 'ALMACEN', 'COCINA'].includes(viewMode)) && (
+        {stats.pendingRequirements && (['ADMIN', 'OPERACIONES', 'ALMACEN', 'COCINA', 'GERENTE'].includes(viewMode)) && (
           <ListWidget 
             title="Logística y Requerimientos"
             icon={ShoppingCart}

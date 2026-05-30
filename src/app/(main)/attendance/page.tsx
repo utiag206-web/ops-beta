@@ -6,8 +6,8 @@ import { Calendar, Search, Filter } from 'lucide-react'
 
 export default async function AttendancePage() {
   const records = await getAttendance()
-  const today = new Date().toISOString().split('T')[0]
-  const todayRecords = records.filter(r => r.date === today)
+  const today = new Date().toLocaleDateString('sv-SE')
+  const todayRecords = records.filter((r: any) => r.date === today)
 
   return (
     <div className="space-y-8">

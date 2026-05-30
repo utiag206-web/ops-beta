@@ -28,9 +28,9 @@ export default function LandingPage() {
       {/* Navbar */}
       <header className="sticky top-0 z-50 w-full border-b border-slate-200/50 bg-white/70 backdrop-blur-xl">
         <div className="container mx-auto flex h-20 items-center justify-between px-6 lg:px-12">
-          <div className="flex items-center gap-2">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-600 text-white shadow-lg shadow-blue-200">
-              <BrainCircuit className="h-6 w-6" />
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-600 text-white font-bold text-lg shadow-lg shadow-blue-200">
+              IO
             </div>
             <span className="text-2xl font-bold tracking-tight text-slate-900">
               Inthaly<span className="text-blue-600">Ops</span>
@@ -258,9 +258,9 @@ export default function LandingPage() {
         <div className="container mx-auto px-6 lg:px-12">
           <div className="grid gap-16 lg:grid-cols-4">
             <div className="lg:col-span-1">
-              <div className="flex items-center gap-2 mb-6">
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-600 text-white">
-                  <BrainCircuit className="h-5 w-5" />
+              <div className="flex items-center gap-3 mb-6">
+                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-600 text-white font-bold text-xs">
+                  IO
                 </div>
                 <span className="text-xl font-bold tracking-tight text-slate-900">
                   Inthaly<span className="text-blue-600">Ops</span>

@@ -5,6 +5,8 @@ import { getIncidencias } from './actions'
 import { Suspense } from 'react'
 import { OperationsDashboardSkeleton } from '@/components/dashboard/dashboard-skeletons'
 
+export const dynamic = 'force-dynamic'
+
 export const metadata = {
   title: 'Incidencias | Sistema de Gestión',
   description: 'Reporte y seguimiento de incidencias en campo.',

@@ -13,20 +13,28 @@ export async function Header() {
   const roleNames: Record<string, string> = {
     super_admin: 'Super Administrador',
     superadmin: 'Super Administrador',
-    admin: 'Administración',
+    admin: 'Gerente General',
     administracion: 'Administración',
     gerente: 'Gerencia General',
-    jefe_area: 'Jefe de Operaciones',
-    almacen: 'Control Logístico',
-    operaciones: 'Gestión Operativa',
+    jefe_area: 'Jefe de Área',
+    almacen: 'Logística',
+    operaciones: 'Operaciones',
     trabajador: 'Colaborador',
-    soma: 'Gestión HSEC',
-    cocina: 'Servicios de Alimentación'
+    soma: 'Seguridad SOMA',
+    cocina: 'Cocina'
   }
   
   let userRole = roleNames[roleId?.toLowerCase()] || 'Sin Rol'
   if (extendedUser?.is_impersonating) {
     userRole = 'Auditoría de Sistemas'
+  } else if (extendedUser?.area) {
+    let cleanArea = extendedUser.area
+    if (cleanArea === 'Almacén y Mantenimiento') {
+      cleanArea = 'Mecánica'
+    }
+    if (userRole.toLowerCase() !== cleanArea.toLowerCase()) {
+      userRole = `${userRole} • Área: ${cleanArea}`
+    }
   }
   const userEmail = extendedUser?.display_email || ''
   
@@ -35,21 +43,17 @@ export async function Header() {
 
   // FALLBACK CRÍTICO: Si el nombre está pero el logo no, intentamos un fetch directo para romper caché
   if (extendedUser?.company_id && !companyLogo) {
-    try {
-      const { createAdminClient } = await import('@/lib/supabase/server')
-      const supabase = await createAdminClient()
-      const { data: directComp } = await supabase
-        .from('companies')
-        .select('name, logo_url')
-        .eq('id', extendedUser.company_id)
-        .maybeSingle()
-      
-      if (directComp) {
-        companyName = directComp.name || companyName
-        companyLogo = directComp.logo_url || null
-      }
-    } catch (error) {
-      console.error("[HEADER_ERROR] Failed to fetch company logo:", error)
+    const { createAdminClient } = await import('@/lib/supabase/server')
+    const supabase = await createAdminClient()
+    const { data: directComp } = await supabase
+      .from('companies')
+      .select('name, logo_url')
+      .eq('id', extendedUser.company_id)
+      .single()
+    
+    if (directComp) {
+      companyName = directComp.name || companyName
+      companyLogo = directComp.logo_url || null
     }
   }
 

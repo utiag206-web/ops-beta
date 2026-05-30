@@ -1,12 +1,12 @@
 'use client'
 
-import { useState, useEffect, useMemo, useCallback } from 'react'
+import React, { useState, useEffect, useMemo, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { Search, ChevronLeft, ChevronRight, Check } from 'lucide-react'
 import { 
   getTareoRecords, upsertTareoRecord,
   getTareoConfig, upsertTareoConfig, getTareoNotes, upsertTareoNote,
-  getAttendancePunches, syncAttendancePunches
+  getAttendancePunches, syncAttendancePunches, getTareoDashboardData
 } from './actions'
 
 interface Worker {
@@ -56,14 +56,22 @@ export default function TareoClient({ initialCycles, workers, userRole }: TareoP
   const [attendanceLogs, setAttendanceLogs] = useState<any[]>([])
   const [dailyHours, setDailyHours] = useState<number>(10.25)
   const [loading, setLoading] = useState(true)
-  const [updatingCell, setUpdatingCell] = useState<string | null>(null)
+  const [updatingCells, setUpdatingCells] = useState<Set<string>>(new Set())
   const [searchTerm, setSearchTerm] = useState('')
   
   const [showLogsModal, setShowLogsModal] = useState<{workerId: string, date: string} | null>(null)
   const [activePunches, setActivePunches] = useState<{ time: string, type: 'in' | 'out' }[]>([])
   const [savingLog, setSavingLog] = useState(false)
 
-  const canWrite = ['admin', 'gerente', 'operaciones', 'super_admin', 'superadmin'].includes(userRole?.toLowerCase() || '')
+  const loggedPunches = useMemo(() => {
+    const set = new Set<string>()
+    attendanceLogs.forEach(log => {
+      set.add(`${log.worker_id}-${log.date_local}`)
+    })
+    return set
+  }, [attendanceLogs])
+
+  const canWrite = !!(userRole && !['trabajador', 'worker'].includes(userRole.toLowerCase()))
 
   const monthNames = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"]
   
@@ -92,17 +100,14 @@ export default function TareoClient({ initialCycles, workers, userRole }: TareoP
     const end = daysInMonth[daysInMonth.length - 1].dateString
     
     try {
-      const [records, notes, config, punches] = await Promise.all([
-        getTareoRecords(start, end),
-        getTareoNotes(currentMonthStr),
-        getTareoConfig(currentMonthStr),
-        getAttendancePunches(start, end)
-      ])
+      const res = await getTareoDashboardData(currentMonthStr, start, end)
       
-      setTareoRecords(records)
-      setTareoNotes(notes)
-      setDailyHours(config?.daily_hours || 10.25)
-      setAttendanceLogs(punches)
+      setTareoRecords(res.records)
+      setTareoNotes(res.notes)
+      setDailyHours(res.dailyHours)
+      setAttendanceLogs(res.punches)
+    } catch (e) {
+      console.error("[TAREO] Error loading optimized data:", e)
     } finally {
       setLoading(false)
     }
@@ -120,8 +125,8 @@ export default function TareoClient({ initialCycles, workers, userRole }: TareoP
     )
   }, [workers, searchTerm])
 
-  const effectiveStatusesMap = useMemo(() => {
-    const map = new Map<string, { status: string; isManual: boolean }>()
+  const workerStatusesMap = useMemo(() => {
+    const map: Record<string, Record<string, { status: string; isManual: boolean }>> = {}
     
     const punchesGrouped = new Map<string, { in: number; out: number }>()
     attendanceLogs.forEach(log => {
@@ -133,6 +138,7 @@ export default function TareoClient({ initialCycles, workers, userRole }: TareoP
     })
 
     workers.forEach(w => {
+      map[w.id] = {}
       daysInMonth.forEach(d => {
         const key = `${w.id}-${d.dateString}`
         const punches = punchesGrouped.get(key)
@@ -141,13 +147,13 @@ export default function TareoClient({ initialCycles, workers, userRole }: TareoP
           if (punches.in > 0 && punches.out > 0) autoStatus = 'AD'
           else if (punches.in > 0) autoStatus = 'INC'
         }
-        map.set(key, { status: autoStatus, isManual: false })
+        map[w.id][d.dateString] = { status: autoStatus, isManual: false }
       })
     })
 
     tareoRecords.forEach(r => {
-      if (r.status) {
-        map.set(`${r.worker_id}-${r.date}`, { status: r.status, isManual: true })
+      if (r.status && map[r.worker_id]) {
+        map[r.worker_id][r.date] = { status: r.status, isManual: true }
       }
     })
 
@@ -156,16 +162,41 @@ export default function TareoClient({ initialCycles, workers, userRole }: TareoP
 
   const handleCellUpdate = async (workerId: string, date: string, status: string | null) => {
     const key = `${workerId}-${date}`
-    setUpdatingCell(key)
-    const result = await upsertTareoRecord({ worker_id: workerId, date, status })
-    if (result.success) {
-      setTareoRecords(prev => {
-        const filtered = prev.filter(r => !(r.worker_id === workerId && r.date === date))
-        if (status) return [...filtered, { worker_id: workerId, date, status }]
-        return filtered
+    
+    // Guardar estado actual para rollback en caso de fallo
+    const oldRecords = [...tareoRecords]
+    
+    // 1. Actualización Optimista Local de la celda
+    setTareoRecords(prev => {
+      const filtered = prev.filter(r => !(r.worker_id === workerId && r.date === date))
+      if (status) return [...filtered, { worker_id: workerId, date, status }]
+      return filtered
+    })
+    
+    // 2. Registrar la celda como "en proceso de sincronización"
+    setUpdatingCells(prev => {
+      const next = new Set(prev)
+      next.add(key)
+      return next
+    })
+    
+    try {
+      const result = await upsertTareoRecord({ worker_id: workerId, date, status })
+      if (!result.success) {
+        // Rollback por error de base de datos
+        setTareoRecords(oldRecords)
+      }
+    } catch {
+      // Rollback por fallo de conexión/red
+      setTareoRecords(oldRecords)
+    } finally {
+      // 3. Quitar del conjunto de celdas en actualización
+      setUpdatingCells(prev => {
+        const next = new Set(prev)
+        next.delete(key)
+        return next
       })
     }
-    setUpdatingCell(null)
   }
 
   const openLogModal = (workerId: string, date: string) => {
@@ -211,7 +242,7 @@ export default function TareoClient({ initialCycles, workers, userRole }: TareoP
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-4 rounded-[2rem] border border-slate-200 shadow-sm">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-white p-4 rounded-[2rem] border border-slate-200 shadow-sm">
         <div>
           <h1 className="text-2xl font-black text-slate-800 uppercase tracking-tight">Matriz de Tareo</h1>
           <p className="text-slate-500 font-medium text-sm">Validación visual horizontal base Excel.</p>
@@ -241,7 +272,7 @@ export default function TareoClient({ initialCycles, workers, userRole }: TareoP
             </button>
           </div>
           
-          {(userRole === 'admin' || userRole === 'company_admin') && (
+          {canWrite && (
             <div className="flex items-center gap-2 bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-200">
               <span className="text-[10px] font-black text-slate-500 uppercase">Horas Diarias</span>
               <input 
@@ -321,12 +352,12 @@ export default function TareoClient({ initialCycles, workers, userRole }: TareoP
                     worker={worker}
                     idx={idx}
                     daysInMonth={daysInMonth}
-                    effectiveStatusesMap={effectiveStatusesMap}
+                    workerStatuses={workerStatusesMap[worker.id] || {}}
                     dailyHours={dailyHours}
-                    updatingCell={updatingCell}
+                    updatingCells={updatingCells}
                     onCellUpdate={handleCellUpdate}
                     onOpenLogs={openLogModal}
-                    attendanceLogs={attendanceLogs}
+                    loggedPunches={loggedPunches}
                     canWrite={canWrite}
                   />
                 ))}
@@ -338,19 +369,58 @@ export default function TareoClient({ initialCycles, workers, userRole }: TareoP
     )
   }
 
-function WorkerRow({ worker, idx, daysInMonth, effectiveStatusesMap, dailyHours, updatingCell, onCellUpdate, onOpenLogs, attendanceLogs, canWrite }: any) {
+function areRowsEqual(prevProps: any, nextProps: any) {
+  if (prevProps.worker.id !== nextProps.worker.id) return false
+  if (prevProps.idx !== nextProps.idx) return false
+  if (prevProps.dailyHours !== nextProps.dailyHours) return false
+  if (prevProps.canWrite !== nextProps.canWrite) return false
+  if (prevProps.daysInMonth.length !== nextProps.daysInMonth.length) return false
+  
+  const prevStatuses = prevProps.workerStatuses || {}
+  const nextStatuses = nextProps.workerStatuses || {}
+  
+  for (const d of nextProps.daysInMonth) {
+    const prev = prevStatuses[d.dateString] || { status: '', isManual: false }
+    const next = nextStatuses[d.dateString] || { status: '', isManual: false }
+    if (prev.status !== next.status || prev.isManual !== next.isManual) {
+      return false
+    }
+  }
+
+  const prevUpdating = prevProps.updatingCells
+  const nextUpdating = nextProps.updatingCells
+  for (const d of nextProps.daysInMonth) {
+    const key = `${nextProps.worker.id}-${d.dateString}`
+    if (prevUpdating.has(key) !== nextUpdating.has(key)) {
+      return false
+    }
+  }
+
+  const prevLogged = prevProps.loggedPunches
+  const nextLogged = nextProps.loggedPunches
+  for (const d of nextProps.daysInMonth) {
+    const key = `${nextProps.worker.id}-${d.dateString}`
+    if (prevLogged.has(key) !== nextLogged.has(key)) {
+      return false
+    }
+  }
+
+  return true
+}
+
+const WorkerRow = React.memo(function WorkerRow({ worker, idx, daysInMonth, workerStatuses, dailyHours, updatingCells, onCellUpdate, onOpenLogs, loggedPunches, canWrite }: any) {
   const totals = useMemo(() => {
     let works = 0
     let libres = 0
     daysInMonth.forEach((d: any) => {
-      const eff = effectiveStatusesMap.get(`${worker.id}-${d.dateString}`)
+      const eff = workerStatuses[d.dateString]
       if (eff) {
         if (remunerables.includes(eff.status)) works++
         if (['L', 'DL'].includes(eff.status)) libres++
       }
     })
     return { works, libres, total: works + libres, hh: (works * dailyHours).toFixed(2) }
-  }, [worker.id, daysInMonth, effectiveStatusesMap, dailyHours])
+  }, [daysInMonth, workerStatuses, dailyHours])
 
   return (
     <tr className="hover:bg-slate-50 relative group bg-white h-10">
@@ -359,10 +429,10 @@ function WorkerRow({ worker, idx, daysInMonth, effectiveStatusesMap, dailyHours,
       <td className="sticky left-[260px] z-20 bg-white group-hover:bg-slate-50 border border-slate-400 px-2 py-1 text-[10px] font-bold text-slate-500 uppercase truncate max-w-[140px]">{worker.position || '-'}</td>
       {daysInMonth.map((d: any) => {
         const key = `${worker.id}-${d.dateString}`
-        const eff = effectiveStatusesMap.get(key) || { status: '', isManual: false }
-        const isUpdating = updatingCell === key
+        const eff = workerStatuses[d.dateString] || { status: '', isManual: false }
+        const isUpdating = updatingCells.has(key)
         const colorClass = eff.isManual ? (statusColors[eff.status] || 'bg-white') : (autoColors[eff.status] || 'bg-white')
-        const logged = attendanceLogs.some((l: any) => l.worker_id === worker.id && l.date_local === d.dateString)
+        const logged = loggedPunches.has(key)
 
         return (
           <td key={d.day} className={`p-0 border border-slate-400 relative ${colorClass} text-center align-middle min-w-[32px] h-10`}>
@@ -393,4 +463,4 @@ function WorkerRow({ worker, idx, daysInMonth, effectiveStatusesMap, dailyHours,
       <td className="px-1 py-0.5 text-[11px] text-white border border-slate-400 bg-slate-800 text-center font-black">{totals.total}</td>
     </tr>
   )
-}
+}, areRowsEqual)

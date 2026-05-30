@@ -41,10 +41,10 @@ export async function getLowStockProducts() {
 
   if (pError) return { error: pError.message }
 
-  const lowStock = products?.map(p => {
+  const lowStock = products?.map((p: any) => {
     const total = p.inventory_stock.reduce((sum: number, stock: any) => sum + (stock.quantity || 0), 0)
     return { ...p, total_stock: total }
-  }).filter(p => p.total_stock <= p.min_stock)
+  }).filter((p: any) => p.total_stock <= p.min_stock)
 
   return { data: lowStock }
 }
@@ -69,7 +69,7 @@ export async function getDormantProducts() {
 
   if (mError) return { error: mError.message }
 
-  const activeProductIds = new Set(recentMoves?.map(m => m.product_id))
+  const activeProductIds = new Set(recentMoves?.map((m: any) => m.product_id))
 
   // Traer stock de productos que NO están en los recientes pero que tienen existencia > 0
   const { data: products, error: pError } = await applyIsolation(
@@ -80,12 +80,12 @@ export async function getDormantProducts() {
 
   if (pError) return { error: pError.message }
 
-  const dormant = products?.filter(p => !activeProductIds.has(p.id))
-    .map(p => {
+  const dormant = products?.filter((p: any) => !activeProductIds.has(p.id))
+    .map((p: any) => {
       const total = p.inventory_stock.reduce((sum: number, stock: any) => sum + (stock.quantity || 0), 0)
       return { ...p, total_stock: total }
     })
-    .filter(p => p.total_stock > 0) // Dormidos pero que ocupan plata/espacio
+    .filter((p: any) => p.total_stock > 0) // Dormidos pero que ocupan plata/espacio
 
   return { data: dormant }
 }

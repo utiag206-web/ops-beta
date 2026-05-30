@@ -57,7 +57,7 @@ export function AccountForm({ user }: AccountFormProps) {
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 animate-in fade-in slide-in-from-bottom-4 duration-700">
       
       {/* Perfil Personal */}
-      <div className="bg-white p-10 rounded-[3rem] border border-slate-100 shadow-sm flex flex-col h-full relative overflow-hidden group hover:shadow-xl hover:shadow-blue-500/5 transition-all">
+      <div className="bg-white p-6 sm:p-10 rounded-[2rem] sm:rounded-[3rem] border border-slate-100 shadow-sm flex flex-col h-full relative overflow-hidden group hover:shadow-xl hover:shadow-blue-500/5 transition-all">
         <div className="absolute top-0 left-0 w-full h-1 bg-blue-600 opacity-0 group-hover:opacity-100 transition-opacity" />
         
         <div className="flex items-center gap-5 mb-10">
@@ -79,7 +79,7 @@ export function AccountForm({ user }: AccountFormProps) {
                 type="text" 
                 value={formData.name}
                 onChange={(e) => setFormData({...formData, name: e.target.value})}
-                className="w-full bg-slate-50 border-2 border-slate-100 focus:border-blue-600 focus:bg-white rounded-[1.5rem] p-5 pl-14 text-slate-900 font-bold transition-all outline-none shadow-sm placeholder:text-slate-300"
+                className="w-full bg-slate-50 border-2 border-slate-100 focus:border-blue-600 focus:bg-white rounded-[1.5rem] py-5 pr-5 pl-14 text-slate-900 font-bold transition-all outline-none shadow-sm placeholder:text-slate-300"
                 placeholder="Nombre completo..."
               />
             </div>
@@ -93,7 +93,7 @@ export function AccountForm({ user }: AccountFormProps) {
                 type="email" 
                 value={formData.email}
                 onChange={(e) => setFormData({...formData, email: e.target.value})}
-                className="w-full bg-blue-50/50 border-2 border-blue-100/50 focus:border-blue-600 focus:bg-white rounded-[1.5rem] p-5 pl-14 text-blue-900 font-black transition-all outline-none shadow-sm"
+                className="w-full bg-blue-50/50 border-2 border-blue-100/50 focus:border-blue-600 focus:bg-white rounded-[1.5rem] py-5 pr-5 pl-14 text-blue-900 font-black transition-all outline-none shadow-sm"
                 placeholder="correo@ejemplo.com"
               />
             </div>
@@ -107,7 +107,7 @@ export function AccountForm({ user }: AccountFormProps) {
                 type="text" 
                 value={user.area || 'Sin asignar'}
                 readOnly
-                className="w-full bg-slate-50 border-2 border-slate-100 rounded-[1.5rem] p-5 pl-14 text-slate-500 font-bold transition-all outline-none shadow-sm cursor-not-allowed opacity-75"
+                className="w-full bg-slate-50 border-2 border-slate-100 rounded-[1.5rem] py-5 pr-5 pl-14 text-slate-500 font-bold transition-all outline-none shadow-sm cursor-not-allowed opacity-75"
               />
             </div>
             <div className="flex items-start gap-2 ml-1">
@@ -130,7 +130,7 @@ export function AccountForm({ user }: AccountFormProps) {
       </div>
 
       {/* Seguridad */}
-      <div className="bg-white p-10 rounded-[3rem] border border-slate-100 shadow-sm flex flex-col h-full relative overflow-hidden group hover:shadow-xl hover:shadow-emerald-500/5 transition-all">
+      <div className="bg-white p-6 sm:p-10 rounded-[2rem] sm:rounded-[3rem] border border-slate-100 shadow-sm flex flex-col h-full relative overflow-hidden group hover:shadow-xl hover:shadow-emerald-500/5 transition-all">
         <div className="absolute top-0 left-0 w-full h-1 bg-emerald-500 opacity-0 group-hover:opacity-100 transition-opacity" />
 
         <div className="flex items-center gap-5 mb-10">
@@ -152,7 +152,7 @@ export function AccountForm({ user }: AccountFormProps) {
                 type="password" 
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full bg-slate-50 border-2 border-slate-100 focus:border-emerald-500 focus:bg-white rounded-[1.5rem] p-5 pl-14 text-slate-900 font-bold transition-all outline-none shadow-sm placeholder:text-slate-300"
+                className="w-full bg-slate-50 border-2 border-slate-100 focus:border-emerald-500 focus:bg-white rounded-[1.5rem] py-5 pr-5 pl-14 text-slate-900 font-bold transition-all outline-none shadow-sm placeholder:text-slate-300"
                 placeholder="Introducir nueva clave..."
               />
             </div>
@@ -166,7 +166,7 @@ export function AccountForm({ user }: AccountFormProps) {
                 type="password" 
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
-                className="w-full bg-slate-50 border-2 border-slate-100 focus:border-emerald-500 focus:bg-white rounded-[1.5rem] p-5 pl-14 text-slate-900 font-bold transition-all outline-none shadow-sm placeholder:text-slate-300"
+                className="w-full bg-slate-50 border-2 border-slate-100 focus:border-emerald-500 focus:bg-white rounded-[1.5rem] py-5 pr-5 pl-14 text-slate-900 font-bold transition-all outline-none shadow-sm placeholder:text-slate-300"
                 placeholder="Confirmar clave..."
               />
             </div>

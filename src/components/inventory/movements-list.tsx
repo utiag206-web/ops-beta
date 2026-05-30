@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { 
   History, Search, Filter, Hash, 
   ArrowUpRight, ArrowDownLeft, Settings2,
-  Calendar, Clock, User, MessageSquare, Package, Plus, MapPin
+  Calendar, Clock, User, MessageSquare, Package, Plus, MapPin, X
 } from 'lucide-react'
 import { MovementForm } from './movement-form'
 
@@ -74,6 +74,7 @@ export function InventoryMovementsList({
 
   const [searchTerm, setSearchTerm] = useState('')
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [selectedMovement, setSelectedMovement] = useState<Movement | null>(null)
 
   const filteredMovements = movements.filter(m => {
     const productName = (m.products?.name || '').toLowerCase()
@@ -201,7 +202,7 @@ export function InventoryMovementsList({
                   const displayQuantity = isIntegerUnit ? Math.round(m.quantity) : m.quantity
                   
                   return (
-                  <tr key={m.id} className="hover:bg-slate-50/50 transition-colors group">
+                  <tr key={m.id} onClick={() => setSelectedMovement(m)} className="hover:bg-slate-50/50 transition-colors group cursor-pointer">
                     <td className="py-5 px-6">
                       <div className="flex flex-col">
                         <div className="flex items-center gap-1.5 text-slate-800 font-black text-sm">
@@ -291,6 +292,93 @@ export function InventoryMovementsList({
         onSuccess={() => router.refresh()}
         products={products}
       />
+
+      {selectedMovement && (
+        <ViewMovementDetailsModal 
+          movement={selectedMovement} 
+          onClose={() => setSelectedMovement(null)} 
+        />
+      )}
+    </div>
+  )
+}
+
+function ViewMovementDetailsModal({ movement, onClose }: { movement: any; onClose: () => void }) {
+  if (!movement) return null
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200 font-sans">
+      <div className="bg-white w-full max-w-md rounded-[2.5rem] shadow-2xl overflow-hidden border border-slate-100 animate-in zoom-in-95 duration-200 p-8 space-y-6">
+        <div className="flex justify-between items-center pb-4 border-b border-slate-100">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center shadow-inner">
+              <History size={22} />
+            </div>
+            <div>
+              <h2 className="text-xl font-black text-slate-800 tracking-tight leading-none uppercase">Detalle de Movimiento</h2>
+              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mt-1.5">Kardex de Inventario</p>
+            </div>
+          </div>
+          <button onClick={onClose} className="p-2 hover:bg-slate-100 rounded-full transition-colors text-slate-400 hover:text-rose-500">
+            <X size={20} />
+          </button>
+        </div>
+
+        <div className="grid grid-cols-2 gap-4 bg-slate-50 p-5 rounded-3xl border border-slate-100 text-left">
+          <div className="col-span-2">
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Producto</p>
+            <p className="text-sm font-black text-slate-800 uppercase mt-1">{movement.products?.name}</p>
+            <p className="text-[10px] font-bold text-slate-400 mt-1">Código: {movement.products?.code?.toUpperCase()}</p>
+          </div>
+          <div>
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Tipo Movimiento</p>
+            <p className="text-xs font-black text-slate-700 uppercase mt-1">
+              {movement.type === 'ingreso' ? '📥 Ingreso' : movement.type === 'salida' ? '📤 Salida' : '⚙️ Ajuste'}
+            </p>
+          </div>
+          <div>
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Cantidad</p>
+            <p className="text-sm font-black text-slate-800 mt-1">
+              {movement.type === 'salida' ? '-' : '+'}{Math.abs(movement.quantity)} <span className="text-[10px] font-bold text-slate-400 uppercase">{movement.products?.unit}</span>
+            </p>
+          </div>
+          <div>
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Ubicación / Almacén</p>
+            <p className="text-xs font-black text-slate-700 uppercase mt-1">{movement.warehouses?.name || movement.location}</p>
+          </div>
+          <div>
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Saldo Posterior</p>
+            <p className="text-xs font-black text-slate-700 uppercase mt-1">{movement.running_balance || '—'}</p>
+          </div>
+        </div>
+
+        <div className="text-left space-y-4">
+          <div>
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Documento & Responsable</p>
+            <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 space-y-2 text-xs font-bold text-slate-600 uppercase">
+              <p>Documento: <span className="text-slate-850 font-black">{movement.document_type ? `${movement.document_type} ${movement.document_number || ''}` : 'Sin documento'}</span></p>
+              <p>Responsable: <span className="text-slate-850 font-black">{movement.responsible_name || movement.users?.name || 'Sistema'}</span></p>
+              <p>Fecha / Hora: <span className="text-slate-850 font-black">{new Date(movement.created_at).toLocaleString()}</span></p>
+            </div>
+          </div>
+
+          <div>
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Observaciones</p>
+            <div className="p-4 bg-slate-50/50 rounded-2xl border border-slate-100">
+              <p className="text-xs text-slate-600 font-bold leading-relaxed uppercase">{movement.observation || 'Sin observaciones registradas'}</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex justify-end pt-4 border-t border-slate-100">
+          <button 
+            onClick={onClose}
+            className="px-6 py-2.5 bg-slate-800 hover:bg-slate-900 text-white font-bold text-sm rounded-xl transition-all shadow-md active:scale-95 uppercase tracking-wider"
+          >
+            Cerrar Detalles
+          </button>
+        </div>
+      </div>
     </div>
   )
 }

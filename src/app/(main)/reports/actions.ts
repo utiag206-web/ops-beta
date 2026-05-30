@@ -53,12 +53,11 @@ export async function getReportsData(month?: number, year?: number) {
     const incidencias = somaRes[0]?.data || []
     const trainings = somaRes[1]?.data || []
     const hsec = somaRes[2]?.data || []
-
-    const activeCount = workers.filter(w => w.status === 'active').length
+    const activeCount = workers.filter((w: any) => w.status === 'active').length
     const inactiveCount = workers.length - activeCount
 
     const splitDataByMonth = (items: any[], range: { start: string, end: string }) => 
-      (items || []).filter(i => i.date >= range.start && i.date <= range.end)
+      (items || []).filter((i: any) => i.date >= range.start && i.date <= range.end)
 
     const currentFinancials = {
       bonuses: splitDataByMonth(bonuses, currentRange),
@@ -71,11 +70,11 @@ export async function getReportsData(month?: number, year?: number) {
 
     const calculateTotals = (data: { bonuses: any[], transport: any[] }) => {
       let bPaid = 0, bPending = 0, tPaid = 0, tPending = 0
-      data.bonuses?.forEach(b => {
+      data.bonuses?.forEach((b: any) => {
         const amt = Number(b.amount) || 0
         b.status === 'paid' ? bPaid += amt : bPending += amt
       })
-      data.transport?.forEach(t => {
+      data.transport?.forEach((t: any) => {
         const amt = Number(t.amount) || 0
         t.status === 'paid' ? tPaid += amt : tPending += amt
       })
@@ -85,13 +84,13 @@ export async function getReportsData(month?: number, year?: number) {
     const currentTotals = calculateTotals(currentFinancials)
     const lastTotals = calculateTotals(lastFinancials)
 
-    const uniqueDates = Array.from(new Set(attendance.map(a => a.date))).length
+    const uniqueDates = Array.from(new Set(attendance.map((a: any) => a.date))).length
     const avgAttendance = uniqueDates > 0 ? attendance.length / uniqueDates : 0
 
     const totalPPE = ppe.length
-    const signedPPE = ppe.filter(p => p.status === 'delivered' && p.signature_url).length
+    const signedPPE = ppe.filter((p: any) => (p.status === 'signed' || p.status === 'delivered') && p.signature_url).length
     const pendingPPE = totalPPE - signedPPE
-    const workersWithPendingPPE = Array.from(new Set(ppe.filter(p => p.status !== 'delivered').map(p => p.worker_id))).length
+    const workersWithPendingPPE = Array.from(new Set(ppe.filter((p: any) => p.status !== 'signed' && p.status !== 'delivered').map((p: any) => p.worker_id))).length
 
     return {
       workers: { active: activeCount, inactive: inactiveCount, total: workers?.length || 0 },
@@ -110,21 +109,14 @@ export async function getReportsData(month?: number, year?: number) {
       },
       soma: {
         incidencias: incidencias.length,
-        openIncidencias: incidencias.filter(i => i.status === 'abierta').length,
+        openIncidencias: incidencias.filter((i: any) => i.status === 'abierta').length,
         trainings: trainings.length,
         hsec: hsec.length,
-        openHsec: hsec.filter(h => h.status === 'abierta').length
+        openHsec: hsec.filter((h: any) => h.status === 'abierta').length
       },
       period: { month: targetMonth, year: targetYear }
     }
   } catch (error: any) {
-    if (
-      error.digest === 'DYNAMIC_SERVER_USAGE' ||
-      error.message?.includes('DYNAMIC_SERVER_USAGE') ||
-      error.message?.includes('Dynamic server usage')
-    ) {
-      throw error
-    }
     console.error('[REPORTS_ERROR] Critical failure in analytics engine:', error.message)
     return {
       workers: { active: 0, inactive: 0, total: 0 },

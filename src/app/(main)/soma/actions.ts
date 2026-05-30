@@ -14,7 +14,7 @@ export async function getSomaTrainings() {
       *,
       participants:soma_training_participants(
         id,
-        worker:workers(id, name, last_name)
+        worker:workers(id, name, last_name, position)
       )
     `),
     companyId,
@@ -48,7 +48,7 @@ export async function createSomaTraining(payload: {
       title: payload.title,
       trainer: payload.trainer,
       date: payload.date,
-      expiry_date: payload.expiry_date,
+      expiry_date: payload.expiry_date || null,
       created_by: extendedUser.id
     }])
     .select()
@@ -104,7 +104,7 @@ export async function getSomaTalks() {
       leader:users!leader_id(name),
       participants:soma_talk_participants(
         id,
-        worker:workers(id, name, last_name)
+        worker:workers(id, name, last_name, position)
       )
     `),
     companyId,

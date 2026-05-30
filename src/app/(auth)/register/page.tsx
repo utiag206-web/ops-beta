@@ -6,7 +6,7 @@ import { register } from './actions'
 import Link from 'next/link'
 
 export default function RegisterPage() {
-  const [state, formAction, isPending] = useActionState(register, { error: null })
+  const [state, formAction, isPending] = useActionState(register, { error: '' })
 
   return (
     <div className="min-h-screen grid lg:grid-cols-2 bg-white">
@@ -18,7 +18,7 @@ export default function RegisterPage() {
         <div className="relative z-10">
           <div className="flex items-center gap-3 mb-12">
             <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-lg">
-              <ShieldCheck className="text-blue-600" size={24} />
+              <span className="font-bold text-blue-700 text-lg">IO</span>
             </div>
             <span className="text-2xl font-black tracking-tighter">Inthaly<span className="text-blue-200">Ops</span></span>
           </div>
@@ -100,7 +100,8 @@ export default function RegisterPage() {
                     type="email"
                     required
                     placeholder="tu@empresa.com"
-                    className="w-full pl-12 pr-4 py-3.5 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-4 focus:ring-blue-100 focus:border-blue-500 outline-none transition-all font-medium text-slate-800"
+                    data-keep-case="true"
+                    className="w-full pl-12 pr-4 py-3.5 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-4 focus:ring-blue-100 focus:border-blue-500 outline-none transition-all font-medium text-slate-800 keep-case"
                   />
                 </div>
               </div>
@@ -115,7 +116,8 @@ export default function RegisterPage() {
                     required
                     minLength={6}
                     placeholder="••••••••"
-                    className="w-full pl-12 pr-4 py-3.5 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-4 focus:ring-blue-100 focus:border-blue-500 outline-none transition-all font-medium text-slate-800"
+                    data-keep-case="true"
+                    className="w-full pl-12 pr-4 py-3.5 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-4 focus:ring-blue-100 focus:border-blue-500 outline-none transition-all font-medium text-slate-800 keep-case"
                   />
                 </div>
               </div>

@@ -18,26 +18,16 @@ export default async function ProfilePage() {
 
   if (!extendedUser) return null
 
-  let companyName = (extendedUser.companies as any)?.name || 'Empresa'
+  let companyName = extendedUser.company_name || 'Empresa'
   
-  let ppeDeliveries = [], bonuses = [], transportPayments = [], attendanceHistory = [];
-  
-  if (extendedUser.worker_id) {
-    try {
-      const results = await Promise.all([
-          getPPEDeliveries(extendedUser.worker_id),
-          getBonuses(extendedUser.worker_id),
-          getTransportPayments(extendedUser.worker_id),
-          getAttendance(extendedUser.worker_id)
+  const [ppeDeliveries, bonuses, transportPayments, attendanceHistory] = extendedUser.worker_id 
+    ? await Promise.all([
+        getPPEDeliveries(extendedUser.worker_id),
+        getBonuses(extendedUser.worker_id),
+        getTransportPayments(extendedUser.worker_id),
+        getAttendance(extendedUser.worker_id)
       ])
-      ppeDeliveries = results[0] || []
-      bonuses = results[1] || []
-      transportPayments = results[2] || []
-      attendanceHistory = results[3] || []
-    } catch (error) {
-      console.error('[PROFILE_PAGE_ERROR] Failed to fetch worker data:', error)
-    }
-  }
+    : [[], [], [], []]
 
   const today = new Date().toISOString().split('T')[0]
   const todayRecord = attendanceHistory.find((r: any) => r.date === today)
@@ -89,27 +79,27 @@ export default async function ProfilePage() {
       )}
 
       {/* Perfil Banner */}
-      <div className="bg-white rounded-[2rem] shadow-sm border border-slate-100 overflow-hidden">
-        <div className="bg-gradient-to-r from-blue-700 to-blue-900 h-40 px-10 flex items-end">
-          <div className="flex items-end gap-6 pb-2 px-10">
-            <div className="w-32 h-32 rounded-[2rem] bg-white p-2 shadow-2xl translate-y-12">
-              <div className="w-full h-full rounded-[1.5rem] bg-slate-50 text-slate-700 flex items-center justify-center text-4xl font-bold border border-slate-200">
-                {extendedUser.display_name?.charAt(0).toUpperCase() || 'U'}
+      <div className="bg-white rounded-[1.5rem] md:rounded-[2rem] shadow-sm border border-slate-100 overflow-hidden">
+        <div className="bg-gradient-to-r from-blue-700 to-blue-900 h-auto py-14 md:h-40 md:py-0 px-4 md:px-10 flex items-center md:items-end">
+          <div className="flex flex-col md:flex-row items-center md:items-end gap-4 md:gap-6 pb-0 md:pb-2 px-2 md:px-10 w-full text-center md:text-left">
+            <div className="w-24 h-24 md:w-32 md:h-32 rounded-[1.5rem] md:rounded-[2rem] bg-white p-1.5 md:p-2 shadow-2xl max-md:transform-none md:translate-y-12 shrink-0">
+              <div className="w-full h-full rounded-[1.2rem] md:rounded-[1.5rem] bg-slate-50 text-slate-700 flex items-center justify-center text-3xl md:text-4xl font-bold border border-slate-200">
+                {extendedUser.name?.charAt(0).toUpperCase() || 'U'}
               </div>
             </div>
-             <div className="mb-6">
-                <h2 className="text-3xl font-bold text-white tracking-tight">
-                  {extendedUser.display_name}
+             <div className="mb-0 md:mb-6 mt-3 md:mt-0">
+                <h2 className="text-2xl md:text-3xl font-bold text-white tracking-tight leading-snug">
+                  {extendedUser.name}
                 </h2>
-                <p className="text-blue-100/80 font-bold flex items-center gap-2 mt-1 text-xs uppercase tracking-widest">
+                <p className="text-blue-100/80 font-bold flex items-center justify-center md:justify-start gap-2 mt-2 text-[10px] md:text-xs uppercase tracking-widest">
                   <Mail size={12} className="text-blue-300" />
-                  {extendedUser.display_email}
+                  {extendedUser.email}
                 </p>
              </div>
           </div>
         </div>
 
-        <div className="pt-20 pb-10 px-10">
+        <div className="pt-8 md:pt-20 pb-6 md:pb-10 px-6 md:px-10">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 pt-8 border-t border-slate-50">
             <div className="flex items-center gap-4 p-4 bg-slate-50/50 rounded-2xl border border-slate-50 transition-all hover:border-blue-100">
               <div className="w-12 h-12 bg-white rounded-xl shadow-sm flex items-center justify-center text-blue-600 border border-slate-100">

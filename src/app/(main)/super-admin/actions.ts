@@ -91,7 +91,7 @@ export async function getSystemStats() {
       fetchCount(supabase.from('companies').select('*', { count: 'exact', head: true }).eq('is_test', false)),
       fetchCount(supabase.from('companies').select('*', { count: 'exact', head: true }).eq('is_test', true)),
       fetchCount(supabase.from('companies').select('*', { count: 'exact', head: true }).eq('status', 'active')),
-      fetchCount(supabase.from('companies').select('*', { count: 'exact', head: true }).eq('status', 'suspended')),
+      fetchCount(supabase.from('companies').select('*', { count: 'exact', head: true }).eq('status', 'inactive')),
       fetchCount(supabase.from('users').select('*', { count: 'exact', head: true }))
     ])
 
@@ -120,7 +120,7 @@ export async function toggleCompanyStatus(companyId: string, currentStatus: stri
   const role = extendedUser?.role_id?.toLowerCase()
   if (role !== 'super_admin' && role !== 'superadmin') throw new Error('Acceso Denegado')
 
-  const newStatus = currentStatus === 'active' ? 'suspended' : 'active'
+  const newStatus = currentStatus === 'active' ? 'inactive' : 'active'
   const supabase = await createAdminClient()
   
   const { error } = await supabase
@@ -148,15 +148,11 @@ export async function createCompany(payload: {
   const supabase = await createAdminClient()
   
   try {
-    // 1. Crear la Empresa con datos homogeneizados de contacto
+    // 1. Crear la Empresa
     const { data: company, error: companyError } = await supabase
       .from('companies')
       .insert([{ 
         name: payload.name, 
-        contact_email: payload.adminEmail,
-        address: 'Av. Principal 123 (Por actualizar)',
-        phone: '999999999',
-        industry: 'Servicios',
         status: 'active',
         is_test: payload.is_test || false
       }])
@@ -167,9 +163,9 @@ export async function createCompany(payload: {
     const companyId = company.id
 
     // 2. Crear Usuario Administrador
+    // Si no viene password, generamos uno temporal
     const password = payload.adminPassword || Math.random().toString(36).slice(-10)
     
-    let authUserId: string | null = null
     const { data: authData, error: authError } = await supabase.auth.admin.createUser({
       email: payload.adminEmail,
       password: password,
@@ -178,55 +174,61 @@ export async function createCompany(payload: {
     })
 
     if (authError) {
-      if (authError.message.includes('already') || authError.message.includes('exists')) {
-        const { data: listData } = await supabase.auth.admin.listUsers()
-        const existing = listData.users.find(u => u.email === payload.adminEmail)
-        if (existing) {
-          authUserId = existing.id
-        } else {
-          throw new Error(`Error al vincular usuario existente: no encontrado.`)
-        }
-      } else {
-        throw new Error(`Error al crear usuario auth: ${authError.message}`)
-      }
-    } else {
-      authUserId = authData.user.id
+      // Si el usuario ya existe, podríamos intentar vincularlo, pero por ahora fallamos
+      throw new Error(`Error al crear usuario auth: ${authError.message}`)
     }
 
-    if (!authUserId) throw new Error('No se pudo resolver el ID de usuario.')
+    const authUserId = authData.user.id
 
-    // 3. Vincular usuario en tabla 'users' - Proteger contra secuestro de Super Admin
-    const { data: existingUser } = await supabase
-      .from('users')
-      .select('role_id')
-      .eq('id', authUserId)
-      .maybeSingle()
-
-    const isSuperAdmin = existingUser?.role_id === 'super_admin'
-
+    // 3. Vincular usuario en tabla 'users'
     const { error: userError } = await supabase
       .from('users')
-      .upsert([{
+      .insert([{
         id: authUserId,
-        company_id: isSuperAdmin ? null : companyId,
+        company_id: companyId,
         name: payload.adminName,
         email: payload.adminEmail,
-        role_id: isSuperAdmin ? 'super_admin' : 'admin',
+        role_id: 'admin', // Legacy string-based role
         status: 'active',
         area: 'Administración'
-      }], { onConflict: 'id' })
+      }])
 
     if (userError) throw new Error(`Error al crear registro de usuario: ${userError.message}`)
 
-    // 4. Sincronizar user_roles solo si no es Super Admin global
-    if (!isSuperAdmin) {
+    // 4. Sincronizar user_roles (Formal RBAC)
+    // Buscamos el ID del rol 'admin' en la tabla roles
+    let roleId: string | null = null
+    const { data: roleData } = await supabase
+      .from('roles')
+      .select('id')
+      .eq('name', 'admin')
+      .maybeSingle()
+    
+    if (!roleData) {
+      console.warn(`[BOOTSTRAP] Rol 'admin' no encontrado. Intentando crear rol maestro...`)
+      const { data: newRole, error: newRoleError } = await supabase
+        .from('roles')
+        .insert([{ name: 'admin', description: 'Administrador de Empresa' }])
+        .select()
+        .single()
+      
+      if (newRoleError) {
+        console.error(`[BOOTSTRAP_CRITICAL] No se pudo crear el rol 'admin':`, newRoleError.message)
+      } else {
+        roleId = newRole.id
+      }
+    } else {
+      roleId = roleData.id
+    }
+
+    if (roleId) {
       const { error: rbacError } = await supabase
         .from('user_roles')
-        .upsert([{
+        .insert([{
           user_id: authUserId,
           company_id: companyId,
-          role_id: 'admin'
-        }], { onConflict: 'user_id, company_id' })
+          role_id: roleId
+        }])
       
       if (rbacError) {
         console.error(`[BOOTSTRAP_CRITICAL] Error al vincular rol administrativo:`, rbacError.message)
@@ -487,74 +489,129 @@ export async function toggleTestStatus(companyId: string, isTest: boolean) {
   return { success: true }
 }
 
-export async function forensicIdentityAudit(email: string) {
+export async function getCompanyDetails(companyId: string) {
   try {
+    const { extendedUser } = await getUserSession()
+    const role = extendedUser?.role_id?.toLowerCase()
+    if (role !== 'super_admin' && role !== 'superadmin') throw new Error('Acceso Denegado')
+
     const supabase = await createAdminClient()
-    
-    // 1. Capa Auth
-    const { data: authUsers } = await supabase.auth.admin.listUsers()
-    const authRecord = authUsers?.users?.filter(u => u.email === email)
 
-    // 2. Capa Public Users
-    const { data: publicRecords } = await supabase
-      .from('users')
-      .select('*, companies(name)')
-      .eq('email', email)
+    // 1. Obtener datos de la empresa
+    const { data: company, error: companyError } = await supabase
+      .from('companies')
+      .select('*')
+      .eq('id', companyId)
+      .single()
 
-    // 3. Capa RBAC
-    let rbacRecords: any[] = []
-    if (publicRecords && publicRecords.length > 0) {
-      const { data: roles } = await supabase
-        .from('user_roles')
-        .select('*, companies(name)')
-        .in('user_id', publicRecords.map(p => p.id))
-      rbacRecords = roles || []
+    if (companyError || !company) {
+      throw new Error(companyError?.message || 'Empresa no encontrada')
     }
+
+    // 2. Obtener roles disponibles para mapear IDs a nombres amigables
+    const { data: roles, error: rolesError } = await supabase
+      .from('roles')
+      .select('id, name, description')
+    
+    const rolesMap = new Map<string, { name: string; description: string }>()
+    if (roles) {
+      roles.forEach((r: any) => {
+        rolesMap.set(r.id, { name: r.name, description: r.description || '' })
+      })
+    }
+
+    // 3. Obtener registros de user_roles para esta empresa
+    const { data: userRoles, error: userRolesError } = await supabase
+      .from('user_roles')
+      .select('user_id, role_id')
+      .eq('company_id', companyId)
+
+    const userRolesMap = new Map<string, string[]>()
+    if (userRoles) {
+      userRoles.forEach((ur: any) => {
+        const roleInfo = rolesMap.get(ur.role_id)
+        const roleName = roleInfo ? roleInfo.name : ur.role_id
+        if (!userRolesMap.has(ur.user_id)) {
+          userRolesMap.set(ur.user_id, [])
+        }
+        userRolesMap.get(ur.user_id)!.push(roleName)
+      })
+    }
+
+    // 4. Obtener todos los usuarios asociados (nativos por company_id o asignados vía user_roles)
+    const userIds = userRoles ? userRoles.map((ur: any) => ur.user_id).filter(Boolean) : []
+    
+    let query = supabase.from('users').select('*')
+    if (userIds.length > 0) {
+      query = query.or(`company_id.eq.${companyId},id.in.(${userIds.join(',')})`)
+    } else {
+      query = query.eq('company_id', companyId)
+    }
+
+    const { data: users, error: usersError } = await query.order('name', { ascending: true })
+    if (usersError) {
+      throw new Error(usersError.message)
+    }
+
+    // Mapear los roles reales a cada usuario
+    const mappedUsers = (users || []).map((u: any) => {
+      const dbRoles = userRolesMap.get(u.id) || []
+      return {
+        ...u,
+        roles: dbRoles.length > 0 ? dbRoles : [u.role_id || 'user']
+      }
+    })
+
+    // Identificar el administrador principal
+    let mainAdmin = mappedUsers.find((u: any) => u.roles.includes('admin'))
+    if (!mainAdmin) {
+      mainAdmin = mappedUsers.find((u: any) => ['admin', 'gerente'].includes(u.role_id?.toLowerCase()))
+    }
+    if (!mainAdmin && mappedUsers.length > 0) {
+      mainAdmin = mappedUsers[0]
+    }
+
+    // 5. Métricas de Soporte/Auditoría seguras con try-catch individual
+    const getCountSafe = async (table: string) => {
+      try {
+        const { count, error } = await supabase
+          .from(table)
+          .select('id', { count: 'exact', head: true })
+          .eq('company_id', companyId)
+        
+        if (error) {
+          return 0
+        }
+        return count || 0
+      } catch (err) {
+        return 0
+      }
+    }
+
+    const [workersCount, documentsCount, productsCount, purchaseOrdersCount] = await Promise.all([
+      getCountSafe('workers'),
+      getCountSafe('documents'),
+      getCountSafe('products'),
+      getCountSafe('purchase_orders')
+    ])
 
     return {
       success: true,
       data: {
-        auth: authRecord || [],
-        public: publicRecords || [],
-        rbac: rbacRecords
+        company,
+        users: mappedUsers,
+        mainAdmin: mainAdmin || null,
+        stats: {
+          workers: workersCount,
+          documents: documentsCount,
+          products: productsCount,
+          purchaseOrders: purchaseOrdersCount
+        }
       }
     }
   } catch (error: any) {
+    console.error('[SUPER_ADMIN] Error in getCompanyDetails:', error.message)
     return { success: false, error: error.message }
   }
 }
 
-export async function repairIdentity(targetId: string, correctName: string) {
-  try {
-    const supabase = await createAdminClient()
-    
-    // 1. Restaurar Nombre en Perfil
-    const { error: profileError } = await supabase
-      .from('users')
-      .update({ name: correctName, role_id: 'super_admin' })
-      .eq('id', targetId)
-
-    if (profileError) throw profileError
-
-    // 2. Asegurar Rol Global
-    const { data: existingRole } = await supabase
-      .from('user_roles')
-      .select('*')
-      .eq('user_id', targetId)
-      .eq('role_id', 'super_admin')
-      .maybeSingle()
-
-    if (!existingRole) {
-      await supabase.from('user_roles').insert({
-        user_id: targetId,
-        role_id: 'super_admin',
-        company_id: null // Global
-      })
-    }
-
-    revalidatePath('/', 'layout')
-    return { success: true }
-  } catch (error: any) {
-    return { success: false, error: error.message }
-  }
-}

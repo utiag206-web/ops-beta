@@ -2,7 +2,7 @@ export const SYSTEM_AREAS = [
   'Gerencia General',
   'Administración',
   'Operaciones',
-  'Almacén y Mantenimiento',
+  'Mecánica',
   'Seguridad SOMA',
   'Cocina'
 ] as const

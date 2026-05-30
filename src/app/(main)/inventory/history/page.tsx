@@ -1,4 +1,4 @@
-import { getInventoryMovements, getProducts } from '../actions'
+import { getInventoryMovements, getProductsMinimal } from '../actions'
 import { InventoryMovementsList } from '@/components/inventory/movements-list'
 import { Suspense } from 'react'
 import { OperationsDashboardSkeleton } from '@/components/dashboard/dashboard-skeletons'
@@ -13,15 +13,15 @@ export default async function InventoryMovementsPage() {
 
   return (
     <Suspense fallback={<OperationsDashboardSkeleton />}>
-      <MovementsFetcher />
+      <StockFetcher user={extendedUser} />
     </Suspense>
   )
 }
 
-async function MovementsFetcher() {
+async function StockFetcher({ user }: { user: any }) {
   const [movementsRes, productsRes] = await Promise.all([
     getInventoryMovements(),
-    getProducts()
+    getProductsMinimal()
   ])
 
   if (movementsRes.error || productsRes.error) {

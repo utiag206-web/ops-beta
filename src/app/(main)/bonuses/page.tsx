@@ -9,11 +9,13 @@ import { Coins, LayoutGrid } from 'lucide-react'
 
 export default async function BonusesPage() {
   const { extendedUser } = await getUserSession()
-  const isWorker = extendedUser?.role_id === 'trabajador'
+  const userRole = extendedUser?.role_id?.toLowerCase() || ''
+  const isWorker = userRole === 'trabajador'
+  const canManage = ['admin', 'gerente', 'administracion', 'super_admin', 'superadmin'].includes(userRole)
 
   const [bonuses, workers] = await Promise.all([
     getBonuses(),
-    isWorker ? Promise.resolve([]) : getWorkersShort()
+    canManage ? getWorkersShort() : Promise.resolve([])
   ])
 
   return (
@@ -23,7 +25,7 @@ export default async function BonusesPage() {
           <h1 className="text-2xl font-bold text-slate-800">Gestión de Bonos</h1>
           <p className="text-slate-500">Historial y registro de bonificaciones para el personal</p>
         </div>
-        {!isWorker && <AddBonusContainer workers={workers} />}
+        {canManage && <AddBonusContainer workers={workers} />}
       </div>
 
       <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
@@ -33,7 +35,7 @@ export default async function BonusesPage() {
             {isWorker ? 'Mi Historial de Bonificaciones' : 'Bonificaciones Registradas'}
           </h2>
         </div>
-        <BonusList bonuses={bonuses} isAdmin={!isWorker} isWorker={isWorker} />
+        <BonusList bonuses={bonuses} isAdmin={canManage} isWorker={isWorker} />
       </div>
     </div>
   )

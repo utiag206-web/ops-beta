@@ -1,5 +1,5 @@
 import { getUsers, getAvailableWorkers } from './actions'
-import { UsersList } from '@/components/users/users-list'
+import { UsersClientWrapper } from '@/components/users/users-client-wrapper'
 
 export const dynamic = 'force-dynamic'
 
@@ -15,23 +15,14 @@ export default async function UsersPage() {
 
     return (
       <div className="max-w-6xl mx-auto">
-        <UsersList 
+        <UsersClientWrapper 
           initialUsers={Array.isArray(users) ? users : []} 
           availableWorkers={Array.isArray(workers) ? workers : []} 
           currentUserRole={extendedUser?.role_id || ''}
         />
       </div>
     )
-  } catch (err: any) {
-    if (
-      err.digest?.startsWith('NEXT_REDIRECT') || 
-      err.message?.includes('NEXT_REDIRECT') ||
-      err.digest === 'DYNAMIC_SERVER_USAGE' ||
-      err.message?.includes('DYNAMIC_SERVER_USAGE') ||
-      err.message?.includes('Dynamic server usage')
-    ) {
-      throw err
-    }
+  } catch (err) {
     console.error('Error loading Users page:', err)
     return (
       <div className="p-8 bg-red-50 text-red-700 rounded-xl border border-red-200">

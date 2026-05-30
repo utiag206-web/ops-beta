@@ -25,6 +25,7 @@ export default function RequirementsPage({ userRole, initialData = [] }: { userR
   const [requirements, setRequirements] = useState<any[]>(initialData)
   const [loading, setLoading] = useState(false)
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [selectedRequirement, setSelectedRequirement] = useState<any | null>(null)
   const [approveModalData, setApproveModalData] = useState<{isOpen: boolean, reqId: string | null}>({ isOpen: false, reqId: null })
   
   const [filters, setFilters] = useState({
@@ -72,20 +73,22 @@ export default function RequirementsPage({ userRole, initialData = [] }: { userR
   return (
     <div className="space-y-8 pb-12">
       {/* Header */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white p-8 rounded-[2rem] shadow-sm border border-slate-50">
-        <div>
-          <h1 className="text-3xl font-bold text-slate-800 tracking-tight flex items-center gap-3">
-            <div className="bg-indigo-100 p-2 rounded-xl">
-              <Package className="text-indigo-600" size={24} />
-            </div>
-            Gestión de Requerimientos
-          </h1>
-          <p className="text-slate-500 font-medium text-sm mt-1">Solicitudes operativas y flujos de aprobación.</p>
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 bg-white p-6 sm:p-8 rounded-2xl sm:rounded-[2rem] shadow-sm border border-slate-50">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6 text-left w-full md:w-auto">
+          <div className="w-12 h-12 sm:w-16 sm:h-16 bg-indigo-100 text-indigo-600 rounded-2xl sm:rounded-[2rem] flex items-center justify-center shadow-sm shrink-0">
+            <Package size={24} className="sm:w-8 sm:h-8" />
+          </div>
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-black text-slate-800 tracking-tight leading-tight uppercase">
+              Gestión de Requerimientos
+            </h1>
+            <p className="text-slate-500 font-medium text-xs sm:text-sm mt-0.5 sm:mt-1">Solicitudes operativas y flujos de aprobación.</p>
+          </div>
         </div>
         
         <button 
           onClick={() => setIsModalOpen(true)}
-          className="w-full md:w-auto bg-indigo-600 hover:bg-indigo-700 text-white px-8 py-4 rounded-2xl font-bold transition-all flex items-center justify-center gap-3 shadow-lg shadow-indigo-100 active:scale-95"
+          className="w-full md:w-auto bg-indigo-600 hover:bg-indigo-700 text-white px-8 py-4 rounded-xl sm:rounded-2xl font-bold transition-all flex items-center justify-center gap-3 shadow-lg shadow-indigo-100 active:scale-95 text-xs sm:text-base"
         >
           <Plus size={20} strokeWidth={3} />
           <span>Nuevo Requerimiento</span>
@@ -189,6 +192,15 @@ export default function RequirementsPage({ userRole, initialData = [] }: { userR
                              {req.products?.name}
                            </span>
                         </div>
+                      ) : req.type === 'fondos' ? (
+                        <div className="flex items-center gap-2">
+                           <div className="bg-emerald-50 p-2 rounded-lg text-emerald-500 shrink-0">
+                             <Package size={14} />
+                           </div>
+                           <span className="text-xs font-black text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-100 uppercase tracking-tight">
+                             Solicitud de Fondos
+                           </span>
+                        </div>
                       ) : (
                         <span className="text-[10px] text-slate-400 italic">No especificado</span>
                       )}
@@ -200,7 +212,7 @@ export default function RequirementsPage({ userRole, initialData = [] }: { userR
                     </td>
                     <td className="py-6 px-4 text-center">
                       <span className="text-[10px] font-bold text-slate-600 bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-100 uppercase tracking-tight whitespace-nowrap">
-                        {req.products?.unit || '—'}
+                        {req.type === 'fondos' ? 'Soles (S/)' : (req.products?.unit || '—')}
                       </span>
                     </td>
                     <td className="py-6 px-4 text-center">
@@ -254,9 +266,20 @@ export default function RequirementsPage({ userRole, initialData = [] }: { userR
                                 Marcar Atendido
                               </button>
                             )}
+                            <button 
+                              onClick={() => setSelectedRequirement(req)}
+                              className="p-2.5 bg-slate-50 text-slate-400 hover:bg-white hover:shadow-md hover:text-indigo-600 rounded-xl transition-all border border-slate-100/50"
+                              title="Ver Detalle"
+                            >
+                              <Eye size={16} />
+                            </button>
                           </div>
                         ) : (
-                          <button className="p-2.5 bg-slate-50 text-slate-400 hover:bg-white hover:shadow-md hover:text-indigo-600 rounded-xl transition-all border border-slate-100/50">
+                          <button 
+                            onClick={() => setSelectedRequirement(req)}
+                            className="p-2.5 bg-slate-50 text-slate-400 hover:bg-white hover:shadow-md hover:text-indigo-600 rounded-xl transition-all border border-slate-100/50"
+                            title="Ver Detalle"
+                          >
                             <Eye size={16} />
                           </button>
                         )}
@@ -265,7 +288,6 @@ export default function RequirementsPage({ userRole, initialData = [] }: { userR
                   </tr>
                 )
               }) : (
-
                 <tr>
                   <td colSpan={12} className="py-32 text-center">
                     <div className="max-w-xs mx-auto space-y-4">
@@ -300,6 +322,109 @@ export default function RequirementsPage({ userRole, initialData = [] }: { userR
         reqId={approveModalData.reqId}
         onSuccess={fetchData}
       />
+
+      {selectedRequirement && (
+        <RequirementDetailModal 
+          isOpen={!!selectedRequirement}
+          onClose={() => setSelectedRequirement(null)}
+          requirement={selectedRequirement}
+        />
+      )}
+    </div>
+  )
+}
+
+function RequirementDetailModal({ isOpen, onClose, requirement }: { isOpen: boolean, onClose: () => void, requirement: any }) {
+  if (!isOpen || !requirement) return null
+  
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+      <div className="bg-white w-full max-w-lg rounded-[2.5rem] shadow-2xl overflow-hidden border border-slate-100 animate-in zoom-in-95 duration-200 max-h-[90vh] flex flex-col">
+        {/* Header */}
+        <div className="px-8 py-6 border-b border-slate-50 flex justify-between items-center bg-slate-50/50">
+          <div>
+            <h2 className="text-2xl font-black text-slate-800 tracking-tight">Detalle de Requerimiento</h2>
+            <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest">Trazabilidad completa de la solicitud.</p>
+          </div>
+          <button onClick={onClose} className="p-2 hover:bg-slate-100 rounded-full transition-colors text-slate-400">
+            <X size={24} />
+          </button>
+        </div>
+
+        {/* Content */}
+        <div className="p-8 space-y-6 overflow-y-auto flex-1 custom-scrollbar">
+          {/* Main Info */}
+          <div className="flex justify-between items-start border-b border-slate-100 pb-6">
+            <div>
+              <span className="bg-indigo-50 text-indigo-700 text-[9px] font-black px-2.5 py-1 rounded shadow-sm border border-indigo-100 uppercase tracking-wider">
+                {requirement.type}
+              </span>
+              <h3 className="text-lg font-black text-slate-800 uppercase tracking-tight mt-3 leading-tight">
+                {requirement.products?.name || 'Solicitud de Fondos'}
+              </h3>
+              {requirement.products?.code && (
+                <p className="text-xs font-bold text-slate-400 mt-1 uppercase">SKU/Código: {requirement.products.code}</p>
+              )}
+            </div>
+            <div className="text-right shrink-0">
+              <RequirementStatusBadge status={requirement.status} />
+              <div className="mt-2">
+                <PriorityBadge priority={requirement.priority} />
+              </div>
+            </div>
+          </div>
+
+          {/* Details Grid */}
+          <div className="grid grid-cols-2 gap-4 bg-slate-50 p-5 rounded-3xl border border-slate-100 text-left">
+            <div>
+              <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Solicitado Por</p>
+              <p className="text-xs font-black text-slate-700 uppercase mt-1">{requirement.user?.name || 'Sistema'}</p>
+            </div>
+            <div>
+              <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Área / Depto.</p>
+              <p className="text-xs font-black text-slate-700 uppercase mt-1">{requirement.area || '—'}</p>
+            </div>
+            <div>
+              <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Cantidad</p>
+              <p className="text-sm font-black text-slate-800 mt-1 uppercase">
+                {requirement.quantity} <span className="text-[10px] font-bold text-slate-400 uppercase">{requirement.type === 'fondos' ? 'Soles (S/)' : (requirement.products?.unit || '—')}</span>
+              </p>
+            </div>
+            <div>
+              <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Fecha Registro</p>
+              <p className="text-xs font-black text-slate-700 uppercase mt-1">
+                {requirement.created_at ? new Date(requirement.created_at).toLocaleDateString() : '—'}
+              </p>
+            </div>
+          </div>
+
+          {/* Justification / Title / Description */}
+          <div className="space-y-2 text-left">
+            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest px-1">Justificación / Descripción del Pedido</p>
+            <div className="p-5 bg-slate-50/50 rounded-2xl border border-slate-100">
+              <p className="text-sm text-slate-600 font-bold leading-relaxed">{requirement.title || requirement.description}</p>
+            </div>
+          </div>
+
+          {/* Trazabilidad de Almacén */}
+          {requirement.movement_id && (
+            <div className="p-5 bg-blue-50/50 rounded-2xl border border-blue-100 flex items-start gap-4 text-left">
+              <div className="p-2.5 bg-blue-100 rounded-xl text-blue-600 shrink-0">
+                <Package size={18} />
+              </div>
+              <div>
+                <h4 className="text-xs font-black text-blue-800 uppercase tracking-wider">Despacho de Almacén</h4>
+                <p className="text-[11px] font-semibold text-blue-600 mt-0.5 leading-normal">
+                  Esta solicitud ha sido despachada y sincronizada de forma segura en el Kardex de Inventario. 
+                </p>
+                <div className="mt-3 flex items-center gap-2">
+                  <span className="text-[9px] font-bold text-blue-700 bg-white border border-blue-100 px-2.5 py-1 rounded-md uppercase">Vínculo: REQ-APP</span>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   )
 }

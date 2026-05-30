@@ -37,8 +37,7 @@ export async function assignWorkCycle(payload: {
 }) {
   try {
     const { extendedUser } = await getUserSession()
-    const allowedRoles = ['admin', 'gerente', 'operaciones', 'super_admin', 'superadmin']
-    if (!extendedUser || !allowedRoles.includes(extendedUser.role_id)) {
+    if (!extendedUser || ['trabajador', 'worker'].includes(extendedUser.role_id?.toLowerCase())) {
       return { success: false, error: 'No autorizado' }
     }
 
@@ -68,8 +67,7 @@ export async function assignWorkCycle(payload: {
 export async function deleteWorkCycle(id: string) {
   try {
     const { extendedUser } = await getUserSession()
-    const allowedRoles = ['admin', 'gerente', 'operaciones', 'super_admin', 'superadmin']
-    if (!extendedUser || !allowedRoles.includes(extendedUser.role_id)) {
+    if (!extendedUser || ['trabajador', 'worker'].includes(extendedUser.role_id?.toLowerCase())) {
       return { success: false, error: 'No autorizado' }
     }
 
@@ -120,8 +118,7 @@ export async function upsertTareoRecord(payload: {
   try {
     const companyId = await getStrictCompanyId()
     const { extendedUser } = await getUserSession()
-    const allowedRoles = ['admin', 'gerente', 'operaciones', 'super_admin', 'superadmin']
-    if (!extendedUser || !allowedRoles.includes(extendedUser.role_id)) {
+    if (!extendedUser || ['trabajador', 'worker'].includes(extendedUser.role_id?.toLowerCase())) {
        return { success: false, error: 'No autorizado' }
     }
     const supabase = await createAdminClient()
@@ -153,7 +150,6 @@ export async function upsertTareoRecord(payload: {
       if (error) throw error
     }
 
-    revalidatePath('/tareo')
     return { success: true }
   } catch (e: any) {
     console.error('[TAREO] Upsert error:', e.message)
@@ -182,8 +178,7 @@ export async function upsertTareoConfig(month: string, daily_hours: number) {
   try {
     const companyId = await getStrictCompanyId()
     const { extendedUser } = await getUserSession()
-    const allowedRoles = ['admin', 'gerente', 'operaciones', 'super_admin', 'superadmin']
-    if (!extendedUser || !allowedRoles.includes(extendedUser.role_id)) {
+    if (!extendedUser || ['trabajador', 'worker'].includes(extendedUser.role_id?.toLowerCase())) {
        return { success: false, error: 'No autorizado' }
     }
     const supabase = await createAdminClient()
@@ -199,7 +194,6 @@ export async function upsertTareoConfig(month: string, daily_hours: number) {
       })
 
     if (error) throw error
-    revalidatePath('/tareo')
     return { success: true }
   } catch (e: any) {
     return { success: false, error: e.message }
@@ -227,8 +221,7 @@ export async function getTareoNotes(month: string) {
 export async function upsertTareoNote(worker_id: string, month: string, note: string) {
   try {
   const { extendedUser } = await getUserSession()
-  const allowedRoles = ['admin', 'gerente', 'operaciones', 'super_admin', 'superadmin']
-  if (!extendedUser || !allowedRoles.includes(extendedUser.role_id)) {
+  if (!extendedUser || ['trabajador', 'worker'].includes(extendedUser.role_id?.toLowerCase())) {
      return { success: false, error: 'No autorizado' }
   }
   const companyId = await getStrictCompanyId()
@@ -259,7 +252,6 @@ export async function upsertTareoNote(worker_id: string, month: string, note: st
        if (error) throw error
     }
 
-    revalidatePath('/tareo')
     return { success: true }
   } catch (e: any) {
     return { success: false, error: e.message }
@@ -293,8 +285,7 @@ export async function syncAttendancePunches(payload: {
 }) {
   try {
     const { extendedUser } = await getUserSession()
-    const allowedRoles = ['admin', 'gerente', 'operaciones', 'super_admin', 'superadmin']
-    if (!extendedUser || !allowedRoles.includes(extendedUser.role_id)) {
+    if (!extendedUser || ['trabajador', 'worker'].includes(extendedUser.role_id?.toLowerCase())) {
        return { success: false, error: 'No autorizado' }
     }
     const companyId = await getStrictCompanyId()
@@ -332,10 +323,37 @@ export async function syncAttendancePunches(payload: {
       if (insError) throw insError
     }
 
-    revalidatePath('/tareo')
     return { success: true }
   } catch (e: any) {
     return { success: false, error: e.message }
+  }
+}
+
+export async function getTareoDashboardData(month: string, startDate: string, endDate: string) {
+  const { extendedUser } = await getUserSession()
+  const companyId = await getStrictCompanyId()
+  const supabase = await createAdminClient()
+
+  const [records, notes, config, punches] = await Promise.all([
+    applyIsolation(supabase.from('tareo_records').select('worker_id, date, status'), companyId, extendedUser.role_id)
+      .gte('date', startDate)
+      .lte('date', endDate),
+    applyIsolation(supabase.from('tareo_monthly_notes').select('worker_id, note'), companyId, extendedUser.role_id)
+      .eq('month', month),
+    applyIsolation(supabase.from('tareo_config').select('daily_hours'), companyId, extendedUser.role_id)
+      .eq('month', month)
+      .maybeSingle(),
+    applyIsolation(supabase.from('attendance_logs').select('id, worker_id, date_local, type, timestamp'), companyId, extendedUser.role_id)
+      .gte('date_local', startDate)
+      .lte('date_local', endDate)
+      .order('timestamp', { ascending: true })
+  ])
+
+  return {
+    records: records.data || [],
+    notes: notes.data || [],
+    dailyHours: config.data?.daily_hours || 10.25,
+    punches: punches.data || []
   }
 }
 

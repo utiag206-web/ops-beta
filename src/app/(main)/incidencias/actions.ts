@@ -9,6 +9,8 @@ export async function getIncidencias(filters?: { status?: string, category?: str
   const { extendedUser } = await getUserSession()
   const companyId = await getStrictCompanyId()
 
+  if (!extendedUser || !companyId) return { error: 'No autorizado' }
+
   let query = applyIsolation(
     supabase.from('incidencias').select('*'),
     companyId,
@@ -21,7 +23,11 @@ export async function getIncidencias(filters?: { status?: string, category?: str
   }
 
   if (filters?.category) {
-    query = query.eq('incident_category', filters.category)
+    if (filters.category === 'soma') {
+      query = query.in('incident_category', ['soma', 'personal', 'ambiental', 'material'])
+    } else {
+      query = query.eq('incident_category', filters.category)
+    }
   }
 
   const { data: rawData, error } = await query
@@ -34,15 +40,15 @@ export async function getIncidencias(filters?: { status?: string, category?: str
   if (!rawData || rawData.length === 0) return { data: [] }
 
   // Manual Join Fallback for reporter names
-  const reporterIds = Array.from(new Set(rawData.map(i => i.reported_by))).filter(id => id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id))
+  const reporterIds = Array.from(new Set(rawData.map((i: any) => i.reported_by))).filter((id: any) => id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id))
   
   const { data: reporters } = reporterIds.length > 0
     ? await supabase.from('users').select('id, name').in('id', reporterIds)
     : { data: [] }
   
-  const reporterMap = new Map((reporters || []).map(r => [r.id, r.name]))
+  const reporterMap = new Map((reporters || []).map((r: any) => [r.id, r.name]))
 
-  const data = rawData.map(i => ({
+  const data = rawData.map((i: any) => ({
     ...i,
     photo_urls: Array.isArray(i.photo_urls) ? i.photo_urls : [],
     reporter: {

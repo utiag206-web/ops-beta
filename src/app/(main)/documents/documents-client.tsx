@@ -33,6 +33,16 @@ export default function DocumentsClient({ initialDocuments, workers, userRole }:
     expiry_date: ''
   })
 
+  // Estado reactivo local para actualizaciones instantáneas
+  const [documents, setDocuments] = useState(initialDocuments)
+  
+  // Sincronizar el estado cliente cuando las props cambien por revalidaciones
+  const [prevInitialDocs, setPrevInitialDocs] = useState(initialDocuments)
+  if (initialDocuments !== prevInitialDocs) {
+    setDocuments(initialDocuments)
+    setPrevInitialDocs(initialDocuments)
+  }
+
   const getStatus = (expiryDate: string | null) => {
     if (!expiryDate) return { label: 'Sin vencimiento', color: 'bg-slate-50 text-slate-500 border-slate-100', icon: FileText }
     const today = new Date()
@@ -66,6 +76,9 @@ export default function DocumentsClient({ initialDocuments, workers, userRole }:
         setShowForm(false)
         setFormData({ worker_id: '', name: '', file_type: '', issue_date: new Date().toISOString().split('T')[0], expiry_date: '' })
         setFile(null)
+        if (result?.data) {
+          setDocuments(prev => [result.data, ...prev])
+        }
         router.refresh()
       }
     } catch (error: any) {
@@ -158,7 +171,7 @@ export default function DocumentsClient({ initialDocuments, workers, userRole }:
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-50">
-            {initialDocuments.map((doc) => {
+            {documents.map((doc) => {
               const status = getStatus(doc.expiry_date)
               const Icon = status.icon
               return (
@@ -193,7 +206,23 @@ export default function DocumentsClient({ initialDocuments, workers, userRole }:
                       </a>
                     )}
                     {(userRole === 'admin' || userRole === 'company_admin' || userRole === 'super_admin' || userRole === 'superadmin') && (
-                      <button onClick={() => deleteDocument(doc.id).then(() => router.refresh())} className="p-2 text-slate-300 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all" title="Eliminar registro">
+                      <button 
+                        onClick={() => {
+                          if (!confirm(`¿Estás seguro de que deseas eliminar permanentemente el documento "${doc.name}"?`)) return
+                          const originalDocs = [...documents]
+                          setDocuments(prev => prev.filter(d => d.id !== doc.id))
+                          deleteDocument(doc.id).then((res) => {
+                            if (res?.success === false) {
+                              alert(res.error)
+                              setDocuments(originalDocs)
+                            } else {
+                              router.refresh()
+                            }
+                          })
+                        }} 
+                        className="p-2 text-slate-300 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all" 
+                        title="Eliminar registro"
+                      >
                         <Trash2 size={18} />
                       </button>
                     )}
@@ -201,7 +230,7 @@ export default function DocumentsClient({ initialDocuments, workers, userRole }:
                 </tr>
               )
             })}
-            {initialDocuments.length === 0 && (
+            {documents.length === 0 && (
               <tr>
                 <td colSpan={6} className="px-8 py-20 text-center text-slate-400 font-bold">Sin documentos registrados.</td>
               </tr>

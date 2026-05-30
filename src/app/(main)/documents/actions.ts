@@ -1,12 +1,14 @@
 'use server'
 
 import { createClient, createAdminClient } from '@/lib/supabase/server'
-import { getUserSession, getStrictCompanyId, applyIsolation } from '@/lib/auth'
+import { getUserSession, getStrictCompanyId, applyIsolation, getActiveViewMode } from '@/lib/auth'
 import { revalidatePath } from 'next/cache'
 
 export async function getWorkerDocuments() {
   const { extendedUser } = await getUserSession()
   const companyId = await getStrictCompanyId()
+
+  if (!extendedUser || !companyId) return []
 
   const supabase = await createAdminClient()
 
@@ -20,7 +22,8 @@ export async function getWorkerDocuments() {
   )
     .order('created_at', { ascending: false })
 
-  if (extendedUser.role_id === 'trabajador') {
+  const viewMode = await getActiveViewMode()
+  if (viewMode === 'WORKER' || extendedUser.role_id === 'trabajador') {
     query = query.eq('worker_id', extendedUser.worker_id)
   }
 
@@ -43,7 +46,7 @@ export async function addWorkerDocument(formData: FormData) {
     const allowedRoles = ['admin', 'company_admin', 'super_admin', 'superadmin', 'operaciones']
     const isAuthorized = extendedUser && (allowedRoles.includes(extendedUser.role_id?.toLowerCase()))
 
-    if (!isAuthorized || !companyId) {
+    if (!extendedUser || !isAuthorized || !companyId) {
       return { success: false, error: 'Acceso Denegado (403): Solo administradores pueden gestionar esta acción.' }
     }
 
@@ -93,7 +96,10 @@ export async function addWorkerDocument(formData: FormData) {
     const { data, error } = await supabase
       .from('worker_documents')
       .insert(insertPayload)
-      .select()
+      .select(`
+        *, 
+        worker:workers(name, last_name)
+      `)
 
     if (error) {
       console.error('[DOCUMENTS] Insert error:', JSON.stringify(error))
@@ -102,7 +108,7 @@ export async function addWorkerDocument(formData: FormData) {
 
     revalidatePath('/documents')
     revalidatePath('/dashboard')
-    return { success: true, error: null }
+    return { success: true, error: null, data: data?.[0] }
   } catch (e: any) {
     console.error('[DOCUMENTS] Unexpected error:', e.message)
     return { success: false, error: `Error inesperado: ${e.message}` }
@@ -113,9 +119,9 @@ export async function deleteDocument(id: string) {
   try {
     const { extendedUser } = await getUserSession()
     const companyId = await getStrictCompanyId()
-    const isAuthorized = extendedUser && (extendedUser.role_id !== 'trabajador' || extendedUser.role_id === 'super_admin')
+    const isAuthorized = extendedUser && extendedUser.role_id !== 'trabajador'
 
-    if (!isAuthorized || !companyId) {
+    if (!extendedUser || !isAuthorized || !companyId) {
       return { success: false, error: 'Acceso Denegado (403): Solo administradores pueden gestionar esta acción.' }
     }
 

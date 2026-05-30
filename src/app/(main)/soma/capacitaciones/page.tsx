@@ -60,19 +60,19 @@ export default function CapacitacionesSomaPage() {
     <div className="space-y-8 animate-in fade-in duration-700">
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-        <div className="flex items-center gap-6">
-          <div className="w-16 h-16 bg-indigo-600 text-white rounded-[2rem] flex items-center justify-center shadow-2xl shadow-indigo-200">
-            <GraduationCap size={32} />
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6 text-left">
+          <div className="w-12 h-12 sm:w-16 sm:h-16 bg-indigo-600 text-white rounded-2xl sm:rounded-[2rem] flex items-center justify-center shadow-2xl shadow-indigo-200 shrink-0">
+            <GraduationCap size={24} className="sm:w-8 sm:h-8" />
           </div>
           <div>
-            <h1 className="text-4xl font-bold text-slate-800 tracking-tight">Capacitaciones SOMA</h1>
-            <p className="text-slate-500 font-bold text-lg">Registro de cursos, certificaciones y vencimientos</p>
+            <h1 className="text-2xl sm:text-4xl font-bold text-slate-800 tracking-tight leading-tight">Capacitaciones SOMA</h1>
+            <p className="text-slate-500 font-bold text-sm sm:text-lg mt-0.5 sm:mt-1">Registro de cursos, certificaciones y vencimientos</p>
           </div>
         </div>
         {['admin', 'soma', 'operaciones', 'jefe_area', 'super_admin', 'superadmin'].includes(role_id || '') && (
           <button 
             onClick={() => setIsModalOpen(true)}
-            className="flex items-center gap-3 px-8 py-4 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-[2rem] shadow-xl shadow-indigo-200 transition-all hover:scale-105 active:scale-95"
+            className="w-full md:w-auto flex items-center justify-center gap-3 px-8 py-4 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-2xl sm:rounded-[2rem] shadow-xl shadow-indigo-200 transition-all hover:scale-105 active:scale-95 text-xs sm:text-base"
           >
             <Plus size={20} />
             Registrar Curso
@@ -270,36 +270,36 @@ function AddTrainingModal({ isOpen, onClose, workers, onSuccess }: any) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
-      <div className="bg-white w-full max-w-4xl max-h-[90vh] overflow-hidden rounded-[2rem] shadow-2xl flex flex-col scale-in-center">
-        <div className="p-10 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
+      <div className="bg-white w-full max-w-2xl rounded-[2.5rem] shadow-[0_20px_50px_rgba(0,0,0,0.3)] overflow-hidden animate-in zoom-in-95 duration-200 flex flex-col max-h-[90vh]">
+        <div className="p-8 border-b border-slate-50 flex justify-between items-center bg-indigo-50/30">
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 bg-indigo-600 text-white rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-200">
               <Plus size={24} />
             </div>
             <div>
-              <h2 className="text-2xl font-bold text-slate-800 tracking-tight">Nueva Capacitación</h2>
+              <h2 className="text-2xl font-black text-slate-800 tracking-tight">Nueva Capacitación</h2>
               <p className="text-slate-400 font-bold text-sm tracking-tight text-indigo-400">FASE SEGURIDADES SOMA</p>
             </div>
           </div>
-          <button onClick={onClose} className="p-4 hover:bg-white rounded-2xl text-slate-400 hover:text-rose-500 transition-all shadow-sm">
+          <button onClick={onClose} className="p-2 hover:bg-slate-100 rounded-full transition-colors text-slate-400">
             <X size={24} />
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-10 custom-scrollbar">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-5 md:p-8 custom-scrollbar">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-8">
             {/* Left side: Basic Info */}
-            <div className="space-y-8">
+            <div className="space-y-6">
               <div className="space-y-3">
                 <label className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] ml-2">Título del Curso</label>
                 <input 
                   required
                   type="text" 
-                  value={formData.title}
-                  onChange={e => setFormData({...formData, title: e.target.value})}
-                  placeholder="Ej: Inducción General de Seguridad"
-                  className="w-full px-8 py-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-indigo-500 font-bold text-slate-700"
+                  value={formData.title.toUpperCase()}
+                  onChange={e => setFormData({...formData, title: e.target.value.toUpperCase()})}
+                  placeholder="EJ: INDUCCIÓN GENERAL DE SEGURIDAD"
+                  className="w-full px-6 md:px-8 py-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-indigo-500 font-bold text-slate-700 uppercase"
                 />
               </div>
 
@@ -307,10 +307,10 @@ function AddTrainingModal({ isOpen, onClose, workers, onSuccess }: any) {
                 <label className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] ml-2">Instructor / Entrenador</label>
                 <input 
                   type="text" 
-                  value={formData.trainer}
-                  onChange={e => setFormData({...formData, trainer: e.target.value})}
-                  placeholder="Nombre del responsable"
-                  className="w-full px-8 py-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-indigo-500 font-bold text-slate-700"
+                  value={formData.trainer.toUpperCase()}
+                  onChange={e => setFormData({...formData, trainer: e.target.value.toUpperCase()})}
+                  placeholder="EJ: JUAN PEREZ"
+                  className="w-full px-6 md:px-8 py-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-indigo-500 font-bold text-slate-700 uppercase"
                 />
               </div>
 
@@ -322,7 +322,7 @@ function AddTrainingModal({ isOpen, onClose, workers, onSuccess }: any) {
                     type="date" 
                     value={formData.date}
                     onChange={e => setFormData({...formData, date: e.target.value})}
-                    className="w-full px-8 py-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-indigo-500 font-bold text-slate-700"
+                    className="w-full px-6 md:px-8 py-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-indigo-500 font-bold text-slate-700"
                   />
                 </div>
                 <div className="space-y-3">
@@ -331,7 +331,7 @@ function AddTrainingModal({ isOpen, onClose, workers, onSuccess }: any) {
                     type="date" 
                     value={formData.expiry_date}
                     onChange={e => setFormData({...formData, expiry_date: e.target.value})}
-                    className="w-full px-8 py-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-indigo-500 font-bold text-slate-700"
+                    className="w-full px-6 md:px-8 py-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-indigo-500 font-bold text-slate-700"
                   />
                 </div>
               </div>
@@ -339,17 +339,17 @@ function AddTrainingModal({ isOpen, onClose, workers, onSuccess }: any) {
               <div className="space-y-3">
                 <label className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] ml-2">Descripción</label>
                 <textarea 
-                  value={formData.description}
-                  onChange={e => setFormData({...formData, description: e.target.value})}
-                  placeholder="Detalles del contenido del curso..."
+                  value={formData.description.toUpperCase()}
+                  onChange={e => setFormData({...formData, description: e.target.value.toUpperCase()})}
+                  placeholder="DETALLES DEL CONTENIDO DEL CURSO..."
                   rows={4}
-                  className="w-full px-8 py-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-indigo-500 font-bold text-slate-700"
+                  className="w-full px-6 md:px-8 py-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-indigo-500 font-bold text-slate-700 uppercase"
                 />
               </div>
             </div>
 
             {/* Right side: Participant Selection */}
-            <div className="flex flex-col h-full bg-slate-50/50 rounded-[2rem] p-8 border border-slate-100/50">
+            <div className="flex flex-col bg-slate-50/50 rounded-[2rem] p-6 md:p-8 border border-slate-100/50 h-[380px] max-h-[380px]">
               <div className="flex items-center justify-between mb-6">
                 <label className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] flex items-center gap-2">
                   <Users size={14} /> Asistentes ({formData.participants.length})
@@ -363,7 +363,7 @@ function AddTrainingModal({ isOpen, onClose, workers, onSuccess }: any) {
                 </button>
               </div>
               
-              <div className="flex-1 overflow-y-auto space-y-2 pr-4 custom-scrollbar min-h-[300px]">
+              <div className="flex-1 overflow-y-auto space-y-2 pr-4 custom-scrollbar h-[250px] max-h-[250px]">
                 {workers.map((w: any) => (
                   <button
                     key={w.id}

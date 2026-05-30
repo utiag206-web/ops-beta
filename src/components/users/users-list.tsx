@@ -24,8 +24,16 @@ export function UsersList({ initialUsers, availableWorkers, currentUserRole }: {
   const [searchTerm, setSearchTerm] = useState('')
   const canManage = ['admin', 'gerente', 'super_admin', 'administracion'].includes(currentUserRole?.toLowerCase() || '')
 
+  // Estado reactivo local para actualizaciones de UI a 0ms de retardo
+  const [users, setUsers] = useState(initialUsers)
+  const [prevInitialUsers, setPrevInitialUsers] = useState(initialUsers)
+  if (initialUsers !== prevInitialUsers) {
+    setUsers(initialUsers)
+    setPrevInitialUsers(initialUsers)
+  }
+
   // Combine users and unlinked workers for a unified view
-  const safeUsers = Array.isArray(initialUsers) ? initialUsers : []
+  const safeUsers = Array.isArray(users) ? users : []
   const safeWorkers = Array.isArray(availableWorkers) ? availableWorkers : []
 
   const unifiedList = [
@@ -53,29 +61,65 @@ export function UsersList({ initialUsers, availableWorkers, currentUserRole }: {
 
   const handleStatusToggle = async (id: string, currentStatus: string) => {
     const newStatus = currentStatus === 'active' ? 'inactive' : 'active'
+    const originalUsers = [...users]
+    
+    // Actualización local inmediata (0ms)
+    setUsers(prev => prev.map(u => u.id === id ? { ...u, status: newStatus } : u))
+    
     const res = await updateUserStatus(id, newStatus as 'active' | 'inactive')
-    if (!res.success) alert(res.error)
-    else router.refresh()
+    if (!res.success) {
+      alert(res.error)
+      setUsers(originalUsers) // rollback en caso de error
+    } else {
+      router.refresh()
+    }
   }
 
   const handleRoleChange = async (id: string, newRole: string) => {
+    const originalUsers = [...users]
+    
+    // Actualización local inmediata (0ms)
+    setUsers(prev => prev.map(u => u.id === id ? { ...u, role_id: newRole } : u))
+    
     const res = await updateUserRole(id, newRole)
-    if (!res.success) alert(res.error)
-    else router.refresh()
+    if (!res.success) {
+      alert(res.error)
+      setUsers(originalUsers) // rollback en caso de error
+    } else {
+      router.refresh()
+    }
   }
 
   const handleAreaChange = async (id: string, newArea: string) => {
+    const originalUsers = [...users]
+    
+    // Actualización local inmediata (0ms)
+    setUsers(prev => prev.map(u => u.id === id ? { ...u, area: newArea } : u))
+    
     const res = await updateUserArea(id, newArea)
-    if (!res.success) alert(res.error)
-    else router.refresh()
+    if (!res.success) {
+      alert(res.error)
+      setUsers(originalUsers) // rollback en caso de error
+    } else {
+      router.refresh()
+    }
   }
   
   const handleDelete = async (id: string, name: string) => {
     if (!confirm(`¿Estás seguro de que deseas eliminar permanentemente al usuario ${name}? Esta acción no se puede deshacer.`)) return
     
+    const originalUsers = [...users]
+    
+    // Actualización local inmediata (0ms)
+    setUsers(prev => prev.filter(u => u.id !== id))
+    
     const res = await deleteUser(id)
-    if (!res.success) alert(res.error)
-    else router.refresh()
+    if (!res.success) {
+      alert(res.error)
+      setUsers(originalUsers) // rollback en caso de error
+    } else {
+      router.refresh()
+    }
   }
 
   return (
@@ -128,29 +172,34 @@ export function UsersList({ initialUsers, availableWorkers, currentUserRole }: {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
-              {filteredItems.map((item) => (
+              {filteredItems.filter(Boolean).map((item) => {
+                if (!item || !item.id) return null;
+                const isUser = item.type === 'user';
+                const isWorker = item.type === 'worker';
+                
+                return (
                 <tr key={item.id} className="hover:bg-slate-50/50 transition-colors group">
                   <td className="py-6 px-8">
                     <div className="flex flex-col">
-                      <span className="text-base font-bold text-slate-800 uppercase tracking-tight">{item.name}</span>
-                      {item.type === 'worker' && <span className="text-[10px] text-blue-500 font-bold uppercase tracking-widest mt-0.5">Ficha Trabajador</span>}
+                      <span className="text-base font-bold text-slate-800 uppercase tracking-tight">
+                        {item.name || 'Sin Nombre'}
+                      </span>
+                      {isWorker && <span className="text-[10px] text-blue-500 font-bold uppercase tracking-widest mt-0.5">Ficha Trabajador</span>}
                     </div>
                   </td>
                   <td className="py-6">
-                    <span className={`text-sm font-bold ${item.type === 'worker' ? 'text-slate-400 italic' : 'text-slate-600'}`}>
-                      {item.email}
+                    <span className={`text-sm font-bold keep-case ${isWorker ? 'text-slate-400 italic' : 'text-slate-600'}`}>
+                      {item.email || (isUser ? 'Correo no definido' : 'Sin cuenta')}
                     </span>
                   </td>
                   <td className="py-6">
-                    {item.type === 'user' ? (
+                    {isUser ? (
                         canManage ? (
                           <select 
-                            defaultValue={item.role_id}
+                            value={item.role_id || 'trabajador'}
                             onChange={(e) => handleRoleChange(item.id, e.target.value)}
                             className="bg-transparent border-none text-blue-600 text-sm font-bold uppercase tracking-tighter focus:ring-0 cursor-pointer p-0"
                           >
-                            <option value="super_admin">Super Admin</option>
-                            <option value="superadmin">Super Admin</option>
                             <option value="admin">Administrador</option>
                             <option value="gerente">Gerente</option>
                             <option value="operaciones">Operaciones</option>
@@ -161,7 +210,7 @@ export function UsersList({ initialUsers, availableWorkers, currentUserRole }: {
                           </select>
                         ) : (
                           <span className="text-xs font-bold text-blue-600 uppercase tracking-tighter bg-blue-50 px-2 py-0.5 rounded-md">
-                            {item.role_id}
+                            {item.role_id || 'trabajador'}
                           </span>
                         )
                     ) : (
@@ -169,10 +218,10 @@ export function UsersList({ initialUsers, availableWorkers, currentUserRole }: {
                     )}
                   </td>
                   <td className="py-6">
-                    {item.type === 'user' ? (
+                    {isUser ? (
                         canManage ? (
                           <select 
-                            defaultValue={item.area}
+                            value={item.area || ''}
                             onChange={(e) => handleAreaChange(item.id, e.target.value)}
                             className="bg-transparent border-none text-slate-600 text-xs font-bold uppercase tracking-tighter focus:ring-0 cursor-pointer p-0"
                           >
@@ -180,7 +229,7 @@ export function UsersList({ initialUsers, availableWorkers, currentUserRole }: {
                             <option value="Gerencia General">Gerencia General</option>
                             <option value="Administración">Administración</option>
                             <option value="Operaciones">Operaciones</option>
-                            <option value="Almacén y Mantenimiento">Almacén y Mant.</option>
+                            <option value="Mecánica">Mecánica</option>
                             <option value="Seguridad SOMA">Seguridad SOMA</option>
                             <option value="Cocina">Cocina</option>
                           </select>
@@ -210,7 +259,7 @@ export function UsersList({ initialUsers, availableWorkers, currentUserRole }: {
                   </td>
                   <td className="py-6 px-8 text-right">
                     <div className="flex items-center justify-end gap-3 transition-all">
-                      {canManage && item.type === 'user' && (
+                      {canManage && isUser && (
                         <>
                           <button 
                             onClick={() => setEditingUser(item)}
@@ -242,7 +291,7 @@ export function UsersList({ initialUsers, availableWorkers, currentUserRole }: {
                         </>
                       )}
                       
-                      {canManage && item.type === 'worker' && (
+                      {canManage && isWorker && (
                         <button 
                           onClick={() => setIsAddModalOpen(true)}
                           className="flex items-center gap-2 text-[10px] font-bold px-4 py-2 rounded-xl border border-blue-100 text-blue-600 bg-blue-50 hover:bg-blue-600 hover:text-white transition-all uppercase tracking-tighter shadow-sm"
@@ -255,7 +304,7 @@ export function UsersList({ initialUsers, availableWorkers, currentUserRole }: {
                     </div>
                   </td>
                 </tr>
-              ))}
+              )})}
               {filteredItems.length === 0 && (
                 <tr>
                   <td colSpan={5} className="py-32 text-center text-slate-400 font-bold">
@@ -277,7 +326,10 @@ export function UsersList({ initialUsers, availableWorkers, currentUserRole }: {
       <EditUserModal 
         isOpen={!!editingUser} 
         onClose={() => setEditingUser(null)} 
-        onSuccess={() => {
+        onSuccess={(updatedData?: any) => {
+          if (updatedData) {
+            setUsers(prev => prev.map(u => u.id === updatedData.id ? { ...u, ...updatedData } : u))
+          }
           router.refresh()
           setEditingUser(null)
         }} 

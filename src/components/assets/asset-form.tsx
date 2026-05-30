@@ -39,9 +39,17 @@ export function AssetForm({ isOpen, onClose, onSuccess, editingAsset }: AssetFor
     setLoading(true)
     
     try {
+      const cleanForm = {
+        code: form.code.toUpperCase().trim(),
+        name: form.name.toUpperCase().trim(),
+        type: form.type,
+        status: form.status,
+        location: form.location.toUpperCase().trim()
+      }
+
       const res = editingAsset
-        ? await updateAsset(editingAsset.id, form)
-        : await createAsset(form)
+        ? await updateAsset(editingAsset.id, cleanForm)
+        : await createAsset(cleanForm)
 
       if (res.error) {
         toast.error(res.error)
@@ -80,9 +88,9 @@ export function AssetForm({ isOpen, onClose, onSuccess, editingAsset }: AssetFor
                 required
                 type="text"
                 placeholder="ACT-001"
-                className="w-full bg-slate-50 border-2 border-transparent focus:border-blue-500 focus:bg-white rounded-2xl p-4 text-sm font-bold transition-all outline-none"
+                className="w-full bg-slate-50 border-2 border-transparent focus:border-blue-500 focus:bg-white rounded-2xl p-4 text-sm font-bold transition-all outline-none uppercase"
                 value={form.code}
-                onChange={e => setForm({...form, code: e.target.value})}
+                onChange={e => setForm({...form, code: e.target.value.toUpperCase()})}
               />
             </div>
             <div className="space-y-1.5">
@@ -105,9 +113,9 @@ export function AssetForm({ isOpen, onClose, onSuccess, editingAsset }: AssetFor
               required
               type="text"
               placeholder="Ej: Camioneta Toyota Hilux"
-              className="w-full bg-slate-50 border-2 border-transparent focus:border-blue-500 focus:bg-white rounded-2xl p-4 text-sm font-bold transition-all outline-none"
+              className="w-full bg-slate-50 border-2 border-transparent focus:border-blue-500 focus:bg-white rounded-2xl p-4 text-sm font-bold transition-all outline-none uppercase"
               value={form.name}
-              onChange={e => setForm({...form, name: e.target.value})}
+              onChange={e => setForm({...form, name: e.target.value.toUpperCase()})}
             />
           </div>
 
@@ -131,9 +139,9 @@ export function AssetForm({ isOpen, onClose, onSuccess, editingAsset }: AssetFor
                 required
                 type="text"
                 placeholder="Ej: Taller Norte"
-                className="w-full bg-slate-50 border-2 border-transparent focus:border-blue-500 focus:bg-white rounded-2xl p-4 text-sm font-bold transition-all outline-none"
+                className="w-full bg-slate-50 border-2 border-transparent focus:border-blue-500 focus:bg-white rounded-2xl p-4 text-sm font-bold transition-all outline-none uppercase"
                 value={form.location}
-                onChange={e => setForm({...form, location: e.target.value})}
+                onChange={e => setForm({...form, location: e.target.value.toUpperCase()})}
               />
             </div>
           </div>

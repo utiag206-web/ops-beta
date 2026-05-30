@@ -144,7 +144,7 @@ export function AddUserModal({ isOpen, onClose, availableWorkers }: AddUserModal
               <option value="Gerencia General">Gerencia General</option>
               <option value="Administración">Administración</option>
               <option value="Operaciones">Operaciones</option>
-              <option value="Almacén y Mantenimiento">Almacén y Mantenimiento</option>
+              <option value="Mecánica">Mecánica</option>
               <option value="Seguridad SOMA">Seguridad SOMA</option>
               <option value="Cocina">Cocina</option>
             </select>

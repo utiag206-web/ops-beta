@@ -13,7 +13,8 @@ export async function bootstrapCompany(companyId: string) {
     { company_id: companyId, name: 'Ingreso Almacén', code: 'ING', effect: 'IN' },
     { company_id: companyId, name: 'Salida Consumo', code: 'SAL', effect: 'OUT' },
     { company_id: companyId, name: 'Transferencia', code: 'TRF', effect: 'BOTH' },
-    { company_id: companyId, name: 'Ajuste de Stock', code: 'ADJUST', effect: 'IN' }
+    { company_id: companyId, name: 'Ajuste de Stock', code: 'ADJUST', effect: 'IN' },
+    { company_id: companyId, name: 'Consumo Operativo Simulado', code: 'OPS_OUT_SIM', effect: 'OUT' }
   ]
 
   // 2. Warehouses

@@ -1,26 +1,24 @@
 {
-  "name": "next-prod-boilerplate",
+  "name": "inthaly-workers",
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev --turbo",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "eslint"
   },
   "dependencies": {
-    "@supabase/ssr": "^0.10.2",
-    "@supabase/supabase-js": "^2.105.0",
-    "clsx": "^2.1.1",
+    "@ducanh2912/next-pwa": "^10.2.9",
+    "@supabase/ssr": "^0.9.0",
+    "@supabase/supabase-js": "^2.99.1",
     "date-fns": "^4.1.0",
     "lucide-react": "^0.577.0",
     "next": "^15.1.6",
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "sonner": "^2.0.7",
-    "tailwind-merge": "^2.3.0",
-    "xlsx": "^0.18.5",
-    "@ducanh2912/next-pwa": "^10.2.9"
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.0.0",
@@ -30,6 +28,8 @@
     "eslint": "^9.0.0",
     "eslint-config-next": "^15.1.6",
     "tailwindcss": "^4.0.0",
-    "typescript": "^5.0.0"
+    "typescript": "^5.0.0",
+    "@babel/core": "^7.24.0",
+    "@babel/types": "^7.24.0"
   }
 }
