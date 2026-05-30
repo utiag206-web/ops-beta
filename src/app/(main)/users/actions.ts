@@ -14,11 +14,11 @@ export async function getUsers() {
 
   console.log(`[USERS_DEBUG] getUsers. Company: ${companyId}, Role: ${extendedUser.role_id}`)
 
-  // 1. Obtener los IDs de usuarios vinculados a esta empresa desde user_roles
+  // 1. Obtener los IDs de usuarios vinculados a esta empresa o globales (Super Admin) desde user_roles
   const { data: roleEntries, error: roleError } = await supabase
     .from('user_roles')
     .select('user_id, role_id')
-    .eq('company_id', companyId)
+    .or(`company_id.eq.${companyId},company_id.is.null`)
 
   if (roleError) {
     console.error('[USERS_CRITICAL] Error fetching roles:', roleError)
@@ -189,6 +189,12 @@ export async function updateUserStatus(userId: string, status: 'active' | 'inact
     }
     const supabaseAdmin = await createAdminClient()
 
+    // PROTECCIÓN: No se puede modificar a un Super Administrador por un usuario que no lo sea
+    const { data: targetUserCheck } = await supabaseAdmin.from('users').select('role_id').eq('id', userId).maybeSingle()
+    if (targetUserCheck?.role_id === 'super_admin' && extendedUser.role_id !== 'super_admin') {
+      return { success: false, error: 'No tienes permisos para modificar a un Super Administrador.' }
+    }
+
     // PROTECCIÓN: No se puede desactivar al último administrador de la empresa
     if (status === 'inactive') {
       const { data: adminCount } = await supabaseAdmin
@@ -232,6 +238,12 @@ export async function updateUserRole(userId: string, role_id: string) {
       return { success: false, error: 'Permiso denegado.' }
     }
     const supabaseAdmin = await createAdminClient()
+
+    // PROTECCIÓN: No se puede modificar a un Super Administrador por un usuario que no lo sea
+    const { data: targetUserCheck } = await supabaseAdmin.from('users').select('role_id').eq('id', userId).maybeSingle()
+    if (targetUserCheck?.role_id === 'super_admin' && extendedUser.role_id !== 'super_admin') {
+      return { success: false, error: 'No tienes permisos para modificar a un Super Administrador.' }
+    }
 
     // PROTECCIÓN: No se puede quitar el rol de administrador si es el último
     if (!['admin', 'gerente'].includes(role_id)) {
@@ -290,6 +302,12 @@ export async function updateUserArea(userId: string, area: string) {
     }
     const supabaseAdmin = await createAdminClient()
 
+    // PROTECCIÓN: No se puede modificar a un Super Administrador por un usuario que no lo sea
+    const { data: targetUserCheck } = await supabaseAdmin.from('users').select('role_id').eq('id', userId).maybeSingle()
+    if (targetUserCheck?.role_id === 'super_admin' && extendedUser.role_id !== 'super_admin') {
+      return { success: false, error: 'No tienes permisos para modificar a un Super Administrador.' }
+    }
+
     const { error } = await applyIsolation(
       supabaseAdmin.from('users').update({ area }),
       companyId,
@@ -318,6 +336,12 @@ export async function deleteUser(userId: string) {
     }
 
     const supabaseAdmin = await createAdminClient()
+
+    // PROTECCIÓN: No se puede eliminar a un Super Administrador por un usuario que no lo sea
+    const { data: targetUserCheck } = await supabaseAdmin.from('users').select('role_id').eq('id', userId).maybeSingle()
+    if (targetUserCheck?.role_id === 'super_admin' && extendedUser.role_id !== 'super_admin') {
+      return { success: false, error: 'No tienes permisos para eliminar a un Super Administrador.' }
+    }
 
     // PROTECCIÓN: No se puede eliminar al último administrador
     const { data: adminCount } = await supabaseAdmin

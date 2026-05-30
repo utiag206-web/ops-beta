@@ -148,11 +148,15 @@ export async function createCompany(payload: {
   const supabase = await createAdminClient()
   
   try {
-    // 1. Crear la Empresa
+    // 1. Crear la Empresa con datos homogeneizados de contacto
     const { data: company, error: companyError } = await supabase
       .from('companies')
       .insert([{ 
         name: payload.name, 
+        contact_email: payload.adminEmail,
+        address: 'Av. Principal 123 (Por actualizar)',
+        phone: '999999999',
+        industry: 'Servicios',
         status: 'active',
         is_test: payload.is_test || false
       }])
@@ -163,7 +167,6 @@ export async function createCompany(payload: {
     const companyId = company.id
 
     // 2. Crear Usuario Administrador
-    // Si no viene password, generamos uno temporal
     const password = payload.adminPassword || Math.random().toString(36).slice(-10)
     
     let authUserId: string | null = null
@@ -176,7 +179,6 @@ export async function createCompany(payload: {
 
     if (authError) {
       if (authError.message.includes('already') || authError.message.includes('exists')) {
-        // User already exists, fetch their ID
         const { data: listData } = await supabase.auth.admin.listUsers()
         const existing = listData.users.find(u => u.email === payload.adminEmail)
         if (existing) {
@@ -193,32 +195,42 @@ export async function createCompany(payload: {
 
     if (!authUserId) throw new Error('No se pudo resolver el ID de usuario.')
 
-    // 3. Vincular usuario en tabla 'users'
+    // 3. Vincular usuario en tabla 'users' - Proteger contra secuestro de Super Admin
+    const { data: existingUser } = await supabase
+      .from('users')
+      .select('role_id')
+      .eq('id', authUserId)
+      .maybeSingle()
+
+    const isSuperAdmin = existingUser?.role_id === 'super_admin'
+
     const { error: userError } = await supabase
       .from('users')
       .upsert([{
         id: authUserId,
-        company_id: companyId, // Default company
+        company_id: isSuperAdmin ? null : companyId,
         name: payload.adminName,
         email: payload.adminEmail,
-        role_id: 'admin',
+        role_id: isSuperAdmin ? 'super_admin' : 'admin',
         status: 'active',
         area: 'Administración'
       }], { onConflict: 'id' })
 
     if (userError) throw new Error(`Error al crear registro de usuario: ${userError.message}`)
 
-    // Sincronizar user_roles directamente con el string para evitar problemas de foreign key nulos
-    const { error: rbacError } = await supabase
-      .from('user_roles')
-      .upsert([{
-        user_id: authUserId,
-        company_id: companyId,
-        role_id: 'admin'
-      }], { onConflict: 'user_id, company_id' })
-    
-    if (rbacError) {
-      console.error(`[BOOTSTRAP_CRITICAL] Error al vincular rol administrativo:`, rbacError.message)
+    // 4. Sincronizar user_roles solo si no es Super Admin global
+    if (!isSuperAdmin) {
+      const { error: rbacError } = await supabase
+        .from('user_roles')
+        .upsert([{
+          user_id: authUserId,
+          company_id: companyId,
+          role_id: 'admin'
+        }], { onConflict: 'user_id, company_id' })
+      
+      if (rbacError) {
+        console.error(`[BOOTSTRAP_CRITICAL] Error al vincular rol administrativo:`, rbacError.message)
+      }
     }
 
     // 5-8. Inicialización Automática (Uso de Utility Centralizada)
