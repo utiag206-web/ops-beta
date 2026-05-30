@@ -12,6 +12,7 @@ import {
   processInboundFromPO 
 } from '@/app/(main)/inventory/actions'
 import { toast } from 'sonner'
+import { useRbac } from '@/components/providers/rbac-provider'
 
 interface MovementFormProps {
   isOpen: boolean
@@ -21,6 +22,8 @@ interface MovementFormProps {
 }
 
 export function MovementForm({ isOpen, onClose, onSuccess, products }: MovementFormProps) {
+  const rbac = useRbac()
+  const userArea = rbac?.user?.area
   const [loading, setLoading] = useState(false)
   const [initLoading, setInitLoading] = useState(false)
   const [warehouses, setWarehouses] = useState<any[]>([])
@@ -56,6 +59,9 @@ export function MovementForm({ isOpen, onClose, onSuccess, products }: MovementF
   // Estado para tipo de ajuste (+/-) en modo Ajuste
   const [adjType, setAdjType] = useState<'plus' | 'minus'>('plus')
 
+  // Search input for products to bypass DOM rendering overhead
+  const [productSearch, setProductSearch] = useState('')
+
   // Carga inicial
   useEffect(() => {
     if (isOpen) {
@@ -63,7 +69,7 @@ export function MovementForm({ isOpen, onClose, onSuccess, products }: MovementF
         setInitLoading(true)
         console.log("[MOVEMENT_FORM_DEBUG] Loading initial data...")
         const [wRes, mTRes, poRes] = await Promise.all([
-          getWarehouses(), 
+          getWarehouses(true), 
           getMovementTypes(),
           getPurchaseOrders()
         ])
@@ -94,10 +100,28 @@ export function MovementForm({ isOpen, onClose, onSuccess, products }: MovementF
       setPoItems([])
       setReceivedQtys({})
       setAdjType('plus')
+      setProductSearch('')
     }
   }, [isOpen])
 
+  const isKitchenUser = userArea === 'Cocina'
+  const sourceWarehouses = isKitchenUser 
+    ? warehouses.filter(w => w.area === 'COCINA' || w.name.toLowerCase().includes('cocina'))
+    : warehouses
+
   const selectedProduct = products.find(p => p.id === form.product_id)
+  
+  // Optimized Product Search & Slice to prevent heavy rendering lag
+  const filteredProducts = products.filter(p => 
+    p.name.toLowerCase().includes(productSearch.toLowerCase()) || 
+    p.code.toLowerCase().includes(productSearch.toLowerCase())
+  )
+  const slicedProducts = filteredProducts.slice(0, 100)
+  // Ensure that currently selected product is always included in the dropdown options
+  if (form.product_id && !slicedProducts.some(p => p.id === form.product_id)) {
+    const selected = products.find(p => p.id === form.product_id)
+    if (selected) slicedProducts.push(selected)
+  }
   const isIntegerUnit = selectedProduct ? ['UND', 'UNIDAD', 'PAR', 'CAJA'].includes(selectedProduct.unit.toUpperCase()) : false
   const activeMovementType = movementTypes.find(t => t.id === form.movement_type_id)
   const isTransfer = activeMovementType?.effect === 'BOTH'
@@ -330,7 +354,7 @@ export function MovementForm({ isOpen, onClose, onSuccess, products }: MovementF
                   onChange={e => setForm({...form, warehouse_id: e.target.value})}
                 >
                   <option value="">Almacén...</option>
-                  {warehouses.map(w => (
+                  {sourceWarehouses.map(w => (
                     <option key={w.id} value={w.id}>{w.name}</option>
                   ))}
                 </select>
@@ -354,17 +378,26 @@ export function MovementForm({ isOpen, onClose, onSuccess, products }: MovementF
 
               <div className="md:col-span-6 space-y-1.5">
                 <label className="text-[11px] font-black uppercase tracking-widest text-slate-400 px-1">Descripción del Producto <span className="text-rose-500">*</span></label>
-                <select 
-                  required
-                  className="w-full bg-slate-50 border-2 border-transparent focus:border-indigo-500 rounded-2xl p-4 text-sm font-bold transition-all outline-none"
-                  value={form.product_id}
-                  onChange={e => setForm({...form, product_id: e.target.value})}
-                >
-                  <option value="">Selección de producto por nombre...</option>
-                  {products.map(p => (
-                    <option key={p.id} value={p.id}>{p.name}</option>
-                  ))}
-                </select>
+                <div className="flex flex-col gap-1">
+                  <input 
+                    type="text"
+                    placeholder="Filtrar producto por nombre o código..."
+                    className="w-full bg-slate-50 border-2 border-transparent focus:border-indigo-500 rounded-2xl px-4 py-2 text-xs font-bold transition-all outline-none uppercase"
+                    value={productSearch}
+                    onChange={e => setProductSearch(e.target.value)}
+                  />
+                  <select 
+                    required
+                    className="w-full bg-slate-50 border-2 border-transparent focus:border-indigo-500 rounded-2xl p-4 text-sm font-bold transition-all outline-none"
+                    value={form.product_id}
+                    onChange={e => setForm({...form, product_id: e.target.value})}
+                  >
+                    <option value="">Selección de producto ({slicedProducts.length} de {filteredProducts.length})...</option>
+                    {slicedProducts.map(p => (
+                      <option key={p.id} value={p.id}>{p.name.toUpperCase()} ({p.code.toUpperCase()})</option>
+                    ))}
+                  </select>
+                </div>
               </div>
             </div>
 
@@ -430,8 +463,8 @@ export function MovementForm({ isOpen, onClose, onSuccess, products }: MovementF
                         type="text"
                         placeholder="Nombre completo..."
                         className="w-full bg-white border-2 border-transparent focus:border-rose-500 rounded-2xl p-4 text-sm font-bold outline-none shadow-sm"
-                        value={form.responsible_name}
-                        onChange={e => setForm({...form, responsible_name: e.target.value})}
+                        value={form.responsible_name.toUpperCase()}
+                        onChange={e => setForm({...form, responsible_name: e.target.value.toUpperCase()})}
                       />
                     </div>
                   </div>
@@ -528,8 +561,8 @@ export function MovementForm({ isOpen, onClose, onSuccess, products }: MovementF
                         type="text"
                         placeholder="Ej: Inventario cíclico..."
                         className="w-full bg-white border-2 border-transparent focus:border-amber-500 rounded-2xl p-4 text-sm font-bold outline-none shadow-sm"
-                        value={form.reference}
-                        onChange={e => setForm({...form, reference: e.target.value})}
+                        value={form.reference.toUpperCase()}
+                        onChange={e => setForm({...form, reference: e.target.value.toUpperCase()})}
                       />
                     </div>
                   </div>
@@ -544,8 +577,8 @@ export function MovementForm({ isOpen, onClose, onSuccess, products }: MovementF
                     type="text"
                     placeholder="Ej: F001-000123"
                     className="w-full bg-white border-2 border-transparent focus:border-indigo-500 rounded-2xl p-4 text-sm font-bold outline-none shadow-sm uppercase"
-                    value={form.invoice_number}
-                    onChange={e => setForm({...form, invoice_number: e.target.value})}
+                    value={form.invoice_number.toUpperCase()}
+                    onChange={e => setForm({...form, invoice_number: e.target.value.toUpperCase()})}
                   />
                 </div>
                 <div className="space-y-1.5">
@@ -553,8 +586,8 @@ export function MovementForm({ isOpen, onClose, onSuccess, products }: MovementF
                   <input 
                     placeholder="Detalles adicionales..."
                     className="w-full bg-white border-2 border-transparent focus:border-indigo-500 rounded-2xl p-4 text-sm font-bold outline-none shadow-sm"
-                    value={form.observation}
-                    onChange={e => setForm({...form, observation: e.target.value})}
+                    value={form.observation.toUpperCase()}
+                    onChange={e => setForm({...form, observation: e.target.value.toUpperCase()})}
                   />
                 </div>
               </div>

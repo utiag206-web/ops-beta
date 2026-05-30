@@ -88,9 +88,9 @@ export async function getReportsData(month?: number, year?: number) {
     const avgAttendance = uniqueDates > 0 ? attendance.length / uniqueDates : 0
 
     const totalPPE = ppe.length
-    const signedPPE = ppe.filter((p: any) => p.status === 'delivered' && p.signature_url).length
+    const signedPPE = ppe.filter((p: any) => (p.status === 'signed' || p.status === 'delivered') && p.signature_url).length
     const pendingPPE = totalPPE - signedPPE
-    const workersWithPendingPPE = Array.from(new Set(ppe.filter((p: any) => p.status !== 'delivered').map((p: any) => p.worker_id))).length
+    const workersWithPendingPPE = Array.from(new Set(ppe.filter((p: any) => p.status !== 'signed' && p.status !== 'delivered').map((p: any) => p.worker_id))).length
 
     return {
       workers: { active: activeCount, inactive: inactiveCount, total: workers?.length || 0 },

@@ -15,14 +15,16 @@ interface CampPageProps {
   initialRooms: any[]
   workers: Worker[]
   userRole: string
+  userArea?: string | null
 }
 
-export default function CampClient({ initialRooms, workers, userRole }: CampPageProps) {
+export default function CampClient({ initialRooms, workers, userRole, userArea }: CampPageProps) {
   const router = useRouter()
   const [showForm, setShowForm] = useState(false)
   const [saving, setSaving] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
+  const [selectedRoom, setSelectedRoom] = useState<any | null>(null)
   const [formData, setFormData] = useState({
     module: '',
     room_number: '',
@@ -30,7 +32,8 @@ export default function CampClient({ initialRooms, workers, userRole }: CampPage
     worker_id: '' as string | null
   })
 
-  const canManage = ['admin', 'gerente', 'operaciones', 'super_admin', 'superadmin'].includes(userRole)
+  const canManage = ['admin', 'gerente', 'operaciones', 'super_admin', 'superadmin'].includes(userRole) || 
+                    (userRole === 'jefe_area' && userArea === 'Operaciones')
 
   const handleAssign = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -110,15 +113,17 @@ export default function CampClient({ initialRooms, workers, userRole }: CampPage
 
   return (
     <div className="space-y-8">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white p-8 rounded-[2.5rem] shadow-sm border border-slate-50">
-        <div>
-          <h1 className="text-3xl font-black text-slate-800 tracking-tight flex items-center gap-3">
-            <div className="bg-blue-100 p-2 rounded-xl text-blue-600">
-              <Home size={28} />
-            </div>
-            Campamento y Alojamiento
-          </h1>
-          <p className="text-slate-500 font-medium text-sm mt-1">Gestión de módulos, habitaciones y asignación de camas.</p>
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 bg-white p-6 sm:p-8 rounded-2xl sm:rounded-[2.5rem] shadow-sm border border-slate-50">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6 text-left w-full md:w-auto">
+          <div className="w-12 h-12 sm:w-16 sm:h-16 bg-blue-100 text-blue-600 rounded-2xl sm:rounded-[2rem] flex items-center justify-center shadow-sm shrink-0">
+            <Home size={24} className="sm:w-8 sm:h-8" />
+          </div>
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-black text-slate-800 tracking-tight leading-tight uppercase">
+              Campamento y Alojamiento
+            </h1>
+            <p className="text-slate-500 font-medium text-xs sm:text-sm mt-0.5 sm:mt-1">Gestión de módulos, habitaciones y asignación de camas.</p>
+          </div>
         </div>
         {canManage && (
           <button 
@@ -127,7 +132,7 @@ export default function CampClient({ initialRooms, workers, userRole }: CampPage
               resetForm()
               setShowForm(!showForm)
             }}
-            className="w-full md:w-auto bg-blue-600 hover:bg-blue-700 text-white px-8 py-4 rounded-2xl font-black transition-all flex items-center justify-center gap-3 shadow-lg shadow-blue-100 active:scale-95"
+            className="w-full md:w-auto bg-blue-600 hover:bg-blue-700 text-white px-8 py-4 rounded-xl sm:rounded-2xl font-black transition-all flex items-center justify-center gap-3 shadow-lg shadow-blue-100 active:scale-95 text-xs sm:text-base"
           >
             <Plus size={20} strokeWidth={3} />
             <span>Nueva Habitación / Cama</span>
@@ -186,7 +191,7 @@ export default function CampClient({ initialRooms, workers, userRole }: CampPage
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
         {initialRooms.map((room) => (
-          <div key={room.id} className="bg-white p-7 rounded-[2.5rem] border border-slate-100 shadow-sm hover:shadow-xl hover:scale-[1.02] transition-all group relative overflow-hidden">
+          <div key={room.id} onClick={() => setSelectedRoom(room)} className="bg-white p-7 rounded-[2.5rem] border border-slate-100 shadow-sm hover:shadow-xl hover:scale-[1.02] transition-all group relative overflow-hidden cursor-pointer text-left">
             <div className={`absolute top-0 left-0 w-2 h-full ${room.worker ? 'bg-amber-400' : 'bg-emerald-400'}`} />
             
             <div className="flex justify-between items-start mb-6">
@@ -197,10 +202,10 @@ export default function CampClient({ initialRooms, workers, userRole }: CampPage
               <div className="flex gap-2">
                 {canManage && (
                   <>
-                    <button onClick={() => handleEdit(room)} className="p-2 text-slate-300 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all opacity-0 group-hover:opacity-100">
+                    <button onClick={(e) => { e.stopPropagation(); handleEdit(room); }} className="p-2 text-slate-300 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all opacity-0 group-hover:opacity-100">
                       <Layout size={18} />
                     </button>
-                    <button onClick={() => handleDelete(room.id)} className="p-2 text-slate-300 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-all opacity-0 group-hover:opacity-100">
+                    <button onClick={(e) => { e.stopPropagation(); handleDelete(room.id); }} className="p-2 text-slate-300 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-all opacity-0 group-hover:opacity-100">
                       <XCircle size={18} />
                     </button>
                   </>
@@ -252,7 +257,7 @@ export default function CampClient({ initialRooms, workers, userRole }: CampPage
                       </div>
                     </div>
                     {canManage && (
-                      <button onClick={() => handleRelease(room.id)} className="px-4 py-2 bg-slate-900 hover:bg-black text-white text-[9px] font-black uppercase rounded-lg transition-all shadow-md">
+                      <button onClick={(e) => { e.stopPropagation(); handleRelease(room.id); }} className="px-4 py-2 bg-slate-900 hover:bg-black text-white text-[9px] font-black uppercase rounded-lg transition-all shadow-md">
                         Liberar
                       </button>
                     )}
@@ -276,6 +281,83 @@ export default function CampClient({ initialRooms, workers, userRole }: CampPage
              <p className="text-slate-400 font-medium text-sm mt-1">Haga clic en el botón superior para empezar la gestión.</p>
           </div>
         )}
+      </div>
+
+      {selectedRoom && (
+        <ViewRoomDetailsModal 
+          room={selectedRoom} 
+          onClose={() => setSelectedRoom(null)} 
+        />
+      )}
+    </div>
+  )
+}
+
+function ViewRoomDetailsModal({ room, onClose }: { room: any; onClose: () => void }) {
+  if (!room) return null
+
+  const workerName = Array.isArray(room.worker) 
+    ? `${room.worker[0]?.name} ${room.worker[0]?.last_name || ''}`
+    : room.worker ? `${room.worker.name} ${room.worker.last_name || ''}` : null
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200 font-sans">
+      <div className="bg-white w-full max-w-md rounded-[2.5rem] shadow-2xl overflow-hidden border border-slate-100 animate-in zoom-in-95 duration-200 p-8 space-y-6">
+        <div className="flex justify-between items-center pb-4 border-b border-slate-100">
+          <div className="flex items-center gap-3">
+            <div className={`p-3 rounded-2xl ${room.worker ? 'bg-amber-50 text-amber-600' : 'bg-emerald-50 text-emerald-600'}`}>
+              <Bed size={24} />
+            </div>
+            <div>
+              <h2 className="text-xl font-black text-slate-800 tracking-tight leading-none uppercase">Detalles de Alojamiento</h2>
+              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mt-1.5">Control de Camas</p>
+            </div>
+          </div>
+          <button onClick={onClose} className="p-2 hover:bg-slate-100 rounded-full transition-colors">
+            <XCircle size={24} className="text-slate-400" />
+          </button>
+        </div>
+
+        <div className="grid grid-cols-2 gap-4 bg-slate-50 p-5 rounded-3xl border border-slate-100 text-left">
+          <div>
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Módulo</p>
+            <p className="text-lg font-black text-slate-800 uppercase mt-1">{room.module}</p>
+          </div>
+          <div>
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Habitación</p>
+            <p className="text-lg font-black text-slate-800 uppercase mt-1">{room.room_number || '—'}</p>
+          </div>
+          <div className="col-span-2">
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Cama Asignada</p>
+            <p className="text-lg font-black text-slate-800 mt-1">{room.bed_number}</p>
+          </div>
+        </div>
+
+        <div className="text-left space-y-2">
+          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Huésped Asignado</p>
+          <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 flex items-center gap-3">
+            <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm ${
+              room.worker ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'
+            }`}>
+              {room.worker ? 'H' : 'L'}
+            </div>
+            <div>
+              <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none">Estado de Ocupación</p>
+              <p className="text-sm font-black text-slate-700 uppercase mt-1">
+                {workerName || 'Disponible / Libre'}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex justify-end pt-4 border-t border-slate-100">
+          <button 
+            onClick={onClose}
+            className="px-6 py-2.5 bg-slate-800 hover:bg-slate-900 text-white font-bold text-sm rounded-xl transition-all shadow-md active:scale-95 uppercase tracking-wider"
+          >
+            Cerrar Detalles
+          </button>
+        </div>
       </div>
     </div>
   )

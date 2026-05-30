@@ -6,7 +6,7 @@ import { getUserSession, requirePermission, getStrictCompanyId, applyIsolation }
 
 export async function deleteProduct(id: string) {
   try {
-    const extendedUser = await requirePermission('admin')
+    const extendedUser = await requirePermission('inventory')
     const companyId = await getStrictCompanyId()
 
     const supabase = await createAdminClient()
@@ -28,7 +28,7 @@ export async function deleteProduct(id: string) {
   }
 }
 
-export async function getWarehouses() {
+export async function getWarehouses(allWarehouses?: boolean) {
   const companyId = await getStrictCompanyId()
   const { extendedUser } = await getUserSession()
   const supabase = await createAdminClient()
@@ -40,7 +40,7 @@ export async function getWarehouses() {
   )
 
   // [BLINDAJE_AREA]
-  if (extendedUser?.area === 'Cocina') {
+  if (extendedUser?.area === 'Cocina' && !allWarehouses) {
     query = query.or('area.eq.COCINA,name.ilike.%Cocina%')
   }
 
@@ -156,7 +156,7 @@ export async function getProductsMinimal() {
 
   // Solo traemos lo estrictamente necesario para el selector de búsqueda
   const { data, error } = await applyIsolation(
-    supabase.from('products').select('id, name, unit'),
+    supabase.from('products').select('id, name, unit, code'),
     companyId,
     extendedUser.role_id
   ).order('name', { ascending: true })
@@ -826,8 +826,8 @@ export async function createWarehouse(payload: { name: string, code?: string, co
   const { extendedUser } = await getUserSession()
   const supabase = await createAdminClient()
 
-  const allowedRoles = ['admin', 'company_admin', 'super_admin', 'superadmin', 'gerente']
-  if (!allowedRoles.includes(extendedUser.role_id)) {
+  const role = (extendedUser.role_id || '').toLowerCase()
+  if (['trabajador', 'worker'].includes(role)) {
     return { error: 'No tienes permisos para crear almacenes.' }
   }
   
@@ -862,8 +862,8 @@ export async function updateWarehouse(id: string, payload: { name: string, code?
   const { extendedUser } = await getUserSession()
   const supabase = await createAdminClient()
 
-  const allowedRoles = ['admin', 'company_admin', 'super_admin', 'superadmin', 'gerente']
-  if (!allowedRoles.includes(extendedUser.role_id)) {
+  const role = (extendedUser.role_id || '').toLowerCase()
+  if (['trabajador', 'worker'].includes(role)) {
     return { error: 'No tienes permisos para editar almacenes.' }
   }
   
@@ -903,8 +903,8 @@ export async function deleteWarehouse(id: string) {
   const { extendedUser } = await getUserSession()
   const supabase = await createAdminClient()
 
-  const allowedRoles = ['admin', 'company_admin', 'super_admin', 'superadmin', 'gerente']
-  if (!allowedRoles.includes(extendedUser.role_id)) {
+  const role = (extendedUser.role_id || '').toLowerCase()
+  if (['trabajador', 'worker'].includes(role)) {
     return { error: 'No tienes permisos para eliminar almacenes.' }
   }
 

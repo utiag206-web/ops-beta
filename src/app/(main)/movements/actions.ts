@@ -41,8 +41,8 @@ export async function registerMovement(payload: {
     const companyId = await getStrictCompanyId()
     const { extendedUser } = await getUserSession()
     
-    const role = extendedUser.role_id?.toLowerCase()
-    const isAuthorized = ['admin', 'gerente', 'operaciones', 'super_admin', 'superadmin'].includes(role)
+    const role = (extendedUser.role_id || '').toLowerCase()
+    const isAuthorized = !['trabajador', 'worker'].includes(role)
     
     if (!isAuthorized) {
       return { success: false, error: 'No autorizado' }
@@ -98,7 +98,8 @@ export async function updateMovement(id: string, payload: {
     const companyId = await getStrictCompanyId()
     const { extendedUser } = await getUserSession()
     
-    if (!['admin', 'gerente', 'operaciones', 'super_admin', 'superadmin'].includes(extendedUser.role_id)) {
+    const role = (extendedUser.role_id || '').toLowerCase()
+    if (['trabajador', 'worker'].includes(role)) {
       return { success: false, error: 'No autorizado' }
     }
  
@@ -139,7 +140,8 @@ export async function deleteMovement(id: string) {
     const companyId = await getStrictCompanyId()
     const { extendedUser } = await getUserSession()
 
-    if (!['admin', 'gerente', 'super_admin'].includes(extendedUser.role_id)) {
+    const role = (extendedUser.role_id || '').toLowerCase()
+    if (['trabajador', 'worker'].includes(role)) {
       throw new Error('No tienes permisos para eliminar registros.')
     }
 

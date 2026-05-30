@@ -52,8 +52,10 @@ export default function CompanyProfilePage() {
     
     if (result.success) {
       setMessage({ type: 'success', text: 'Perfil de empresa actualizado correctamente.' })
-      router.refresh()
       window.scrollTo({ top: 0, behavior: 'smooth' })
+      setTimeout(() => {
+        window.location.reload()
+      }, 1000)
     } else {
       setMessage({ type: 'error', text: result.error || 'Error al actualizar.' })
     }
@@ -141,7 +143,7 @@ export default function CompanyProfilePage() {
                     type="text"
                     value={formData.address}
                     onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                    className="w-full bg-slate-50 border-2 border-slate-100 focus:border-blue-600 focus:bg-white rounded-2xl p-4 pl-12 text-slate-800 font-bold transition-all outline-none text-base placeholder:text-slate-300"
+                    className="w-full bg-slate-50 border-2 border-slate-100 focus:border-blue-600 focus:bg-white rounded-2xl py-4 pr-4 pl-12 text-slate-800 font-bold transition-all outline-none text-base placeholder:text-slate-300"
                     placeholder="Av. Javier Prado Este 1234, San Isidro, Lima"
                   />
                 </div>
@@ -261,6 +263,9 @@ export default function CompanyProfilePage() {
                               if (res.success && res.url) {
                                 setFormData({ ...formData, logo_url: res.url })
                                 setMessage({ type: 'success', text: 'Logo actualizado correctamente.' })
+                                setTimeout(() => {
+                                  window.location.reload()
+                                }, 1000)
                               } else {
                                 setMessage({ type: 'error', text: res.error || 'Error al subir.' })
                               }

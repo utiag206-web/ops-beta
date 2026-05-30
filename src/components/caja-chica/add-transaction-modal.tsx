@@ -16,11 +16,13 @@ import {
   Tag,
   Hash,
   Paperclip,
-  CheckCircle2
+  CheckCircle2,
+  Building
 } from 'lucide-react'
 import { registerPettyCashTransaction } from '@/app/(main)/caja-chica/actions'
 import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase/client'
+import { useRbac } from '@/components/providers/rbac-provider'
 
 interface AddTransactionModalProps {
   isOpen: boolean
@@ -40,11 +42,14 @@ const CATEGORIES = [
   { id: 'fondo_inicial', label: 'Fondo Inicial', icon: '🏦' },
   { id: 'reposicion', label: 'Reposición', icon: '🔄' },
   { id: 'reembolso', label: 'Reembolso', icon: '💰' },
+  { id: 'transferencia', label: 'Transferencia Interna', icon: '💸' },
 ]
 
 export function AddTransactionModal({ isOpen, onClose, onSuccess, area, initialData }: AddTransactionModalProps) {
+  const { role_id } = useRbac()
   const [loading, setLoading] = useState(false)
   const [uploading, setUploading] = useState(false)
+  const [targetArea, setTargetArea] = useState('')
   const [formData, setFormData] = useState({
     type: initialData?.type || 'egreso' as 'ingreso' | 'egreso',
     category: initialData?.category || 'otros',
@@ -69,6 +74,7 @@ export function AddTransactionModal({ isOpen, onClose, onSuccess, area, initialD
         date: initialData.date,
         voucher_url: initialData.voucher_url || ''
       })
+      setTargetArea(initialData.target_area || '')
     } else {
       setFormData({
         type: 'egreso',
@@ -80,6 +86,7 @@ export function AddTransactionModal({ isOpen, onClose, onSuccess, area, initialD
         date: new Date().toISOString().split('T')[0],
         voucher_url: ''
       })
+      setTargetArea('')
     }
   }, [initialData, isOpen])
 
@@ -132,6 +139,11 @@ export function AddTransactionModal({ isOpen, onClose, onSuccess, area, initialD
       return
     }
 
+    if (formData.category === 'transferencia' && !targetArea) {
+      toast.error('Por favor selecciona la caja de contraparte para la transferencia')
+      return
+    }
+
     setLoading(true)
     
     try {
@@ -154,7 +166,8 @@ export function AddTransactionModal({ isOpen, onClose, onSuccess, area, initialD
           ...formData,
           amount: Number(formData.amount),
           area,
-          category: formData.category
+          category: formData.category,
+          target_area: targetArea
         })
         if (result.error) toast.error(result.error)
         else {
@@ -171,18 +184,18 @@ export function AddTransactionModal({ isOpen, onClose, onSuccess, area, initialD
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
-      <div className="bg-white w-full max-w-xl rounded-[2rem] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300">
-        <div className="p-8 border-b border-slate-50 flex justify-between items-center bg-slate-50/50">
+      <div className="bg-white w-full max-w-xl rounded-[2rem] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300 max-h-[90vh] flex flex-col">
+        <div className="p-6 md:p-8 border-b border-slate-50 flex justify-between items-center bg-slate-50/50">
           <div>
-            <h2 className="text-2xl font-bold text-slate-800 tracking-tight">Registro de Movimiento</h2>
+            <h2 className="text-xl md:text-2xl font-bold text-slate-800 tracking-tight">Registro de Movimiento</h2>
             <p className="text-xs font-bold text-blue-600 uppercase tracking-widest mt-1">Caja Chica: {area}</p>
           </div>
-          <button onClick={onClose} className="p-3 hover:bg-white rounded-full text-slate-400 transition-all shadow-sm">
+          <button onClick={onClose} className="p-2.5 hover:bg-white rounded-full text-slate-400 transition-all shadow-sm">
             <X size={20} />
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-8 space-y-6 max-h-[80vh] overflow-y-auto custom-scrollbar">
+        <form onSubmit={handleSubmit} className="p-6 md:p-8 space-y-6 overflow-y-auto flex-1 custom-scrollbar">
           {/* TIPO DE MOVIMIENTO */}
           <div className="grid grid-cols-2 gap-4 p-1.5 bg-slate-100 rounded-2xl border border-slate-200">
             <button
@@ -222,7 +235,11 @@ export function AddTransactionModal({ isOpen, onClose, onSuccess, area, initialD
                 className="w-full px-4 py-4 bg-slate-50 border-transparent focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 rounded-2xl text-sm font-bold text-slate-700 transition-all outline-none appearance-none cursor-pointer"
               >
                 {CATEGORIES.filter(c => {
-                  if (formData.type === 'ingreso') return ['fondo_inicial', 'reposicion', 'reembolso', 'otros'].includes(c.id)
+                  const isTransfer = c.id === 'transferencia'
+                  const isCentralRole = ['admin', 'gerente', 'super_admin', 'superadmin', 'administracion', 'finanzas', 'caja central'].includes((role_id || '').toLowerCase())
+                  if (isTransfer && !isCentralRole) return false
+
+                  if (formData.type === 'ingreso') return ['fondo_inicial', 'reposicion', 'reembolso', 'otros', 'transferencia'].includes(c.id)
                   return !['fondo_inicial', 'reposicion', 'reembolso'].includes(c.id)
                 }).map(c => (
                   <option key={c.id} value={c.id}>{c.icon} {c.label}</option>
@@ -244,6 +261,29 @@ export function AddTransactionModal({ isOpen, onClose, onSuccess, area, initialD
               />
             </div>
           </div>
+
+          {/* CAJA CONTRA-PARTE (TRANSFERENCIAS) */}
+          {formData.category === 'transferencia' && (
+            <div className="space-y-2 animate-in fade-in slide-in-from-top-2 duration-200">
+              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2">
+                <Building size={12} /> {formData.type === 'egreso' ? 'Caja de Destino' : 'Caja de Origen'}
+              </label>
+              <select 
+                required
+                value={targetArea}
+                onChange={e => setTargetArea(e.target.value)}
+                className="w-full px-4 py-4 bg-blue-50 border-transparent focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 rounded-2xl text-sm font-bold text-slate-700 transition-all outline-none appearance-none cursor-pointer"
+              >
+                <option value="">-- Selecciona una Caja --</option>
+                {['Administración', 'Operaciones', 'Cocina']
+                  .filter(a => a.toLowerCase() !== area.toLowerCase())
+                  .map(a => (
+                    <option key={a} value={a}>{a}</option>
+                  ))
+                }
+              </select>
+            </div>
+          )}
 
           <div className="space-y-2">
             <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2">

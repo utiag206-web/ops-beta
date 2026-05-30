@@ -5,7 +5,8 @@ import {
   Eye, Plus, ShieldAlert, AlertTriangle, 
   MapPin, CheckCircle2, ChevronRight, X, 
   Loader2, Camera, Filter, Grid, List,
-  ArrowRight, Info, AlertCircle, Activity
+  ArrowRight, Info, AlertCircle, Activity,
+  Calendar, Users
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { getHsecStops, createHsecStop, closeHsecStop } from './actions'
@@ -26,6 +27,7 @@ export default function StopHsecPage() {
   const [loading, setLoading] = useState(true)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [filter, setFilter] = useState<'all' | 'abierta' | 'cerrada'>('all')
+  const [selectedStop, setSelectedStop] = useState<any | null>(null)
 
   useEffect(() => {
     loadStops()
@@ -50,18 +52,18 @@ export default function StopHsecPage() {
     <div className="space-y-8 animate-in fade-in duration-700 pb-20 md:pb-8">
       {/* Mobile Friendly Header */}
       <div className="bg-white p-8 rounded-[2.5rem] shadow-xl shadow-slate-200/50 border border-slate-100 flex flex-col md:flex-row items-center justify-between gap-6">
-        <div className="flex items-center gap-6">
-          <div className="w-16 h-16 bg-rose-600 text-white rounded-[2rem] flex items-center justify-center shadow-2xl shadow-rose-200 animate-pulse">
-            <Eye size={32} />
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6 text-left w-full md:w-auto">
+          <div className="w-12 h-12 sm:w-16 sm:h-16 bg-rose-600 text-white rounded-2xl sm:rounded-[2rem] flex items-center justify-center shadow-2xl shadow-rose-200 animate-pulse shrink-0">
+            <Eye size={24} className="sm:w-8 sm:h-8" />
           </div>
           <div>
-            <h1 className="text-3xl font-black text-slate-800 tracking-tight leading-none">STOP / HSEC</h1>
-            <p className="text-slate-400 font-bold text-sm mt-1 uppercase tracking-widest">Observación Preventiva</p>
+            <h1 className="text-2xl sm:text-3xl font-black text-slate-800 tracking-tight leading-tight uppercase">STOP / HSEC</h1>
+            <p className="text-slate-400 font-bold text-xs sm:text-sm mt-0.5 sm:mt-1 uppercase tracking-widest">Observación Preventiva</p>
           </div>
         </div>
         <button 
           onClick={() => setIsModalOpen(true)}
-          className="w-full md:w-auto flex items-center justify-center gap-3 px-10 py-5 bg-rose-600 hover:bg-rose-700 text-white font-black rounded-[2.2rem] shadow-2xl shadow-rose-200 transition-all hover:scale-105 active:scale-95"
+          className="w-full md:w-auto flex items-center justify-center gap-3 px-8 sm:px-10 py-4 sm:py-5 bg-rose-600 hover:bg-rose-700 text-white font-black rounded-2xl sm:rounded-[2.2rem] shadow-2xl shadow-rose-200 transition-all hover:scale-105 active:scale-95 text-xs sm:text-base"
         >
           <Plus size={24} />
           Nuevo Reporte
@@ -121,7 +123,7 @@ export default function StopHsecPage() {
             <p className="text-slate-400 text-sm font-bold mt-1 uppercase tracking-widest">Registra tu primer STOP ahora</p>
           </div>
         ) : filteredStops.map((stop) => (
-          <div key={stop.id} className="group bg-white rounded-[2.5rem] shadow-xl shadow-slate-200/40 border border-slate-100 overflow-hidden flex flex-col hover:-translate-y-2 transition-all">
+          <div key={stop.id} onClick={() => setSelectedStop(stop)} className="group bg-white rounded-[2.5rem] shadow-xl shadow-slate-200/40 border border-slate-100 overflow-hidden flex flex-col hover:-translate-y-2 transition-all cursor-pointer">
             <div className="p-8 flex-1">
               <div className="flex items-center justify-between mb-6">
                 <span className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest ${
@@ -152,7 +154,7 @@ export default function StopHsecPage() {
                  </div>
                  {stop.status === 'abierta' ? (
                    <button 
-                    onClick={() => handleCloseStop(stop.id)}
+                    onClick={(e) => { e.stopPropagation(); handleCloseStop(stop.id); }}
                     className="flex items-center gap-2 text-[10px] font-black text-rose-600 hover:bg-rose-50 px-3 py-1.5 rounded-lg transition-all"
                    >
                      Cerrar <ArrowRight size={12} />
@@ -178,6 +180,13 @@ export default function StopHsecPage() {
           isOpen={isModalOpen} 
           onClose={() => setIsModalOpen(false)} 
           onSuccess={loadStops}
+        />
+      )}
+
+      {selectedStop && (
+        <ViewStopDetailsModal 
+          stop={selectedStop} 
+          onClose={() => setSelectedStop(null)} 
         />
       )}
     </div>
@@ -222,9 +231,9 @@ function AddStopModal({ isOpen, onClose, onSuccess }: any) {
   }
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
-      <div className="bg-white w-full max-w-lg max-h-[90vh] overflow-hidden rounded-[3rem] shadow-2xl flex flex-col scale-in-center">
-        <div className="p-8 border-b border-slate-100 flex items-center justify-between bg-emerald-50/20">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
+      <div className="bg-white w-full max-w-2xl rounded-[2.5rem] shadow-[0_20px_50px_rgba(0,0,0,0.3)] overflow-hidden animate-in zoom-in-95 duration-200 flex flex-col max-h-[90vh]">
+        <div className="p-8 border-b border-slate-50 flex justify-between items-center bg-rose-50/30">
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 bg-rose-600 text-white rounded-2xl flex items-center justify-center shadow-lg shadow-rose-200">
               <Plus size={24} />
@@ -234,7 +243,7 @@ function AddStopModal({ isOpen, onClose, onSuccess }: any) {
               <p className="text-slate-400 font-bold text-[10px] uppercase tracking-widest text-rose-500">FASE SOMA: STOP / HSEC</p>
             </div>
           </div>
-          <button onClick={onClose} className="p-4 hover:bg-white rounded-2xl text-slate-400 hover:text-rose-500 transition-all shadow-sm">
+          <button onClick={onClose} className="p-2 hover:bg-slate-100 rounded-full transition-colors text-slate-400">
             <X size={24} />
           </button>
         </div>
@@ -340,4 +349,97 @@ function AddStopModal({ isOpen, onClose, onSuccess }: any) {
 
 function AlertSquare(props: any) {
   return <ShieldAlert {...props} />
+}
+
+function ViewStopDetailsModal({ stop, onClose }: { stop: any; onClose: () => void }) {
+  if (!stop) return null
+
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200 font-sans">
+      <div className="bg-white w-full max-w-lg max-h-[85vh] overflow-hidden rounded-[2.5rem] shadow-2xl flex flex-col border border-slate-100">
+        {/* Header */}
+        <div className="p-8 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 bg-rose-50 text-rose-600 rounded-2xl flex items-center justify-center shadow-inner">
+              <ShieldAlert size={22} />
+            </div>
+            <div>
+              <h2 className="text-xl font-black text-slate-800 tracking-tight leading-none uppercase">Detalles de STOP / HSEC</h2>
+              <p className="text-[10px] font-black text-rose-600 uppercase tracking-widest mt-1.5">Observación Preventiva</p>
+            </div>
+          </div>
+          <button onClick={onClose} className="p-3 hover:bg-slate-100 rounded-2xl text-slate-400 hover:text-rose-500 transition-colors">
+            <X size={20} />
+          </button>
+        </div>
+
+        {/* Content */}
+        <div className="flex-1 overflow-y-auto p-8 space-y-6 custom-scrollbar text-left">
+          {/* Status and Type Badge */}
+          <div className="flex justify-between items-center border-b border-slate-100 pb-4">
+            <span className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest ${
+              stop.type === 'condicion_insegura' ? 'bg-amber-50 text-amber-600 border border-amber-100' : 'bg-blue-50 text-blue-600 border border-blue-100'
+            }`}>
+              {stop.type === 'acto_inseguro' ? 'Acto Inseguro' : 'Condición Insegura'}
+            </span>
+            <span className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest ${
+              stop.status === 'abierta' ? 'bg-rose-50 text-rose-600 border border-rose-100' : 'bg-emerald-50 text-emerald-600 border border-emerald-100'
+            }`}>
+              {stop.status === 'abierta' ? 'Abierta' : 'Cerrada'}
+            </span>
+          </div>
+
+          {/* Details Card */}
+          <div className="bg-slate-50 p-6 rounded-3xl border border-slate-100 space-y-4">
+            <h3 className="text-lg font-bold text-slate-800 tracking-tight leading-tight uppercase">{stop.description}</h3>
+            
+            <div className="grid grid-cols-2 gap-4 text-xs font-bold uppercase text-slate-600">
+              <div className="flex items-center gap-2">
+                <Calendar size={16} className="text-slate-400" />
+                <span>Fecha: <span className="text-slate-800 font-black">{format(new Date(stop.created_at), 'dd/MM/yyyy')}</span></span>
+              </div>
+              <div className="flex items-center gap-2">
+                <MapPin size={16} className="text-slate-400" />
+                <span>Ubicación: <span className="text-slate-800 font-black">{stop.area_location || 'Área General'}</span></span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Users size={16} className="text-slate-400" />
+                <span>Observador: <span className="text-slate-800 font-black">{stop.observer?.name || 'Sistema'}</span></span>
+              </div>
+              {stop.category && (
+                <div className="flex items-center gap-2">
+                  <Info size={16} className="text-slate-400" />
+                  <span>Categoría: <span className="text-slate-800 font-black uppercase">{stop.category}</span></span>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Photo Evidence if available */}
+          {stop.photo_url && (
+            <div className="space-y-2">
+              <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest px-1">Evidencia Fotográfica</h4>
+              <div className="relative rounded-3xl overflow-hidden border border-slate-100 shadow-sm max-h-60 bg-slate-900 flex items-center justify-center">
+                <img 
+                  src={stop.photo_url} 
+                  alt="Evidencia STOP" 
+                  className="max-h-60 object-contain w-full"
+                />
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="p-6 border-t border-slate-100 flex justify-end bg-slate-50">
+          <button 
+            onClick={onClose}
+            className="px-6 py-2.5 bg-slate-800 hover:bg-slate-900 text-white font-bold text-sm rounded-2xl transition-all shadow-md active:scale-95 uppercase tracking-wider"
+          >
+            Cerrar Detalles
+          </button>
+        </div>
+      </div>
+    </div>
+  )
 }

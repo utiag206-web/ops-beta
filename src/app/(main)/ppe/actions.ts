@@ -96,7 +96,7 @@ export async function signPPEDelivery(deliveryId: string, signatureBase64: strin
     const fileName = `signature_${deliveryId}.png`
     const storagePath = generateStoragePath(
       companyId,
-      'ppe',
+      'ppe_signatures',
       extendedUser.worker_id || extendedUser.id,
       fileName
     )
@@ -105,7 +105,7 @@ export async function signPPEDelivery(deliveryId: string, signatureBase64: strin
     const buffer = Buffer.from(base64Data, 'base64')
     const blob = new Blob([buffer], { type: 'image/png' })
 
-    const { publicUrl } = await uploadFile(blob, 'ppe', storagePath)
+    const { publicUrl } = await uploadFile(blob, 'ppe_signatures', storagePath)
 
     // Use Admin Client to bypass RLS for status update
     const adminClient = await createAdminClient()

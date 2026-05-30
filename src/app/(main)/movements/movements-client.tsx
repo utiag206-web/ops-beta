@@ -125,7 +125,7 @@ export default function MovementsClient({ initialMovements, workers, userRole }:
     }
   }
 
-  const isManager = ['admin', 'gerente', 'operaciones', 'super_admin', 'superadmin'].includes(userRole?.toLowerCase())
+  const isManager = !!(userRole && !['trabajador', 'worker'].includes(userRole.toLowerCase()))
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">

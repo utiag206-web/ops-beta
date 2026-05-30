@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
 import { Toaster } from 'sonner';
+import UppercaseEnforcer from "@/components/UppercaseEnforcer";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -18,6 +19,11 @@ export const metadata: Metadata = {
   title: "InthalyOps",
   description: "Plataforma de Gestión de Trabajadores - Horizon Industries",
   manifest: "/manifest.json",
+  icons: {
+    icon: "/logo-ops.png",
+    shortcut: "/logo-ops.png",
+    apple: "/apple-touch-icon.png",
+  }
 };
 
 export default function RootLayout({
@@ -30,6 +36,7 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
+        <UppercaseEnforcer />
         {children}
         <Toaster richColors position="top-right" />
       </body>

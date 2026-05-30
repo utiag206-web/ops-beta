@@ -1,7 +1,7 @@
 'use server'
 
 import { createClient, createAdminClient } from '@/lib/supabase/server'
-import { getUserSession, getStrictCompanyId, applyIsolation } from '@/lib/auth'
+import { getUserSession, getStrictCompanyId, applyIsolation, getActiveViewMode } from '@/lib/auth'
 import { revalidatePath } from 'next/cache'
 
 export async function getWorkerDocuments() {
@@ -22,7 +22,8 @@ export async function getWorkerDocuments() {
   )
     .order('created_at', { ascending: false })
 
-  if (extendedUser.role_id === 'trabajador') {
+  const viewMode = await getActiveViewMode()
+  if (viewMode === 'WORKER' || extendedUser.role_id === 'trabajador') {
     query = query.eq('worker_id', extendedUser.worker_id)
   }
 

@@ -1,6 +1,6 @@
 
 
-export type StorageBucket = 'incidencias' | 'worker_documents' | 'ppe' | 'petty-cash' | 'soma'
+export type StorageBucket = 'incidencias' | 'worker_documents' | 'ppe_signatures' | 'petty-cash' | 'soma'
 
 export async function uploadFile(
   file: File | Blob, 

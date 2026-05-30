@@ -51,7 +51,8 @@ function LoginForm() {
                   name="email"
                   type="email"
                   required
-                  className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent outline-none transition-all text-slate-900 bg-white"
+                  data-keep-case="true"
+                  className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent outline-none transition-all text-slate-900 bg-white keep-case"
                   placeholder="tu@empresa.com"
                 />
               </div>
@@ -66,7 +67,8 @@ function LoginForm() {
                   name="password"
                   type="password"
                   required
-                  className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent outline-none transition-all text-slate-900 bg-white"
+                  data-keep-case="true"
+                  className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent outline-none transition-all text-slate-900 bg-white keep-case"
                   placeholder="••••••••"
                 />
               </div>

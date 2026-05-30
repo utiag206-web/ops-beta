@@ -23,7 +23,11 @@ export async function getIncidencias(filters?: { status?: string, category?: str
   }
 
   if (filters?.category) {
-    query = query.eq('incident_category', filters.category)
+    if (filters.category === 'soma') {
+      query = query.in('incident_category', ['soma', 'personal', 'ambiental', 'material'])
+    } else {
+      query = query.eq('incident_category', filters.category)
+    }
   }
 
   const { data: rawData, error } = await query

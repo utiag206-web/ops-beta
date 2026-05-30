@@ -17,6 +17,7 @@ export default async function CampPage() {
       initialRooms={initialRooms} 
       workers={workers} 
       userRole={extendedUser?.role_id || 'worker'} 
+      userArea={extendedUser?.area || null}
     />
   )
 }

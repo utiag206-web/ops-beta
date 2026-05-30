@@ -146,3 +146,254 @@ input::placeholder {
   z-index: -1;
 }
 
+/* --- VISUAL UPPERCASE SYSTEM-WIDE NORMALIZATION --- */
+input[type="text"],
+input[type="search"],
+textarea,
+select,
+option,
+td,
+th,
+p:not(.keep-case):not(.keep-case *),
+span:not(.keep-case):not(.keep-case *),
+div:not(.keep-case):not(.keep-case *):not(.nth-sidebar):not(.nth-sidebar *):not(.keep-case-container *),
+label:not(.keep-case):not(.keep-case *),
+h1:not(.keep-case):not(.keep-case *),
+h2:not(.keep-case):not(.keep-case *),
+h3:not(.keep-case):not(.keep-case *),
+h4:not(.keep-case):not(.keep-case *),
+h5:not(.keep-case):not(.keep-case *),
+h6:not(.keep-case):not(.keep-case *) {
+  text-transform: uppercase;
+}
+
+input[type="text"],
+input[type="search"],
+textarea,
+select,
+option {
+  text-transform: uppercase;
+}
+
+/* Exclude emails, passwords and components that need mixed case */
+input[type="email"],
+input[type="password"],
+.keep-case,
+.keep-case * {
+  text-transform: none !important;
+}
+
+/* --- GLOBAL Z-INDEX FORCE FOR CENTERING MODALS --- */
+div.fixed.inset-0.flex.items-center.justify-center {
+  z-index: 100 !important;
+}
+
+/* --- TYPOGRAPHIC HIERARCHY & PREMIUM ENTERPRISE REFINEMENT --- */
+h1 {
+  font-size: 2.25rem; /* text-3xl/4xl */
+  font-weight: 900; /* font-black */
+  letter-spacing: -0.03em; /* tracking-tight */
+}
+
+h2 {
+  font-size: 1.5rem; /* text-2xl */
+  font-weight: 800; /* font-extrabold */
+  letter-spacing: -0.025em;
+}
+
+h3 {
+  font-size: 1.125rem; /* text-lg */
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+label, 
+.form-label, 
+.text-\[10px\].font-bold.text-slate-400 {
+  font-size: 0.7rem !important; /* text-[11px] equivalent */
+  font-weight: 800 !important; /* font-extrabold */
+  letter-spacing: 0.15em !important; /* tracking-widest */
+  color: #64748b !important; /* slate-500 (improved contrast over slate-400) */
+  text-transform: uppercase !important;
+}
+
+th {
+  font-size: 0.725rem !important; /* text-xs */
+  font-weight: 800 !important;
+  letter-spacing: 0.12em !important;
+  color: #475569 !important; /* slate-600 */
+  text-transform: uppercase !important;
+  background-color: #f8fafc !important; /* light background fill */
+}
+
+td {
+  font-size: 0.825rem !important;
+  color: #334155;
+}
+
+/* Metric / KPI highlighting */
+.metric-value {
+  font-weight: 900 !important;
+  letter-spacing: -0.04em !important;
+  color: #0f172a; /* solid branding black */
+}
+
+/* Subtitles, hints and secondary text refinement */
+.text-slate-400, 
+.text-gray-400 {
+  color: #64748b; /* slate-500 for better readability contrast */
+  font-weight: 600;
+}
+
+.text-slate-500, 
+.text-gray-500 {
+  color: #475569; /* slate-600 */
+  font-weight: 600;
+}
+
+/* --- PREMIUM MOBILE-FIRST RESPONSIVE OPTIMIZATIONS --- */
+@media (max-width: 768px) {
+
+  /* 1. Maximize usable horizontal width on main container */
+  main.flex-1.overflow-y-auto {
+    padding: 0.5rem !important; /* Reduces p-4 to a tighter p-2 to gain 16px of horizontal space on each side! */
+  }
+
+  /* 2. Tighten card, modal, and container paddings so content has room to shine */
+  .rounded-\[2rem\],
+  .rounded-\[2\.2rem\],
+  .rounded-\[2\.5rem\],
+  .rounded-\[3rem\],
+  .p-8,
+  .p-10,
+  .p-12 {
+    border-radius: 1.25rem !important;
+    padding: 1rem !important; /* Tighter padding (p-4) on small screens */
+  }
+
+  /* Keep header icons and search bars aligned nicely on mobile */
+  .flex-col.md\:flex-row.p-8 {
+    padding: 1rem !important;
+    gap: 0.75rem !important;
+  }
+
+  /* 3. Form fields and select inputs sizing and margins */
+  input:not([class*="pl-"]), select, textarea, :not(input).p-3\.5, :not(input).py-3\.5 {
+    padding: 0.75rem !important; /* Tighter vertical height on inputs and forms */
+    border-radius: 1rem !important;
+    font-size: 0.8rem !important;
+  }
+
+  input[class*="pl-"] {
+    padding-top: 0.75rem !important;
+    padding-bottom: 0.75rem !important;
+    padding-right: 0.75rem !important;
+    border-radius: 1rem !important;
+    font-size: 0.8rem !important;
+  }
+
+  /* Adjust gap on mobile grids */
+  .gap-8, .gap-6, .gap-4 {
+    gap: 0.75rem !important;
+  }
+
+  /* 4. Table cell padding and font tuning to avoid excessive horizontal stretch */
+  th, td, .px-6, .py-6, .px-8, .py-8 {
+    padding-left: 0.5rem !important;
+    padding-right: 0.5rem !important;
+    padding-top: 0.75rem !important;
+    padding-bottom: 0.75rem !important;
+    font-size: 0.75rem !important;
+  }
+
+  /* Ensure tables scroll smoothly without stretching container layout */
+  .overflow-x-auto {
+    border-radius: 1rem !important;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* 5. Typography tuning to prevent titles from wrapping in 4 ugly lines */
+  h1 {
+    font-size: 1.5rem !important; /* max text-2xl on phone */
+    font-weight: 900 !important;
+    letter-spacing: -0.025em !important;
+    line-height: 1.25 !important;
+  }
+
+  h2 {
+    font-size: 1.25rem !important; /* max text-xl on phone */
+    font-weight: 800 !important;
+    line-height: 1.25 !important;
+  }
+
+  h3 {
+    font-size: 1.1rem !important; /* text-lg */
+    font-weight: 700 !important;
+  }
+
+  label, 
+  .form-label, 
+  .text-\[10px\].font-bold.text-slate-400 {
+    font-size: 0.65rem !important; /* slightly smaller for small screens */
+    letter-spacing: 0.12em !important;
+  }
+
+  /* 6. ListWidget, Cards, Containers and compound padding compact overrides to maximize screen width on mobile */
+  .p-6, .p-5, .p-8, .p-10, .p-12, 
+  .px-6, .px-8, .px-10, .px-12, 
+  .py-6, .py-8, .py-10, .py-12 {
+    padding-left: 0.85rem !important;
+    padding-right: 0.85rem !important;
+  }
+
+  .p-6, .p-5, .p-8, .p-10, .p-12 {
+    padding-top: 1rem !important;
+    padding-bottom: 1rem !important;
+    border-radius: 1.25rem !important;
+  }
+
+  /* Compounded padding reduction for page components and main wrappers */
+  main.flex-1.p-4.md\:p-8, 
+  div.container.mx-auto.px-4 {
+    padding-left: 0.4rem !important;
+    padding-right: 0.4rem !important;
+    padding-top: 0.5rem !important;
+    padding-bottom: 0.5rem !important;
+  }
+
+  /* Overwrite overly rounded corners that steal screen space on small viewports */
+  .rounded-\[2rem\], 
+  .rounded-\[2\.5rem\], 
+  .rounded-\[3rem\] {
+    border-radius: 1.25rem !important;
+  }
+
+  .gap-10 {
+    gap: 0.75rem !important;
+  }
+
+  /* Ensure button links are comfortable but fit properly */
+  button, .px-8.py-4 {
+    padding-left: 1rem !important;
+    padding-right: 1rem !important;
+    padding-top: 0.65rem !important;
+    padding-bottom: 0.65rem !important;
+    border-radius: 0.85rem !important;
+    font-size: 0.75rem !important;
+  }
+
+  /* 7. Modals: maximize width to 96% of screen on mobile to avoid shrinking inside a central box */
+  div.fixed.inset-0.flex.items-center.justify-center {
+    padding: 0.5rem !important;
+  }
+
+  div.fixed.inset-0.flex.items-center.justify-center > div {
+    max-width: 98% !important;
+    width: 98% !important;
+    margin: 0 auto !important;
+    border-radius: 1.25rem !important;
+  }
+}
+
+
+

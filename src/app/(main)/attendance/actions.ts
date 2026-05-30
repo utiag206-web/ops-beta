@@ -1,7 +1,7 @@
 'use server'
 
 import { createClient, createAdminClient } from '@/lib/supabase/server'
-import { getUserSession, getStrictCompanyId, applyIsolation } from '@/lib/auth'
+import { getUserSession, getStrictCompanyId, applyIsolation, getActiveViewMode } from '@/lib/auth'
 import { revalidatePath } from 'next/cache'
 
 export async function getAttendance(workerId?: string, date?: string) {
@@ -10,7 +10,7 @@ export async function getAttendance(workerId?: string, date?: string) {
 
   if (!extendedUser || !companyId) return []
 
-  const supabase = await createClient()
+  const supabase = await createAdminClient()
   let query = applyIsolation(
     supabase.from('attendance').select('*, worker:workers(name)'),
     companyId,
@@ -19,7 +19,8 @@ export async function getAttendance(workerId?: string, date?: string) {
     .order('date', { ascending: false })
 
   // [BLINDAJE_UUID]
-  if (extendedUser.role_id === 'trabajador') {
+  const viewMode = await getActiveViewMode()
+  if (viewMode === 'WORKER' || extendedUser.role_id === 'trabajador') {
     if (!extendedUser.worker_id) return []
     query = query.eq('worker_id', extendedUser.worker_id)
   } else if (workerId && workerId !== 'none') {
@@ -51,8 +52,8 @@ export async function checkIn() {
     return { success: false, error: 'No autorizado como trabajador o sin contexto de empresa' }
   }
 
-  const supabase = await createClient()
-  const today = new Date().toISOString().split('T')[0]
+  const supabase = await createAdminClient()
+  const today = new Date().toLocaleDateString('sv-SE')
   const now = new Date().toLocaleTimeString('en-GB') // HH:MM:SS
 
   const { data, error } = await supabase
@@ -85,8 +86,8 @@ export async function checkOut() {
     return { success: false, error: 'No autorizado' }
   }
 
-  const supabase = await createClient()
-  const today = new Date().toISOString().split('T')[0]
+  const supabase = await createAdminClient()
+  const today = new Date().toLocaleDateString('sv-SE')
   const now = new Date().toLocaleTimeString('en-GB')
 
   const { error } = await supabase

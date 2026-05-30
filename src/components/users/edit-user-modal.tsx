@@ -78,7 +78,7 @@ export function EditUserModal({ isOpen, onClose, onSuccess, user }: EditUserModa
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="bg-white w-full max-w-lg rounded-[2.5rem] shadow-2xl overflow-hidden border border-slate-100 animate-in zoom-in-95 duration-200">
+      <div className="bg-white w-full max-w-lg rounded-[2.5rem] shadow-2xl overflow-hidden border border-slate-100 animate-in zoom-in-95 duration-200 max-h-[90vh] flex flex-col">
         <div className="px-8 py-6 border-b border-slate-50 flex justify-between items-center bg-slate-50/50">
           <div>
             <h2 className="text-2xl font-black text-slate-800 tracking-tight">Editar Usuario</h2>
@@ -104,7 +104,7 @@ export function EditUserModal({ isOpen, onClose, onSuccess, user }: EditUserModa
           </button>
         </div>
 
-        <div className="p-8">
+        <div className="p-6 md:p-8 overflow-y-auto flex-1 custom-scrollbar">
           {activeTab === 'profile' ? (
             <form onSubmit={handleUpdateProfile} className="space-y-6">
               <div className="space-y-2">
@@ -114,7 +114,7 @@ export function EditUserModal({ isOpen, onClose, onSuccess, user }: EditUserModa
                   <input 
                     required
                     type="text"
-                    className="w-full bg-slate-50 border-2 border-transparent focus:border-blue-500 focus:bg-white rounded-2xl p-4 pl-12 text-sm font-bold transition-all outline-none"
+                    className="w-full bg-slate-50 border-2 border-transparent focus:border-blue-500 focus:bg-white rounded-2xl py-4 pr-4 pl-12 text-sm font-bold transition-all outline-none"
                     value={formData.name}
                     onChange={e => setFormData({...formData, name: e.target.value})}
                   />
@@ -131,7 +131,7 @@ export function EditUserModal({ isOpen, onClose, onSuccess, user }: EditUserModa
                   <option value="Gerencia General">Gerencia General</option>
                   <option value="Administración">Administración</option>
                   <option value="Operaciones">Operaciones</option>
-                  <option value="Almacén y Mantenimiento">Almacén y Mant.</option>
+                  <option value="Mecánica">Mecánica</option>
                   <option value="Seguridad SOMA">Seguridad SOMA</option>
                   <option value="Cocina">Cocina</option>
                 </select>
@@ -162,7 +162,7 @@ export function EditUserModal({ isOpen, onClose, onSuccess, user }: EditUserModa
                       <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" size={18} />
                       <input 
                         type="email"
-                        className="w-full bg-slate-50 border-2 border-transparent focus:border-blue-500 focus:bg-white rounded-2xl p-4 pl-12 text-sm font-bold transition-all outline-none"
+                        className="w-full bg-slate-50 border-2 border-transparent focus:border-blue-500 focus:bg-white rounded-2xl py-4 pr-4 pl-12 text-sm font-bold transition-all outline-none"
                         value={formData.email}
                         onChange={e => setFormData({...formData, email: e.target.value})}
                       />
@@ -185,7 +185,7 @@ export function EditUserModal({ isOpen, onClose, onSuccess, user }: EditUserModa
                       <input 
                         type="password"
                         placeholder="Mínimo 6 caracteres"
-                        className="w-full bg-slate-50 border-2 border-transparent focus:border-blue-500 focus:bg-white rounded-2xl p-4 pl-12 text-sm font-bold transition-all outline-none"
+                        className="w-full bg-slate-50 border-2 border-transparent focus:border-blue-500 focus:bg-white rounded-2xl py-4 pr-4 pl-12 text-sm font-bold transition-all outline-none"
                         value={formData.password}
                         onChange={e => setFormData({...formData, password: e.target.value})}
                       />

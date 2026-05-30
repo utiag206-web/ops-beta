@@ -1,5 +1,5 @@
 import { getWorkCycles } from './actions'
-import { getWorkers } from '../workers/actions'
+import { getWorkersShort } from '../workers/actions'
 import { getUserSession } from '@/lib/auth'
 import TareoClient from './tareo-client'
 
@@ -8,7 +8,7 @@ export const dynamic = 'force-dynamic'
 export default async function TareoPage() {
   const [initialCycles, workers, { extendedUser }] = await Promise.all([
     getWorkCycles(),
-    getWorkers(),
+    getWorkersShort(),
     getUserSession()
   ])
 

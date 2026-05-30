@@ -63,6 +63,20 @@ export function CreateRequirementModal({ isOpen, onClose, onSuccess }: CreateReq
 
   useEffect(() => {
     if (isOpen) {
+      setForm({
+        title: '',
+        description: '',
+        type: 'insumo',
+        priority: 'media',
+        product_id: '',
+        quantity: 0,
+        tool_type: '',
+        specialty: '',
+        people_count: 1
+      })
+      setSearchQuery('')
+      setShowDropdown(false)
+
       const loadProducts = async () => {
         setFetchingProducts(true)
         const { getProductsMinimal } = await import('@/app/(main)/inventory/actions')
@@ -89,6 +103,11 @@ export function CreateRequirementModal({ isOpen, onClose, onSuccess }: CreateReq
       return
     }
 
+    if (form.type === 'fondos' && form.quantity <= 0) {
+      toast.error('Especifica un monto mayor a 0')
+      return
+    }
+
     setLoading(true)
     
     try {
@@ -99,6 +118,8 @@ export function CreateRequirementModal({ isOpen, onClose, onSuccess }: CreateReq
         payload.description = `[HERRAMIENTA: ${form.tool_type} | CANT: ${form.quantity}] ${form.description}`
       } else if (form.type === 'personal') {
         payload.description = `[PERSONAL: ${form.specialty} | CANT: ${form.people_count}] ${form.description}`
+      } else if (form.type === 'fondos') {
+        payload.description = `[SOLICITUD DE FONDOS: S/ ${form.quantity.toFixed(2)}] ${form.description}`
       }
 
       if (form.type !== 'insumo') {
@@ -131,7 +152,7 @@ export function CreateRequirementModal({ isOpen, onClose, onSuccess }: CreateReq
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="bg-white w-full max-w-md rounded-[2.2rem] shadow-2xl overflow-hidden border border-slate-100 animate-in zoom-in-95 duration-200">
+      <div className="bg-white w-full max-w-md rounded-[2.2rem] shadow-2xl overflow-hidden border border-slate-100 animate-in zoom-in-95 duration-200 max-h-[90vh] flex flex-col">
         <div className="px-6 py-5 border-b border-slate-50 flex justify-between items-center bg-slate-50/50">
           <div>
             <h2 className="text-xl font-black text-slate-800 tracking-tight">Nuevo Requerimiento</h2>
@@ -142,7 +163,7 @@ export function CreateRequirementModal({ isOpen, onClose, onSuccess }: CreateReq
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="px-6 py-2 space-y-4 max-h-[80vh] overflow-y-auto custom-scrollbar pb-6">
+        <form onSubmit={handleSubmit} className="px-6 py-4 space-y-4 overflow-y-auto flex-1 custom-scrollbar pb-6">
           <div className="grid grid-cols-2 gap-4 pt-2">
             <div className="space-y-2">
               <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 px-1">Tipo de Pedido</label>
@@ -155,6 +176,7 @@ export function CreateRequirementModal({ isOpen, onClose, onSuccess }: CreateReq
                 <option value="insumo">Insumo / Producto</option>
                 <option value="herramienta">Herramienta</option>
                 <option value="personal">Personal</option>
+                <option value="fondos">Solicitud de Caja Chica (Fondos)</option>
               </select>
             </div>
             <div className="space-y-2">
@@ -264,8 +286,8 @@ export function CreateRequirementModal({ isOpen, onClose, onSuccess }: CreateReq
                   type="text"
                   placeholder="Ej: Taladro Percutor, Amoladora..."
                   className="w-full bg-white border-2 border-transparent focus:border-amber-500 rounded-2xl p-3 text-sm font-bold transition-all outline-none"
-                  value={form.tool_type}
-                  onChange={e => setForm({...form, tool_type: e.target.value})}
+                  value={form.tool_type.toUpperCase()}
+                  onChange={e => setForm({...form, tool_type: e.target.value.toUpperCase()})}
                 />
               </div>
               <div className="space-y-2">
@@ -289,8 +311,8 @@ export function CreateRequirementModal({ isOpen, onClose, onSuccess }: CreateReq
                   type="text"
                   placeholder="Ej: Mecánico Hércules, Electricista..."
                   className="w-full bg-white border-2 border-transparent focus:border-emerald-500 rounded-2xl p-3 text-sm font-bold transition-all outline-none"
-                  value={form.specialty}
-                  onChange={e => setForm({...form, specialty: e.target.value})}
+                  value={form.specialty.toUpperCase()}
+                  onChange={e => setForm({...form, specialty: e.target.value.toUpperCase()})}
                 />
               </div>
               <div className="space-y-2">
@@ -306,15 +328,33 @@ export function CreateRequirementModal({ isOpen, onClose, onSuccess }: CreateReq
             </div>
           )}
 
+          {form.type === 'fondos' && (
+            <div className="bg-emerald-50/50 p-4 rounded-3xl border border-emerald-100/50 space-y-4">
+              <div className="space-y-2">
+                <label className="text-[10px] font-black uppercase tracking-widest text-emerald-700 px-1 text-xs">Monto Solicitado (S/)</label>
+                <input 
+                  type="number"
+                  step="0.01"
+                  min="0.01"
+                  required
+                  placeholder="0.00"
+                  className="w-full bg-white border-2 border-transparent focus:border-emerald-500 rounded-2xl p-3 text-sm font-bold transition-all outline-none"
+                  value={form.quantity || ''}
+                  onChange={e => setForm({...form, quantity: Number(e.target.value)})}
+                />
+              </div>
+            </div>
+          )}
+
           <div className="space-y-2">
             <label className="text-[11px] font-black uppercase tracking-widest text-slate-400 px-1">Título / Asunto</label>
             <input 
               required
               type="text"
-              placeholder={form.type === 'insumo' ? "Ej: Urgente para parada de planta" : "Ej: Solicitud de equipo adicional"}
+              placeholder={form.type === 'insumo' ? "Ej: Urgente para parada de planta" : form.type === 'fondos' ? "Ej: Fondos para viáticos de viaje" : "Ej: Solicitud de equipo adicional"}
               className="w-full bg-slate-50 border-2 border-transparent focus:border-indigo-500 focus:bg-white rounded-2xl p-4 text-sm font-bold transition-all outline-none"
-              value={form.title}
-              onChange={e => setForm({...form, title: e.target.value})}
+              value={form.title.toUpperCase()}
+              onChange={e => setForm({...form, title: e.target.value.toUpperCase()})}
             />
           </div>
 
@@ -323,9 +363,9 @@ export function CreateRequirementModal({ isOpen, onClose, onSuccess }: CreateReq
             <textarea 
               rows={3}
               className="w-full bg-slate-50 border-2 border-transparent focus:border-indigo-500 focus:bg-white rounded-2xl p-4 text-sm font-bold transition-all outline-none resize-none"
-              placeholder="Explica para qué se necesita esta solicitud..."
-              value={form.description}
-              onChange={e => setForm({...form, description: e.target.value})}
+              placeholder={form.type === 'fondos' ? "Explica detalladamente para qué se utilizarán los fondos..." : "Explica para qué se necesita esta solicitud..."}
+              value={form.description.toUpperCase()}
+              onChange={e => setForm({...form, description: e.target.value.toUpperCase()})}
             />
           </div>
 
@@ -483,15 +523,24 @@ export function ReportIncidentModal({
     description: '',
     severity: 'media',
     event_date: new Date().toISOString().split('T')[0],
-    incident_category: initialCategory || 'personal',
+    incident_category: initialCategory === 'soma' ? 'soma' : (initialCategory || 'personal'),
     corrective_actions: ''
   })
 
   useEffect(() => {
-    if (initialCategory) {
-      setForm(f => ({ ...f, incident_category: initialCategory }))
+    if (isOpen) {
+      setForm({
+        type: 'operacion',
+        area_location: '',
+        description: '',
+        severity: 'media',
+        event_date: new Date().toISOString().split('T')[0],
+        incident_category: initialCategory === 'soma' ? 'soma' : (initialCategory || 'personal'),
+        corrective_actions: ''
+      })
+      setFiles([])
     }
-  }, [initialCategory])
+  }, [isOpen, initialCategory])
 
   if (!isOpen) return null
 
@@ -592,8 +641,8 @@ export function ReportIncidentModal({
                 type="text"
                 placeholder="Ej: Taller Mecánico, KM 15..."
                 className="w-full bg-slate-50 border-2 border-transparent focus:border-orange-500 focus:bg-white rounded-2xl p-4 text-sm font-bold transition-all outline-none"
-                value={form.area_location}
-                onChange={e => setForm({...form, area_location: e.target.value})}
+                value={form.area_location.toUpperCase()}
+                onChange={e => setForm({...form, area_location: e.target.value.toUpperCase()})}
               />
             </div>
             <div className="space-y-2">
@@ -604,10 +653,10 @@ export function ReportIncidentModal({
                 value={form.type}
                 onChange={e => setForm({...form, type: e.target.value})}
               >
-                <option value="maquinaria">Maquinaria / Equipo</option>
-                <option value="personal">Personal / Salud</option>
-                <option value="ambiental">Impacto Ambiental</option>
-                <option value="legal">Incumplimiento Legal</option>
+                <option value="maquinaria">MAQUINARIA / EQUIPO</option>
+                <option value="personal">PERSONAL / SALUD</option>
+                <option value="ambiental">IMPACTO AMBIENTAL</option>
+                <option value="legal">INCUMPLIMIENTO LEGAL</option>
               </select>
             </div>
           </div>
@@ -621,11 +670,11 @@ export function ReportIncidentModal({
                 value={form.severity}
                 onChange={e => setForm({...form, severity: e.target.value})}
               >
-                <option value="leve">Leve</option>
-                <option value="moderado">Moderado</option>
-                <option value="grave">Grave</option>
-                <option value="critico">Crítico</option>
-                <option value="fatal">Fatal</option>
+                <option value="leve">LEVE</option>
+                <option value="moderado">MODERADO</option>
+                <option value="grave">GRAVE</option>
+                <option value="critico">CRÍTICO</option>
+                <option value="fatal">FATAL</option>
               </select>
             </div>
             <div className="space-y-2">
@@ -636,11 +685,22 @@ export function ReportIncidentModal({
                 value={form.incident_category}
                 onChange={e => setForm({...form, incident_category: e.target.value})}
               >
-                <option value="personal">Daño Personal</option>
-                <option value="ambiental">Daño Ambiental</option>
-                <option value="material">Daño Material</option>
-                <option value="soma">HSEC / SOMA</option>
-                <option value="operativa">Operativa / Mantenimiento</option>
+                {initialCategory === 'soma' ? (
+                  <>
+                    <option value="soma">HSEC / SOMA</option>
+                    <option value="personal">DAÑO PERSONAL</option>
+                    <option value="ambiental">DAÑO AMBIENTAL</option>
+                    <option value="material">DAÑO MATERIAL</option>
+                  </>
+                ) : (
+                  <>
+                    <option value="personal">DAÑO PERSONAL</option>
+                    <option value="ambiental">DAÑO AMBIENTAL</option>
+                    <option value="material">DAÑO MATERIAL</option>
+                    <option value="soma">HSEC / SOMA</option>
+                    <option value="operativa">OPERATIVA / MANTENIMIENTO</option>
+                  </>
+                )}
               </select>
             </div>
             <div className="space-y-2">
@@ -688,8 +748,8 @@ export function ReportIncidentModal({
               required
               className="w-full bg-slate-50 border-2 border-transparent focus:border-orange-500 focus:bg-white rounded-2xl p-4 text-sm font-bold transition-all outline-none resize-none"
               placeholder="Detalla lo sucedido de forma clara..."
-              value={form.description}
-              onChange={e => setForm({...form, description: e.target.value})}
+              value={form.description.toUpperCase()}
+              onChange={e => setForm({...form, description: e.target.value.toUpperCase()})}
             />
           </div>
 
@@ -699,8 +759,8 @@ export function ReportIncidentModal({
               rows={2}
               className="w-full bg-orange-50 border-2 border-orange-100 focus:border-orange-500 focus:bg-white rounded-2xl p-4 text-sm font-bold transition-all outline-none resize-none"
               placeholder="¿Qué se hizo al instante para mitigar el riesgo?"
-              value={form.corrective_actions}
-              onChange={e => setForm({...form, corrective_actions: e.target.value})}
+              value={form.corrective_actions.toUpperCase()}
+              onChange={e => setForm({...form, corrective_actions: e.target.value.toUpperCase()})}
             />
           </div>
 

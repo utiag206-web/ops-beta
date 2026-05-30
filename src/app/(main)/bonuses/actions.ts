@@ -1,7 +1,7 @@
 'use server'
 
 import { createClient, createAdminClient } from '@/lib/supabase/server'
-import { getUserSession, getStrictCompanyId, applyIsolation } from '@/lib/auth'
+import { getUserSession, getStrictCompanyId, applyIsolation, getActiveViewMode } from '@/lib/auth'
 import { revalidatePath } from 'next/cache'
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -20,7 +20,8 @@ export async function getBonuses(workerId?: string) {
     let tQuery = applyIsolation(supabase.from('transport_payments').select('*'), companyId, extendedUser.role_id)
 
     // UUID context filters
-    if (extendedUser.role_id === 'trabajador') {
+    const viewMode = await getActiveViewMode()
+    if (viewMode === 'WORKER' || extendedUser.role_id === 'trabajador') {
       const wId = extendedUser.worker_id;
       if (wId && UUID_REGEX.test(wId)) {
         bQuery = bQuery.eq('worker_id', wId)
@@ -88,7 +89,7 @@ export async function createBonus(formData: {
     const { extendedUser } = await getUserSession()
     const companyId = await getStrictCompanyId()
     const role = (extendedUser?.role_id || '').toLowerCase()
-    const authorized = ['admin', 'gerente', 'operaciones', 'administracion', 'super_admin', 'superadmin'].includes(role)
+    const authorized = ['admin', 'gerente', 'administracion', 'super_admin', 'superadmin'].includes(role)
 
     if (!companyId || !UUID_REGEX.test(companyId) || !authorized) {
       return { success: false, error: 'No autorizado o sesión inválida' }
@@ -143,7 +144,7 @@ export async function updateBonusStatus(id: string, status: 'paid' | 'pending') 
     const { extendedUser } = await getUserSession()
     const companyId = await getStrictCompanyId()
     const role = (extendedUser?.role_id || '').toLowerCase()
-    const authorized = ['admin', 'gerente', 'operaciones', 'administracion', 'super_admin', 'superadmin'].includes(role)
+    const authorized = ['admin', 'gerente', 'administracion', 'super_admin', 'superadmin'].includes(role)
 
     if (!extendedUser || !companyId || !authorized) {
       return { success: false, error: 'No autorizado' }

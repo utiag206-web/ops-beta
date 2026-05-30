@@ -81,6 +81,7 @@ export async function registerPettyCashTransaction(payload: {
   operation_number?: string
   date?: string
   voucher_url?: string
+  target_area?: string
 }) {
   const { extendedUser } = await getUserSession()
   const companyId = await getStrictCompanyId()
@@ -118,6 +119,74 @@ export async function registerPettyCashTransaction(payload: {
 
   const supabase = await createAdminClient()
 
+  // --- LÓGICA DE TRANSFERENCIA ---
+  if (finalCategory === 'transferencia') {
+    const isCentralRole = ['admin', 'gerente', 'super_admin', 'superadmin', 'administracion', 'finanzas', 'caja central'].includes(role || '')
+    if (!isCentralRole) {
+      return { error: 'No autorizado: Solo los roles de gestión y administración central pueden transferir fondos.' }
+    }
+
+    if (!payload.target_area || payload.target_area === finalArea) {
+      return { error: 'Debes seleccionar una caja de contraparte válida y diferente de la actual.' }
+    }
+
+    // Definir qué caja disminuye (origen) y qué caja aumenta (destino)
+    const sourceArea = finalType === 'egreso' ? finalArea : payload.target_area
+    const destArea = finalType === 'egreso' ? payload.target_area : finalArea
+
+    // Validar fondos del origen
+    const statsSource = await getPettyCashStats(sourceArea)
+    if (statsSource && payload.amount > statsSource.balance) {
+      return { error: `Saldo insuficiente en la caja de ${sourceArea}. Saldo disponible: S/ ${statsSource.balance.toFixed(2)}` }
+    }
+
+    // Generar un ID de transferencia para relacionarlas en operation_number
+    const transferRef = payload.operation_number || `TRF-${Date.now()}-${Math.floor(Math.random() * 1000)}`
+
+    // 1. Insertar el egreso en la caja de origen
+    const { error: errorOut } = await supabase
+      .from('petty_cash_transactions')
+      .insert([{
+        reason: `[TRANSFERENCIA] Enviado a ${destArea}: ${payload.reason}`,
+        amount: payload.amount,
+        payment_method: payload.payment_method,
+        type: 'egreso',
+        category: 'transferencia',
+        operation_number: transferRef,
+        voucher_url: payload.voucher_url,
+        date: payload.date || new Date().toISOString().split('T')[0],
+        area: sourceArea,
+        company_id: companyId,
+        responsible_id: extendedUser.id
+      }])
+
+    if (errorOut) return { error: `Error al registrar egreso en ${sourceArea}: ${errorOut.message}` }
+
+    // 2. Insertar el ingreso en la caja de destino
+    const { error: errorIn } = await supabase
+      .from('petty_cash_transactions')
+      .insert([{
+        reason: `[TRANSFERENCIA] Recibido de ${sourceArea}: ${payload.reason}`,
+        amount: payload.amount,
+        payment_method: payload.payment_method,
+        type: 'ingreso',
+        category: 'transferencia',
+        operation_number: transferRef,
+        voucher_url: payload.voucher_url,
+        date: payload.date || new Date().toISOString().split('T')[0],
+        area: destArea,
+        company_id: companyId,
+        responsible_id: extendedUser.id
+      }])
+
+    if (errorIn) return { error: `Error al registrar ingreso en ${destArea}: ${errorIn.message}` }
+
+    revalidatePath('/dashboard')
+    revalidatePath('/caja-chica')
+    return { success: true }
+  }
+
+  // --- LÓGICA DE TRANSACCIÓN INDEPENDIENTE ---
   // Si es un egreso, validar saldo disponible (excepto para admin/gerente/super_admin)
   if (finalType === 'egreso' && !['admin', 'gerente', 'super_admin'].includes(role || '')) {
     const stats = await getPettyCashStats(finalArea)
@@ -129,13 +198,17 @@ export async function registerPettyCashTransaction(payload: {
   const { error } = await supabase
     .from('petty_cash_transactions')
     .insert([{
-      ...payload,
-      area: finalArea,
+      reason: payload.reason,
+      amount: payload.amount,
+      payment_method: payload.payment_method,
       type: finalType,
       category: finalCategory,
+      operation_number: payload.operation_number,
+      date: payload.date || new Date().toISOString().split('T')[0],
+      voucher_url: payload.voucher_url,
+      area: finalArea,
       company_id: companyId,
-      responsible_id: extendedUser.id,
-      date: payload.date || new Date().toISOString().split('T')[0]
+      responsible_id: extendedUser.id
     }])
 
   if (error) return { error: error.message }
@@ -158,11 +231,31 @@ export async function deletePettyCashTransaction(id: string) {
     return { error: 'No tienes permisos para eliminar movimientos de caja.' }
   }
 
-  const { error } = await applyIsolation(
-    supabase.from('petty_cash_transactions').delete(),
+  // Obtener la transacción actual para saber si es una transferencia
+  const { data: currentTx } = await applyIsolation(
+    supabase.from('petty_cash_transactions').select('category, operation_number'),
     companyId,
     extendedUser.role_id
-  ).eq('id', id)
+  ).eq('id', id).maybeSingle()
+
+  let deleteQuery
+  if (currentTx && currentTx.category === 'transferencia' && currentTx.operation_number && currentTx.operation_number.startsWith('TRF-')) {
+    // Es una transferencia vinculada, eliminamos ambas por su operation_number
+    deleteQuery = applyIsolation(
+      supabase.from('petty_cash_transactions').delete(),
+      companyId,
+      extendedUser.role_id
+    ).eq('operation_number', currentTx.operation_number).eq('category', 'transferencia')
+  } else {
+    // Eliminación individual normal
+    deleteQuery = applyIsolation(
+      supabase.from('petty_cash_transactions').delete(),
+      companyId,
+      extendedUser.role_id
+    ).eq('id', id)
+  }
+
+  const { error } = await deleteQuery
 
   if (error) return { error: error.message }
   

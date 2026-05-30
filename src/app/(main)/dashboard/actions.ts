@@ -1,7 +1,7 @@
 'use server'
 
 import { createClient, createAdminClient } from '@/lib/supabase/server'
-import { getUserSession, applyIsolation } from '@/lib/auth'
+import { getUserSession, applyIsolation, getActiveViewMode } from '@/lib/auth'
 
 export async function getDashboardStats() {
   try {
@@ -18,20 +18,28 @@ export async function getDashboardStats() {
     }
 
     const supabase = await createAdminClient()
-    const today = new Date().toISOString().split('T')[0]
+    const today = new Date().toLocaleDateString('sv-SE')
+
+    const viewMode = await getActiveViewMode()
+    const isWorkerModeActive = viewMode === 'WORKER'
 
     let stats: any = {
       role_id: user.role_id,
-      company_name: user.company_name || 'Sistema'
+      company_name: user.company_name || 'Sistema',
+      activeView: viewMode
     }
 
     // 1. PRIORIDAD ESTRICTA PARA DATA FETCHING
-    const isAdmin = ['admin', 'gerente', 'administracion', 'super_admin', 'superadmin'].includes(user.role_id?.toLowerCase())
-    const isSoma = !isAdmin && (user.role_id === 'soma' || (user.role_id === 'jefe_area' && user.area === 'Seguridad SOMA'))
-    const isCocina = !isAdmin && !isSoma && (user.role_id === 'jefe_area' && user.area === 'Cocina')
-    const isOperaciones = !isAdmin && !isSoma && !isCocina && (user.role_id === 'operaciones' || user.role_id === 'jefe_area')
-    const isAlmacen = !isAdmin && !isSoma && !isCocina && !isOperaciones && (user.role_id === 'almacen')
-    const isWorker = !isAdmin && !isSoma && !isCocina && !isOperaciones && !isAlmacen && (user.role_id === 'trabajador')
+    const userRoleLower = user.role_id?.toLowerCase() || ''
+    const userAreaLower = user.area?.toLowerCase() || ''
+
+    const isAdmin = !isWorkerModeActive && ['admin', 'gerente', 'administracion', 'super_admin', 'superadmin'].includes(userRoleLower)
+    const isSoma = !isWorkerModeActive && !isAdmin && (userRoleLower === 'soma' || (userRoleLower === 'jefe_area' && userAreaLower === 'seguridad soma'))
+    const isCocina = !isWorkerModeActive && !isAdmin && !isSoma && (userRoleLower === 'jefe_area' && userAreaLower === 'cocina')
+    const isOperaciones = !isWorkerModeActive && !isAdmin && !isSoma && !isCocina && (userRoleLower === 'operaciones' || userRoleLower === 'jefe_area')
+    const isAlmacen = !isWorkerModeActive && !isAdmin && !isSoma && !isCocina && !isOperaciones && (userRoleLower === 'almacen')
+    const isWorker = isWorkerModeActive || (!isAdmin && !isSoma && !isCocina && !isOperaciones && !isAlmacen && (userRoleLower === 'trabajador'))
+
 
     // 2. FETCH POR MODO EXCLUSIVO
     if (isAdmin) {
@@ -39,7 +47,7 @@ export async function getDashboardStats() {
       sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
       const sevenDaysAgoStr = sevenDaysAgo.toISOString().split('T')[0]
 
-      const [u, w, p, cashTotal, inc, reqs, movsToday, critical, weekly, comps, pendingBonuses, pendingTransport, assets] = await Promise.all([
+      const [u, w, p, cashTotal, inc, reqs, movsToday, critical, weekly, comps, pendingBonuses, pendingTransport, assets, weeklyAttendance, weeklyWorkerMovements, weeklyRequirements] = await Promise.all([
         applyIsolation(supabase.from('users').select('id', { count: 'exact', head: true }), companyId, user.role_id),
         applyIsolation(supabase.from('workers').select('id', { count: 'exact', head: true }), companyId, user.role_id),
         applyIsolation(supabase.from('products').select('id', { count: 'exact', head: true }), companyId, user.role_id),
@@ -50,9 +58,12 @@ export async function getDashboardStats() {
         applyIsolation(supabase.from('inventory_stock').select('id', { count: 'exact', head: true }), companyId, user.role_id).lt('quantity', 5),
         applyIsolation(supabase.from('inventory_movements').select('created_at, type, effect, quantity'), companyId, user.role_id).gte('created_at', sevenDaysAgoStr),
         supabase.from('companies').select('id', { count: 'exact', head: true }).eq('status', 'active'),
-        applyIsolation(supabase.from('bonuses').select('id', { count: 'exact', head: true }), companyId, user.role_id).eq('status', 'pendiente'),
-        applyIsolation(supabase.from('transport_payments').select('id', { count: 'exact', head: true }), companyId, user.role_id).eq('status', 'pendiente'),
-        applyIsolation(supabase.from('assets').select('id', { count: 'exact', head: true }), companyId, user.role_id)
+        applyIsolation(supabase.from('bonuses').select('id', { count: 'exact', head: true }), companyId, user.role_id).eq('status', 'pending'),
+        applyIsolation(supabase.from('transport_payments').select('id', { count: 'exact', head: true }), companyId, user.role_id).eq('status', 'pending'),
+        applyIsolation(supabase.from('assets').select('id', { count: 'exact', head: true }), companyId, user.role_id),
+        applyIsolation(supabase.from('attendance').select('date'), companyId, user.role_id).gte('date', sevenDaysAgoStr),
+        applyIsolation(supabase.from('worker_movements').select('created_at'), companyId, user.role_id).gte('created_at', sevenDaysAgoStr),
+        applyIsolation(supabase.from('requirements').select('created_at'), companyId, user.role_id).gte('created_at', sevenDaysAgoStr)
       ])
 
       const isSuperAdmin = user.role_id === 'super_admin' || user.role_id === 'superadmin'
@@ -67,21 +78,33 @@ export async function getDashboardStats() {
       for (let i = 0; i < 7; i++) {
         const d = new Date()
         d.setDate(d.getDate() - i)
-        const dateStr = d.toISOString().split('T')[0]
+        const dateStr = d.toLocaleDateString('sv-SE')
         activityMap[dateStr] = 0
         stats.weeklyMovements[dateStr] = { in: 0, out: 0 }
       }
       
+      const addActivity = (items: any[]) => {
+        if (!items) return
+        items.forEach((m: any) => {
+          const dateVal = m.date || m.created_at
+          if (!dateVal) return
+          const date = dateVal.split('T')[0]
+          if (activityMap[date] !== undefined) {
+            activityMap[date] += 1
+          }
+        })
+      }
+
+      addActivity(weekly.data || [])
+      addActivity(weeklyAttendance?.data || [])
+      addActivity(weeklyWorkerMovements?.data || [])
+      addActivity(weeklyRequirements?.data || [])
+
       if (weekly.data) {
         weekly.data.forEach((m: any) => {
           if (!m.created_at) return
           const date = m.created_at.split('T')[0]
           
-          // Sumamos a la actividad global (puntos en el gráfico)
-          if (activityMap[date] !== undefined) {
-            activityMap[date] += 1
-          }
-
           // Sumamos volúmenes de inventario (opcional para el detalle)
           if (stats.weeklyMovements[date]) {
             if (m.effect === 'IN') stats.weeklyMovements[date].in += Number(m.quantity) || 0
@@ -198,7 +221,7 @@ export async function getDashboardStats() {
     }
     else if (isWorker && user.worker_id) {
       const [att, ppe, docs, bns, nextT, nextS] = await Promise.all([
-        supabase.from('attendance').select('status, created_at').eq('worker_id', user.worker_id).eq('date', today).maybeSingle(),
+        supabase.from('attendance').select('check_in, check_out, created_at').eq('worker_id', user.worker_id).eq('date', today).maybeSingle(),
         supabase.from('ppe_deliveries').select('id', { count: 'exact', head: true }).eq('worker_id', user.worker_id).or('status.eq.pending_signature,signature_url.is.null'),
         supabase.from('worker_documents').select('id', { count: 'exact', head: true }).eq('worker_id', user.worker_id),
         supabase.from('bonuses').select('id', { count: 'exact', head: true }).eq('worker_id', user.worker_id),
@@ -208,8 +231,17 @@ export async function getDashboardStats() {
 
       const { data: workerData } = await supabase.from('workers').select('status').eq('id', user.worker_id).maybeSingle()
 
+      let statusText = 'SIN REGISTRO'
+      if (att.data) {
+        if (att.data.check_in && !att.data.check_out) {
+          statusText = 'PRESENTE'
+        } else if (att.data.check_in && att.data.check_out) {
+          statusText = 'SALIDA'
+        }
+      }
+
       stats.worker = {
-        todayAttendance: att.data?.status || 'SIN REGISTRO',
+        todayAttendance: statusText,
         totalBonuses: bns.count || 0,
         totalDocs: docs.count || 0,
         pendingPPE: ppe.count || 0,
@@ -217,6 +249,8 @@ export async function getDashboardStats() {
         nextTalk: nextS.data?.topic || 'No programada',
         laborStatus: workerData?.status || 'Active'
       }
+
+      stats.todayAttendance = att.data || null
     }
 
     // 3. FETCH TRANSVERSAL SOMA PARA TODOS
@@ -252,7 +286,16 @@ export async function getTodayAttendance() {
   const { extendedUser } = await getUserSession()
   if (!extendedUser?.worker_id) return null
   const supabase = await createAdminClient()
-  const today = new Date().toISOString().split('T')[0]
-  const { data, error } = await supabase.from('attendance').select('id, status, created_at').eq('worker_id', extendedUser.worker_id).eq('date', today).maybeSingle()
-  return error ? null : data
+  const today = new Date().toLocaleDateString('sv-SE')
+  const { data, error } = await supabase.from('attendance').select('id, check_in, check_out, created_at').eq('worker_id', extendedUser.worker_id).eq('date', today).maybeSingle()
+  if (error || !data) return null
+
+  let statusText = 'SIN REGISTRO'
+  if (data.check_in && !data.check_out) {
+    statusText = 'PRESENTE'
+  } else if (data.check_in && data.check_out) {
+    statusText = 'SALIDA'
+  }
+
+  return { ...data, status: statusText }
 }

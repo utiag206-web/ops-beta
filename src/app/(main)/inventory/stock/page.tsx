@@ -1,4 +1,4 @@
-import { getInventoryStock, getProducts, getInventoryMovements } from '../actions'
+import { getInventoryStock, getProductsMinimal, getInventoryMovements } from '../actions'
 import { InventoryStockList } from '@/components/inventory/inventory-stock-list'
 import { Suspense } from 'react'
 import { OperationsDashboardSkeleton } from '@/components/dashboard/dashboard-skeletons'
@@ -21,7 +21,7 @@ export default async function InventoryStockPage() {
 async function StockFetcher({ user }: { user: any }) {
   const [stockRes, productsRes] = await Promise.all([
     getInventoryStock(),
-    getProducts()
+    getProductsMinimal()
   ])
 
   if (stockRes.error || productsRes.error) {

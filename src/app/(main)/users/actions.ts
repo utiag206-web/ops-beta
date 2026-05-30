@@ -137,6 +137,36 @@ export async function createUser(prevState: any, formData: FormData) {
 
     if (!authUserId) return { success: false, error: 'No se pudo obtener el ID del usuario.' }
 
+    let finalWorkerId = (workerId && workerId !== 'none') ? workerId : null
+
+    if (roleId === 'trabajador' && !finalWorkerId) {
+      const nameParts = name.trim().split(' ')
+      const firstName = nameParts[0]
+      const lastName = nameParts.slice(1).join(' ') || 'Trabajador'
+      const tempDni = String(Math.floor(10000000 + Math.random() * 90000000))
+
+      const { data: newWorker, error: wError } = await supabaseAdmin
+        .from('workers')
+        .insert({
+          company_id: companyId,
+          name: firstName,
+          last_name: lastName,
+          dni: tempDni,
+          cod: `W-${tempDni.substring(4)}`,
+          position: 'Trabajador',
+          email: email,
+          status: 'ACTIVO'
+        })
+        .select()
+        .single()
+
+      if (!wError && newWorker) {
+        finalWorkerId = newWorker.id
+      } else {
+        console.error('[CREATE_USER_WORKER_AUTO] Error auto-creating worker profile:', wError)
+      }
+    }
+
     // 2. Link/Upsert to our public.users table
     const { error: dbError } = await supabaseAdmin
       .from('users')
@@ -147,7 +177,7 @@ export async function createUser(prevState: any, formData: FormData) {
         email,
         role_id: roleId,
         area,
-        worker_id: (workerId && workerId !== 'none') ? workerId : null,
+        worker_id: finalWorkerId,
         status: 'active'
       }, { onConflict: 'id' })
 

@@ -13,20 +13,28 @@ export async function Header() {
   const roleNames: Record<string, string> = {
     super_admin: 'Super Administrador',
     superadmin: 'Super Administrador',
-    admin: 'Administración',
+    admin: 'Gerente General',
     administracion: 'Administración',
     gerente: 'Gerencia General',
-    jefe_area: 'Jefe de Operaciones',
-    almacen: 'Control Logístico',
-    operaciones: 'Gestión Operativa',
+    jefe_area: 'Jefe de Área',
+    almacen: 'Logística',
+    operaciones: 'Operaciones',
     trabajador: 'Colaborador',
-    soma: 'Gestión HSEC',
-    cocina: 'Servicios de Alimentación'
+    soma: 'Seguridad SOMA',
+    cocina: 'Cocina'
   }
   
   let userRole = roleNames[roleId?.toLowerCase()] || 'Sin Rol'
   if (extendedUser?.is_impersonating) {
     userRole = 'Auditoría de Sistemas'
+  } else if (extendedUser?.area) {
+    let cleanArea = extendedUser.area
+    if (cleanArea === 'Almacén y Mantenimiento') {
+      cleanArea = 'Mecánica'
+    }
+    if (userRole.toLowerCase() !== cleanArea.toLowerCase()) {
+      userRole = `${userRole} • Área: ${cleanArea}`
+    }
   }
   const userEmail = extendedUser?.display_email || ''
   

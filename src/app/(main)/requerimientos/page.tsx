@@ -5,6 +5,8 @@ import { getRequirements } from './actions'
 import { Suspense } from 'react'
 import { OperationsDashboardSkeleton } from '@/components/dashboard/dashboard-skeletons'
 
+export const dynamic = 'force-dynamic'
+
 export const metadata = {
   title: 'Requerimientos | Sistema de Gestión',
   description: 'Gestión de solicitudes y requerimientos internos.',

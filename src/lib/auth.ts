@@ -65,7 +65,7 @@ export const getUserSession = cache(async function getUserSession() {
         .from('workers')
         .select('id, status')
         .eq('company_id', finalCompanyId)
-        .or(`id.eq.${userData.worker_id || '00000000-0000-0000-0000-000000000000'},email.eq.${userData.email}`)
+        .eq('id', userData.worker_id || '00000000-0000-0000-0000-000000000000')
         .maybeSingle()
 
       if (companyWorker) {
@@ -96,6 +96,22 @@ export const getUserSession = cache(async function getUserSession() {
       companyData = comp
     }
 
+    // Helper function to slugify company name in JS as fallback
+    const slugify = (text: string) => {
+      return text
+        .toString()
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-z0-9\s-]/g, '')
+        .trim()
+        .replace(/\s+/g, '-')
+        .replace(/-+/g, '-');
+    }
+
+    const companyObj = Array.isArray(companyData) ? companyData[0] : companyData
+    const companySlug = companyObj?.slug || (companyObj?.name ? slugify(companyObj.name) : 'empresa')
+
     const extendedUser = {
       id: user.id,
       email: userData.email || user.email || '',
@@ -109,8 +125,9 @@ export const getUserSession = cache(async function getUserSession() {
       permissions: getPermissionsByRole(rbacRole, (userData as any)?.area),
       active_company_id: finalCompanyId,
       companies: companyData,
-      company_name: (Array.isArray(companyData) ? companyData[0] : companyData)?.name || 'Empresa',
-      company_logo: (Array.isArray(companyData) ? companyData[0] : companyData)?.logo_url || null,
+      company_name: companyObj?.name || 'Empresa',
+      company_logo: companyObj?.logo_url || null,
+      company_slug: companySlug,
       is_impersonating: impersonating,
       display_name: '',
       display_email: '',
@@ -161,6 +178,21 @@ export async function requirePermission(moduleName: string) {
     throw new Error(`Acceso Denegado a '${moduleName}'`)
   }
   return extendedUser
+}
+
+export async function getActiveViewMode(): Promise<'OPERATIONAL' | 'WORKER'> {
+  try {
+    const { extendedUser } = await getUserSession()
+    if (!extendedUser || !extendedUser.worker_id) return 'OPERATIONAL'
+    
+    const role = extendedUser.role_id?.toLowerCase()
+    if (['admin', 'super_admin', 'superadmin'].includes(role)) return 'OPERATIONAL'
+    
+    const cookieStore = await cookies()
+    return cookieStore.get('view_mode')?.value === 'WORKER' ? 'WORKER' : 'OPERATIONAL'
+  } catch {
+    return 'OPERATIONAL'
+  }
 }
 
 export function applyIsolation(query: any, companyId: string | null, role: string) {

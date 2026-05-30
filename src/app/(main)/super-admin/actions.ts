@@ -91,7 +91,7 @@ export async function getSystemStats() {
       fetchCount(supabase.from('companies').select('*', { count: 'exact', head: true }).eq('is_test', false)),
       fetchCount(supabase.from('companies').select('*', { count: 'exact', head: true }).eq('is_test', true)),
       fetchCount(supabase.from('companies').select('*', { count: 'exact', head: true }).eq('status', 'active')),
-      fetchCount(supabase.from('companies').select('*', { count: 'exact', head: true }).eq('status', 'suspended')),
+      fetchCount(supabase.from('companies').select('*', { count: 'exact', head: true }).eq('status', 'inactive')),
       fetchCount(supabase.from('users').select('*', { count: 'exact', head: true }))
     ])
 
@@ -120,7 +120,7 @@ export async function toggleCompanyStatus(companyId: string, currentStatus: stri
   const role = extendedUser?.role_id?.toLowerCase()
   if (role !== 'super_admin' && role !== 'superadmin') throw new Error('Acceso Denegado')
 
-  const newStatus = currentStatus === 'active' ? 'suspended' : 'active'
+  const newStatus = currentStatus === 'active' ? 'inactive' : 'active'
   const supabase = await createAdminClient()
   
   const { error } = await supabase

@@ -6,6 +6,7 @@ import { getDashboardStats } from './actions'
 import { getUserSession } from '@/lib/auth'
 import { DashboardShell } from '@/components/dashboard/dashboard-shell'
 import { AdminDashboardSkeleton } from '@/components/dashboard/dashboard-skeletons'
+import os from 'os'
 
 export const dynamic = 'force-dynamic'
 
@@ -56,5 +57,24 @@ async function DashboardContent({ user }: { user: any }) {
     )
   }
 
-  return <DashboardShell stats={stats} user={user} />
+  // Get local IP address safely on Server Side
+  let localIp = '127.0.0.1'
+  try {
+    const interfaces = os.networkInterfaces()
+    for (const name of Object.keys(interfaces)) {
+      for (const net of interfaces[name] || []) {
+        if (net.family === 'IPv4' && !net.internal) {
+          if (net.address.startsWith('192.168.') || net.address.startsWith('10.') || net.address.startsWith('172.')) {
+            localIp = net.address
+            break
+          }
+        }
+      }
+      if (localIp !== '127.0.0.1') break
+    }
+  } catch (err) {
+    console.error('Error fetching local IP:', err)
+  }
+
+  return <DashboardShell stats={stats} user={user} localIp={localIp} />
 }

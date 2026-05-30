@@ -30,7 +30,11 @@ export const ROLE_PERMISSIONS: Record<string, string[]> = {
     'configuracion',
     'profile',
     'reports',
-    'tareo'
+    'tareo',
+    'soma',
+    'documents',
+    'company',
+    'operaciones'
   ],
 
   // 2. OPERACIONES: Foco en gestión de campo y personal operativo
@@ -38,6 +42,8 @@ export const ROLE_PERMISSIONS: Record<string, string[]> = {
     'dashboard', 
     'workers', 
     'tareo', 
+    'inventory',
+    'movements',
     'requerimientos', 
     'incidencias', 
     'camp', 
@@ -47,7 +53,9 @@ export const ROLE_PERMISSIONS: Record<string, string[]> = {
     'attendance',
     'profile',
     'soma-capacitaciones', // Puede ver/registrar charlas/cursos en campo
-    'soma-charlas'
+    'soma-charlas',
+    'soma',
+    'operaciones'
   ],
 
   // 3. ALMACÉN / LOGÍSTICA: Control de stock y abastecimiento
@@ -68,7 +76,8 @@ export const ROLE_PERMISSIONS: Record<string, string[]> = {
     'incidencias', 
     'ppe',          // Entrega EPP
     'reports',
-    'profile'
+    'profile',
+    'soma'
   ],
 
   // 5. TRABAJADOR: Autoservicio y reportes personales
@@ -97,7 +106,33 @@ export const ROLE_PERMISSIONS: Record<string, string[]> = {
   ],
 
   // Roles adicionales heredados o por compatibilidad
-  gerente: ['*'], // Gerente suele actuar como Admin
+  gerente: [
+    'dashboard',
+    'workers',
+    'inventory',
+    'movements',
+    'requerimientos',
+    'incidencias',
+    'camp',
+    'transport',
+    'caja-chica',
+    'bonuses',
+    'attendance',
+    'soma-capacitaciones',
+    'soma-charlas',
+    'soma-hsec',
+    'ppe',
+    'assets',
+    'analytics',
+    'configuracion',
+    'profile',
+    'reports',
+    'tareo',
+    'soma',
+    'documents',
+    'company',
+    'operaciones'
+  ],
   logistica: [
     'dashboard', 
     'inventory', 
@@ -117,8 +152,9 @@ export function getPermissionsByRole(role_id: string, area?: string | null): str
   // Lógica de área para jefes de área o roles específicos si fuera necesario
   if (normalizedRole === 'jefe_area') {
     if (area === 'Seguridad SOMA') return ROLE_PERMISSIONS['soma']
-    if (area === 'Cocina') return ROLE_PERMISSIONS['almacen']
+    if (area === 'Cocina') return [...ROLE_PERMISSIONS['almacen'], 'caja-chica']
     if (area === 'Operaciones') return ROLE_PERMISSIONS['operaciones']
+    if (area === 'Almacén y Mantenimiento' || area === 'Mecánica') return ROLE_PERMISSIONS['almacen']
   }
 
   // Fallback de seguridad: Si no hay permisos, al menos dashboard y perfil

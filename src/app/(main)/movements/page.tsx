@@ -1,5 +1,5 @@
 import { getMovements } from './actions'
-import { getWorkers } from '../workers/actions'
+import { getWorkersShort } from '../workers/actions'
 import { getUserSession } from '@/lib/auth'
 import MovementsClient from './movements-client'
 
@@ -8,7 +8,7 @@ export const dynamic = 'force-dynamic'
 export default async function MovementsPage() {
   const [initialMovements, workers, { extendedUser }] = await Promise.all([
     getMovements(),
-    getWorkers(),
+    getWorkersShort(),
     getUserSession()
   ])
 

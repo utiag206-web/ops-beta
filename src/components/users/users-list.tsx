@@ -188,7 +188,7 @@ export function UsersList({ initialUsers, availableWorkers, currentUserRole }: {
                     </div>
                   </td>
                   <td className="py-6">
-                    <span className={`text-sm font-bold ${isWorker ? 'text-slate-400 italic' : 'text-slate-600'}`}>
+                    <span className={`text-sm font-bold keep-case ${isWorker ? 'text-slate-400 italic' : 'text-slate-600'}`}>
                       {item.email || (isUser ? 'Correo no definido' : 'Sin cuenta')}
                     </span>
                   </td>
@@ -229,7 +229,7 @@ export function UsersList({ initialUsers, availableWorkers, currentUserRole }: {
                             <option value="Gerencia General">Gerencia General</option>
                             <option value="Administración">Administración</option>
                             <option value="Operaciones">Operaciones</option>
-                            <option value="Almacén y Mantenimiento">Almacén y Mant.</option>
+                            <option value="Mecánica">Mecánica</option>
                             <option value="Seguridad SOMA">Seguridad SOMA</option>
                             <option value="Cocina">Cocina</option>
                           </select>
