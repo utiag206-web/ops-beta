@@ -1,11 +1,12 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { updateWorkerFullProfile } from '@/app/(main)/workers/actions'
 import { Save, Loader2, Briefcase, Landmark, User, ShieldAlert } from 'lucide-react'
 import { WorkerChildren } from '@/components/workers/worker-children'
 
-const Input = ({ label, value, onChange, type = "text", required = false, disabled = false }: any) => (
+const Input = ({ label, value, onChange, type = "text", required = false, disabled = false, autoComplete = "off" }: any) => (
   <div className="space-y-1.5 flex-1 min-w-[200px]">
     <label className="text-xs font-bold text-slate-500 uppercase">{label} {required && <span className="text-rose-500">*</span>}</label>
     <input 
@@ -13,19 +14,21 @@ const Input = ({ label, value, onChange, type = "text", required = false, disabl
       value={value || ''} 
       onChange={onChange}
       disabled={disabled}
+      autoComplete={autoComplete}
       className={`w-full border border-slate-200 rounded-xl px-3 py-2 text-sm font-semibold text-slate-800 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all ${disabled ? 'bg-slate-100 opacity-60' : 'bg-slate-50 focus:bg-white'}`}
       required={required}
     />
   </div>
 )
 
-const Select = ({ label, value, onChange, options, disabled = false }: any) => (
+const Select = ({ label, value, onChange, options, disabled = false, autoComplete = "off" }: any) => (
   <div className="space-y-1.5 flex-1 min-w-[200px]">
     <label className="text-xs font-bold text-slate-500 uppercase">{label}</label>
     <select 
       value={value || ''} 
       onChange={onChange} 
       disabled={disabled}
+      autoComplete={autoComplete}
       className={`w-full border border-slate-200 rounded-xl px-3 py-2 text-sm font-semibold text-slate-800 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all ${disabled ? 'bg-slate-100 opacity-60' : 'bg-slate-50 focus:bg-white cursor-pointer'}`}
     >
       <option value="">- Seleccionar -</option>
@@ -35,6 +38,7 @@ const Select = ({ label, value, onChange, options, disabled = false }: any) => (
 )
 
 export function WorkerProfileForm({ worker, childrenList = [], canManage = false }: { worker: any, childrenList?: any[], canManage?: boolean }) {
+  const router = useRouter()
   const [activeTab, setActiveTab] = useState<'laboral' | 'financial' | 'personal'>('laboral')
   const [isSaving, setIsSaving] = useState(false)
   
@@ -90,6 +94,7 @@ export function WorkerProfileForm({ worker, childrenList = [], canManage = false
     setIsSaving(false)
     if (result.success) {
       alert(result.message || "Perfil actualizado correctamente.")
+      router.refresh()
     } else {
       alert("Error crítico: " + (result.error || "No se pudo guardar la información."))
     }

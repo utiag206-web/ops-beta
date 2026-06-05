@@ -53,9 +53,7 @@ export default function CompanyProfilePage() {
     if (result.success) {
       setMessage({ type: 'success', text: 'Perfil de empresa actualizado correctamente.' })
       window.scrollTo({ top: 0, behavior: 'smooth' })
-      setTimeout(() => {
-        window.location.reload()
-      }, 1000)
+      router.refresh()
     } else {
       setMessage({ type: 'error', text: result.error || 'Error al actualizar.' })
     }
@@ -263,9 +261,7 @@ export default function CompanyProfilePage() {
                               if (res.success && res.url) {
                                 setFormData({ ...formData, logo_url: res.url })
                                 setMessage({ type: 'success', text: 'Logo actualizado correctamente.' })
-                                setTimeout(() => {
-                                  window.location.reload()
-                                }, 1000)
+                                router.refresh()
                               } else {
                                 setMessage({ type: 'error', text: res.error || 'Error al subir.' })
                               }

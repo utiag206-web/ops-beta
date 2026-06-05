@@ -121,7 +121,7 @@ export function CreateCompanyModal({ isOpen, onClose }: CreateCompanyModalProps)
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-8 space-y-8">
+        <form onSubmit={handleSubmit} className="p-8 space-y-8" autoComplete="off">
           {error && (
             <div className="bg-rose-50 border border-rose-100 text-rose-600 p-4 rounded-2xl text-sm font-bold flex items-center gap-3">
               <X size={18} className="shrink-0" />
@@ -140,6 +140,7 @@ export function CreateCompanyModal({ isOpen, onClose }: CreateCompanyModalProps)
                   placeholder="Ej: Constructora Horizonte SAC"
                   value={formData.name}
                   onChange={(e) => setFormData({...formData, name: e.target.value})}
+                  autoComplete="new-company-name"
                   className="w-full pl-12 pr-4 py-4 bg-slate-50 border-2 border-transparent focus:border-slate-900 focus:bg-white rounded-2xl text-sm font-bold transition-all outline-none"
                 />
               </div>
@@ -155,6 +156,7 @@ export function CreateCompanyModal({ isOpen, onClose }: CreateCompanyModalProps)
                   placeholder="Nombre completo"
                   value={formData.adminName}
                   onChange={(e) => setFormData({...formData, adminName: e.target.value})}
+                  autoComplete="new-admin-fullname"
                   className="w-full pl-12 pr-4 py-4 bg-slate-50 border-2 border-transparent focus:border-slate-900 focus:bg-white rounded-2xl text-sm font-bold transition-all outline-none"
                 />
               </div>
@@ -170,6 +172,7 @@ export function CreateCompanyModal({ isOpen, onClose }: CreateCompanyModalProps)
                   placeholder="admin@empresa.com"
                   value={formData.adminEmail}
                   onChange={(e) => setFormData({...formData, adminEmail: e.target.value})}
+                  autoComplete="new-admin-email"
                   className="w-full pl-12 pr-4 py-4 bg-slate-50 border-2 border-transparent focus:border-slate-900 focus:bg-white rounded-2xl text-sm font-bold transition-all outline-none"
                 />
               </div>
@@ -187,6 +190,7 @@ export function CreateCompanyModal({ isOpen, onClose }: CreateCompanyModalProps)
                   placeholder="••••••••••••"
                   value={formData.adminPassword}
                   onChange={(e) => setFormData({...formData, adminPassword: e.target.value})}
+                  autoComplete="new-admin-password"
                   className="w-full pl-12 pr-4 py-4 bg-slate-50 border-2 border-transparent focus:border-slate-900 focus:bg-white rounded-2xl text-sm font-bold transition-all outline-none"
                 />
               </div>
