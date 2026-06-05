@@ -297,7 +297,7 @@ function AddTrainingModal({ isOpen, onClose, workers, onSuccess }: any) {
                   required
                   type="text" 
                   value={formData.title.toUpperCase()}
-                  onChange={e => setFormData({...formData, title: e.target.value.toUpperCase()})}
+                  onChange={e => setFormData(prev => ({...prev, title: e.target.value.toUpperCase()}))}
                   placeholder="EJ: INDUCCIÓN GENERAL DE SEGURIDAD"
                   className="w-full px-6 md:px-8 py-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-indigo-500 font-bold text-slate-700 uppercase"
                 />
@@ -308,7 +308,7 @@ function AddTrainingModal({ isOpen, onClose, workers, onSuccess }: any) {
                 <input 
                   type="text" 
                   value={formData.trainer.toUpperCase()}
-                  onChange={e => setFormData({...formData, trainer: e.target.value.toUpperCase()})}
+                  onChange={e => setFormData(prev => ({...prev, trainer: e.target.value.toUpperCase()}))}
                   placeholder="EJ: JUAN PEREZ"
                   className="w-full px-6 md:px-8 py-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-indigo-500 font-bold text-slate-700 uppercase"
                 />
@@ -321,7 +321,7 @@ function AddTrainingModal({ isOpen, onClose, workers, onSuccess }: any) {
                     required
                     type="date" 
                     value={formData.date}
-                    onChange={e => setFormData({...formData, date: e.target.value})}
+                    onChange={e => setFormData(prev => ({...prev, date: e.target.value}))}
                     className="w-full px-6 md:px-8 py-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-indigo-500 font-bold text-slate-700"
                   />
                 </div>
@@ -330,7 +330,7 @@ function AddTrainingModal({ isOpen, onClose, workers, onSuccess }: any) {
                   <input 
                     type="date" 
                     value={formData.expiry_date}
-                    onChange={e => setFormData({...formData, expiry_date: e.target.value})}
+                    onChange={e => setFormData(prev => ({...prev, expiry_date: e.target.value}))}
                     className="w-full px-6 md:px-8 py-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-indigo-500 font-bold text-slate-700"
                   />
                 </div>
@@ -340,7 +340,7 @@ function AddTrainingModal({ isOpen, onClose, workers, onSuccess }: any) {
                 <label className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] ml-2">Descripción</label>
                 <textarea 
                   value={formData.description.toUpperCase()}
-                  onChange={e => setFormData({...formData, description: e.target.value.toUpperCase()})}
+                  onChange={e => setFormData(prev => ({...prev, description: e.target.value.toUpperCase()}))}
                   placeholder="DETALLES DEL CONTENIDO DEL CURSO..."
                   rows={4}
                   className="w-full px-6 md:px-8 py-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-indigo-500 font-bold text-slate-700 uppercase"

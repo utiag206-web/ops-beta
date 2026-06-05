@@ -334,7 +334,7 @@ function AddTalkModal({ isOpen, onClose, workers, onSuccess }: any) {
                   required
                   type="text" 
                   value={formData.topic.toUpperCase()}
-                  onChange={e => setFormData({...formData, topic: e.target.value.toUpperCase()})}
+                  onChange={e => setFormData(prev => ({...prev, topic: e.target.value.toUpperCase()}))}
                   placeholder="EJ: USO CORRECTO DE ARNÉS DE SEGURIDAD"
                   className="w-full px-6 md:px-8 py-4 md:py-5 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-emerald-500 font-bold text-slate-700 shadow-sm uppercase"
                 />
@@ -347,7 +347,7 @@ function AddTalkModal({ isOpen, onClose, workers, onSuccess }: any) {
                     required
                     type="date" 
                     value={formData.date}
-                    onChange={e => setFormData({...formData, date: e.target.value})}
+                    onChange={e => setFormData(prev => ({...prev, date: e.target.value}))}
                     className="w-full px-6 md:px-8 py-4 md:py-5 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-emerald-500 font-bold text-slate-700 shadow-sm"
                   />
                 </div>
@@ -356,7 +356,7 @@ function AddTalkModal({ isOpen, onClose, workers, onSuccess }: any) {
                   <input 
                     type="text" 
                     value={formData.location.toUpperCase()}
-                    onChange={e => setFormData({...formData, location: e.target.value.toUpperCase()})}
+                    onChange={e => setFormData(prev => ({...prev, location: e.target.value.toUpperCase()}))}
                     placeholder="EJ: TALLER NORTE"
                     className="w-full px-6 md:px-8 py-4 md:py-5 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-emerald-500 font-bold text-slate-700 shadow-sm uppercase"
                   />
@@ -368,7 +368,7 @@ function AddTalkModal({ isOpen, onClose, workers, onSuccess }: any) {
                   <label className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] ml-2">Área Asignada (Transversal)</label>
                   <select 
                     value={formData.target_area}
-                    onChange={e => setFormData({...formData, target_area: e.target.value})}
+                    onChange={e => setFormData(prev => ({...prev, target_area: e.target.value}))}
                     className="w-full px-6 md:px-8 py-4 md:py-5 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-emerald-500 font-bold text-slate-700 shadow-sm"
                   >
                     <option value="">Todas las áreas</option>
@@ -383,7 +383,7 @@ function AddTalkModal({ isOpen, onClose, workers, onSuccess }: any) {
                   <input 
                     type="url" 
                     value={formData.material_url}
-                    onChange={e => setFormData({...formData, material_url: e.target.value})}
+                    onChange={e => setFormData(prev => ({...prev, material_url: e.target.value}))}
                     placeholder="https://docs.google.com/..."
                     className="w-full px-6 md:px-8 py-4 md:py-5 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-emerald-500 font-bold text-slate-700 shadow-sm"
                   />

@@ -42,7 +42,7 @@ export function AttendanceMarker({ initialStatus }: AttendanceMarkerProps) {
     try {
       const result = await checkOut()
       if (result.success) {
-        setStatus({ ...status, check_out: new Date().toLocaleTimeString('en-GB') })
+        setStatus((prev: any) => ({ ...prev, check_out: new Date().toLocaleTimeString('en-GB') }))
       } else {
         setError(result.error ?? null)
       }

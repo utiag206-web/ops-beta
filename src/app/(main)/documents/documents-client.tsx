@@ -117,7 +117,7 @@ export default function DocumentsClient({ initialDocuments, workers, userRole }:
             <div className="space-y-2">
               <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Trabajador</label>
               <select required className="w-full bg-slate-50 border-2 border-slate-100 rounded-xl p-3 font-bold outline-none focus:border-blue-600 text-slate-800"
-                value={formData.worker_id} onChange={e => setFormData({...formData, worker_id: e.target.value})}>
+                value={formData.worker_id} onChange={e => setFormData(prev => ({...prev, worker_id: e.target.value}))}>
                 <option value="">Seleccionar...</option>
                 {workers.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
               </select>
@@ -125,12 +125,12 @@ export default function DocumentsClient({ initialDocuments, workers, userRole }:
             <div className="space-y-2">
               <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Nombre del Documento</label>
               <input type="text" required placeholder="Ej. EMO 2026" className="w-full bg-slate-50 border-2 border-slate-100 rounded-xl p-3 font-bold outline-none focus:border-blue-600 text-slate-800"
-                value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} />
+                value={formData.name} onChange={e => setFormData(prev => ({...prev, name: e.target.value}))} />
             </div>
             <div className="space-y-2">
               <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Tipo</label>
               <select required className="w-full bg-slate-50 border-2 border-slate-100 rounded-xl p-3 font-bold outline-none focus:border-blue-600 text-slate-800"
-                value={formData.file_type} onChange={e => setFormData({...formData, file_type: e.target.value})}>
+                value={formData.file_type} onChange={e => setFormData(prev => ({...prev, file_type: e.target.value}))}>
                 <option value="">Seleccionar...</option>
                 <option value="emo">Examen Médico (EMO)</option>
                 <option value="licencia">Licencia de Conducir</option>
@@ -144,7 +144,7 @@ export default function DocumentsClient({ initialDocuments, workers, userRole }:
             <div className="space-y-2">
               <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Vencimiento</label>
               <input type="date" required className="w-full bg-slate-50 border-2 border-slate-100 rounded-xl p-3 font-bold outline-none focus:border-blue-600 text-slate-800"
-                value={formData.expiry_date} onChange={e => setFormData({...formData, expiry_date: e.target.value})} />
+                value={formData.expiry_date} onChange={e => setFormData(prev => ({...prev, expiry_date: e.target.value}))} />
             </div>
             <div className="space-y-2">
               <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Archivo (Opcional)</label>

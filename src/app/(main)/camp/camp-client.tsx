@@ -162,22 +162,22 @@ export default function CampClient({ initialRooms, workers, userRole, userArea }
             <div className="space-y-2">
               <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Módulo</label>
               <input type="text" required placeholder="Ej. B-01" className="w-full bg-slate-50 border-2 border-slate-100 rounded-xl p-3 font-bold outline-none focus:border-blue-600 text-slate-800"
-                value={formData.module} onChange={e => setFormData({...formData, module: e.target.value})} />
+                value={formData.module} onChange={e => setFormData(prev => ({...prev, module: e.target.value}))} />
             </div>
             <div className="space-y-2">
               <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Habitación</label>
               <input type="text" required placeholder="Hab. 104" className="w-full bg-slate-50 border-2 border-slate-100 rounded-xl p-3 font-bold outline-none focus:border-blue-600 text-slate-800"
-                value={formData.room_number} onChange={e => setFormData({...formData, room_number: e.target.value})} />
+                value={formData.room_number} onChange={e => setFormData(prev => ({...prev, room_number: e.target.value}))} />
             </div>
             <div className="space-y-2">
               <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Cama</label>
               <input type="text" required placeholder="Cama A" className="w-full bg-slate-50 border-2 border-slate-100 rounded-xl p-3 font-bold outline-none focus:border-blue-600 text-slate-800"
-                value={formData.bed_number} onChange={e => setFormData({...formData, bed_number: e.target.value})} />
+                value={formData.bed_number} onChange={e => setFormData(prev => ({...prev, bed_number: e.target.value}))} />
             </div>
             <div className="space-y-2">
               <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Trabajador</label>
               <select className="w-full bg-slate-50 border-2 border-slate-100 rounded-xl p-3 font-bold outline-none focus:border-blue-600 text-slate-800"
-                value={formData.worker_id || ''} onChange={e => setFormData({...formData, worker_id: e.target.value || null})}>
+                value={formData.worker_id || ''} onChange={e => setFormData(prev => ({...prev, worker_id: e.target.value || null}))}>
                 <option value="">Disponible / Libre</option>
                 {workers.map(w => <option key={w.id} value={w.id}>{w.name} {w.last_name}</option>)}
               </select>

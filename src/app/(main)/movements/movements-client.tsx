@@ -300,7 +300,7 @@ export default function MovementsClient({ initialMovements, workers, userRole }:
                     disabled={!!editingItem}
                     className="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl p-4 font-bold outline-none focus:border-blue-600 transition-all disabled:opacity-60"
                     value={formData.worker_id}
-                    onChange={e => setFormData({...formData, worker_id: e.target.value})}
+                    onChange={e => setFormData(prev => ({...prev, worker_id: e.target.value}))}
                   >
                     <option value="">Seleccionar trabajador...</option>
                     {workers.map(w => (
@@ -316,7 +316,7 @@ export default function MovementsClient({ initialMovements, workers, userRole }:
                   <div className="grid grid-cols-2 gap-3">
                     <button 
                       type="button"
-                      onClick={() => setFormData({...formData, type: 'subida'})}
+                      onClick={() => setFormData(prev => ({...prev, type: 'subida'}))}
                       className={`py-4 rounded-2xl font-black text-xs transition-all border-2 ${
                         formData.type === 'subida' 
                           ? 'bg-blue-600 border-blue-600 text-white shadow-lg shadow-blue-200' 
@@ -327,7 +327,7 @@ export default function MovementsClient({ initialMovements, workers, userRole }:
                     </button>
                     <button 
                       type="button"
-                      onClick={() => setFormData({...formData, type: 'bajada'})}
+                      onClick={() => setFormData(prev => ({...prev, type: 'bajada'}))}
                       className={`py-4 rounded-2xl font-black text-xs transition-all border-2 ${
                         formData.type === 'bajada' 
                           ? 'bg-slate-900 border-slate-900 text-white shadow-lg shadow-slate-200' 
@@ -348,7 +348,7 @@ export default function MovementsClient({ initialMovements, workers, userRole }:
                     required
                     className="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl p-4 font-bold outline-none focus:border-blue-600 transition-all"
                     value={formData.date}
-                    onChange={e => setFormData({...formData, date: e.target.value})}
+                    onChange={e => setFormData(prev => ({...prev, date: e.target.value}))}
                   />
                 </div>
 
@@ -361,7 +361,7 @@ export default function MovementsClient({ initialMovements, workers, userRole }:
                     placeholder="Ej: Campamento Central"
                     className="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl p-4 font-bold outline-none focus:border-blue-600 transition-all"
                     value={formData.location}
-                    onChange={e => setFormData({...formData, location: e.target.value})}
+                    onChange={e => setFormData(prev => ({...prev, location: e.target.value}))}
                   />
                 </div>
               </div>
@@ -375,7 +375,7 @@ export default function MovementsClient({ initialMovements, workers, userRole }:
                   rows={3}
                   className="w-full bg-slate-50 border-2 border-slate-100 rounded-3xl p-6 font-bold outline-none focus:border-blue-600 transition-all resize-none"
                   value={formData.observations}
-                  onChange={e => setFormData({...formData, observations: e.target.value})}
+                  onChange={e => setFormData(prev => ({...prev, observations: e.target.value}))}
                 />
               </div>
 

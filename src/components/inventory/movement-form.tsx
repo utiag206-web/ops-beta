@@ -325,7 +325,7 @@ export function MovementForm({ isOpen, onClose, onSuccess, products }: MovementF
                           : t.effect?.toUpperCase() === mode.id
                       );
                       if (mt) {
-                        setForm({...form, movement_type_id: mt.id, outbound_type: mode.id === 'BOTH' ? 'INTERNAL' : 'EXTERNAL'});
+                        setForm(prev => ({...prev, movement_type_id: mt.id, outbound_type: mode.id === 'BOTH' ? 'INTERNAL' : 'EXTERNAL'}));
                       } else {
                         toast.error(`El tipo de movimiento ${mode.label} no existe.`)
                       }
@@ -351,7 +351,7 @@ export function MovementForm({ isOpen, onClose, onSuccess, products }: MovementF
                   required
                   className="w-full bg-slate-50 border-2 border-transparent focus:border-indigo-500 rounded-2xl p-4 text-sm font-bold transition-all shadow-sm outline-none"
                   value={form.warehouse_id}
-                  onChange={e => setForm({...form, warehouse_id: e.target.value})}
+                  onChange={e => setForm(prev => ({...prev, warehouse_id: e.target.value}))}
                 >
                   <option value="">Almacén...</option>
                   {sourceWarehouses.map(w => (
@@ -370,8 +370,8 @@ export function MovementForm({ isOpen, onClose, onSuccess, products }: MovementF
                   onChange={e => {
                     const code = e.target.value.trim().toLowerCase()
                     const found = products.find(p => p.code.toLowerCase() === code)
-                    if (found) setForm({...form, product_id: found.id})
-                    else if (code === '') setForm({...form, product_id: ''})
+                    if (found) setForm(prev => ({...prev, product_id: found.id}))
+                    else if (code === '') setForm(prev => ({...prev, product_id: ''}))
                   }}
                 />
               </div>
@@ -390,7 +390,7 @@ export function MovementForm({ isOpen, onClose, onSuccess, products }: MovementF
                     required
                     className="w-full bg-slate-50 border-2 border-transparent focus:border-indigo-500 rounded-2xl p-4 text-sm font-bold transition-all outline-none"
                     value={form.product_id}
-                    onChange={e => setForm({...form, product_id: e.target.value})}
+                    onChange={e => setForm(prev => ({...prev, product_id: e.target.value}))}
                   >
                     <option value="">Selección de producto ({slicedProducts.length} de {filteredProducts.length})...</option>
                     {slicedProducts.map(p => (
@@ -415,7 +415,7 @@ export function MovementForm({ isOpen, onClose, onSuccess, products }: MovementF
                           type="number"
                           className="w-full bg-white border-2 border-transparent focus:border-emerald-500 rounded-2xl p-4 text-lg font-black outline-none shadow-sm"
                           value={form.quantity || ''}
-                          onChange={e => setForm({...form, quantity: Number(e.target.value)})}
+                          onChange={e => setForm(prev => ({...prev, quantity: Number(e.target.value)}))}
                         />
                         <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-black text-slate-300 uppercase tracking-widest">
                           {selectedProduct?.unit || 'UND'}
@@ -427,7 +427,7 @@ export function MovementForm({ isOpen, onClose, onSuccess, products }: MovementF
                       <select 
                         className="w-full bg-white border-2 border-transparent focus:border-emerald-500 rounded-2xl p-4 text-sm font-bold outline-none shadow-sm"
                         value={form.invoice_type}
-                        onChange={e => setForm({...form, invoice_type: e.target.value})}
+                        onChange={e => setForm(prev => ({...prev, invoice_type: e.target.value}))}
                       >
                         <option value="GUIA">GUÍA DE REMISIÓN</option>
                         <option value="FACTURA">FACTURA</option>
@@ -450,7 +450,7 @@ export function MovementForm({ isOpen, onClose, onSuccess, products }: MovementF
                           type="number"
                           className="w-full bg-white border-2 border-transparent focus:border-rose-500 rounded-2xl p-4 text-lg font-black outline-none shadow-sm"
                           value={form.quantity || ''}
-                          onChange={e => setForm({...form, quantity: Number(e.target.value)})}
+                          onChange={e => setForm(prev => ({...prev, quantity: Number(e.target.value)}))}
                         />
                         <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-black text-slate-300 uppercase tracking-widest">
                           {selectedProduct?.unit || 'UND'}
@@ -464,7 +464,7 @@ export function MovementForm({ isOpen, onClose, onSuccess, products }: MovementF
                         placeholder="Nombre completo..."
                         className="w-full bg-white border-2 border-transparent focus:border-rose-500 rounded-2xl p-4 text-sm font-bold outline-none shadow-sm"
                         value={form.responsible_name.toUpperCase()}
-                        onChange={e => setForm({...form, responsible_name: e.target.value.toUpperCase()})}
+                        onChange={e => setForm(prev => ({...prev, responsible_name: e.target.value.toUpperCase()}))}
                       />
                     </div>
                   </div>
@@ -481,7 +481,7 @@ export function MovementForm({ isOpen, onClose, onSuccess, products }: MovementF
                         type="number"
                         className="w-full bg-white border-2 border-transparent focus:border-indigo-500 rounded-2xl p-4 text-lg font-black outline-none shadow-sm"
                         value={form.quantity || ''}
-                        onChange={e => setForm({...form, quantity: Number(e.target.value)})}
+                        onChange={e => setForm(prev => ({...prev, quantity: Number(e.target.value)}))}
                       />
                     </div>
                     <div className="space-y-1.5">
@@ -490,7 +490,7 @@ export function MovementForm({ isOpen, onClose, onSuccess, products }: MovementF
                         required
                         className="w-full bg-white border-2 border-indigo-100 focus:border-indigo-500 rounded-2xl p-4 text-sm font-bold outline-none shadow-sm"
                         value={form.target_warehouse_id}
-                        onChange={e => setForm({...form, target_warehouse_id: e.target.value})}
+                        onChange={e => setForm(prev => ({...prev, target_warehouse_id: e.target.value}))}
                       >
                         <option value="">Seleccionar destino...</option>
                         {warehouses.map(w => (
@@ -548,7 +548,7 @@ export function MovementForm({ isOpen, onClose, onSuccess, products }: MovementF
                           placeholder="0"
                           className="w-full bg-white border-2 border-transparent focus:border-amber-500 rounded-2xl p-4 text-xl font-black outline-none shadow-sm text-center"
                           value={form.quantity || ''}
-                          onChange={e => setForm({...form, quantity: Math.abs(Number(e.target.value))})}
+                          onChange={e => setForm(prev => ({...prev, quantity: Math.abs(Number(e.target.value))}))}
                         />
                         <span className={`absolute left-4 top-1/2 -translate-y-1/2 font-black text-xl ${adjType === 'plus' ? 'text-emerald-500' : 'text-rose-500'}`}>
                           {adjType === 'plus' ? '+' : '-'}
@@ -562,7 +562,7 @@ export function MovementForm({ isOpen, onClose, onSuccess, products }: MovementF
                         placeholder="Ej: Inventario cíclico..."
                         className="w-full bg-white border-2 border-transparent focus:border-amber-500 rounded-2xl p-4 text-sm font-bold outline-none shadow-sm"
                         value={form.reference.toUpperCase()}
-                        onChange={e => setForm({...form, reference: e.target.value.toUpperCase()})}
+                        onChange={e => setForm(prev => ({...prev, reference: e.target.value.toUpperCase()}))}
                       />
                     </div>
                   </div>
@@ -578,7 +578,7 @@ export function MovementForm({ isOpen, onClose, onSuccess, products }: MovementF
                     placeholder="Ej: F001-000123"
                     className="w-full bg-white border-2 border-transparent focus:border-indigo-500 rounded-2xl p-4 text-sm font-bold outline-none shadow-sm uppercase"
                     value={form.invoice_number.toUpperCase()}
-                    onChange={e => setForm({...form, invoice_number: e.target.value.toUpperCase()})}
+                    onChange={e => setForm(prev => ({...prev, invoice_number: e.target.value.toUpperCase()}))}
                   />
                 </div>
                 <div className="space-y-1.5">
@@ -587,7 +587,7 @@ export function MovementForm({ isOpen, onClose, onSuccess, products }: MovementF
                     placeholder="Detalles adicionales..."
                     className="w-full bg-white border-2 border-transparent focus:border-indigo-500 rounded-2xl p-4 text-sm font-bold outline-none shadow-sm"
                     value={form.observation.toUpperCase()}
-                    onChange={e => setForm({...form, observation: e.target.value.toUpperCase()})}
+                    onChange={e => setForm(prev => ({...prev, observation: e.target.value.toUpperCase()}))}
                   />
                 </div>
               </div>

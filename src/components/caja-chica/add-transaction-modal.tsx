@@ -120,7 +120,7 @@ export function AddTransactionModal({ isOpen, onClose, onSuccess, area, initialD
       )
 
       if (result.success && result.urls?.[0]) {
-        setFormData({ ...formData, voucher_url: result.urls[0] })
+        setFormData(prev => ({ ...prev, voucher_url: result.urls[0] }))
         toast.success('Comprobante subido correctamente')
       } else {
         throw new Error(result.error || 'No se obtuvo la URL pública')
@@ -200,7 +200,7 @@ export function AddTransactionModal({ isOpen, onClose, onSuccess, area, initialD
           <div className="grid grid-cols-2 gap-4 p-1.5 bg-slate-100 rounded-2xl border border-slate-200">
             <button
               type="button"
-              onClick={() => setFormData({...formData, type: 'ingreso'})}
+              onClick={() => setFormData(prev => ({...prev, type: 'ingreso'}))}
               className={`flex items-center justify-center gap-3 py-3.5 rounded-xl font-bold text-[11px] uppercase tracking-widest transition-all ${
                 formData.type === 'ingreso' 
                 ? 'bg-emerald-500 text-white shadow-lg' 
@@ -211,7 +211,7 @@ export function AddTransactionModal({ isOpen, onClose, onSuccess, area, initialD
             </button>
             <button
               type="button"
-              onClick={() => setFormData({...formData, type: 'egreso'})}
+              onClick={() => setFormData(prev => ({...prev, type: 'egreso'}))}
               className={`flex items-center justify-center gap-3 py-3.5 rounded-xl font-bold text-[11px] uppercase tracking-widest transition-all ${
                 formData.type === 'egreso' 
                 ? 'bg-rose-500 text-white shadow-lg' 
@@ -231,7 +231,7 @@ export function AddTransactionModal({ isOpen, onClose, onSuccess, area, initialD
               <select 
                 required
                 value={formData.category}
-                onChange={e => setFormData({...formData, category: e.target.value})}
+                onChange={e => setFormData(prev => ({...prev, category: e.target.value}))}
                 className="w-full px-4 py-4 bg-slate-50 border-transparent focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 rounded-2xl text-sm font-bold text-slate-700 transition-all outline-none appearance-none cursor-pointer"
               >
                 {CATEGORIES.filter(c => {
@@ -256,7 +256,7 @@ export function AddTransactionModal({ isOpen, onClose, onSuccess, area, initialD
                 type="date"
                 required
                 value={formData.date}
-                onChange={e => setFormData({...formData, date: e.target.value})}
+                onChange={e => setFormData(prev => ({...prev, date: e.target.value}))}
                 className="w-full px-4 py-4 bg-slate-50 border-transparent focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 rounded-2xl text-sm font-bold text-slate-700 transition-all outline-none"
               />
             </div>
@@ -294,7 +294,7 @@ export function AddTransactionModal({ isOpen, onClose, onSuccess, area, initialD
               required
               placeholder="Ej: Insumos para almuerzo"
               value={formData.reason}
-              onChange={e => setFormData({...formData, reason: e.target.value})}
+              onChange={e => setFormData(prev => ({...prev, reason: e.target.value}))}
               className="w-full px-4 py-4 bg-slate-50 border-transparent focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 rounded-2xl text-sm font-bold text-slate-700 transition-all outline-none"
             />
           </div>
@@ -311,7 +311,7 @@ export function AddTransactionModal({ isOpen, onClose, onSuccess, area, initialD
                 required
                 placeholder="0.00"
                 value={formData.amount}
-                onChange={e => setFormData({...formData, amount: e.target.value})}
+                onChange={e => setFormData(prev => ({...prev, amount: e.target.value}))}
                 className="w-full px-4 py-4 bg-emerald-50/50 border-transparent focus:bg-white focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 rounded-2xl text-xl font-black text-slate-800 transition-all outline-none"
               />
             </div>
@@ -325,7 +325,7 @@ export function AddTransactionModal({ isOpen, onClose, onSuccess, area, initialD
                 type="text"
                 placeholder="01234..."
                 value={formData.operation_number}
-                onChange={e => setFormData({...formData, operation_number: e.target.value})}
+                onChange={e => setFormData(prev => ({...prev, operation_number: e.target.value}))}
                 className="w-full px-4 py-4 bg-slate-50 border-transparent focus:bg-white focus:border-slate-500 rounded-2xl text-sm font-bold text-slate-700 transition-all outline-none"
               />
             </div>
@@ -343,7 +343,7 @@ export function AddTransactionModal({ isOpen, onClose, onSuccess, area, initialD
                 <button
                   key={m.id}
                   type="button"
-                  onClick={() => setFormData({...formData, payment_method: m.id as any})}
+                  onClick={() => setFormData(prev => ({...prev, payment_method: m.id as any}))}
                   className={`flex flex-col items-center gap-2 py-4 rounded-2xl border transition-all ${
                     formData.payment_method === m.id 
                     ? 'bg-slate-900 border-slate-900 text-white shadow-lg' 

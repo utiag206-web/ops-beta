@@ -110,7 +110,7 @@ export function StockForm({ isOpen, onClose, onSuccess, products, editingItem }:
                 required
                 className="w-full bg-slate-50 border-2 border-transparent focus:border-emerald-500 focus:bg-white rounded-2xl p-4 text-sm font-bold transition-all outline-none appearance-none"
                 value={form.product_id}
-                onChange={e => setForm({...form, product_id: e.target.value})}
+                onChange={e => setForm(prev => ({...prev, product_id: e.target.value}))}
               >
                 <option value="">Seleccionar producto...</option>
                 {products.map(p => (
@@ -130,7 +130,7 @@ export function StockForm({ isOpen, onClose, onSuccess, products, editingItem }:
                     if (e.target.value === 'new_warehouse') {
                       setIsWarehouseModalOpen(true)
                     } else {
-                      setForm({...form, warehouse_id: e.target.value})
+                      setForm(prev => ({...prev, warehouse_id: e.target.value}))
                     }
                   }}
                 >
@@ -151,7 +151,7 @@ export function StockForm({ isOpen, onClose, onSuccess, products, editingItem }:
                   min="0"
                   className="w-full bg-slate-50 border-2 border-transparent focus:border-emerald-500 focus:bg-white rounded-2xl p-4 text-sm font-bold transition-all outline-none"
                   value={form.quantity}
-                  onChange={e => setForm({...form, quantity: Number(e.target.value)})}
+                  onChange={e => setForm(prev => ({...prev, quantity: Number(e.target.value)}))}
                 />
               </div>
             </div>
