@@ -6,9 +6,9 @@ import { createAdminClient } from './supabase/server'
  */
 export async function bootstrapCompany(companyId: string) {
   const supabase = await createAdminClient()
-  console.log(`[BOOTSTRAP] 🚀 Initializing data for company: ${companyId}`)
+  console.log(`[BOOTSTRAP] 🚀 Programmatically initializing data for company: ${companyId}`)
 
-  // 1. Movement Types
+  // 1. Movement Types Defaults
   const movementDefaults = [
     { company_id: companyId, name: 'Ingreso Almacén', code: 'ING', effect: 'IN' },
     { company_id: companyId, name: 'Salida Consumo', code: 'SAL', effect: 'OUT' },
@@ -17,48 +17,61 @@ export async function bootstrapCompany(companyId: string) {
     { company_id: companyId, name: 'Consumo Operativo Simulado', code: 'OPS_OUT_SIM', effect: 'OUT' }
   ]
 
-  // 2. Warehouses
+  // 2. Warehouses Defaults
   const warehouseDefaults = [
     { company_id: companyId, name: 'Almacén General', code: 'GEN' },
     { company_id: companyId, name: 'Almacén Cocina', code: 'COC', area: 'COCINA' }
   ]
 
-  // 3. Categories
-  const categoryDefaults = [
-    { company_id: companyId, name: 'EPP', description: 'Equipos de Protección Personal' },
-    { company_id: companyId, name: 'Herramientas', description: 'Herramientas y Equipos' },
-    { company_id: companyId, name: 'Insumos', description: 'Insumos generales' },
-    { company_id: companyId, name: 'Cocina', description: 'Insumos para cocina' }
-  ]
-
-  // 4. Units
-  const unitDefaults = [
-    { company_id: companyId, name: 'Unidad', abbreviation: 'UND' },
-    { company_id: companyId, name: 'Paquete', abbreviation: 'PQT' },
-    { company_id: companyId, name: 'Caja', abbreviation: 'CJ' },
-    { company_id: companyId, name: 'Kilogramo', abbreviation: 'KG' }
-  ]
-
-  // 5. SOMA Defaults
+  // 3. SOMA Defaults (Note: description column does not exist in soma_talks)
   const somaDefaults = [
-    { company_id: companyId, topic: 'Inducción de Seguridad', description: 'Capacitación inicial' },
-    { company_id: companyId, topic: 'Primeros Auxilios', description: 'Atención de emergencias' }
+    { company_id: companyId, topic: 'Inducción de Seguridad' },
+    { company_id: companyId, topic: 'Primeros Auxilios' }
   ]
 
   try {
-    const results = await Promise.all([
-      supabase.from('movement_types').upsert(movementDefaults, { onConflict: 'company_id, code' }),
-      supabase.from('warehouses').upsert(warehouseDefaults, { onConflict: 'company_id, code' }),
-      supabase.from('categories').upsert(categoryDefaults, { onConflict: 'company_id, name' }),
-      supabase.from('units').upsert(unitDefaults, { onConflict: 'company_id, abbreviation' }),
-      supabase.from('soma_talks').upsert(somaDefaults, { onConflict: 'company_id, topic' })
-    ])
+    // A. Programmatically Seed Movement Types
+    const { data: existingTypes, error: typesFetchErr } = await supabase
+      .from('movement_types')
+      .select('code')
+      .eq('company_id', companyId)
+    
+    if (typesFetchErr) console.warn('[BOOTSTRAP_WARN] Failed to fetch existing movement types:', typesFetchErr.message)
+    const existingCodes = new Set((existingTypes || []).map((t: any) => t.code))
+    const typesToInsert = movementDefaults.filter(t => !existingCodes.has(t.code))
+    if (typesToInsert.length > 0) {
+      const { error: insertErr } = await supabase.from('movement_types').insert(typesToInsert)
+      if (insertErr) console.warn('[BOOTSTRAP_WARN] Failed to insert default movement types:', insertErr.message)
+    }
 
-    results.forEach((res, idx) => {
-      if (res.error) {
-        console.warn(`[BOOTSTRAP_WARN] Step ${idx} failed: ${res.error.message}`)
-      }
-    })
+    // B. Programmatically Seed Warehouses
+    const { data: existingWh, error: whFetchErr } = await supabase
+      .from('warehouses')
+      .select('code, name')
+      .eq('company_id', companyId)
+    
+    if (whFetchErr) console.warn('[BOOTSTRAP_WARN] Failed to fetch existing warehouses:', whFetchErr.message)
+    const existingWhCodes = new Set((existingWh || []).map((w: any) => w.code))
+    const existingWhNames = new Set((existingWh || []).map((w: any) => w.name.toLowerCase()))
+    const whToInsert = warehouseDefaults.filter(w => !existingWhCodes.has(w.code) && !existingWhNames.has(w.name.toLowerCase()))
+    if (whToInsert.length > 0) {
+      const { error: insertErr } = await supabase.from('warehouses').insert(whToInsert)
+      if (insertErr) console.warn('[BOOTSTRAP_WARN] Failed to insert default warehouses:', insertErr.message)
+    }
+
+    // C. Programmatically Seed SOMA Talks
+    const { data: existingSoma, error: somaFetchErr } = await supabase
+      .from('soma_talks')
+      .select('topic')
+      .eq('company_id', companyId)
+    
+    if (somaFetchErr) console.warn('[BOOTSTRAP_WARN] Failed to fetch existing SOMA talks:', somaFetchErr.message)
+    const existingTopics = new Set((existingSoma || []).map((s: any) => s.topic.toLowerCase()))
+    const somaToInsert = somaDefaults.filter(s => !existingTopics.has(s.topic.toLowerCase()))
+    if (somaToInsert.length > 0) {
+      const { error: insertErr } = await supabase.from('soma_talks').insert(somaToInsert)
+      if (insertErr) console.warn('[BOOTSTRAP_WARN] Failed to insert default SOMA talks:', insertErr.message)
+    }
 
     return { success: true }
   } catch (error: any) {
@@ -66,3 +79,4 @@ export async function bootstrapCompany(companyId: string) {
     return { success: false, error: error.message }
   }
 }
+
