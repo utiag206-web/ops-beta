@@ -115,7 +115,7 @@ export default function CompanyProfilePage() {
                     required
                     type="text"
                     value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
                     className="w-full bg-slate-50 border-2 border-slate-100 focus:border-blue-600 focus:bg-white rounded-2xl p-4 text-slate-800 font-bold transition-all outline-none text-base placeholder:text-slate-300"
                     placeholder="Ej. Corporación Inthaly S.A.C."
                   />
@@ -125,7 +125,7 @@ export default function CompanyProfilePage() {
                   <input
                     type="text"
                     value={formData.tax_id}
-                    onChange={(e) => setFormData({ ...formData, tax_id: e.target.value })}
+                    onChange={(e) => setFormData(prev => ({ ...prev, tax_id: e.target.value }))}
                     className="w-full bg-slate-50 border-2 border-slate-100 focus:border-blue-600 focus:bg-white rounded-2xl p-4 text-slate-800 font-bold transition-all outline-none text-base placeholder:text-slate-300"
                     placeholder="20123456789"
                   />
@@ -140,7 +140,7 @@ export default function CompanyProfilePage() {
                     required
                     type="text"
                     value={formData.address}
-                    onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                    onChange={(e) => setFormData(prev => ({ ...prev, address: e.target.value }))}
                     className="w-full bg-slate-50 border-2 border-slate-100 focus:border-blue-600 focus:bg-white rounded-2xl py-4 pr-4 pl-12 text-slate-800 font-bold transition-all outline-none text-base placeholder:text-slate-300"
                     placeholder="Av. Javier Prado Este 1234, San Isidro, Lima"
                   />
@@ -154,7 +154,7 @@ export default function CompanyProfilePage() {
                     required
                     type="email"
                     value={formData.contact_email}
-                    onChange={(e) => setFormData({ ...formData, contact_email: e.target.value })}
+                    onChange={(e) => setFormData(prev => ({ ...prev, contact_email: e.target.value }))}
                     className="w-full bg-slate-50 border-2 border-slate-100 focus:border-blue-600 focus:bg-white rounded-2xl p-4 text-slate-800 font-bold transition-all outline-none text-base placeholder:text-slate-300"
                     placeholder="contacto@empresa.com"
                   />
@@ -165,7 +165,7 @@ export default function CompanyProfilePage() {
                     required
                     type="tel"
                     value={formData.phone}
-                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                    onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
                     className="w-full bg-slate-50 border-2 border-slate-100 focus:border-blue-600 focus:bg-white rounded-2xl p-4 text-slate-800 font-bold transition-all outline-none text-base placeholder:text-slate-300"
                     placeholder="+51 987 654 321"
                   />
@@ -192,7 +192,7 @@ export default function CompanyProfilePage() {
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">Sector / Industria</label>
                   <select
                     value={formData.industry}
-                    onChange={(e) => setFormData({ ...formData, industry: e.target.value })}
+                    onChange={(e) => setFormData(prev => ({ ...prev, industry: e.target.value }))}
                     className="w-full bg-slate-50 border-2 border-slate-100 focus:border-blue-600 focus:bg-white rounded-2xl p-4 text-slate-800 font-bold transition-all outline-none text-base"
                   >
                     <option value="">Seleccionar...</option>
@@ -207,7 +207,7 @@ export default function CompanyProfilePage() {
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">Zona Horaria</label>
                   <select
                     value={formData.timezone}
-                    onChange={(e) => setFormData({ ...formData, timezone: e.target.value })}
+                    onChange={(e) => setFormData(prev => ({ ...prev, timezone: e.target.value }))}
                     className="w-full bg-slate-50 border-2 border-slate-100 focus:border-blue-600 focus:bg-white rounded-2xl p-4 text-slate-800 font-bold transition-all outline-none text-base"
                   >
                     <option value="UTC-5">Perú, Colombia (UTC-5)</option>
@@ -222,7 +222,7 @@ export default function CompanyProfilePage() {
                 <input
                   type="text"
                   value={formData.working_hours}
-                  onChange={(e) => setFormData({ ...formData, working_hours: e.target.value })}
+                  onChange={(e) => setFormData(prev => ({ ...prev, working_hours: e.target.value }))}
                   className="w-full bg-slate-50 border-2 border-slate-100 focus:border-blue-600 focus:bg-white rounded-2xl p-4 text-slate-800 font-bold transition-all outline-none text-base placeholder:text-slate-300"
                   placeholder="Ej. Lunes a Viernes 08:30 - 18:00"
                 />
@@ -259,7 +259,7 @@ export default function CompanyProfilePage() {
                               upData.append('file', file)
                               const res = await uploadCompanyLogo(upData)
                               if (res.success && res.url) {
-                                setFormData({ ...formData, logo_url: res.url })
+                                setFormData(prev => ({ ...prev, logo_url: res.url }))
                                 setMessage({ type: 'success', text: 'Logo actualizado correctamente.' })
                                 router.refresh()
                               } else {
@@ -273,7 +273,7 @@ export default function CompanyProfilePage() {
                       {formData.logo_url && (
                         <button 
                           type="button"
-                          onClick={() => setFormData({ ...formData, logo_url: '' })}
+                          onClick={() => setFormData(prev => ({ ...prev, logo_url: '' }))}
                           className="bg-rose-50 hover:bg-rose-100 border-2 border-rose-100 text-rose-600 px-5 py-2.5 rounded-xl text-xs font-black transition-all"
                         >
                           Eliminar

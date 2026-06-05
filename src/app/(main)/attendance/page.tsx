@@ -1,12 +1,16 @@
 import { getAttendance } from './actions'
 import { AttendanceList } from '@/components/attendance/attendance-list'
+import { getStrictCompanyId } from '@/lib/auth'
+import { getCompanyTimezone, getCompanyLocalTime } from '@/lib/date-utils'
 
 export const dynamic = 'force-dynamic'
 import { Calendar, Search, Filter } from 'lucide-react'
 
 export default async function AttendancePage() {
   const records = await getAttendance()
-  const today = new Date().toLocaleDateString('sv-SE')
+  const companyId = await getStrictCompanyId()
+  const ianaTimezone = await getCompanyTimezone(companyId)
+  const { date: today } = getCompanyLocalTime(ianaTimezone)
   const todayRecords = records.filter((r: any) => r.date === today)
 
   return (

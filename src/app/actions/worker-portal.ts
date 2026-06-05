@@ -4,6 +4,7 @@ import { cookies } from 'next/headers'
 import { createAdminClient } from '@/lib/supabase/server'
 import { getWorkerSession } from './worker-auth'
 import { revalidatePath } from 'next/cache'
+import { getCompanyTimezone, getCompanyLocalTime } from '@/lib/date-utils'
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -68,7 +69,8 @@ export async function getWorkerPortalStats() {
 
     const { workerId, companyId } = session
     const supabase = await createAdminClient()
-    const today = new Date().toLocaleDateString('sv-SE')
+    const ianaTimezone = await getCompanyTimezone(companyId)
+    const { date: today } = getCompanyLocalTime(ianaTimezone)
 
     // Fetch stats concurrently
     const [att, ppe, docs, bns, trns, nextT, nextS] = await Promise.all([
@@ -136,10 +138,8 @@ export async function checkInWorker() {
 
     const { workerId, companyId, companySlug } = session
     const supabase = await createAdminClient()
-    const today = new Date().toLocaleDateString('sv-SE')
-    
-    // We use a clean 24h format for local time
-    const now = new Date().toLocaleTimeString('en-GB') // HH:MM:SS
+    const ianaTimezone = await getCompanyTimezone(companyId)
+    const { date: today, time: now } = getCompanyLocalTime(ianaTimezone)
 
     const { data, error } = await supabase
       .from('attendance')
@@ -177,10 +177,10 @@ export async function checkOutWorker() {
     const session = await getWorkerSession()
     if (!session) return { success: false, error: 'Sesión no válida o expirada.' }
 
-    const { workerId, companySlug } = session
+    const { workerId, companyId, companySlug } = session
     const supabase = await createAdminClient()
-    const today = new Date().toLocaleDateString('sv-SE')
-    const now = new Date().toLocaleTimeString('en-GB')
+    const ianaTimezone = await getCompanyTimezone(companyId)
+    const { date: today, time: now } = getCompanyLocalTime(ianaTimezone)
 
     const { error } = await supabase
       .from('attendance')

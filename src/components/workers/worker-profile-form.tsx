@@ -140,20 +140,20 @@ export function WorkerProfileForm({ worker, childrenList = [], canManage = false
           <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2">
             <h3 className="text-lg font-bold text-slate-800 border-b border-slate-100 pb-2">Identidad Corporativa</h3>
             <div className="flex flex-wrap gap-4">
-              <Input label="Código (COD)" value={laboral.cod} onChange={(e:any) => setLaboral({...laboral, cod: e.target.value})} disabled={!canManage} />
-              <Input label="Documento (DNI/CE)" value={laboral.document_number} onChange={(e:any) => setLaboral({...laboral, document_number: e.target.value})} required disabled={!canManage} />
-              <Input label="Nombres" value={laboral.name} onChange={(e:any) => setLaboral({...laboral, name: e.target.value})} required disabled={!canManage} />
-              <Input label="Apellidos" value={laboral.last_name} onChange={(e:any) => setLaboral({...laboral, last_name: e.target.value})} disabled={!canManage} />
+              <Input label="Código (COD)" value={laboral.cod} onChange={(e:any) => setLaboral(prev => ({...prev, cod: e.target.value}))} disabled={!canManage} />
+              <Input label="Documento (DNI/CE)" value={laboral.document_number} onChange={(e:any) => setLaboral(prev => ({...prev, document_number: e.target.value}))} required disabled={!canManage} />
+              <Input label="Nombres" value={laboral.name} onChange={(e:any) => setLaboral(prev => ({...prev, name: e.target.value}))} required disabled={!canManage} />
+              <Input label="Apellidos" value={laboral.last_name} onChange={(e:any) => setLaboral(prev => ({...prev, last_name: e.target.value}))} disabled={!canManage} />
             </div>
 
             <h3 className="text-lg font-bold text-slate-800 border-b border-slate-100 pb-2 mt-8">Asignación Operativa</h3>
             <div className="flex flex-wrap gap-4">
-              <Input label="Cargo" value={laboral.position} onChange={(e:any) => setLaboral({...laboral, position: e.target.value})} required disabled={!canManage} />
-              <Input label="Guardia" value={laboral.guardia} onChange={(e:any) => setLaboral({...laboral, guardia: e.target.value})} disabled={!canManage} />
+              <Input label="Cargo" value={laboral.position} onChange={(e:any) => setLaboral(prev => ({...prev, position: e.target.value}))} required disabled={!canManage} />
+              <Input label="Guardia" value={laboral.guardia} onChange={(e:any) => setLaboral(prev => ({...prev, guardia: e.target.value}))} disabled={!canManage} />
               <Select 
                 label="Sistema de Trabajo" 
                 value={laboral.work_system} 
-                onChange={(e:any) => setLaboral({...laboral, work_system: e.target.value})}
+                onChange={(e:any) => setLaboral(prev => ({...prev, work_system: e.target.value}))}
                 disabled={!canManage}
                 options={[
                   {val: '20X10', label: '20 x 10'},
@@ -165,7 +165,7 @@ export function WorkerProfileForm({ worker, childrenList = [], canManage = false
               <Select 
                 label="Condición" 
                 value={laboral.condition} 
-                onChange={(e:any) => setLaboral({...laboral, condition: e.target.value})}
+                onChange={(e:any) => setLaboral(prev => ({...prev, condition: e.target.value}))}
                 disabled={!canManage}
                 options={[
                   {val: 'PLANILLA', label: 'Planilla'},
@@ -180,7 +180,7 @@ export function WorkerProfileForm({ worker, childrenList = [], canManage = false
               <Select 
                 label="Situación Actual" 
                 value={laboral.current_status} 
-                onChange={(e:any) => setLaboral({...laboral, current_status: e.target.value})}
+                onChange={(e:any) => setLaboral(prev => ({...prev, current_status: e.target.value}))}
                 disabled={!canManage}
                 options={[
                   {val: 'ACTIVO', label: '🟢 Activo'},
@@ -188,8 +188,8 @@ export function WorkerProfileForm({ worker, childrenList = [], canManage = false
                   {val: 'SUSPENDIDO', label: '🟡 Suspendido'}
                 ]}
               />
-              <Input type="date" label="Fecha Ingreso" value={laboral.hire_date} onChange={(e:any) => setLaboral({...laboral, hire_date: e.target.value})} disabled={!canManage} />
-              <Input type="date" label="Fecha Cese" value={laboral.termination_date} onChange={(e:any) => setLaboral({...laboral, termination_date: e.target.value})} disabled={!canManage} />
+              <Input type="date" label="Fecha Ingreso" value={laboral.hire_date} onChange={(e:any) => setLaboral(prev => ({...prev, hire_date: e.target.value}))} disabled={!canManage} />
+              <Input type="date" label="Fecha Cese" value={laboral.termination_date} onChange={(e:any) => setLaboral(prev => ({...prev, termination_date: e.target.value}))} disabled={!canManage} />
             </div>
           </div>
         )}
@@ -198,8 +198,8 @@ export function WorkerProfileForm({ worker, childrenList = [], canManage = false
           <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2">
             <h3 className="text-lg font-bold text-emerald-800 border-b border-emerald-100 pb-2">Remuneración Base</h3>
             <div className="flex flex-wrap gap-4">
-              <Input type="number" label="Sueldo Diario (S/)" value={financial.daily_rate} onChange={(e:any) => setFinancial({...financial, daily_rate: parseFloat(e.target.value) || 0})} disabled={!canManage} />
-              <Input type="number" label="Sueldo Mensual Fijo (S/)" value={financial.monthly_salary} onChange={(e:any) => setFinancial({...financial, monthly_salary: parseFloat(e.target.value) || 0})} disabled={!canManage} />
+              <Input type="number" label="Sueldo Diario (S/)" value={financial.daily_rate} onChange={(e:any) => setFinancial(prev => ({...prev, daily_rate: parseFloat(e.target.value) || 0}))} disabled={!canManage} />
+              <Input type="number" label="Sueldo Mensual Fijo (S/)" value={financial.monthly_salary} onChange={(e:any) => setFinancial(prev => ({...prev, monthly_salary: parseFloat(e.target.value) || 0}))} disabled={!canManage} />
             </div>
 
             <h3 className="text-lg font-bold text-emerald-800 border-b border-emerald-100 pb-2 mt-8">Beneficios Sociales</h3>
@@ -208,7 +208,7 @@ export function WorkerProfileForm({ worker, childrenList = [], canManage = false
                 <input 
                   type="checkbox" 
                   checked={financial.has_family_allowance} 
-                  onChange={(e) => setFinancial({...financial, has_family_allowance: e.target.checked})}
+                  onChange={(e) => setFinancial(prev => ({...prev, has_family_allowance: e.target.checked}))}
                   disabled={!canManage}
                   className="w-5 h-5 rounded text-emerald-600 focus:ring-emerald-500"
                 />
@@ -217,7 +217,7 @@ export function WorkerProfileForm({ worker, childrenList = [], canManage = false
               
               {financial.has_family_allowance && (
                 <div className="w-48 animate-in fade-in slide-in-from-left-2">
-                  <Input type="number" label="Monto Asig. Fam (S/)" value={financial.family_allowance_amount} onChange={(e:any) => setFinancial({...financial, family_allowance_amount: parseFloat(e.target.value) || 0})} disabled={!canManage} />
+                  <Input type="number" label="Monto Asig. Fam (S/)" value={financial.family_allowance_amount} onChange={(e:any) => setFinancial(prev => ({...prev, family_allowance_amount: parseFloat(e.target.value) || 0}))} disabled={!canManage} />
                 </div>
               )}
             </div>
@@ -227,7 +227,7 @@ export function WorkerProfileForm({ worker, childrenList = [], canManage = false
               <Select 
                 label="Entidad Bancaria" 
                 value={financial.bank_name} 
-                onChange={(e:any) => setFinancial({...financial, bank_name: e.target.value})}
+                onChange={(e:any) => setFinancial(prev => ({...prev, bank_name: e.target.value}))}
                 disabled={!canManage}
                 options={[
                   {val: 'BCP', label: 'BCP'},
@@ -242,7 +242,7 @@ export function WorkerProfileForm({ worker, childrenList = [], canManage = false
               <Select 
                 label="Tipo de Cuenta" 
                 value={financial.account_type} 
-                onChange={(e:any) => setFinancial({...financial, account_type: e.target.value})}
+                onChange={(e:any) => setFinancial(prev => ({...prev, account_type: e.target.value}))}
                 disabled={!canManage}
                 options={[
                   {val: 'AHORROS', label: 'Ahorros'},
@@ -250,7 +250,7 @@ export function WorkerProfileForm({ worker, childrenList = [], canManage = false
                   {val: 'SUELDO', label: 'Sueldo'}
                 ]}
               />
-              <Input label="Nº Cuenta / CCI" value={financial.account_number} onChange={(e:any) => setFinancial({...financial, account_number: e.target.value})} disabled={!canManage} />
+              <Input label="Nº Cuenta / CCI" value={financial.account_number} onChange={(e:any) => setFinancial(prev => ({...prev, account_number: e.target.value}))} disabled={!canManage} />
             </div>
           </div>
         )}
@@ -259,18 +259,18 @@ export function WorkerProfileForm({ worker, childrenList = [], canManage = false
           <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2">
             <h3 className="text-lg font-bold text-purple-800 border-b border-purple-100 pb-2">Información Demográfica</h3>
             <div className="flex flex-wrap gap-4">
-              <Input type="date" label="Fecha Nacimiento" value={personal.birth_date} onChange={(e:any) => setPersonal({...personal, birth_date: e.target.value})} disabled={!canManage} />
+              <Input type="date" label="Fecha Nacimiento" value={personal.birth_date} onChange={(e:any) => setPersonal(prev => ({...prev, birth_date: e.target.value}))} disabled={!canManage} />
               <Select 
                 label="Género" 
                 value={personal.gender} 
-                onChange={(e:any) => setPersonal({...personal, gender: e.target.value})}
+                onChange={(e:any) => setPersonal(prev => ({...prev, gender: e.target.value}))}
                 disabled={!canManage}
                 options={[{val: 'M', label: 'Masculino'}, {val: 'F', label: 'Femenino'}]}
               />
               <Select 
                 label="Estado Civil" 
                 value={personal.marital_status} 
-                onChange={(e:any) => setPersonal({...personal, marital_status: e.target.value})}
+                onChange={(e:any) => setPersonal(prev => ({...prev, marital_status: e.target.value}))}
                 disabled={!canManage}
                 options={[{val: 'SOLTERO', label: 'Soltero'}, {val: 'CASADO', label: 'Casado'}, {val: 'CONVIVIENTE', label: 'Conviviente'}]}
               />
@@ -289,13 +289,13 @@ export function WorkerProfileForm({ worker, childrenList = [], canManage = false
             <h3 className="text-lg font-bold text-purple-800 border-b border-purple-100 pb-2 mt-8">Ubicación y Contacto</h3>
             <div className="flex flex-wrap gap-4">
               <div className="w-full flex gap-4">
-                <Input label="Teléfono / Celular" value={personal.phone_number} onChange={(e:any) => setPersonal({...personal, phone_number: e.target.value})} disabled={!canManage} />
-                <Input label="Licencia de Conducir (Cat)" value={personal.driver_license} onChange={(e:any) => setPersonal({...personal, driver_license: e.target.value})} disabled={!canManage} />
+                <Input label="Teléfono / Celular" value={personal.phone_number} onChange={(e:any) => setPersonal(prev => ({...prev, phone_number: e.target.value}))} disabled={!canManage} />
+                <Input label="Licencia de Conducir (Cat)" value={personal.driver_license} onChange={(e:any) => setPersonal(prev => ({...prev, driver_license: e.target.value}))} disabled={!canManage} />
               </div>
-              <Input label="Dirección Completa" value={personal.address} onChange={(e:any) => setPersonal({...personal, address: e.target.value})} disabled={!canManage} />
-              <Input label="Distrito" value={personal.district} onChange={(e:any) => setPersonal({...personal, district: e.target.value})} disabled={!canManage} />
-              <Input label="Provincia" value={personal.province} onChange={(e:any) => setPersonal({...personal, province: e.target.value})} disabled={!canManage} />
-              <Input label="Departamento" value={personal.department} onChange={(e:any) => setPersonal({...personal, department: e.target.value})} disabled={!canManage} />
+              <Input label="Dirección Completa" value={personal.address} onChange={(e:any) => setPersonal(prev => ({...prev, address: e.target.value}))} disabled={!canManage} />
+              <Input label="Distrito" value={personal.district} onChange={(e:any) => setPersonal(prev => ({...prev, district: e.target.value}))} disabled={!canManage} />
+              <Input label="Provincia" value={personal.province} onChange={(e:any) => setPersonal(prev => ({...prev, province: e.target.value}))} disabled={!canManage} />
+              <Input label="Departamento" value={personal.department} onChange={(e:any) => setPersonal(prev => ({...prev, department: e.target.value}))} disabled={!canManage} />
             </div>
 
             <div className="bg-rose-50 border border-rose-200 rounded-xl p-5 mt-8 relative overflow-hidden">
@@ -304,9 +304,9 @@ export function WorkerProfileForm({ worker, childrenList = [], canManage = false
                 Contacto de Emergencia
               </h3>
               <div className="flex flex-wrap gap-4 relative z-10">
-                <Input label="Nombre del Contacto" value={personal.emergency_contact_name} onChange={(e:any) => setPersonal({...personal, emergency_contact_name: e.target.value})} disabled={!canManage} />
-                <Input label="Teléfono (Emergencia)" value={personal.emergency_contact_phone} onChange={(e:any) => setPersonal({...personal, emergency_contact_phone: e.target.value})} disabled={!canManage} />
-                <Input label="Parentesco" value={personal.emergency_contact_relation} onChange={(e:any) => setPersonal({...personal, emergency_contact_relation: e.target.value})} disabled={!canManage} />
+                <Input label="Nombre del Contacto" value={personal.emergency_contact_name} onChange={(e:any) => setPersonal(prev => ({...prev, emergency_contact_name: e.target.value}))} disabled={!canManage} />
+                <Input label="Teléfono (Emergencia)" value={personal.emergency_contact_phone} onChange={(e:any) => setPersonal(prev => ({...prev, emergency_contact_phone: e.target.value}))} disabled={!canManage} />
+                <Input label="Parentesco" value={personal.emergency_contact_relation} onChange={(e:any) => setPersonal(prev => ({...prev, emergency_contact_relation: e.target.value}))} disabled={!canManage} />
               </div>
             </div>
           </div>

@@ -136,10 +136,10 @@ export function CreateCompanyModal({ isOpen, onClose }: CreateCompanyModalProps)
                 <Building2 className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
                 <input 
                   required
-                  type="text" 
+                  type="text"
                   placeholder="Ej: Constructora Horizonte SAC"
                   value={formData.name}
-                  onChange={(e) => setFormData({...formData, name: e.target.value})}
+                  onChange={(e) => setFormData(prev => ({...prev, name: e.target.value}))}
                   autoComplete="new-company-name"
                   className="w-full pl-12 pr-4 py-4 bg-slate-50 border-2 border-transparent focus:border-slate-900 focus:bg-white rounded-2xl text-sm font-bold transition-all outline-none"
                 />
@@ -152,10 +152,10 @@ export function CreateCompanyModal({ isOpen, onClose }: CreateCompanyModalProps)
                 <User className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
                 <input 
                   required
-                  type="text" 
+                  type="text"
                   placeholder="Nombre completo"
                   value={formData.adminName}
-                  onChange={(e) => setFormData({...formData, adminName: e.target.value})}
+                  onChange={(e) => setFormData(prev => ({...prev, adminName: e.target.value}))}
                   autoComplete="new-admin-fullname"
                   className="w-full pl-12 pr-4 py-4 bg-slate-50 border-2 border-transparent focus:border-slate-900 focus:bg-white rounded-2xl text-sm font-bold transition-all outline-none"
                 />
@@ -168,10 +168,10 @@ export function CreateCompanyModal({ isOpen, onClose }: CreateCompanyModalProps)
                 <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
                 <input 
                   required
-                  type="email" 
+                  type="email"
                   placeholder="admin@empresa.com"
                   value={formData.adminEmail}
-                  onChange={(e) => setFormData({...formData, adminEmail: e.target.value})}
+                  onChange={(e) => setFormData(prev => ({...prev, adminEmail: e.target.value}))}
                   autoComplete="new-admin-email"
                   className="w-full pl-12 pr-4 py-4 bg-slate-50 border-2 border-transparent focus:border-slate-900 focus:bg-white rounded-2xl text-sm font-bold transition-all outline-none"
                 />
@@ -186,10 +186,10 @@ export function CreateCompanyModal({ isOpen, onClose }: CreateCompanyModalProps)
               <div className="relative">
                 <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
                 <input 
-                  type="password" 
+                  type="password"
                   placeholder="••••••••••••"
                   value={formData.adminPassword}
-                  onChange={(e) => setFormData({...formData, adminPassword: e.target.value})}
+                  onChange={(e) => setFormData(prev => ({...prev, adminPassword: e.target.value}))}
                   autoComplete="new-admin-password"
                   className="w-full pl-12 pr-4 py-4 bg-slate-50 border-2 border-transparent focus:border-slate-900 focus:bg-white rounded-2xl text-sm font-bold transition-all outline-none"
                 />
@@ -207,7 +207,7 @@ export function CreateCompanyModal({ isOpen, onClose }: CreateCompanyModalProps)
                   type="checkbox" 
                   className="hidden"
                   checked={formData.is_test}
-                  onChange={(e) => setFormData({...formData, is_test: e.target.checked})}
+                  onChange={(e) => setFormData(prev => ({...prev, is_test: e.target.checked}))}
                 />
                 <div className="flex flex-col">
                   <span className="text-sm font-black text-slate-900">Empresa de Prueba</span>

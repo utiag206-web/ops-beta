@@ -89,7 +89,7 @@ export function WarehouseForm({ isOpen, onClose, onSuccess, editingWarehouse }: 
               autoComplete="off"
               className="w-full bg-slate-50 border-2 border-transparent focus:border-indigo-500 focus:bg-white rounded-2xl p-4 text-sm font-bold transition-all outline-none"
               value={form.name}
-              onChange={e => setForm({...form, name: e.target.value})}
+              onChange={e => setForm(prev => ({...prev, name: e.target.value}))}
             />
           </div>
 
@@ -101,7 +101,7 @@ export function WarehouseForm({ isOpen, onClose, onSuccess, editingWarehouse }: 
               autoComplete="off"
               className="w-full bg-slate-50 border-2 border-transparent focus:border-indigo-500 focus:bg-white rounded-2xl p-4 text-sm font-bold transition-all outline-none uppercase"
               value={form.code}
-              onChange={e => setForm({...form, code: e.target.value})}
+              onChange={e => setForm(prev => ({...prev, code: e.target.value}))}
             />
           </div>
 
