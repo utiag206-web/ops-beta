@@ -185,7 +185,7 @@ export function CreateRequirementModal({ isOpen, onClose, onSuccess }: CreateReq
                 required
                 className="w-full bg-slate-50 border-2 border-transparent focus:border-indigo-500 focus:bg-white rounded-2xl p-3.5 text-xs font-bold transition-all outline-none"
                 value={form.priority}
-                onChange={e => setForm({...form, priority: e.target.value})}
+                onChange={e => setForm(prev => ({...prev, priority: e.target.value}))}
               >
                 <option value="alta">Alta</option>
                 <option value="media">Media</option>
@@ -213,7 +213,7 @@ export function CreateRequirementModal({ isOpen, onClose, onSuccess }: CreateReq
                     onChange={e => {
                       setSearchQuery(e.target.value)
                       setShowDropdown(true)
-                      if (!e.target.value) setForm({...form, product_id: ''})
+                      if (!e.target.value) setForm(prev => ({...prev, product_id: ''}))
                     }}
                   />
                   {fetchingProducts && (
@@ -231,7 +231,7 @@ export function CreateRequirementModal({ isOpen, onClose, onSuccess }: CreateReq
                               key={p.id}
                               type="button"
                               onClick={() => {
-                                setForm({ ...form, product_id: p.id })
+                                setForm(prev => ({ ...prev, product_id: p.id }))
                                 setSearchQuery(p.name)
                                 setShowDropdown(false)
                               }}
@@ -272,7 +272,7 @@ export function CreateRequirementModal({ isOpen, onClose, onSuccess }: CreateReq
                   min="0.01"
                   className="w-full bg-white border-2 border-transparent focus:border-indigo-500 rounded-2xl p-3 text-sm font-bold transition-all outline-none"
                   value={form.quantity}
-                  onChange={e => setForm({...form, quantity: Number(e.target.value)})}
+                  onChange={e => setForm(prev => ({...prev, quantity: Number(e.target.value)}))}
                 />
               </div>
             </div>
@@ -287,7 +287,7 @@ export function CreateRequirementModal({ isOpen, onClose, onSuccess }: CreateReq
                   placeholder="Ej: Taladro Percutor, Amoladora..."
                   className="w-full bg-white border-2 border-transparent focus:border-amber-500 rounded-2xl p-3 text-sm font-bold transition-all outline-none"
                   value={form.tool_type.toUpperCase()}
-                  onChange={e => setForm({...form, tool_type: e.target.value.toUpperCase()})}
+                  onChange={e => setForm(prev => ({...prev, tool_type: e.target.value.toUpperCase()}))}
                 />
               </div>
               <div className="space-y-2">
@@ -297,7 +297,7 @@ export function CreateRequirementModal({ isOpen, onClose, onSuccess }: CreateReq
                   min="1"
                   className="w-full bg-white border-2 border-transparent focus:border-amber-500 rounded-2xl p-3 text-sm font-bold transition-all outline-none"
                   value={form.quantity}
-                  onChange={e => setForm({...form, quantity: Number(e.target.value)})}
+                  onChange={e => setForm(prev => ({...prev, quantity: Number(e.target.value)}))}
                 />
               </div>
             </div>
@@ -312,7 +312,7 @@ export function CreateRequirementModal({ isOpen, onClose, onSuccess }: CreateReq
                   placeholder="Ej: Mecánico Hércules, Electricista..."
                   className="w-full bg-white border-2 border-transparent focus:border-emerald-500 rounded-2xl p-3 text-sm font-bold transition-all outline-none"
                   value={form.specialty.toUpperCase()}
-                  onChange={e => setForm({...form, specialty: e.target.value.toUpperCase()})}
+                  onChange={e => setForm(prev => ({...prev, specialty: e.target.value.toUpperCase()}))}
                 />
               </div>
               <div className="space-y-2">
@@ -322,7 +322,7 @@ export function CreateRequirementModal({ isOpen, onClose, onSuccess }: CreateReq
                   min="1"
                   className="w-full bg-white border-2 border-transparent focus:border-emerald-500 rounded-2xl p-3 text-sm font-bold transition-all outline-none"
                   value={form.people_count}
-                  onChange={e => setForm({...form, people_count: Number(e.target.value)})}
+                  onChange={e => setForm(prev => ({...prev, people_count: Number(e.target.value)}))}
                 />
               </div>
             </div>
@@ -340,7 +340,7 @@ export function CreateRequirementModal({ isOpen, onClose, onSuccess }: CreateReq
                   placeholder="0.00"
                   className="w-full bg-white border-2 border-transparent focus:border-emerald-500 rounded-2xl p-3 text-sm font-bold transition-all outline-none"
                   value={form.quantity || ''}
-                  onChange={e => setForm({...form, quantity: Number(e.target.value)})}
+                  onChange={e => setForm(prev => ({...prev, quantity: Number(e.target.value)}))}
                 />
               </div>
             </div>
@@ -354,7 +354,7 @@ export function CreateRequirementModal({ isOpen, onClose, onSuccess }: CreateReq
               placeholder={form.type === 'insumo' ? "Ej: Urgente para parada de planta" : form.type === 'fondos' ? "Ej: Fondos para viáticos de viaje" : "Ej: Solicitud de equipo adicional"}
               className="w-full bg-slate-50 border-2 border-transparent focus:border-indigo-500 focus:bg-white rounded-2xl p-4 text-sm font-bold transition-all outline-none"
               value={form.title.toUpperCase()}
-              onChange={e => setForm({...form, title: e.target.value.toUpperCase()})}
+              onChange={e => setForm(prev => ({...prev, title: e.target.value.toUpperCase()}))}
             />
           </div>
 
@@ -365,7 +365,7 @@ export function CreateRequirementModal({ isOpen, onClose, onSuccess }: CreateReq
               className="w-full bg-slate-50 border-2 border-transparent focus:border-indigo-500 focus:bg-white rounded-2xl p-4 text-sm font-bold transition-all outline-none resize-none"
               placeholder={form.type === 'fondos' ? "Explica detalladamente para qué se utilizarán los fondos..." : "Explica para qué se necesita esta solicitud..."}
               value={form.description.toUpperCase()}
-              onChange={e => setForm({...form, description: e.target.value.toUpperCase()})}
+              onChange={e => setForm(prev => ({...prev, description: e.target.value.toUpperCase()}))}
             />
           </div>
 
@@ -642,7 +642,7 @@ export function ReportIncidentModal({
                 placeholder="Ej: Taller Mecánico, KM 15..."
                 className="w-full bg-slate-50 border-2 border-transparent focus:border-orange-500 focus:bg-white rounded-2xl p-4 text-sm font-bold transition-all outline-none"
                 value={form.area_location.toUpperCase()}
-                onChange={e => setForm({...form, area_location: e.target.value.toUpperCase()})}
+                onChange={e => setForm(prev => ({...prev, area_location: e.target.value.toUpperCase()}))}
               />
             </div>
             <div className="space-y-2">
@@ -651,7 +651,7 @@ export function ReportIncidentModal({
                 required
                 className="w-full bg-slate-50 border-2 border-transparent focus:border-orange-500 focus:bg-white rounded-2xl p-4 text-sm font-bold transition-all outline-none"
                 value={form.type}
-                onChange={e => setForm({...form, type: e.target.value})}
+                onChange={e => setForm(prev => ({...prev, type: e.target.value}))}
               >
                 <option value="maquinaria">MAQUINARIA / EQUIPO</option>
                 <option value="personal">PERSONAL / SALUD</option>
@@ -668,7 +668,7 @@ export function ReportIncidentModal({
                 required
                 className="w-full bg-slate-50 border-2 border-transparent focus:border-orange-500 focus:bg-white rounded-2xl p-4 text-sm font-bold transition-all outline-none"
                 value={form.severity}
-                onChange={e => setForm({...form, severity: e.target.value})}
+                onChange={e => setForm(prev => ({...prev, severity: e.target.value}))}
               >
                 <option value="leve">LEVE</option>
                 <option value="moderado">MODERADO</option>
@@ -683,7 +683,7 @@ export function ReportIncidentModal({
                 required
                 className="w-full bg-slate-50 border-2 border-transparent focus:border-orange-500 focus:bg-white rounded-2xl p-4 text-sm font-bold transition-all outline-none"
                 value={form.incident_category}
-                onChange={e => setForm({...form, incident_category: e.target.value})}
+                onChange={e => setForm(prev => ({...prev, incident_category: e.target.value}))}
               >
                 {initialCategory === 'soma' ? (
                   <>
@@ -710,7 +710,7 @@ export function ReportIncidentModal({
                 type="date"
                 className="w-full bg-slate-50 border-2 border-transparent focus:border-orange-500 focus:bg-white rounded-2xl p-4 text-sm font-bold transition-all outline-none"
                 value={form.event_date}
-                onChange={e => setForm({...form, event_date: e.target.value})}
+                onChange={e => setForm(prev => ({...prev, event_date: e.target.value}))}
               />
             </div>
           </div>
@@ -749,7 +749,7 @@ export function ReportIncidentModal({
               className="w-full bg-slate-50 border-2 border-transparent focus:border-orange-500 focus:bg-white rounded-2xl p-4 text-sm font-bold transition-all outline-none resize-none"
               placeholder="Detalla lo sucedido de forma clara..."
               value={form.description.toUpperCase()}
-              onChange={e => setForm({...form, description: e.target.value.toUpperCase()})}
+              onChange={e => setForm(prev => ({...prev, description: e.target.value.toUpperCase()}))}
             />
           </div>
 
@@ -760,7 +760,7 @@ export function ReportIncidentModal({
               className="w-full bg-orange-50 border-2 border-orange-100 focus:border-orange-500 focus:bg-white rounded-2xl p-4 text-sm font-bold transition-all outline-none resize-none"
               placeholder="¿Qué se hizo al instante para mitigar el riesgo?"
               value={form.corrective_actions.toUpperCase()}
-              onChange={e => setForm({...form, corrective_actions: e.target.value.toUpperCase()})}
+              onChange={e => setForm(prev => ({...prev, corrective_actions: e.target.value.toUpperCase()}))}
             />
           </div>
 

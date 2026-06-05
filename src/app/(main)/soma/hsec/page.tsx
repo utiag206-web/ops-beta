@@ -253,7 +253,7 @@ function AddStopModal({ isOpen, onClose, onSuccess }: any) {
           <div className="p-2 bg-slate-100 rounded-[1.8rem] flex gap-2">
             <button
               type="button"
-              onClick={() => setFormData({...formData, type: 'acto_inseguro'})}
+              onClick={() => setFormData(prev => ({...prev, type: 'acto_inseguro'}))}
               className={`flex-1 flex items-center justify-center gap-3 py-4 rounded-[1.5rem] font-black text-xs uppercase tracking-widest transition-all ${
                 formData.type === 'acto_inseguro' ? 'bg-white text-blue-600 shadow-md translate-y-[-2px]' : 'text-slate-400 hover:text-slate-600'
               }`}
@@ -262,7 +262,7 @@ function AddStopModal({ isOpen, onClose, onSuccess }: any) {
             </button>
             <button
               type="button"
-              onClick={() => setFormData({...formData, type: 'condicion_insegura'})}
+              onClick={() => setFormData(prev => ({...prev, type: 'condicion_insegura'}))}
               className={`flex-1 flex items-center justify-center gap-3 py-4 rounded-[1.5rem] font-black text-xs uppercase tracking-widest transition-all ${
                 formData.type === 'condicion_insegura' ? 'bg-rose-500 text-white shadow-xl shadow-rose-200 translate-y-[-2px]' : 'text-slate-400 hover:text-slate-600'
               }`}
@@ -280,7 +280,7 @@ function AddStopModal({ isOpen, onClose, onSuccess }: any) {
               required
               type="text" 
               value={formData.area_location}
-              onChange={e => setFormData({...formData, area_location: e.target.value})}
+              onChange={e => setFormData(prev => ({...prev, area_location: e.target.value}))}
               placeholder="Ej: Frente Mina Norte, Garita Principal..."
               className="w-full px-8 py-5 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-rose-500 font-bold text-slate-700 shadow-inner"
              />
@@ -296,7 +296,7 @@ function AddStopModal({ isOpen, onClose, onSuccess }: any) {
                   <button
                     key={cat.id}
                     type="button"
-                    onClick={() => setFormData({...formData, category: cat.id})}
+                    onClick={() => setFormData(prev => ({...prev, category: cat.id}))}
                     className={`flex flex-col items-center justify-center p-4 rounded-2xl border transition-all gap-2 ${
                       formData.category === cat.id 
                         ? 'bg-rose-50 border-rose-500 text-rose-700 shadow-lg shadow-rose-50 translate-y-[-2px]' 
@@ -317,7 +317,7 @@ function AddStopModal({ isOpen, onClose, onSuccess }: any) {
               required
               rows={3}
               value={formData.description}
-              onChange={e => setFormData({...formData, description: e.target.value})}
+              onChange={e => setFormData(prev => ({...prev, description: e.target.value}))}
               placeholder="Sé breve y conciso con la observación detectada..."
               className="w-full px-8 py-5 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-rose-500 font-bold text-slate-700 shadow-inner resize-none"
              />

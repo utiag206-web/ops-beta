@@ -102,7 +102,7 @@ export default function RequirementsPage({ userRole, initialData = [] }: { userR
           <select 
             className="bg-transparent text-sm font-bold text-slate-600 outline-none w-full"
             value={filters.status}
-            onChange={e => setFilters({...filters, status: e.target.value})}
+            onChange={e => setFilters(prev => ({...prev, status: e.target.value}))}
           >
             <option value="todos">Todos los estados</option>
             <option value="pendiente">Pendientes</option>
@@ -117,7 +117,7 @@ export default function RequirementsPage({ userRole, initialData = [] }: { userR
           <select 
             className="bg-transparent text-sm font-bold text-slate-600 outline-none"
             value={filters.priority}
-            onChange={e => setFilters({...filters, priority: e.target.value})}
+            onChange={e => setFilters(prev => ({...prev, priority: e.target.value}))}
           >
             <option value="todas">Todas las prioridades</option>
             <option value="alta">Prioridad Alta</option>

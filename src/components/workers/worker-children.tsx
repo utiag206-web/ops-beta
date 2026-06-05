@@ -188,7 +188,7 @@ export function WorkerChildren({ workerId, initialChildren, canManage = false }:
                 <input 
                   type="text" 
                   value={formData.nombre}
-                  onChange={e => setFormData({...formData, nombre: e.target.value})}
+                  onChange={e => setFormData(prev => ({...prev, nombre: e.target.value}))}
                   className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 outline-none focus:border-blue-500 font-medium text-slate-700" 
                   required 
                   placeholder="Ej. Juan Pérez"
@@ -201,7 +201,7 @@ export function WorkerChildren({ workerId, initialChildren, canManage = false }:
                   <input 
                     type="date" 
                     value={formData.fecha_nacimiento}
-                    onChange={e => setFormData({...formData, fecha_nacimiento: e.target.value})}
+                    onChange={e => setFormData(prev => ({...prev, fecha_nacimiento: e.target.value}))}
                     className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 outline-none focus:border-blue-500 font-medium text-slate-700" 
                     required 
                   />
@@ -210,7 +210,7 @@ export function WorkerChildren({ workerId, initialChildren, canManage = false }:
                   <label className="block text-xs font-bold text-slate-500 uppercase mb-1.5">Género</label>
                   <select 
                     value={formData.genero}
-                    onChange={e => setFormData({...formData, genero: e.target.value})}
+                    onChange={e => setFormData(prev => ({...prev, genero: e.target.value}))}
                     className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 outline-none focus:border-blue-500 font-medium text-slate-700" 
                   >
                     <option value="M">Hombre</option>

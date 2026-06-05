@@ -116,7 +116,7 @@ export function EditUserModal({ isOpen, onClose, onSuccess, user }: EditUserModa
                     type="text"
                     className="w-full bg-slate-50 border-2 border-transparent focus:border-blue-500 focus:bg-white rounded-2xl py-4 pr-4 pl-12 text-sm font-bold transition-all outline-none"
                     value={formData.name}
-                    onChange={e => setFormData({...formData, name: e.target.value})}
+                    onChange={e => setFormData(prev => ({...prev, name: e.target.value}))}
                   />
                 </div>
               </div>
@@ -125,7 +125,7 @@ export function EditUserModal({ isOpen, onClose, onSuccess, user }: EditUserModa
                 <select 
                   className="w-full bg-slate-50 border-2 border-transparent focus:border-blue-500 focus:bg-white rounded-2xl p-4 text-sm font-bold transition-all outline-none"
                   value={formData.area}
-                  onChange={e => setFormData({...formData, area: e.target.value})}
+                  onChange={e => setFormData(prev => ({...prev, area: e.target.value}))}
                 >
                   <option value="">Sin Asignar</option>
                   <option value="Gerencia General">Gerencia General</option>
@@ -164,7 +164,7 @@ export function EditUserModal({ isOpen, onClose, onSuccess, user }: EditUserModa
                         type="email"
                         className="w-full bg-slate-50 border-2 border-transparent focus:border-blue-500 focus:bg-white rounded-2xl py-4 pr-4 pl-12 text-sm font-bold transition-all outline-none"
                         value={formData.email}
-                        onChange={e => setFormData({...formData, email: e.target.value})}
+                        onChange={e => setFormData(prev => ({...prev, email: e.target.value}))}
                       />
                     </div>
                     <button 
@@ -187,7 +187,7 @@ export function EditUserModal({ isOpen, onClose, onSuccess, user }: EditUserModa
                         placeholder="Mínimo 6 caracteres"
                         className="w-full bg-slate-50 border-2 border-transparent focus:border-blue-500 focus:bg-white rounded-2xl py-4 pr-4 pl-12 text-sm font-bold transition-all outline-none"
                         value={formData.password}
-                        onChange={e => setFormData({...formData, password: e.target.value})}
+                        onChange={e => setFormData(prev => ({...prev, password: e.target.value}))}
                       />
                     </div>
                     <button 

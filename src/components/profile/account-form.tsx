@@ -78,7 +78,7 @@ export function AccountForm({ user }: AccountFormProps) {
               <input 
                 type="text" 
                 value={formData.name}
-                onChange={(e) => setFormData({...formData, name: e.target.value})}
+                onChange={(e) => setFormData(prev => ({...prev, name: e.target.value}))}
                 className="w-full bg-slate-50 border-2 border-slate-100 focus:border-blue-600 focus:bg-white rounded-[1.5rem] py-5 pr-5 pl-14 text-slate-900 font-bold transition-all outline-none shadow-sm placeholder:text-slate-300"
                 placeholder="Nombre completo..."
               />
@@ -92,7 +92,7 @@ export function AccountForm({ user }: AccountFormProps) {
               <input 
                 type="email" 
                 value={formData.email}
-                onChange={(e) => setFormData({...formData, email: e.target.value})}
+                onChange={(e) => setFormData(prev => ({...prev, email: e.target.value}))}
                 className="w-full bg-blue-50/50 border-2 border-blue-100/50 focus:border-blue-600 focus:bg-white rounded-[1.5rem] py-5 pr-5 pl-14 text-blue-900 font-black transition-all outline-none shadow-sm"
                 placeholder="correo@ejemplo.com"
               />

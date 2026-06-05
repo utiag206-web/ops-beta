@@ -90,7 +90,7 @@ export function AssetForm({ isOpen, onClose, onSuccess, editingAsset }: AssetFor
                 placeholder="ACT-001"
                 className="w-full bg-slate-50 border-2 border-transparent focus:border-blue-500 focus:bg-white rounded-2xl p-4 text-sm font-bold transition-all outline-none uppercase"
                 value={form.code}
-                onChange={e => setForm({...form, code: e.target.value.toUpperCase()})}
+                onChange={e => setForm(prev => ({...prev, code: e.target.value.toUpperCase()}))}
               />
             </div>
             <div className="space-y-1.5">
@@ -99,7 +99,7 @@ export function AssetForm({ isOpen, onClose, onSuccess, editingAsset }: AssetFor
                 required
                 className="w-full bg-slate-50 border-2 border-transparent focus:border-blue-500 focus:bg-white rounded-2xl p-4 text-sm font-bold transition-all outline-none"
                 value={form.type}
-                onChange={e => setForm({...form, type: e.target.value})}
+                onChange={e => setForm(prev => ({...prev, type: e.target.value}))}
               >
                 <option value="equipo">Equipo Pesado / Vehículo</option>
                 <option value="herramienta">Herramienta / Menor</option>
@@ -115,7 +115,7 @@ export function AssetForm({ isOpen, onClose, onSuccess, editingAsset }: AssetFor
               placeholder="Ej: Camioneta Toyota Hilux"
               className="w-full bg-slate-50 border-2 border-transparent focus:border-blue-500 focus:bg-white rounded-2xl p-4 text-sm font-bold transition-all outline-none uppercase"
               value={form.name}
-              onChange={e => setForm({...form, name: e.target.value.toUpperCase()})}
+              onChange={e => setForm(prev => ({...prev, name: e.target.value.toUpperCase()}))}
             />
           </div>
 
@@ -126,7 +126,7 @@ export function AssetForm({ isOpen, onClose, onSuccess, editingAsset }: AssetFor
                 required
                 className="w-full bg-slate-50 border-2 border-transparent focus:border-blue-500 focus:bg-white rounded-2xl p-4 text-sm font-bold transition-all outline-none"
                 value={form.status}
-                onChange={e => setForm({...form, status: e.target.value})}
+                onChange={e => setForm(prev => ({...prev, status: e.target.value}))}
               >
                 <option value="operativo">Operativo</option>
                 <option value="en mantenimiento">En Mantenimiento</option>
@@ -141,7 +141,7 @@ export function AssetForm({ isOpen, onClose, onSuccess, editingAsset }: AssetFor
                 placeholder="Ej: Taller Norte"
                 className="w-full bg-slate-50 border-2 border-transparent focus:border-blue-500 focus:bg-white rounded-2xl p-4 text-sm font-bold transition-all outline-none uppercase"
                 value={form.location}
-                onChange={e => setForm({...form, location: e.target.value.toUpperCase()})}
+                onChange={e => setForm(prev => ({...prev, location: e.target.value.toUpperCase()}))}
               />
             </div>
           </div>

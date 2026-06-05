@@ -109,7 +109,7 @@ export function ProductForm({ isOpen, onClose, onSuccess, editingProduct, isView
                 placeholder="SKU-001"
                 className="w-full bg-slate-50 border-2 border-transparent focus:border-indigo-500 focus:bg-white rounded-2xl p-4 text-sm font-bold transition-all outline-none disabled:opacity-70"
                 value={form.code}
-                onChange={e => setForm({...form, code: e.target.value})}
+                onChange={e => setForm(prev => ({...prev, code: e.target.value}))}
               />
             </div>
             <div className="space-y-1.5">
@@ -119,7 +119,7 @@ export function ProductForm({ isOpen, onClose, onSuccess, editingProduct, isView
                 disabled={isViewOnly}
                 className="w-full bg-slate-50 border-2 border-transparent focus:border-indigo-500 focus:bg-white rounded-2xl p-4 text-sm font-bold transition-all outline-none disabled:opacity-70 appearance-none"
                 value={form.category}
-                onChange={e => setForm({...form, category: e.target.value})}
+                onChange={e => setForm(prev => ({...prev, category: e.target.value}))}
               >
                 <option value="EPP">EPP</option>
                 <option value="herramientas">Herramientas</option>
@@ -141,7 +141,7 @@ export function ProductForm({ isOpen, onClose, onSuccess, editingProduct, isView
               placeholder="Ej: Guantes de nitrilo reforzados"
               className="w-full bg-slate-50 border-2 border-transparent focus:border-indigo-500 focus:bg-white rounded-2xl p-4 text-sm font-bold transition-all outline-none disabled:opacity-70"
               value={form.name}
-              onChange={e => setForm({...form, name: e.target.value})}
+              onChange={e => setForm(prev => ({...prev, name: e.target.value}))}
             />
           </div>
 
@@ -153,7 +153,7 @@ export function ProductForm({ isOpen, onClose, onSuccess, editingProduct, isView
                 disabled={isViewOnly}
                 className="w-full bg-slate-50 border-2 border-transparent focus:border-indigo-500 focus:bg-white rounded-2xl p-4 text-sm font-bold transition-all outline-none disabled:opacity-70 appearance-none"
                 value={form.unit}
-                onChange={e => setForm({...form, unit: e.target.value})}
+                onChange={e => setForm(prev => ({...prev, unit: e.target.value}))}
               >
                 <option value="unidad">Unidad (UND)</option>
                 <option value="kg">Kilogramos (KG)</option>
@@ -170,7 +170,7 @@ export function ProductForm({ isOpen, onClose, onSuccess, editingProduct, isView
                 disabled={isViewOnly}
                 className="w-full bg-slate-50 border-2 border-transparent focus:border-indigo-500 focus:bg-white rounded-2xl p-4 text-sm font-bold transition-all outline-none disabled:opacity-70 appearance-none"
                 value={form.type}
-                onChange={e => setForm({...form, type: e.target.value})}
+                onChange={e => setForm(prev => ({...prev, type: e.target.value}))}
               >
                 <option value="consumible">Consumible</option>
                 <option value="no consumible">No Consumible</option>
@@ -188,7 +188,7 @@ export function ProductForm({ isOpen, onClose, onSuccess, editingProduct, isView
               placeholder="Ej: 1 caja = 12 unidades"
               className="w-full bg-slate-50 border-2 border-transparent focus:border-indigo-500 focus:bg-white rounded-2xl p-4 text-sm font-bold transition-all outline-none disabled:opacity-70"
               value={form.equivalence || ''}
-              onChange={e => setForm({...form, equivalence: e.target.value})}
+              onChange={e => setForm(prev => ({...prev, equivalence: e.target.value}))}
             />
           </div>
 
@@ -202,12 +202,12 @@ export function ProductForm({ isOpen, onClose, onSuccess, editingProduct, isView
                 min="0"
                 className="w-full bg-slate-50 border-2 border-transparent focus:border-indigo-500 focus:bg-white rounded-2xl p-4 text-sm font-bold transition-all outline-none disabled:opacity-70"
                 value={form.min_stock}
-                onChange={e => setForm({...form, min_stock: Number(e.target.value)})}
+                onChange={e => setForm(prev => ({...prev, min_stock: Number(e.target.value)}))}
               />
             </div>
             <div className="space-y-4">
               <div className={`flex items-center gap-3 bg-slate-50 p-4 rounded-2xl border-2 border-transparent transition-all transition-all ${isViewOnly ? 'opacity-70 cursor-not-allowed' : 'hover:border-slate-100 cursor-pointer select-none'}`}
-                  onClick={() => !isViewOnly && setForm({...form, has_expiry: !form.has_expiry})}>
+                  onClick={() => !isViewOnly && setForm(prev => ({...prev, has_expiry: !prev.has_expiry}))}>
                 <div className={`w-5 h-5 rounded flex items-center justify-center border-2 transition-all ${form.has_expiry ? 'bg-indigo-600 border-indigo-600' : 'border-slate-300'}`}>
                   {form.has_expiry && <CheckCircle2 size={14} className="text-white" />}
                 </div>
@@ -223,7 +223,7 @@ export function ProductForm({ isOpen, onClose, onSuccess, editingProduct, isView
                     type="date"
                     className="w-full bg-slate-50 border-2 border-transparent focus:border-indigo-500 focus:bg-white rounded-2xl p-4 text-sm font-bold transition-all outline-none disabled:opacity-70"
                     value={form.expiry_date || ''}
-                    onChange={e => setForm({...form, expiry_date: e.target.value})}
+                    onChange={e => setForm(prev => ({...prev, expiry_date: e.target.value}))}
                   />
                 </div>
               )}
@@ -251,7 +251,7 @@ export function ProductForm({ isOpen, onClose, onSuccess, editingProduct, isView
                     placeholder="Ej: Central (opcional)"
                     className="w-full bg-white border-2 border-transparent focus:border-emerald-500 rounded-xl p-3 text-xs font-bold transition-all outline-none shadow-sm"
                     value={form.initial_location || ''}
-                    onChange={e => setForm({...form, initial_location: e.target.value})}
+                    onChange={e => setForm(prev => ({...prev, initial_location: e.target.value}))}
                   />
                 </div>
                 <div className="space-y-1.5">
@@ -266,7 +266,7 @@ export function ProductForm({ isOpen, onClose, onSuccess, editingProduct, isView
                     onChange={e => {
                       const val = Number(e.target.value)
                       const isInteger = ['UND', 'UNIDAD', 'PAR', 'CAJA'].includes(form.unit.toUpperCase())
-                      setForm({...form, initial_stock: isInteger ? Math.floor(val) : val})
+                      setForm(prev => ({...prev, initial_stock: isInteger ? Math.floor(val) : val}))
                     }}
                     onKeyDown={e => {
                       if (['UND', 'UNIDAD', 'PAR', 'CAJA'].includes(form.unit.toUpperCase()) && (e.key === '.' || e.key === ',')) {
