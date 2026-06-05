@@ -2,6 +2,7 @@
 
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { getUserSession, applyIsolation, getActiveViewMode } from '@/lib/auth'
+import { getCompanyTimezone, getCompanyLocalTime } from '@/lib/date-utils'
 
 export async function getDashboardStats() {
   try {
@@ -18,7 +19,8 @@ export async function getDashboardStats() {
     }
 
     const supabase = await createAdminClient()
-    const today = new Date().toLocaleDateString('sv-SE')
+    const ianaTimezone = companyId ? await getCompanyTimezone(companyId) : 'America/Lima'
+    const { date: today } = getCompanyLocalTime(ianaTimezone)
 
     const viewMode = await getActiveViewMode()
     const isWorkerModeActive = viewMode === 'WORKER'
@@ -78,7 +80,7 @@ export async function getDashboardStats() {
       for (let i = 0; i < 7; i++) {
         const d = new Date()
         d.setDate(d.getDate() - i)
-        const dateStr = d.toLocaleDateString('sv-SE')
+        const dateStr = d.toLocaleDateString('sv-SE', { timeZone: ianaTimezone })
         activityMap[dateStr] = 0
         stats.weeklyMovements[dateStr] = { in: 0, out: 0 }
       }
@@ -286,7 +288,9 @@ export async function getTodayAttendance() {
   const { extendedUser } = await getUserSession()
   if (!extendedUser?.worker_id) return null
   const supabase = await createAdminClient()
-  const today = new Date().toLocaleDateString('sv-SE')
+  const companyId = extendedUser.company_id
+  const ianaTimezone = companyId ? await getCompanyTimezone(companyId) : 'America/Lima'
+  const { date: today } = getCompanyLocalTime(ianaTimezone)
   const { data, error } = await supabase.from('attendance').select('id, check_in, check_out, created_at').eq('worker_id', extendedUser.worker_id).eq('date', today).maybeSingle()
   if (error || !data) return null
 

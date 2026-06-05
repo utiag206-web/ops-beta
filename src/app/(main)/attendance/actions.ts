@@ -3,6 +3,7 @@
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { getUserSession, getStrictCompanyId, applyIsolation, getActiveViewMode } from '@/lib/auth'
 import { revalidatePath } from 'next/cache'
+import { getCompanyTimezone, getCompanyLocalTime } from '@/lib/date-utils'
 
 export async function getAttendance(workerId?: string, date?: string) {
   const { extendedUser } = await getUserSession()
@@ -53,8 +54,8 @@ export async function checkIn() {
   }
 
   const supabase = await createAdminClient()
-  const today = new Date().toLocaleDateString('sv-SE')
-  const now = new Date().toLocaleTimeString('en-GB') // HH:MM:SS
+  const ianaTimezone = await getCompanyTimezone(companyId)
+  const { date: today, time: now } = getCompanyLocalTime(ianaTimezone)
 
   const { data, error } = await supabase
     .from('attendance')
@@ -82,13 +83,14 @@ export async function checkIn() {
 
 export async function checkOut() {
   const { extendedUser } = await getUserSession()
-  if (!extendedUser?.worker_id) {
-    return { success: false, error: 'No autorizado' }
+  const companyId = extendedUser?.company_id
+  if (!extendedUser?.worker_id || !companyId) {
+    return { success: false, error: 'No autorizado o sin contexto de empresa' }
   }
 
   const supabase = await createAdminClient()
-  const today = new Date().toLocaleDateString('sv-SE')
-  const now = new Date().toLocaleTimeString('en-GB')
+  const ianaTimezone = await getCompanyTimezone(companyId)
+  const { date: today, time: now } = getCompanyLocalTime(ianaTimezone)
 
   const { error } = await supabase
     .from('attendance')
