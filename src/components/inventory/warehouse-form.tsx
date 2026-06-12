@@ -22,12 +22,13 @@ export function WarehouseForm({ isOpen, onClose, onSuccess, editingWarehouse }: 
   // Sincronizar formulario al abrir o cambiar de modo
   useEffect(() => {
     if (isOpen) {
-      setForm({
+      setForm(prev => ({
+        ...prev,
         name: editingWarehouse?.name || '',
         code: editingWarehouse?.code || '',
-      })
+      }))
     }
-  }, [isOpen, editingWarehouse])
+  }, [isOpen, editingWarehouse?.id])
 
   if (!isOpen) return null
 

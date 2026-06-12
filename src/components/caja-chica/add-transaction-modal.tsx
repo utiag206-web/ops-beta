@@ -64,7 +64,8 @@ export function AddTransactionModal({ isOpen, onClose, onSuccess, area, initialD
   // Sync state when initialData changes (for Edit mode)
   React.useEffect(() => {
     if (initialData) {
-      setFormData({
+      setFormData(prev => ({
+        ...prev,
         type: initialData.type,
         category: initialData.category,
         reason: initialData.reason,
@@ -73,10 +74,11 @@ export function AddTransactionModal({ isOpen, onClose, onSuccess, area, initialD
         operation_number: initialData.operation_number || '',
         date: initialData.date,
         voucher_url: initialData.voucher_url || ''
-      })
+      }))
       setTargetArea(initialData.target_area || '')
     } else {
-      setFormData({
+      setFormData(prev => ({
+        ...prev,
         type: 'egreso',
         category: 'otros',
         reason: '',
@@ -85,10 +87,10 @@ export function AddTransactionModal({ isOpen, onClose, onSuccess, area, initialD
         operation_number: '',
         date: new Date().toISOString().split('T')[0],
         voucher_url: ''
-      })
+      }))
       setTargetArea('')
     }
-  }, [initialData, isOpen])
+  }, [initialData?.id, isOpen])
 
   if (!isOpen) return null
 

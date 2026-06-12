@@ -26,7 +26,8 @@ export default function CompanyProfilePage() {
     async function loadData() {
       const profile = await getCompanyProfile()
       if (profile) {
-        setFormData({
+        setFormData(prev => ({
+          ...prev,
           name: profile.name || '',
           address: profile.address || '',
           phone: profile.phone || '',
@@ -36,7 +37,7 @@ export default function CompanyProfilePage() {
           timezone: profile.timezone || 'UTC-5',
           working_hours: profile.working_hours || '',
           logo_url: profile.logo_url || ''
-        })
+        }))
       }
       setLoading(false)
     }

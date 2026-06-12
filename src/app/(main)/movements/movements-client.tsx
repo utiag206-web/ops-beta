@@ -54,26 +54,28 @@ export default function MovementsClient({ initialMovements, workers, userRole }:
   const openEdit = (item: any) => {
     setEditingItem(item)
     const opDate = item.subida_date || item.bajada_date
-    setFormData({
+    setFormData(prev => ({
+      ...prev,
       worker_id: item.worker_id,
       type: item.subida_date ? 'subida' : 'bajada',
       date: getLocalISOString(new Date(opDate)),
       location: item.location || '',
       observations: item.observations || ''
-    })
+    }))
     setShowModal(true)
   }
 
   const closeModal = () => {
     setShowModal(false)
     setEditingItem(null)
-    setFormData({
+    setFormData(prev => ({
+      ...prev,
       worker_id: '',
       type: 'subida',
       date: getLocalISOString(),
       location: '',
       observations: ''
-    })
+    }))
     setErrorMsg(null)
   }
 

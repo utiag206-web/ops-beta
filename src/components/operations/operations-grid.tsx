@@ -745,12 +745,13 @@ function OperationsFormModal({
     if (isOpen) {
       setError(null)
       if (row) {
-        setFormData({ ...row })
+        setFormData((prev: any) => ({ ...prev, ...row }))
       } else {
-        setFormData({ ...defaultRowValues() })
+        const defaultVals = defaultRowValues()
+        setFormData((prev: any) => ({ ...prev, ...defaultVals }))
       }
     }
-  }, [isOpen, row, defaultRowValues])
+  }, [isOpen, row?.id])
 
   if (!isOpen) return null
 

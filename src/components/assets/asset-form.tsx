@@ -27,10 +27,10 @@ export function AssetForm({ isOpen, onClose, onSuccess, editingAsset }: AssetFor
 
   useEffect(() => {
     if (isOpen) {
-      if (editingAsset) setForm(editingAsset)
-      else setForm(initialState)
+      if (editingAsset) setForm(prev => ({ ...prev, ...editingAsset }))
+      else setForm(prev => ({ ...prev, ...initialState }))
     }
-  }, [editingAsset, isOpen])
+  }, [editingAsset?.id, isOpen])
 
   if (!isOpen) return null
 

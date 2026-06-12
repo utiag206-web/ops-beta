@@ -89,14 +89,15 @@ export function MovementForm({ isOpen, onClose, onSuccess, products }: MovementF
       }
       load()
     } else {
-      setForm({
+      setForm(prev => ({
+        ...prev,
         product_id: '', movement_type_id: '', quantity: 0, warehouse_id: '',
         target_warehouse_id: '', document_type: '', document_number: '', reference: '',
         responsible_name: '', observation: '',
         entry_origin: 'MANUAL', outbound_type: 'EXTERNAL', po_id: '', invoice_type: 'FACTURA',
         invoice_number: '', guide_number: '', 
         document_date: new Date().toISOString().split('T')[0]
-      })
+      }))
       setPoItems([])
       setReceivedQtys({})
       setAdjType('plus')
@@ -152,7 +153,7 @@ export function MovementForm({ isOpen, onClose, onSuccess, products }: MovementF
         document_number: '' 
       }))
     }
-  }, [isTransfer, form.outbound_type, isOpen, activeMovementType])
+  }, [isTransfer, form.outbound_type, isOpen, activeMovementType?.id])
 
   // Carga de items de OC
   useEffect(() => {

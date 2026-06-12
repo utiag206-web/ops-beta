@@ -30,14 +30,15 @@ export function EditUserModal({ isOpen, onClose, onSuccess, user }: EditUserModa
   // Sync state when user changes
   useEffect(() => {
     if (user) {
-      setFormData({
+      setFormData(prev => ({
+        ...prev,
         name: user.name || '',
         area: user.area || '',
         email: user.email || '',
         password: ''
-      })
+      }))
     }
-  }, [user])
+  }, [user?.id])
 
   if (!isOpen || !user) return null
 

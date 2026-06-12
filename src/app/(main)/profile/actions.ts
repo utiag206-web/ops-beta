@@ -50,7 +50,7 @@ export async function updateProfile(formData: { name: string, email: string }) {
 
     if (dbError) return { success: false, error: dbError.message }
 
-    revalidatePath('/profile')
+    revalidatePath('/', 'layout')
     return { success: true }
   } catch (error: any) {
     return { success: false, error: error.message }

@@ -34,12 +34,12 @@ export function ProductForm({ isOpen, onClose, onSuccess, editingProduct, isView
   useEffect(() => {
     if (isOpen) {
       if (editingProduct) {
-        setForm(editingProduct)
+        setForm(prev => ({ ...prev, ...editingProduct }))
       } else {
-        setForm(initialState)
+        setForm(prev => ({ ...prev, ...initialState }))
       }
     }
-  }, [editingProduct, isOpen])
+  }, [editingProduct?.id, isOpen])
 
   if (!isOpen) return null
 

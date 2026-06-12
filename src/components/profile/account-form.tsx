@@ -4,12 +4,14 @@ import { useState } from 'react'
 import { User, Mail, Lock, Save, KeyRound, CheckCircle2, AlertCircle, Building } from 'lucide-react'
 import { updateProfile, updatePassword } from '@/app/(main)/profile/actions'
 import { toast } from 'sonner'
+import { useRouter } from 'next/navigation'
 
 interface AccountFormProps {
   user: any
 }
 
 export function AccountForm({ user }: AccountFormProps) {
+  const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [formData, setFormData] = useState({
     name: user.name || '',
@@ -24,6 +26,7 @@ export function AccountForm({ user }: AccountFormProps) {
     const res = await updateProfile(formData)
     if (res.success) {
       toast.success('Perfil actualizado correctamente')
+      router.refresh()
     } else {
       toast.error(res.error || 'Error al actualizar perfil')
     }

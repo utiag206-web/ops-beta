@@ -74,7 +74,14 @@ export default function DocumentsClient({ initialDocuments, workers, userRole }:
         setErrorMsg(result.error || 'Error al registrar documento')
       } else {
         setShowForm(false)
-        setFormData({ worker_id: '', name: '', file_type: '', issue_date: new Date().toISOString().split('T')[0], expiry_date: '' })
+        setFormData(prev => ({
+          ...prev,
+          worker_id: '',
+          name: '',
+          file_type: '',
+          issue_date: new Date().toISOString().split('T')[0],
+          expiry_date: ''
+        }))
         setFile(null)
         if (result?.data) {
           setDocuments(prev => [result.data, ...prev])
