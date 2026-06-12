@@ -147,7 +147,7 @@ export async function registerPettyCashTransaction(payload: {
     const { error: errorOut } = await supabase
       .from('petty_cash_transactions')
       .insert([{
-        reason: `[TRANSFERENCIA] Enviado a ${destArea}: ${payload.reason}`,
+        reason: payload.reason,
         amount: payload.amount,
         payment_method: payload.payment_method,
         type: 'egreso',
@@ -166,7 +166,7 @@ export async function registerPettyCashTransaction(payload: {
     const { error: errorIn } = await supabase
       .from('petty_cash_transactions')
       .insert([{
-        reason: `[TRANSFERENCIA] Recibido de ${sourceArea}: ${payload.reason}`,
+        reason: payload.reason,
         amount: payload.amount,
         payment_method: payload.payment_method,
         type: 'ingreso',

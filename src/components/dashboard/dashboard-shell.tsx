@@ -196,8 +196,8 @@ export function DashboardShell({ user, stats, localIp }: DashboardShellProps) {
                 icon={FileText} color="text-rose-500" bg="bg-rose-50" href="/requerimientos"
               />
               <StatWidget 
-                title="Stock Crítico" value={stats.admin?.criticalProductsCount?.toString() || '0'} 
-                icon={AlertTriangle} color="text-rose-700" bg="bg-rose-50" href="/inventory/stock"
+                title="Control de Inventario" value={stats.admin?.criticalProductsCount?.toString() || '0'} 
+                icon={Boxes} color="text-indigo-600" bg="bg-indigo-50" href="/inventory/stock"
               />
               <StatWidget 
                 title="Activos Controlados" value={stats.admin?.assetsCount?.toString() || '0'} 
@@ -404,8 +404,8 @@ export function DashboardShell({ user, stats, localIp }: DashboardShellProps) {
         return (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
                   <StatWidget 
-                    title="Productos Críticos" value={stats.kitchen?.criticalProducts?.toString() || '0'} 
-                    icon={AlertTriangle} color="text-rose-600" bg="bg-rose-50" href="/inventory/stock"
+                    title="Control de Inventario" value={stats.kitchen?.criticalProducts?.toString() || '0'} 
+                    icon={Boxes} color="text-indigo-600" bg="bg-indigo-50" href="/inventory/stock"
                   />
                   <StatWidget 
                     title="Consumo Hoy" value={`${stats.kitchen?.consumptionToday || '0'} UND`} 
@@ -472,8 +472,8 @@ export function DashboardShell({ user, stats, localIp }: DashboardShellProps) {
                     icon={LayoutGrid} color="text-indigo-600" bg="bg-indigo-50" href="/inventory/products"
                   />
                   <StatWidget 
-                    title="Productos Críticos" value={stats.logistics?.criticalProducts?.toString() || '0'} 
-                    icon={AlertTriangle} color="text-rose-600" bg="bg-rose-50" href="/inventory/stock"
+                    title="Control de Inventario" value={stats.logistics?.criticalProducts?.toString() || '0'} 
+                    icon={Boxes} color="text-indigo-600" bg="bg-indigo-50" href="/inventory/stock"
                   />
                   <StatWidget 
                     title="Entradas Hoy" value={stats.logistics?.incomingToday?.toString() || '0'} 

@@ -23,11 +23,7 @@ export async function bootstrapCompany(companyId: string) {
     { company_id: companyId, name: 'Almacén Cocina', code: 'COC', area: 'COCINA' }
   ]
 
-  // 3. SOMA Defaults (Note: description column does not exist in soma_talks)
-  const somaDefaults = [
-    { company_id: companyId, topic: 'Inducción de Seguridad' },
-    { company_id: companyId, topic: 'Primeros Auxilios' }
-  ]
+
 
   try {
     // A. Programmatically Seed Movement Types
@@ -59,19 +55,7 @@ export async function bootstrapCompany(companyId: string) {
       if (insertErr) console.warn('[BOOTSTRAP_WARN] Failed to insert default warehouses:', insertErr.message)
     }
 
-    // C. Programmatically Seed SOMA Talks
-    const { data: existingSoma, error: somaFetchErr } = await supabase
-      .from('soma_talks')
-      .select('topic')
-      .eq('company_id', companyId)
-    
-    if (somaFetchErr) console.warn('[BOOTSTRAP_WARN] Failed to fetch existing SOMA talks:', somaFetchErr.message)
-    const existingTopics = new Set((existingSoma || []).map((s: any) => s.topic.toLowerCase()))
-    const somaToInsert = somaDefaults.filter(s => !existingTopics.has(s.topic.toLowerCase()))
-    if (somaToInsert.length > 0) {
-      const { error: insertErr } = await supabase.from('soma_talks').insert(somaToInsert)
-      if (insertErr) console.warn('[BOOTSTRAP_WARN] Failed to insert default SOMA talks:', insertErr.message)
-    }
+
 
     return { success: true }
   } catch (error: any) {

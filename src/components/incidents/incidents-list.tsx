@@ -19,6 +19,7 @@ export function IncidentsList({ initialData = [], user, forcedCategory }: { init
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState('abierta')
+  const [categoryFilter, setCategoryFilter] = useState(forcedCategory || 'all')
   const [hasMounted, setHasMounted] = useState(false)
 
   const isWorker = user?.role_id === 'trabajador'
@@ -39,7 +40,7 @@ export function IncidentsList({ initialData = [], user, forcedCategory }: { init
     try {
       const res = await getIncidencias({ 
         status: statusFilter !== 'all' ? statusFilter : undefined,
-        category: forcedCategory
+        category: categoryFilter !== 'all' ? categoryFilter : undefined
       })
       if (res && res.data) {
         setIncidents(res.data)
@@ -63,7 +64,7 @@ export function IncidentsList({ initialData = [], user, forcedCategory }: { init
         fetchData()
       }
     }
-  }, [statusFilter])
+  }, [statusFilter, categoryFilter])
 
   // OPTIMIZED: Memoized filtering to prevent lag during typing
   const filtered = incidents.filter(inc => {
@@ -116,15 +117,30 @@ export function IncidentsList({ initialData = [], user, forcedCategory }: { init
         </div>
         <div className="flex gap-2">
           <div className="flex-1 bg-white border-2 border-slate-100 hover:border-orange-200 rounded-2xl font-bold text-slate-600 flex items-center px-4 transition-all shadow-sm">
-            <Filter size={18} className="text-slate-400 mr-2" />
+            <Filter size={18} className="text-slate-400 mr-2 shrink-0" />
             <select 
-              className="bg-transparent w-full outline-none text-sm h-[54px]"
+              className="bg-transparent w-full outline-none text-sm h-[54px] cursor-pointer"
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
             >
               <option value="all">Todos los estados</option>
               <option value="abierta">Abiertas</option>
               <option value="cerrada">Cerradas</option>
+            </select>
+          </div>
+          <div className="flex-1 bg-white border-2 border-slate-100 hover:border-orange-200 rounded-2xl font-bold text-slate-600 flex items-center px-4 transition-all shadow-sm">
+            <Filter size={18} className="text-slate-400 mr-2 shrink-0" />
+            <select 
+              className="bg-transparent w-full outline-none text-sm h-[54px] cursor-pointer"
+              value={categoryFilter}
+              onChange={(e) => setCategoryFilter(e.target.value)}
+            >
+              <option value="all">Todas las categorías</option>
+              <option value="operativa">Operativas</option>
+              <option value="soma">SOMA / HSEC</option>
+              <option value="personal">Daño Personal</option>
+              <option value="ambiental">Daño Ambiental</option>
+              <option value="material">Daño Material</option>
             </select>
           </div>
         </div>
@@ -233,9 +249,13 @@ export function IncidentsList({ initialData = [], user, forcedCategory }: { init
         isOpen={isModalOpen} 
         initialCategory={forcedCategory}
         onClose={() => setIsModalOpen(false)} 
-        onSuccess={() => {
+        onSuccess={(newIncidentCategory) => {
           router.refresh()
-          fetchData()
+          if (newIncidentCategory && categoryFilter !== 'all' && categoryFilter !== newIncidentCategory) {
+            setCategoryFilter('all')
+          } else {
+            fetchData()
+          }
           setIsModalOpen(false)
         }}
       />

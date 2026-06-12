@@ -883,7 +883,7 @@ export async function updateWarehouse(id: string, payload: { name: string, code?
     return { error: 'Ya existe otro almacén con este nombre.' }
   }
 
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from('warehouses')
     .update({ 
       name: normalizedName,
@@ -892,10 +892,12 @@ export async function updateWarehouse(id: string, payload: { name: string, code?
     })
     .eq('id', id)
     .match(companyId ? { company_id: companyId } : {})
+    .select('*')
+    .single()
 
   if (error) return { error: error.message }
   revalidatePath('/configuracion/warehouses')
-  return { success: true }
+  return { success: true, data }
 }
 
 export async function deleteWarehouse(id: string) {

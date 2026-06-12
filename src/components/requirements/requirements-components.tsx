@@ -512,7 +512,7 @@ export function ReportIncidentModal({
 }: { 
   isOpen: boolean, 
   onClose: () => void,
-  onSuccess?: () => void,
+  onSuccess?: (category?: string) => void,
   initialCategory?: string 
 }) {
   const [loading, setLoading] = useState(false)
@@ -603,7 +603,7 @@ export function ReportIncidentModal({
 
       if (res.success) {
         toast.success('Incidencia reportada correctamente')
-        onSuccess?.()
+        onSuccess?.(form.incident_category)
         onClose()
       } else {
         toast.error(res.error || 'Error al reportar incidencia')

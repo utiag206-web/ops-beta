@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { 
   Users, 
   TrendingUp, 
@@ -20,8 +21,35 @@ import { getDetailedHistory } from '@/app/(main)/reports/actions'
 import * as XLSX from 'xlsx'
 
 export function ReportsDashboard({ initialData }: { initialData: any }) {
+  const router = useRouter()
   const [data, setData] = useState(initialData)
   const stats = data
+
+  useEffect(() => {
+    setData(initialData)
+  }, [initialData])
+
+  const months = [
+    { value: 1, label: 'Enero' },
+    { value: 2, label: 'Febrero' },
+    { value: 3, label: 'Marzo' },
+    { value: 4, label: 'Abril' },
+    { value: 5, label: 'Mayo' },
+    { value: 6, label: 'Junio' },
+    { value: 7, label: 'Julio' },
+    { value: 8, label: 'Agosto' },
+    { value: 9, label: 'Septiembre' },
+    { value: 10, label: 'Octubre' },
+    { value: 11, label: 'Noviembre' },
+    { value: 12, label: 'Diciembre' },
+  ]
+  
+  const currentYear = new Date().getFullYear()
+  const years = [currentYear - 2, currentYear - 1, currentYear, currentYear + 1]
+
+  const handlePeriodChange = (newMonth: number, newYear: number) => {
+    router.push(`/reports?month=${newMonth}&year=${newYear}`)
+  }
 
   const handleExport = async (type: 'bonuses' | 'transport' | 'attendance') => {
     const history = await getDetailedHistory({
@@ -59,17 +87,39 @@ export function ReportsDashboard({ initialData }: { initialData: any }) {
 
   return (
     <div className="space-y-8 pb-12">
-      {/* Header with Filters (Mocked for now) */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+      {/* Header with Period Selectors */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-6 rounded-3xl border border-slate-100 shadow-sm">
         <div>
-          <h2 className="text-xl font-bold text-slate-800">Resumen Ejecutivo</h2>
-          <p className="text-xs text-slate-500 font-medium">Periodo: {new Date(0, stats.period.month - 1).toLocaleString('es-ES', { month: 'long' })} {stats.period.year}</p>
+          <h2 className="text-xl font-black text-slate-800 tracking-tight">Resumen Ejecutivo</h2>
+          <p className="text-xs text-slate-500 font-medium uppercase tracking-widest mt-0.5">
+            Período de Análisis Consolidado
+          </p>
         </div>
-        <div className="flex gap-2">
-          <button className="flex items-center gap-2 bg-white border border-slate-200 px-4 py-2 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-50 transition-all">
-            <Filter size={16} />
-            Filtros Avanzados
-          </button>
+        <div className="flex items-center gap-3 w-full sm:w-auto">
+          <div className="flex-1 sm:flex-none flex items-center bg-slate-50 border border-slate-200 rounded-xl px-3 py-2">
+            <Calendar size={16} className="text-slate-400 mr-2" />
+            <select
+              className="bg-transparent text-xs font-bold text-slate-700 outline-none pr-4 cursor-pointer"
+              value={stats.period.month}
+              onChange={(e) => handlePeriodChange(Number(e.target.value), stats.period.year)}
+            >
+              {months.map(m => (
+                <option key={m.value} value={m.value}>{m.label}</option>
+              ))}
+            </select>
+          </div>
+          <div className="flex-1 sm:flex-none flex items-center bg-slate-50 border border-slate-200 rounded-xl px-3 py-2">
+            <Calendar size={16} className="text-slate-400 mr-2" />
+            <select
+              className="bg-transparent text-xs font-bold text-slate-700 outline-none pr-4 cursor-pointer"
+              value={stats.period.year}
+              onChange={(e) => handlePeriodChange(stats.period.month, Number(e.target.value))}
+            >
+              {years.map(y => (
+                <option key={y} value={y}>{y}</option>
+              ))}
+            </select>
+          </div>
         </div>
       </div>
 

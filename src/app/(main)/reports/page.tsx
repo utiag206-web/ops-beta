@@ -1,8 +1,12 @@
 import { getReportsData } from './actions'
 import { ReportsDashboard } from '@/components/reports/reports-dashboard'
 
-export default async function ReportsPage() {
-  const data = await getReportsData()
+export default async function ReportsPage(props: { searchParams: Promise<{ month?: string, year?: string }> }) {
+  const searchParams = await props.searchParams
+  const month = searchParams.month ? parseInt(searchParams.month, 10) : undefined
+  const year = searchParams.year ? parseInt(searchParams.year, 10) : undefined
+
+  const data = await getReportsData(month, year)
 
   if (!data) return null
 

@@ -399,6 +399,7 @@ export async function importWorkers(workersData: any[]) {
   // Prepare data with company_id
   const workersToInsert = workersData.map((worker: any) => ({
     name: worker.name,
+    last_name: worker.last_name || null,
     dni: worker.dni?.toString(),
     position: worker.position,
     phone: worker.phone?.toString(),

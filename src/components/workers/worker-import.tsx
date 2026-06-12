@@ -9,6 +9,7 @@ import { importWorkers } from '@/app/(main)/workers/actions'
 
 interface WorkerImportData {
   name: string
+  last_name?: string
   dni: string
   position: string
   phone: string
@@ -50,6 +51,7 @@ export function WorkerImport() {
 
         const validatedData = jsonData.map((row: any) => ({
           name: findValue(row, ['name', 'nombre', 'nombre completo', 'nombres', 'trabajador']),
+          last_name: findValue(row, ['last_name', 'last name', 'apellido', 'apellidos']),
           dni: findValue(row, ['dni', 'documento', 'cedula', 'id']),
           position: findValue(row, ['position', 'cargo', 'puesto', 'rol', 'ocupacion']),
           phone: findValue(row, ['phone', 'telefono', 'celular', 'movil']),
@@ -180,7 +182,8 @@ export function WorkerImport() {
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="bg-slate-50">
-                    <th className="px-4 py-3 text-xs font-bold text-slate-500 uppercase tracking-wider">Nombre</th>
+                    <th className="px-4 py-3 text-xs font-bold text-slate-500 uppercase tracking-wider">Nombres</th>
+                    <th className="px-4 py-3 text-xs font-bold text-slate-500 uppercase tracking-wider">Apellidos</th>
                     <th className="px-4 py-3 text-xs font-bold text-slate-500 uppercase tracking-wider">DNI</th>
                     <th className="px-4 py-3 text-xs font-bold text-slate-500 uppercase tracking-wider">Cargo</th>
                     <th className="px-4 py-3 text-xs font-bold text-slate-500 uppercase tracking-wider">Teléfono</th>
@@ -191,6 +194,7 @@ export function WorkerImport() {
                   {data.map((row, i) => (
                     <tr key={i} className="hover:bg-slate-50 transition-colors">
                       <td className="px-4 py-3 text-sm font-medium text-slate-700">{row.name}</td>
+                      <td className="px-4 py-3 text-sm text-slate-600">{row.last_name || ''}</td>
                       <td className="px-4 py-3 text-sm text-slate-600">{row.dni}</td>
                       <td className="px-4 py-3 text-sm text-slate-600">{row.position}</td>
                       <td className="px-4 py-3 text-sm text-slate-600">{row.phone}</td>

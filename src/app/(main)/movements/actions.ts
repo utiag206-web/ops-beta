@@ -78,7 +78,6 @@ export async function registerMovement(payload: {
     }
 
     revalidatePath('/movements')
-    revalidatePath('/dashboard')
     return { success: true, error: null }
   } catch (e: any) {
     if (e.digest?.startsWith('NEXT_REDIRECT')) throw e
@@ -127,7 +126,6 @@ export async function updateMovement(id: string, payload: {
  
     if (error) throw error
     revalidatePath('/movements')
-    revalidatePath('/dashboard')
     return { success: true }
   } catch (error: any) {
     console.error('[MOVEMENTS_UPDATE] Error:', error.message)

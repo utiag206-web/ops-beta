@@ -52,7 +52,11 @@ export function WarehouseForm({ isOpen, onClose, onSuccess, editingWarehouse }: 
         toast.error(res.error as string)
       } else {
         toast.success(editingWarehouse ? 'Almacén actualizado' : 'Almacén creado exitosamente')
-        if (res && 'data' in res) onSuccess?.(res.data)
+        if (res && 'data' in res && res.data) {
+          onSuccess?.(res.data)
+        } else {
+          onSuccess?.({ id: editingWarehouse?.id, ...form })
+        }
         onClose()
       }
     } catch (err: any) {
