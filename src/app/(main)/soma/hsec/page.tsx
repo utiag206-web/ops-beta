@@ -6,12 +6,13 @@ import {
   MapPin, CheckCircle2, ChevronRight, X, 
   Loader2, Camera, Filter, Grid, List,
   ArrowRight, Info, AlertCircle, Activity,
-  Calendar, Users
+  Calendar, Users, Pencil, Trash2
 } from 'lucide-react'
 import { toast } from 'sonner'
-import { getHsecStops, createHsecStop, closeHsecStop } from './actions'
+import { getHsecStops, createHsecStop, closeHsecStop, updateHsecStop, deleteHsecStop } from './actions'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
+import { useRbac } from '@/components/providers/rbac-provider'
 
 const STOP_CATEGORIES = [
   { id: 'ppe', label: 'EPP / Ropa de Trabajo', icon: ShieldAlert },
@@ -23,11 +24,27 @@ const STOP_CATEGORIES = [
 ]
 
 export default function StopHsecPage() {
+  const { role_id } = useRbac()
   const [stops, setStops] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [editStop, setEditStop] = useState<any | null>(null)
   const [filter, setFilter] = useState<'all' | 'abierta' | 'cerrada'>('all')
   const [selectedStop, setSelectedStop] = useState<any | null>(null)
+
+  const isSomaRole = ['admin', 'soma', 'operaciones', 'jefe_area', 'super_admin', 'superadmin'].includes(role_id || '')
+
+  const handleDeleteStop = async (id: string) => {
+    if (!confirm('¿Estás seguro de que deseas eliminar este reporte HSEC/STOP? Esta acción no se puede deshacer.')) return
+    try {
+      const res = await deleteHsecStop(id)
+      if (res.error) throw new Error(res.error)
+      toast.success('Reporte HSEC/STOP eliminado')
+      loadStops()
+    } catch (err: any) {
+      toast.error(err.message || 'Error al eliminar reporte')
+    }
+  }
 
   useEffect(() => {
     loadStops()
@@ -152,18 +169,38 @@ export default function StopHsecPage() {
                    </div>
                    <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{stop.observer?.name || 'Observer'}</div>
                  </div>
-                 {stop.status === 'abierta' ? (
-                   <button 
-                    onClick={(e) => { e.stopPropagation(); handleCloseStop(stop.id); }}
-                    className="flex items-center gap-2 text-[10px] font-black text-rose-600 hover:bg-rose-50 px-3 py-1.5 rounded-lg transition-all"
-                   >
-                     Cerrar <ArrowRight size={12} />
-                   </button>
-                 ) : (
-                   <span className="flex items-center gap-1.5 text-[10px] font-black text-emerald-600 bg-emerald-50 px-3 py-1.5 rounded-lg uppercase tracking-widest">
-                     <CheckCircle2 size={12} /> Cerrada
-                   </span>
-                 )}
+                  <div className="flex items-center gap-1">
+                    {stop.status === 'abierta' ? (
+                      <button 
+                       onClick={(e) => { e.stopPropagation(); handleCloseStop(stop.id); }}
+                       className="flex items-center gap-1 text-[10px] font-black text-rose-600 hover:bg-rose-50 px-2 py-1.5 rounded-lg transition-all"
+                      >
+                        Cerrar <ArrowRight size={10} />
+                      </button>
+                    ) : (
+                      <span className="flex items-center gap-1 text-[10px] font-black text-emerald-600 bg-emerald-50 px-2 py-1.5 rounded-lg uppercase tracking-widest">
+                        <CheckCircle2 size={10} /> Cerrada
+                      </span>
+                    )}
+                    {isSomaRole && (
+                      <>
+                        <button 
+                          onClick={(e) => { e.stopPropagation(); setEditStop(stop); }}
+                          className="p-1.5 text-slate-400 hover:text-amber-500 rounded-lg hover:bg-slate-50 transition-all ml-1"
+                          title="Editar"
+                        >
+                          <Pencil size={14} />
+                        </button>
+                        <button 
+                          onClick={(e) => { e.stopPropagation(); handleDeleteStop(stop.id); }}
+                          className="p-1.5 text-slate-400 hover:text-rose-500 rounded-lg hover:bg-slate-50 transition-all"
+                          title="Eliminar"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </>
+                    )}
+                  </div>
               </div>
             </div>
             {stop.photo_url && (
@@ -187,6 +224,15 @@ export default function StopHsecPage() {
         <ViewStopDetailsModal 
           stop={selectedStop} 
           onClose={() => setSelectedStop(null)} 
+        />
+      )}
+
+      {editStop && (
+        <EditStopModal 
+          isOpen={!!editStop} 
+          onClose={() => setEditStop(null)} 
+          stop={editStop}
+          onSuccess={loadStops}
         />
       )}
     </div>
@@ -443,3 +489,171 @@ function ViewStopDetailsModal({ stop, onClose }: { stop: any; onClose: () => voi
     </div>
   )
 }
+
+function EditStopModal({ isOpen, onClose, stop, onSuccess }: any) {
+  const [loading, setLoading] = useState(false)
+  const [formData, setFormData] = useState({
+    type: stop?.type || 'acto_inseguro',
+    category: stop?.category || '',
+    area_location: stop?.area_location || '',
+    description: stop?.description || '',
+    status: stop?.status || 'abierta'
+  })
+
+  useEffect(() => {
+    if (stop) {
+      setFormData({
+        type: stop.type || 'acto_inseguro',
+        category: stop.category || '',
+        area_location: stop.area_location || '',
+        description: stop.description || '',
+        status: stop.status || 'abierta'
+      })
+    }
+  }, [stop])
+
+  if (!isOpen) return null
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    if (!formData.category) return toast.warning('Selecciona una categoría')
+    setLoading(true)
+    try {
+      const res = await updateHsecStop(stop.id, formData as any)
+      if (res.error) throw new Error(res.error)
+      toast.success('Reporte preventivo actualizado')
+      onSuccess()
+      onClose()
+    } catch (error: any) {
+      toast.error(error.message)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
+      <div className="bg-white w-full max-w-2xl rounded-[2.5rem] shadow-[0_20px_50px_rgba(0,0,0,0.3)] overflow-hidden animate-in zoom-in-95 duration-200 flex flex-col max-h-[90vh]">
+        <div className="p-8 border-b border-slate-50 flex justify-between items-center bg-rose-50/30">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 bg-amber-500 text-white rounded-2xl flex items-center justify-center shadow-lg shadow-amber-200">
+              <Pencil size={24} />
+            </div>
+            <div>
+              <h2 className="text-2xl font-black text-slate-800 tracking-tight">Editar Reporte STOP</h2>
+              <p className="text-slate-400 font-bold text-[10px] uppercase tracking-widest text-amber-500">FASE SOMA: STOP / HSEC</p>
+            </div>
+          </div>
+          <button onClick={onClose} className="p-2 hover:bg-slate-100 rounded-full transition-colors text-slate-400">
+            <X size={24} />
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-5 md:p-8 custom-scrollbar">
+          <div className="space-y-6 text-left">
+            <div className="grid grid-cols-2 gap-4">
+              <button
+                type="button"
+                onClick={() => setFormData(prev => ({ ...prev, type: 'acto_inseguro' }))}
+                className={`py-4 px-6 rounded-2xl font-black text-xs uppercase tracking-widest transition-all ${
+                  formData.type === 'acto_inseguro' 
+                    ? 'bg-rose-600 text-white shadow-xl shadow-rose-200' 
+                    : 'bg-slate-50 text-slate-400 hover:bg-slate-100'
+                }`}
+              >
+                Acto Inseguro
+              </button>
+              <button
+                type="button"
+                onClick={() => setFormData(prev => ({ ...prev, type: 'condicion_insegura' }))}
+                className={`py-4 px-6 rounded-2xl font-black text-xs uppercase tracking-widest transition-all ${
+                  formData.type === 'condicion_insegura' 
+                    ? 'bg-amber-500 text-white shadow-xl shadow-amber-200' 
+                    : 'bg-slate-50 text-slate-400 hover:bg-slate-100'
+                }`}
+              >
+                Condición Insegura
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+              <div className="space-y-3">
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] ml-2">Ubicación / Frente</label>
+                <input 
+                  required
+                  type="text" 
+                  value={formData.area_location.toUpperCase()}
+                  onChange={e => setFormData(prev => ({ ...prev, area_location: e.target.value.toUpperCase() }))}
+                  placeholder="EJ: ALMACÉN CENTRAL"
+                  className="w-full px-6 py-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-rose-500 font-bold text-slate-700 shadow-sm uppercase"
+                />
+              </div>
+
+              <div className="space-y-3">
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] ml-2">Categoría de Riesgo</label>
+                <select
+                  required
+                  value={formData.category}
+                  onChange={e => setFormData(prev => ({ ...prev, category: e.target.value }))}
+                  className="w-full px-6 py-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-rose-500 font-bold text-slate-700 shadow-sm"
+                >
+                  <option value="">Seleccione...</option>
+                  <option value="ppe">EPP / Ropa de Trabajo</option>
+                  <option value="tools">Herramientas / Equipos</option>
+                  <option value="housekeeping">Orden y Limpieza</option>
+                  <option value="position">Posición de Personas</option>
+                  <option value="environment">Medio Ambiente</option>
+                  <option value="others">Otros Riesgos</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] ml-2">Estado del Reporte</label>
+              <select
+                required
+                value={formData.status}
+                onChange={e => setFormData(prev => ({ ...prev, status: e.target.value as 'abierta' | 'cerrada' }))}
+                className="w-full px-6 py-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-rose-500 font-bold text-slate-700 shadow-sm"
+              >
+                <option value="abierta">ABIERTA / PENDIENTE</option>
+                <option value="cerrada">CERRADA / RESUELTA</option>
+              </select>
+            </div>
+
+            <div className="space-y-3">
+              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] ml-2">Descripción del Hallazgo</label>
+              <textarea 
+                required
+                value={formData.description.toUpperCase()}
+                onChange={e => setFormData(prev => ({ ...prev, description: e.target.value.toUpperCase() }))}
+                placeholder="DESCRIBA EN DETALLE LA OBSERVACIÓN DE RIESGO ENCONTRADA..."
+                rows={5}
+                className="w-full px-6 py-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-rose-500 font-bold text-slate-700 shadow-sm uppercase"
+              />
+            </div>
+          </div>
+
+          <div className="mt-12 flex justify-end gap-6 pt-10 border-t border-slate-50">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-10 py-4 font-bold text-slate-400 hover:text-slate-600 transition-colors"
+            >
+              Cancelar
+            </button>
+            <button
+              disabled={loading}
+              type="submit"
+              className="flex items-center gap-3 px-12 py-4 bg-rose-600 text-white font-bold rounded-2xl shadow-xl shadow-rose-200 hover:bg-rose-700 transition-all disabled:opacity-50"
+            >
+              {loading && <Loader2 className="w-5 h-5 animate-spin" />}
+              Actualizar STOP
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  )
+}
+

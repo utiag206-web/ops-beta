@@ -90,7 +90,8 @@ export const ROLE_PERMISSIONS: Record<string, string[]> = {
     'requerimientos', // Solo para solicitar
     'incidencias',    // Reportar incidencia personal/campo
     'ppe',           // Mis EPP
-    'profile'
+    'profile',
+    'soma'
   ],
 
   // 6. ADMINISTRACIÓN: Finanzas, pagos y auditoría parcial
@@ -138,6 +139,18 @@ export const ROLE_PERMISSIONS: Record<string, string[]> = {
     'inventory', 
     'movements', 
     'requerimientos',
+    'profile'
+  ],
+  supervisor: [
+    'dashboard',
+    'workers',
+    'attendance',
+    'tareo',
+    'requerimientos',
+    'camp',
+    'soma-capacitaciones',
+    'soma-charlas',
+    'incidencias',
     'profile'
   ],
 }

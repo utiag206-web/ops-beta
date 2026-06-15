@@ -126,7 +126,7 @@ export async function registerPettyCashTransaction(payload: {
       return { error: 'No autorizado: Solo los roles de gestión y administración central pueden transferir fondos.' }
     }
 
-    if (!payload.target_area || payload.target_area === finalArea) {
+    if (!payload.target_area || payload.target_area.toLowerCase() === finalArea.toLowerCase()) {
       return { error: 'Debes seleccionar una caja de contraparte válida y diferente de la actual.' }
     }
 
@@ -142,12 +142,13 @@ export async function registerPettyCashTransaction(payload: {
 
     // Generar un ID de transferencia para relacionarlas en operation_number
     const transferRef = payload.operation_number || `TRF-${Date.now()}-${Math.floor(Math.random() * 1000)}`
+    const enrichedReason = `${payload.reason} [TRF: ${sourceArea} -> ${destArea}]`
 
     // 1. Insertar el egreso en la caja de origen
     const { error: errorOut } = await supabase
       .from('petty_cash_transactions')
       .insert([{
-        reason: payload.reason,
+        reason: enrichedReason,
         amount: payload.amount,
         payment_method: payload.payment_method,
         type: 'egreso',
@@ -166,7 +167,7 @@ export async function registerPettyCashTransaction(payload: {
     const { error: errorIn } = await supabase
       .from('petty_cash_transactions')
       .insert([{
-        reason: payload.reason,
+        reason: enrichedReason,
         amount: payload.amount,
         payment_method: payload.payment_method,
         type: 'ingreso',

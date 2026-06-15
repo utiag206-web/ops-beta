@@ -41,7 +41,7 @@ export function UserDropdown({
             <span className="text-sm font-bold text-slate-700 leading-none">{userName}</span>
             <ChevronDown size={14} className={`text-slate-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
           </div>
-          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">{userRole}</span>
+          <span className="text-[10px] font-bold text-slate-400 keep-case tracking-tighter">{userRole}</span>
         </div>
       </button>
 

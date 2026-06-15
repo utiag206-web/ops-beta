@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { 
   Package, Plus, Search, Filter, 
   MoreVertical, Hammer, Truck, Activity, 
-  MapPin, Hash, Trash2, Pencil, ExternalLink
+  MapPin, Hash, Trash2, Pencil, ExternalLink, FileSpreadsheet
 } from 'lucide-react'
 import { AssetForm } from './asset-form'
 import { deleteAsset } from '@/app/(main)/assets/actions'
@@ -82,13 +82,22 @@ export function AssetsList({ initialAssets }: { initialAssets: Asset[] }) {
           </h1>
           <p className="text-slate-500 font-medium text-sm mt-1">Equipos y herramientas de alto valor.</p>
         </div>
-        <button 
-          onClick={() => setIsModalOpen(true)}
-          className="w-full md:w-auto bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-2xl font-bold flex items-center justify-center gap-2 transition-all shadow-lg shadow-blue-100 active:scale-95"
-        >
-          <Plus size={20} strokeWidth={3} />
-          <span>Registrar Activo</span>
-        </button>
+        <div className="flex flex-wrap gap-2 w-full md:w-auto">
+          <button 
+            onClick={() => router.push('/assets/import')}
+            className="flex-1 md:flex-none bg-white border-2 border-blue-100 hover:bg-blue-50/50 text-blue-700 px-6 py-3 rounded-2xl font-bold flex items-center justify-center gap-2 transition-all active:scale-95 text-sm"
+          >
+            <FileSpreadsheet size={18} />
+            <span>Importar</span>
+          </button>
+          <button 
+            onClick={() => setIsModalOpen(true)}
+            className="flex-1 md:flex-none bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-2xl font-bold flex items-center justify-center gap-2 transition-all shadow-lg shadow-blue-100 active:scale-95 text-sm"
+          >
+            <Plus size={20} strokeWidth={3} />
+            <span>Registrar Activo</span>
+          </button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

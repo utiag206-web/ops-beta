@@ -274,6 +274,12 @@ export function WorkerProfileForm({ worker, childrenList = [], canManage = false
                 disabled={!canManage}
                 options={[{val: 'SOLTERO', label: 'Soltero'}, {val: 'CASADO', label: 'Casado'}, {val: 'CONVIVIENTE', label: 'Conviviente'}]}
               />
+              <Input 
+                label="Categoría del Trabajador" 
+                value={personal.worker_category} 
+                onChange={(e:any) => setPersonal(prev => ({...prev, worker_category: e.target.value}))} 
+                disabled={!canManage} 
+              />
               <div className="space-y-1.5 flex-1 min-w-[200px]">
                 <label className="text-xs font-bold text-slate-500 uppercase">Nº Hijos Registrados</label>
                 <div className="w-full px-3 py-2 text-sm font-bold text-blue-700 bg-blue-50 border border-blue-100 rounded-xl flex items-center h-[38px]">

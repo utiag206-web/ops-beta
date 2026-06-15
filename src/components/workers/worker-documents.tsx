@@ -12,6 +12,8 @@ type Document = {
   file_path: string
   size: number
   created_at: string
+  issue_date?: string | null
+  expiry_date?: string | null
 }
 
 export function WorkerDocuments({ 
@@ -92,29 +94,49 @@ export function WorkerDocuments({
 
       {showUploadForm && (
         <div className="p-6 bg-slate-50 border-b border-slate-100 animate-in fade-in slide-in-from-top-2">
-          <form onSubmit={handleUpload} className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <label className="block text-xs font-bold text-slate-500 uppercase mb-1 ml-1">Nombre del Archivo</label>
-              <input 
-                name="name" 
-                required 
-                placeholder="Ej: Contrato 2024"
-                className="w-full px-4 py-2 bg-white border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600 transition-all text-sm text-slate-900"
-              />
+          <form onSubmit={handleUpload} className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-500 uppercase mb-1 ml-1">Nombre del Archivo</label>
+                <input 
+                  name="name" 
+                  required 
+                  placeholder="Ej: Contrato 2024"
+                  className="w-full px-4 py-2 bg-white border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600 transition-all text-sm text-slate-900"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-500 uppercase mb-1 ml-1">Categoría</label>
+                <select 
+                  name="file_type" 
+                  required
+                  className="w-full px-4 py-2 bg-white border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600 transition-all text-sm appearance-none text-slate-900"
+                >
+                  <option value="dni">DNI / Identificación</option>
+                  <option value="contrato">Contrato</option>
+                  <option value="certificado">Certificado Médico / Capacitación</option>
+                  <option value="licencia">Licencia de Conducir / Especial</option>
+                  <option value="otros">Otros</option>
+                </select>
+              </div>
             </div>
-            <div>
-              <label className="block text-xs font-bold text-slate-500 uppercase mb-1 ml-1">Categoría</label>
-              <select 
-                name="file_type" 
-                required
-                className="w-full px-4 py-2 bg-white border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600 transition-all text-sm appearance-none text-slate-900"
-              >
-                <option value="dni">DNI / Identificación</option>
-                <option value="contrato">Contrato</option>
-                <option value="certificado">Certificado Médico / Capacitación</option>
-                <option value="licencia">Licencia de Conducir / Especial</option>
-                <option value="otros">Otros</option>
-              </select>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-500 uppercase mb-1 ml-1">Fecha Emisión (Opcional)</label>
+                <input 
+                  name="issue_date" 
+                  type="date"
+                  className="w-full px-4 py-2 bg-white border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600 transition-all text-sm text-slate-900"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-500 uppercase mb-1 ml-1">Fecha Vencimiento (Opcional)</label>
+                <input 
+                  name="expiry_date" 
+                  type="date"
+                  className="w-full px-4 py-2 bg-white border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600 transition-all text-sm text-slate-900"
+                />
+              </div>
             </div>
             <div>
               <label className="block text-xs font-bold text-slate-500 uppercase mb-1 ml-1">Archivo</label>
@@ -154,7 +176,9 @@ export function WorkerDocuments({
                         {doc.file_type}
                       </span>
                       <span className="text-[10px] text-slate-400 font-medium">
-                        {formatSize(doc.size)} • {new Date(doc.created_at).toLocaleDateString()}
+                        {formatSize(doc.size)} • Subido: {new Date(doc.created_at).toLocaleDateString()}
+                        {doc.issue_date && ` • Emisión: ${new Date(doc.issue_date + 'T12:00:00').toLocaleDateString()}`}
+                        {doc.expiry_date && ` • Vence: ${new Date(doc.expiry_date + 'T12:00:00').toLocaleDateString()}`}
                       </span>
                     </div>
                   </div>

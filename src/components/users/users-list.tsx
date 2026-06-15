@@ -205,6 +205,7 @@ export function UsersList({ initialUsers, availableWorkers, currentUserRole }: {
                             <option value="operaciones">Operaciones</option>
                             <option value="almacen">Almacén</option>
                             <option value="soma">SOMA / Seguridad</option>
+                            <option value="supervisor">Supervisor</option>
                             <option value="jefe_area">Jefe de Área</option>
                             <option value="trabajador">Trabajador</option>
                           </select>

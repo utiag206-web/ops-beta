@@ -60,6 +60,23 @@ export default function CajaChicaPage() {
   const [selectedTransaction, setSelectedTransaction] = useState<any>(null)
   const [filter, setFilter] = useState('all')
   const [area, setArea] = useState(user?.area || 'Cocina')
+  const [warehouses, setWarehouses] = useState<string[]>(['Administración', 'Cocina', 'Operaciones'])
+
+  useEffect(() => {
+    async function fetchWarehouses() {
+      try {
+        const { getWarehouses } = await import('@/app/(main)/inventory/actions')
+        const res = await getWarehouses(true)
+        if (res.data) {
+          const list = Array.from(new Set(['Administración', ...res.data.map((w: any) => w.name)]))
+          setWarehouses(list)
+        }
+      } catch (err) {
+        console.error('Error fetching warehouses in page:', err)
+      }
+    }
+    fetchWarehouses()
+  }, [])
 
   async function loadData() {
     setLoading(true)
@@ -137,9 +154,9 @@ export default function CajaChicaPage() {
                   onChange={(e) => setArea(e.target.value)}
                   className="bg-transparent border-none p-0 text-3xl font-bold text-slate-800 tracking-tight focus:ring-0 outline-none cursor-pointer hover:text-blue-600 transition-colors"
                 >
-                  <option value="Cocina">Caja Chica: Cocina</option>
-                  <option value="Operaciones">Caja Chica: Operaciones</option>
-                  <option value="Administración">Caja Chica: Administración</option>
+                  {warehouses.map(w => (
+                    <option key={w} value={w}>Caja Chica: {w}</option>
+                  ))}
                 </select>
               </div>
             ) : (
@@ -390,6 +407,7 @@ export default function CajaChicaPage() {
         }}
         area={area}
         initialData={selectedTransaction}
+        currentBalance={stats?.balance || 0}
       />
     </div>
   )

@@ -145,7 +145,7 @@ export function InventoryMovementsList({
 
       <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-100 overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-left">
+          <table className="w-full text-left whitespace-nowrap">
             <thead>
               <tr className="bg-slate-50/50 border-b border-slate-100">
                 <th className="py-5 px-6 text-[11px] font-black text-slate-400 uppercase tracking-widest">Fecha / Hora</th>
@@ -216,7 +216,7 @@ export function InventoryMovementsList({
                       </div>
                     </td>
                     <td className="py-5 px-6 text-center">
-                      <span className="text-[11px] font-black text-blue-600 bg-blue-50 px-2 py-1 rounded-lg border border-blue-100 uppercase tracking-widest">{m.products.code}</span>
+                      <span className="text-[11px] font-black text-blue-600 bg-blue-50 px-2 py-1 rounded-lg border border-blue-100 uppercase tracking-widest whitespace-nowrap">{m.products.code}</span>
                     </td>
                     <td className="py-5 px-6">
                       <p className="text-xs font-black text-slate-800 uppercase tracking-tight line-clamp-1">{m.products.name}</p>

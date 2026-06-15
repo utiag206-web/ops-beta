@@ -168,9 +168,16 @@ export default function WarehousesPage() {
                 <span className="text-[10px] font-black uppercase tracking-tighter text-slate-400 bg-slate-50 px-3 py-1.5 rounded-full">
                   ID: {w.id.slice(0, 8)}...
                 </span>
-                <span className="text-[10px] font-black uppercase text-indigo-500 bg-indigo-50 px-3 py-1.5 rounded-full">
-                  Activo
-                </span>
+                <div className="flex gap-2">
+                  {w.is_default && (
+                    <span className="text-[10px] font-black uppercase text-amber-600 bg-amber-50 px-3 py-1.5 rounded-full border border-amber-100">
+                      Principal
+                    </span>
+                  )}
+                  <span className="text-[10px] font-black uppercase text-indigo-500 bg-indigo-50 px-3 py-1.5 rounded-full">
+                    Activo
+                  </span>
+                </div>
               </div>
             </div>
           ))}

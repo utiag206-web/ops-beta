@@ -3,7 +3,7 @@
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { getUserSession, getStrictCompanyId, applyIsolation } from '@/lib/auth'
 
-export async function getReportsData(month?: number, year?: number) {
+export async function getReportsData(month?: number, year?: number, workerId?: string) {
   const now = new Date()
   const targetMonth = month || now.getMonth() + 1
   const targetYear = year || now.getFullYear()
@@ -30,14 +30,25 @@ export async function getReportsData(month?: number, year?: number) {
     const fullRangeStart = lastRange.start
     const fullRangeEnd = currentRange.end
 
+    let bonusesQuery = applyIsolation(supabase.from('bonuses').select('amount, status, date'), companyId, extendedUser.role_id).gte('date', fullRangeStart).lte('date', fullRangeEnd)
+    let transportQuery = applyIsolation(supabase.from('transport_payments').select('amount, status, date'), companyId, extendedUser.role_id).gte('date', fullRangeStart).lte('date', fullRangeEnd)
+    let paymentsQuery = applyIsolation(supabase.from('worker_payments').select('amount, status, date'), companyId, extendedUser.role_id).gte('date', fullRangeStart).lte('date', fullRangeEnd)
+    let attendanceQuery = applyIsolation(supabase.from('attendance').select('date, worker_id, check_in, check_out'), companyId, extendedUser.role_id).gte('date', currentRange.start).lte('date', currentRange.end)
+    let ppeQuery = applyIsolation(supabase.from('ppe_deliveries').select('status, worker_id, signature_url'), companyId, extendedUser.role_id)
+
+    if (workerId) {
+      bonusesQuery = bonusesQuery.eq('worker_id', workerId)
+      transportQuery = transportQuery.eq('worker_id', workerId)
+      paymentsQuery = paymentsQuery.eq('worker_id', workerId)
+      attendanceQuery = attendanceQuery.eq('worker_id', workerId)
+      ppeQuery = ppeQuery.eq('worker_id', workerId)
+    }
+
     const [workersRes, financialsRes, attendanceRes, ppeRes, somaRes] = await Promise.all([
       applyIsolation(supabase.from('workers').select('id, status, position'), companyId, extendedUser.role_id),
-      Promise.all([
-        applyIsolation(supabase.from('bonuses').select('amount, status, date'), companyId, extendedUser.role_id).gte('date', fullRangeStart).lte('date', fullRangeEnd),
-        applyIsolation(supabase.from('transport_payments').select('amount, status, date'), companyId, extendedUser.role_id).gte('date', fullRangeStart).lte('date', fullRangeEnd)
-      ]),
-      applyIsolation(supabase.from('attendance').select('date, worker_id, check_in, check_out'), companyId, extendedUser.role_id).gte('date', currentRange.start).lte('date', currentRange.end),
-      applyIsolation(supabase.from('ppe_deliveries').select('status, worker_id, signature_url'), companyId, extendedUser.role_id),
+      Promise.all([bonusesQuery, transportQuery, paymentsQuery]),
+      attendanceQuery,
+      ppeQuery,
       Promise.all([
         applyIsolation(supabase.from('incidencias').select('*'), companyId, extendedUser.role_id),
         applyIsolation(supabase.from('soma_trainings').select('*'), companyId, extendedUser.role_id),
@@ -48,12 +59,13 @@ export async function getReportsData(month?: number, year?: number) {
     const workers = workersRes.data || []
     const bonuses = financialsRes[0]?.data || []
     const transport = financialsRes[1]?.data || []
+    const payments = financialsRes[2]?.data || []
     const attendance = attendanceRes.data || []
     const ppe = ppeRes.data || []
     const incidencias = somaRes[0]?.data || []
     const trainings = somaRes[1]?.data || []
     const hsec = somaRes[2]?.data || []
-    const activeCount = workers.filter((w: any) => w.status === 'active').length
+    const activeCount = workers.filter((w: any) => w.status?.toLowerCase() === 'activo' || w.status?.toLowerCase() === 'active').length
     const inactiveCount = workers.length - activeCount
 
     const splitDataByMonth = (items: any[], range: { start: string, end: string }) => 
@@ -61,15 +73,17 @@ export async function getReportsData(month?: number, year?: number) {
 
     const currentFinancials = {
       bonuses: splitDataByMonth(bonuses, currentRange),
-      transport: splitDataByMonth(transport, currentRange)
+      transport: splitDataByMonth(transport, currentRange),
+      payments: splitDataByMonth(payments, currentRange)
     }
     const lastFinancials = {
       bonuses: splitDataByMonth(bonuses, lastRange),
-      transport: splitDataByMonth(transport, lastRange)
+      transport: splitDataByMonth(transport, lastRange),
+      payments: splitDataByMonth(payments, lastRange)
     }
 
-    const calculateTotals = (data: { bonuses: any[], transport: any[] }) => {
-      let bPaid = 0, bPending = 0, tPaid = 0, tPending = 0
+    const calculateTotals = (data: { bonuses: any[], transport: any[], payments: any[] }) => {
+      let bPaid = 0, bPending = 0, tPaid = 0, tPending = 0, pPaid = 0, pPending = 0
       data.bonuses?.forEach((b: any) => {
         const amt = Number(b.amount) || 0
         b.status === 'paid' ? bPaid += amt : bPending += amt
@@ -78,7 +92,14 @@ export async function getReportsData(month?: number, year?: number) {
         const amt = Number(t.amount) || 0
         t.status === 'paid' ? tPaid += amt : tPending += amt
       })
-      return { bPaid, bPending, tPaid, tPending, total: bPaid + bPending + tPaid + tPending }
+      data.payments?.forEach((p: any) => {
+        const amt = Number(p.amount) || 0
+        p.status === 'paid' ? pPaid += amt : pPending += amt
+      })
+      return { 
+        bPaid, bPending, tPaid, tPending, pPaid, pPending, 
+        total: bPaid + bPending + tPaid + tPending + pPaid + pPending 
+      }
     }
 
     const currentTotals = calculateTotals(currentFinancials)
@@ -120,7 +141,11 @@ export async function getReportsData(month?: number, year?: number) {
     console.error('[REPORTS_ERROR] Critical failure in analytics engine:', error.message)
     return {
       workers: { active: 0, inactive: 0, total: 0 },
-      financials: { current: { bPaid: 0, bPending: 0, tPaid: 0, tPending: 0, total: 0 }, last: { bPaid: 0, bPending: 0, tPaid: 0, tPending: 0, total: 0 }, data: { bonuses: [], transport: [] } },
+      financials: { 
+        current: { bPaid: 0, bPending: 0, tPaid: 0, tPending: 0, pPaid: 0, pPending: 0, total: 0 }, 
+        last: { bPaid: 0, bPending: 0, tPaid: 0, tPending: 0, pPaid: 0, pPending: 0, total: 0 }, 
+        data: { bonuses: [], transport: [], payments: [] } 
+      },
       attendance: { avgDaily: "0", totalRecords: 0, raw: [] },
       ppe: { total: 0, signed: 0, pending: 0, rate: 0, workersPending: 0 },
       soma: { incidencias: 0, openIncidencias: 0, trainings: 0, hsec: 0, openHsec: 0 },
@@ -130,7 +155,7 @@ export async function getReportsData(month?: number, year?: number) {
 }
 
 export async function getDetailedHistory(filters: {
-  type: 'bonuses' | 'transport' | 'attendance',
+  type: 'bonuses' | 'transport' | 'attendance' | 'payments',
   startDate: string,
   endDate: string,
   workerId?: string
@@ -138,7 +163,16 @@ export async function getDetailedHistory(filters: {
   const { extendedUser } = await getUserSession()
   const companyId = await getStrictCompanyId()
   const supabase = await createAdminClient()
-  const tableName = filters.type === 'transport' ? 'transport_payments' : filters.type
+  
+  let tableName = 'bonuses'
+  if (filters.type === 'transport') {
+    tableName = 'transport_payments'
+  } else if (filters.type === 'payments') {
+    tableName = 'worker_payments'
+  } else if (filters.type === 'attendance') {
+    tableName = 'attendance'
+  }
+
   let query = applyIsolation(
     supabase.from(tableName).select('*, worker:workers(name, position)'),
     companyId,

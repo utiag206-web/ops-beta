@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect, useRef } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { 
   Clock, LogIn, LogOut, CheckCircle2, FileText, 
@@ -10,7 +10,7 @@ import {
   ChevronRight, Download, RefreshCw, PenTool, 
   X, AlertTriangle, Info, Calendar, DollarSign,
   TrendingUp, Award, AwardIcon, ShieldCheck,
-  LayoutDashboard, Loader2
+  LayoutDashboard, Loader2, ArrowLeft
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { loginWorker, logoutWorker } from '@/app/actions/worker-auth'
@@ -21,8 +21,11 @@ import {
   getWorkerPortalDocuments, 
   getWorkerPortalPPEDeliveries, 
   signWorkerPortalPPEDelivery, 
-  getWorkerPortalFinances 
+  getWorkerPortalFinances,
+  getWorkerPortalSomaTalks,
+  getWorkerPortalSomaTrainings
 } from '@/app/actions/worker-portal'
+import { confirmSomaTalk, confirmSomaTraining } from '@/app/(main)/soma/actions'
 import { hasPermission } from '@/lib/permissions'
 
 interface WorkerPortalClientProps {
@@ -75,6 +78,16 @@ export default function WorkerPortalClient({ company, session }: WorkerPortalCli
   }, [session])
 
   const [activeTab, setActiveTab] = useState<TabType>('inicio')
+  const searchParams = useSearchParams()
+
+  useEffect(() => {
+    if (searchParams) {
+      const tab = searchParams.get('tab')
+      if (tab && ['inicio', 'documentos', 'epps', 'finanzas', 'soma'].includes(tab)) {
+        setActiveTab(tab as TabType)
+      }
+    }
+  }, [searchParams])
   
   // Login State
   const [identifier, setIdentifier] = useState('')
@@ -88,6 +101,10 @@ export default function WorkerPortalClient({ company, session }: WorkerPortalCli
   const [documents, setDocuments] = useState<any[]>([])
   const [ppeDeliveries, setPpeDeliveries] = useState<any[]>([])
   const [finances, setFinances] = useState<any[]>([])
+  const [somaTalks, setSomaTalks] = useState<any[]>([])
+  const [somaTrainings, setSomaTrainings] = useState<any[]>([])
+  const [selectedTalk, setSelectedTalk] = useState<any | null>(null)
+  const [selectedTraining, setSelectedTraining] = useState<any | null>(null)
   const [loadingData, setLoadingData] = useState(false)
   const [markingAttendance, setMarkingAttendance] = useState(false)
 
@@ -110,22 +127,60 @@ export default function WorkerPortalClient({ company, session }: WorkerPortalCli
     if (!session) return
     setLoadingData(true)
     try {
-      const [statsData, docsData, ppeData, finData] = await Promise.all([
+      const [statsData, docsData, ppeData, finData, talksData, trainingsData] = await Promise.all([
         getWorkerPortalStats(),
         getWorkerPortalDocuments(),
         getWorkerPortalPPEDeliveries(),
-        getWorkerPortalFinances()
+        getWorkerPortalFinances(),
+        getWorkerPortalSomaTalks(),
+        getWorkerPortalSomaTrainings()
       ])
       
       setStats(statsData)
       setDocuments(docsData)
       setPpeDeliveries(ppeData)
       setFinances(finData)
+      setSomaTalks(talksData)
+      setSomaTrainings(trainingsData)
     } catch (error) {
       console.error('Error al cargar datos del portal:', error)
       toast.error('Error al sincronizar datos.')
     } finally {
       setLoadingData(false)
+    }
+  }
+
+  const handleConfirmAttendance = async (talkId: string) => {
+    try {
+      const res = await confirmSomaTalk(talkId)
+      if (res.error) throw new Error(res.error)
+      toast.success('Asistencia confirmada exitosamente')
+      const [talksData, statsData] = await Promise.all([
+        getWorkerPortalSomaTalks(),
+        getWorkerPortalStats()
+      ])
+      setSomaTalks(talksData)
+      setStats(statsData)
+      router.refresh()
+    } catch (err: any) {
+      toast.error(err.message || 'Error al confirmar asistencia')
+    }
+  }
+
+  const handleConfirmTraining = async (trainingId: string) => {
+    try {
+      const res = await confirmSomaTraining(trainingId)
+      if (res.error) throw new Error(res.error)
+      toast.success('Capacitación confirmada exitosamente')
+      const [trainingsData, statsData] = await Promise.all([
+        getWorkerPortalSomaTrainings(),
+        getWorkerPortalStats()
+      ])
+      setSomaTrainings(trainingsData)
+      setStats(statsData)
+      router.refresh()
+    } catch (err: any) {
+      toast.error(err.message || 'Error al confirmar capacitación')
     }
   }
 
@@ -334,6 +389,10 @@ export default function WorkerPortalClient({ company, session }: WorkerPortalCli
     }
   }
 
+  const handleGoToAdmin = () => {
+    document.cookie = 'view_mode=OPERATIONAL; path=/; max-age=31536000; SameSite=Lax'
+  }
+
   if (isResettingSession) {
     return (
       <div className="min-h-screen bg-slate-950 flex flex-col justify-center items-center p-6 text-center relative overflow-hidden font-sans">
@@ -475,7 +534,7 @@ export default function WorkerPortalClient({ company, session }: WorkerPortalCli
     <div className="min-h-screen bg-slate-50 pb-28 md:pb-8 font-sans antialiased text-slate-800 relative">
       
       {/* 1. PREMIUM HEADER */}
-      <header className="bg-gradient-to-r from-blue-800 to-indigo-900 text-white pt-8 pb-14 px-6 relative overflow-hidden rounded-b-[2.5rem] shadow-lg">
+      <header className="bg-gradient-to-r from-blue-800 to-indigo-900 text-white pt-8 pb-8 px-6 relative overflow-hidden rounded-b-[2.5rem] shadow-lg">
         {/* Glow circles */}
         <div className="absolute top-[-50%] right-[-20%] w-[80%] h-[150%] rounded-full bg-blue-600/20 blur-[100px]" />
         
@@ -507,13 +566,24 @@ export default function WorkerPortalClient({ company, session }: WorkerPortalCli
           
           <div className="flex items-center gap-3">
             {session.roleId && session.roleId.toLowerCase() !== 'trabajador' && (
-              <Link 
-                href="/dashboard"
-                className="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-wider flex items-center gap-2 transition-all active:scale-95 shadow-md shadow-emerald-950/20 cursor-pointer border border-emerald-400/30"
-              >
-                <LayoutDashboard size={14} />
-                <span>Panel de Gestión</span>
-              </Link>
+              <>
+                <Link 
+                  href="/dashboard"
+                  onClick={handleGoToAdmin}
+                  className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-2xl text-[10px] font-black uppercase tracking-wider flex items-center gap-2 transition-all active:scale-95 border border-white/25 cursor-pointer"
+                >
+                  <ArrowLeft size={14} />
+                  <span>Volver</span>
+                </Link>
+                <Link 
+                  href="/dashboard"
+                  onClick={handleGoToAdmin}
+                  className="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-wider flex items-center gap-2 transition-all active:scale-95 shadow-md shadow-emerald-950/20 cursor-pointer border border-emerald-400/30"
+                >
+                  <LayoutDashboard size={14} />
+                  <span>Panel de Gestión</span>
+                </Link>
+              </>
             )}
             
             <button 
@@ -528,7 +598,7 @@ export default function WorkerPortalClient({ company, session }: WorkerPortalCli
       </header>
 
       {/* 2. MAIN CONTAINER */}
-      <main className="max-w-4xl mx-auto px-4 -mt-8 relative z-20">
+      <main className="max-w-4xl mx-auto px-4 mt-6 relative z-20">
         
         {/* Loading overlay */}
         {loadingData && (
@@ -549,7 +619,7 @@ export default function WorkerPortalClient({ company, session }: WorkerPortalCli
                   <Clock size={24} />
                 </div>
                 <div>
-                  <h3 className="font-bold text-slate-800">Fecha y Hora</h3>
+                  <h3 className="font-bold text-slate-800">Control de Asistencia</h3>
                   <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Hora Local del Servidor</p>
                 </div>
               </div>
@@ -567,7 +637,7 @@ export default function WorkerPortalClient({ company, session }: WorkerPortalCli
             <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 space-y-6">
               <div className="flex justify-between items-center border-b border-slate-100 pb-4">
                 <div>
-                  <h3 className="font-black text-slate-800 text-lg">Control de Asistencia</h3>
+                  <h3 className="font-black text-slate-800 text-lg">Registro de Asistencia</h3>
                   <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Registra tus marcaciones diarias</p>
                 </div>
                 <div className="px-3 py-1.5 rounded-full bg-slate-100 border border-slate-200 text-xs font-bold text-slate-600 flex items-center gap-2">
@@ -635,7 +705,7 @@ export default function WorkerPortalClient({ company, session }: WorkerPortalCli
             </div>
                     {/* Quick Stats Grid */}
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-              {hasPermission(session?.roleId || 'trabajador', 'documents', session?.area) && (
+              {hasPermission('trabajador', 'documents', session?.area) && (
                 <button 
                   onClick={() => setActiveTab('documentos')}
                   className="bg-white p-5 rounded-3xl border border-slate-100 shadow-sm flex flex-col items-start text-left hover:border-blue-300 transition-all cursor-pointer active:scale-95 group"
@@ -651,7 +721,7 @@ export default function WorkerPortalClient({ company, session }: WorkerPortalCli
                 </button>
               )}
 
-              {hasPermission(session?.roleId || 'trabajador', 'ppe', session?.area) && (
+              {hasPermission('trabajador', 'ppe', session?.area) && (
                 <button 
                   onClick={() => setActiveTab('epps')}
                   className={`bg-white p-5 rounded-3xl border shadow-sm flex flex-col items-start text-left hover:border-rose-300 transition-all cursor-pointer active:scale-95 group ${stats?.pendingPPE > 0 ? 'border-rose-100 bg-rose-50/20' : 'border-slate-100'}`}
@@ -667,7 +737,7 @@ export default function WorkerPortalClient({ company, session }: WorkerPortalCli
                 </button>
               )}
 
-              {hasPermission(session?.roleId || 'trabajador', 'bonuses', session?.area) && (
+              {hasPermission('trabajador', 'bonuses', session?.area) && (
                 <button 
                   onClick={() => setActiveTab('finanzas')}
                   className={`p-5 rounded-3xl border shadow-sm flex flex-col items-start text-left hover:border-emerald-300 transition-all col-span-2 md:col-span-1 cursor-pointer active:scale-95 group ${stats?.pendingBenefitsAmount > 0 ? 'border-amber-100 bg-amber-50/20' : 'bg-white border-slate-100'}`}
@@ -675,8 +745,8 @@ export default function WorkerPortalClient({ company, session }: WorkerPortalCli
                   <div className={`w-10 h-10 rounded-2xl flex items-center justify-center mb-3 group-hover:scale-110 transition-transform ${stats?.pendingBenefitsAmount > 0 ? 'bg-amber-100 text-amber-600 animate-pulse' : 'bg-emerald-50 text-emerald-600'}`}>
                     <BadgeDollarSign size={20} />
                   </div>
-                  <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest font-sans">Beneficios S/</h4>
-                  <p className="text-2xl font-black text-slate-800 mt-1">S/ {((stats?.totalBonusesAmount || 0) + (stats?.totalTransportAmount || 0)).toLocaleString()}</p>
+                  <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest font-sans">Historial Financiero S/</h4>
+                  <p className="text-2xl font-black text-slate-800 mt-1">S/ {((stats?.totalBonusesAmount || 0) + (stats?.totalTransportAmount || 0) + (stats?.totalPaymentsAmount || 0)).toLocaleString()}</p>
                   {stats?.pendingBenefitsAmount > 0 ? (
                     <span className="text-[9px] text-amber-600 font-bold uppercase tracking-wider flex items-center mt-2 group-hover:translate-x-1 transition-transform">
                       S/ {stats.pendingBenefitsAmount.toLocaleString()} PENDIENTE <ChevronRight size={10} className="ml-1" />
@@ -691,7 +761,7 @@ export default function WorkerPortalClient({ company, session }: WorkerPortalCli
             </div>
 
             {/* SOMA Next training / talk box */}
-            {(hasPermission(session?.roleId || 'trabajador', 'soma', session?.area) || hasPermission(session?.roleId || 'trabajador', 'soma-capacitaciones', session?.area)) && (
+            {(hasPermission('trabajador', 'soma', session?.area) || hasPermission('trabajador', 'soma-capacitaciones', session?.area)) && (
               <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 space-y-4">
                 <h3 className="font-black text-slate-800 text-md flex items-center gap-2 border-b border-slate-100 pb-3">
                   <GraduationCap className="text-amber-500" size={20} />
@@ -808,7 +878,7 @@ export default function WorkerPortalClient({ company, session }: WorkerPortalCli
                   >
                     <div className="space-y-2">
                       <div className="flex items-center gap-2.5">
-                        <h4 className="font-black text-slate-800 text-md leading-tight">{delivery.equipment_name}</h4>
+                        <h4 className="font-black text-slate-800 text-md leading-tight">{delivery.ppe_type || delivery.equipment_name}</h4>
                         {delivery.status === 'signed' ? (
                           <span className="px-2 py-0.5 rounded-full bg-emerald-100 border border-emerald-200 text-[9px] font-bold text-emerald-700 uppercase tracking-wide">FIRMADO</span>
                         ) : (
@@ -855,12 +925,12 @@ export default function WorkerPortalClient({ company, session }: WorkerPortalCli
           <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 space-y-6">
             <div className="flex justify-between items-center">
               <div>
-                <h3 className="font-black text-slate-800 text-xl">Mis Pagos y Beneficios</h3>
-                <p className="text-xs text-slate-400 font-bold uppercase tracking-wider">Historial de bonos y reembolsos de movilidad</p>
+                <h3 className="font-black text-slate-800 text-xl">Mi Historial Financiero</h3>
+                <p className="text-xs text-slate-400 font-bold uppercase tracking-wider">Historial consolidado de pagos, adelantos, bonos y pasajes</p>
               </div>
               <div className="text-right">
                 <p className="text-xs text-slate-400 font-bold uppercase tracking-wider">Total Acumulado</p>
-                <p className="text-2xl font-black text-emerald-600">S/ {((stats?.totalBonusesAmount || 0) + (stats?.totalTransportAmount || 0)).toLocaleString()}</p>
+                <p className="text-2xl font-black text-emerald-600">S/ {((stats?.totalBonusesAmount || 0) + (stats?.totalTransportAmount || 0) + (stats?.totalPaymentsAmount || 0)).toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
               </div>
             </div>
 
@@ -876,22 +946,22 @@ export default function WorkerPortalClient({ company, session }: WorkerPortalCli
               </div>
               <div className="p-5 bg-blue-50/20 border border-blue-100 rounded-2xl flex flex-col justify-between text-left">
                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total Acumulado</p>
-                <p className="text-xl font-black text-blue-700 mt-2">S/ {((stats?.totalBonusesAmount || 0) + (stats?.totalTransportAmount || 0)).toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+                <p className="text-xl font-black text-blue-700 mt-2">S/ {((stats?.totalBonusesAmount || 0) + (stats?.totalTransportAmount || 0) + (stats?.totalPaymentsAmount || 0)).toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
               </div>
             </div>
 
             {finances.length === 0 ? (
               <div className="p-12 text-center border border-dashed border-slate-200 rounded-3xl space-y-3">
                 <BadgeDollarSign className="mx-auto text-slate-300" size={48} />
-                <p className="font-bold text-slate-500">No se registran bonificaciones</p>
-                <p className="text-xs text-slate-400 max-w-xs mx-auto">No se registran bonos ni depósitos de movilidad asignados en su cuenta.</p>
+                <p className="font-bold text-slate-500">No se registra historial financiero</p>
+                <p className="text-xs text-slate-400 max-w-xs mx-auto">No se registran pagos, adelantos, bonos ni pasajes asignados en su cuenta.</p>
               </div>
             ) : (
               <div className="divide-y divide-slate-100 border border-slate-100 rounded-2xl overflow-hidden">
                 {finances.map((item) => (
                   <div key={item.id} className="p-4 hover:bg-slate-50 flex items-center justify-between gap-4 transition-all">
                     <div className="flex items-center gap-3">
-                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${item.type === 'bono' ? 'bg-emerald-50 text-emerald-600' : 'bg-blue-50 text-blue-600'}`}>
+                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${item.type === 'bono' ? 'bg-amber-50 text-amber-600' : item.type === 'pasaje' ? 'bg-blue-50 text-blue-600' : 'bg-emerald-50 text-emerald-600'}`}>
                         <DollarSign size={20} />
                       </div>
                       <div>
@@ -901,13 +971,34 @@ export default function WorkerPortalClient({ company, session }: WorkerPortalCli
                             {item.status === 'paid' ? 'PAGADO' : 'PENDIENTE'}
                           </span>
                           <span className="text-slate-400 font-semibold">{new Date(item.date).toLocaleDateString()}</span>
+                          {item.payment_method && (
+                            <span className="text-slate-400 font-medium capitalize">· {item.payment_method}</span>
+                          )}
                         </div>
+                        {item.observations && (
+                          <p className="text-xs text-slate-400 font-medium mt-1 pl-1 border-l-2 border-slate-200">{item.observations}</p>
+                        )}
                       </div>
                     </div>
 
-                    <div className="text-right">
-                      <p className="font-black text-slate-800 text-md">S/ {Number(item.amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
-                      <p className="text-[9px] text-slate-400 uppercase tracking-wider font-bold">{item.type}</p>
+                    <div className="flex items-center gap-4">
+                      {item.document_url && (
+                        <a 
+                          href={item.document_url} 
+                          target="_blank" 
+                          rel="noreferrer" 
+                          className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all flex items-center justify-center"
+                          title="Ver comprobante adjunto"
+                        >
+                          <Download size={18} />
+                        </a>
+                      )}
+                      <div className="text-right">
+                        <p className="font-black text-slate-800 text-md">S/ {Number(item.amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+                        <p className="text-[9px] text-slate-400 uppercase tracking-wider font-bold">
+                          {item.type === 'bono' ? 'Bono' : item.type === 'pasaje' ? 'Pasaje' : 'Pago'}
+                        </p>
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -940,18 +1031,18 @@ export default function WorkerPortalClient({ company, session }: WorkerPortalCli
             <div className="space-y-4">
               {/* Box 1: Trainings */}
               <div className="p-5 bg-slate-50 border border-slate-200/60 rounded-2xl space-y-3">
-                <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
-                  <Calendar size={14} />
-                  <span>Programación de Capacitaciones SOMA</span>
+                <h4 className="text-xs font-bold text-blue-600 uppercase tracking-widest flex items-center gap-1.5">
+                  <Calendar size={14} className="text-blue-500" />
+                  <span>Programación de Capacitaciones SOMA (Formación)</span>
                 </h4>
                 
-                <div className="p-4 bg-white border border-slate-200 rounded-xl flex justify-between items-center gap-4">
+                <div className="p-4 bg-white border border-slate-200 border-l-4 border-l-blue-500 rounded-xl flex justify-between items-center gap-4">
                   <div>
                     <h5 className="font-bold text-slate-700 text-sm">{stats?.nextTraining || 'Ninguna programada'}</h5>
                     <p className="text-[10px] text-slate-400 font-semibold mt-1">Capacitación General Mensual</p>
                   </div>
                   {stats?.nextTrainingDate && (
-                    <span className="px-3 py-1.5 rounded-lg bg-indigo-50 border border-indigo-100 text-[10px] font-bold text-indigo-700 uppercase tabular-nums">
+                    <span className="px-3 py-1.5 rounded-lg bg-blue-50 border border-blue-100 text-[10px] font-bold text-blue-700 uppercase tabular-nums">
                       {new Date(stats?.nextTrainingDate).toLocaleDateString()}
                     </span>
                   )}
@@ -960,22 +1051,144 @@ export default function WorkerPortalClient({ company, session }: WorkerPortalCli
 
               {/* Box 2: Talks */}
               <div className="p-5 bg-slate-50 border border-slate-200/60 rounded-2xl space-y-3">
-                <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
-                  <MessageSquare size={14} />
-                  <span>Charlas Diarias de 5 Minutos</span>
+                <h4 className="text-xs font-bold text-emerald-600 uppercase tracking-widest flex items-center gap-1.5">
+                  <MessageSquare size={14} className="text-emerald-500" />
+                  <span>Charlas Diarias de 5 Minutos (Seguridad)</span>
                 </h4>
 
-                <div className="p-4 bg-white border border-slate-200 rounded-xl flex justify-between items-center gap-4">
+                <div className="p-4 bg-white border border-slate-200 border-l-4 border-l-emerald-500 rounded-xl flex justify-between items-center gap-4 text-left">
                   <div>
                     <h5 className="font-bold text-slate-700 text-sm">{stats?.nextTalk || 'Ninguna programada'}</h5>
                     <p className="text-[10px] text-slate-400 font-semibold mt-1">Charla Técnica Operativa</p>
                   </div>
                   {stats?.nextTalkDate && (
-                    <span className="px-3 py-1.5 rounded-lg bg-blue-50 border border-blue-100 text-[10px] font-bold text-blue-700 uppercase tabular-nums">
+                    <span className="px-3 py-1.5 rounded-lg bg-emerald-50 border border-emerald-100 text-[10px] font-bold text-emerald-700 uppercase tabular-nums">
                       {new Date(stats?.nextTalkDate).toLocaleDateString()}
                     </span>
                   )}
                 </div>
+              </div>
+
+              {/* Box 3: My Talks list for attendance signature */}
+              <div className="p-5 bg-slate-50 border border-slate-200/60 rounded-2xl space-y-3">
+                <h4 className="text-xs font-bold text-emerald-600 uppercase tracking-widest flex items-center gap-1.5">
+                  <MessageSquare size={14} className="text-emerald-500" />
+                  <span>Mis Asistencias a Charlas (Verde)</span>
+                </h4>
+
+                {somaTalks.length === 0 ? (
+                  <div className="p-4 bg-white border border-slate-100 rounded-xl text-center text-xs text-slate-400 font-bold uppercase py-6">
+                    No tienes charlas asignadas
+                  </div>
+                ) : (
+                  <div className="space-y-3 max-h-80 overflow-y-auto pr-1 custom-scrollbar">
+                    {somaTalks.map((item: any) => {
+                      const talk = item.talk
+                      if (!talk) return null
+                      return (
+                        <div key={item.id} className="p-4 bg-white border border-slate-200 border-l-4 border-l-emerald-500 rounded-xl flex flex-col sm:flex-row justify-between sm:items-center gap-3 shadow-sm hover:shadow-md transition-shadow text-left">
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-2 mb-1.5 flex-wrap">
+                              <span className="px-2 py-0.5 bg-emerald-50 border border-emerald-100 text-[8px] font-black text-emerald-700 rounded-md uppercase tracking-wider">Charla</span>
+                              <h5 className="font-bold text-slate-700 text-sm leading-tight">{talk.topic}</h5>
+                            </div>
+                            <div className="flex flex-wrap gap-2 text-[10px] text-slate-400 font-bold uppercase tracking-wider">
+                              <span>📅 {new Date(talk.date).toLocaleDateString()}</span>
+                              <span>📍 {talk.location || 'General'}</span>
+                            </div>
+                          </div>
+                          <div className="shrink-0 flex items-center gap-2 justify-end">
+                            <button
+                              onClick={() => setSelectedTalk(item)}
+                              className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 text-[10px] font-black rounded-xl uppercase tracking-widest transition-all cursor-pointer"
+                            >
+                              Ver Detalles
+                            </button>
+                            {item.status === 'confirmado' ? (
+                              <span className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-emerald-50 border border-emerald-100 text-[10px] font-black text-emerald-600 uppercase tracking-widest shadow-sm">
+                                <CheckCircle2 size={12} className="stroke-[3]" /> Asistió
+                              </span>
+                            ) : (
+                              <button
+                                onClick={() => handleConfirmAttendance(talk.id)}
+                                className="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-black rounded-xl uppercase tracking-widest transition-all shadow-md shadow-emerald-100 active:scale-95 cursor-pointer"
+                              >
+                                Confirmar
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
+
+              {/* Box 4: My Trainings list for attendance signature */}
+              <div className="p-5 bg-slate-50 border border-slate-200/60 rounded-2xl space-y-3">
+                <h4 className="text-xs font-bold text-blue-600 uppercase tracking-widest flex items-center gap-1.5">
+                  <GraduationCap size={14} className="text-blue-500" />
+                  <span>Mis Capacitaciones SOMA (Azul)</span>
+                </h4>
+
+                {somaTrainings.length === 0 ? (
+                  <div className="p-4 bg-white border border-slate-100 rounded-xl text-center text-xs text-slate-400 font-bold uppercase py-6">
+                    No tienes capacitaciones asignadas
+                  </div>
+                ) : (
+                  <div className="space-y-3 max-h-80 overflow-y-auto pr-1 custom-scrollbar">
+                    {somaTrainings.map((item: any) => {
+                      const training = item.training
+                      if (!training) return null
+                      const isCompleted = item.status === 'completado'
+                      return (
+                        <div key={item.id} className="p-4 bg-white border border-slate-200 border-l-4 border-l-blue-500 rounded-xl flex flex-col sm:flex-row justify-between sm:items-center gap-3 shadow-sm hover:shadow-md transition-shadow text-left">
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-2 mb-1.5 flex-wrap">
+                              <span className="px-2 py-0.5 bg-blue-50 border border-blue-100 text-[8px] font-black text-blue-700 rounded-md uppercase tracking-wider">Capacitación</span>
+                              <h5 className="font-bold text-slate-700 text-sm leading-tight">{training.title}</h5>
+                            </div>
+                            <div className="flex flex-wrap gap-2 text-[10px] text-slate-400 font-bold uppercase tracking-wider">
+                              <span>📅 {new Date(training.date).toLocaleDateString()}</span>
+                              {training.expiry_date && <span>⏳ Vence: {new Date(training.expiry_date).toLocaleDateString()}</span>}
+                            </div>
+                          </div>
+                          <div className="shrink-0 flex items-center gap-2 justify-end">
+                            {training.material_url && (
+                              <a
+                                href={training.material_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                onClick={(e) => e.stopPropagation()}
+                                className="px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-600 text-[10px] font-black rounded-xl uppercase tracking-widest transition-all cursor-pointer"
+                              >
+                                Material
+                              </a>
+                            )}
+                            <button
+                              onClick={() => setSelectedTraining(item)}
+                              className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 text-[10px] font-black rounded-xl uppercase tracking-widest transition-all cursor-pointer"
+                            >
+                              Ver Detalles
+                            </button>
+                            {isCompleted ? (
+                              <span className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-blue-50 border border-blue-100 text-[10px] font-black text-blue-600 uppercase tracking-widest shadow-sm">
+                                <CheckCircle2 size={12} className="stroke-[3]" /> Completado
+                              </span>
+                            ) : (
+                              <button
+                                onClick={() => handleConfirmTraining(training.id)}
+                                className="px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-[10px] font-black rounded-xl uppercase tracking-widest transition-all shadow-md shadow-blue-100 active:scale-95 cursor-pointer"
+                              >
+                                Confirmar
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -986,7 +1199,7 @@ export default function WorkerPortalClient({ company, session }: WorkerPortalCli
       {/* 3. MOBILE BOTTOM NAVIGATION */}
       <nav className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-slate-200 py-2.5 px-4 shadow-[0_-8px_30px_rgb(0,0,0,0.06)] z-50 md:py-3.5">
         <div className="max-w-md mx-auto flex items-center justify-between">
-          {hasPermission(session?.roleId || 'trabajador', 'dashboard', session?.area) && (
+          {hasPermission('trabajador', 'dashboard', session?.area) && (
             <button 
               onClick={() => setActiveTab('inicio')}
               className={`flex flex-col items-center gap-1 flex-1 cursor-pointer transition-colors ${activeTab === 'inicio' ? 'text-blue-600' : 'text-slate-400 hover:text-slate-600'}`}
@@ -996,7 +1209,7 @@ export default function WorkerPortalClient({ company, session }: WorkerPortalCli
             </button>
           )}
           
-          {hasPermission(session?.roleId || 'trabajador', 'documents', session?.area) && (
+          {hasPermission('trabajador', 'documents', session?.area) && (
             <button 
               onClick={() => setActiveTab('documentos')}
               className={`flex flex-col items-center gap-1 flex-1 cursor-pointer transition-colors ${activeTab === 'documentos' ? 'text-blue-600' : 'text-slate-400 hover:text-slate-600'}`}
@@ -1006,7 +1219,7 @@ export default function WorkerPortalClient({ company, session }: WorkerPortalCli
             </button>
           )}
 
-          {hasPermission(session?.roleId || 'trabajador', 'ppe', session?.area) && (
+          {hasPermission('trabajador', 'ppe', session?.area) && (
             <button 
               onClick={() => setActiveTab('epps')}
               className={`flex flex-col items-center gap-1 flex-1 cursor-pointer transition-colors relative ${activeTab === 'epps' ? 'text-blue-600' : 'text-slate-400 hover:text-slate-600'}`}
@@ -1021,17 +1234,17 @@ export default function WorkerPortalClient({ company, session }: WorkerPortalCli
             </button>
           )}
 
-          {hasPermission(session?.roleId || 'trabajador', 'bonuses', session?.area) && (
+          {hasPermission('trabajador', 'bonuses', session?.area) && (
             <button 
               onClick={() => setActiveTab('finanzas')}
               className={`flex flex-col items-center gap-1 flex-1 cursor-pointer transition-colors ${activeTab === 'finanzas' ? 'text-blue-600' : 'text-slate-400 hover:text-slate-600'}`}
             >
               <BadgeDollarSign size={20} className={activeTab === 'finanzas' ? 'scale-110' : ''} />
-              <span className="text-[9px] font-black uppercase tracking-wider">Pagos</span>
+              <span className="text-[9px] font-black uppercase tracking-wider">Finanzas</span>
             </button>
           )}
 
-          {(hasPermission(session?.roleId || 'trabajador', 'soma', session?.area) || hasPermission(session?.roleId || 'trabajador', 'soma-capacitaciones', session?.area)) && (
+          {(hasPermission('trabajador', 'soma', session?.area) || hasPermission('trabajador', 'soma-capacitaciones', session?.area)) && (
             <button 
               onClick={() => setActiveTab('soma')}
               className={`flex flex-col items-center gap-1 flex-1 cursor-pointer transition-colors ${activeTab === 'soma' ? 'text-blue-600' : 'text-slate-400 hover:text-slate-600'}`}
@@ -1072,7 +1285,7 @@ export default function WorkerPortalClient({ company, session }: WorkerPortalCli
             {/* EPP Description info */}
             <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl space-y-1">
               <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Artículo Entregado</p>
-              <h4 className="font-black text-slate-700 text-md">{activePPETosign.equipment_name}</h4>
+              <h4 className="font-black text-slate-700 text-md">{activePPETosign.ppe_type || activePPETosign.equipment_name}</h4>
               <p className="text-xs text-slate-500 mt-1 font-semibold flex items-center gap-1.5">
                 <Calendar size={12} />
                 <span>Fecha de asignación: {new Date(activePPETosign.delivery_date).toLocaleDateString()}</span>
@@ -1132,6 +1345,274 @@ export default function WorkerPortalClient({ company, session }: WorkerPortalCli
         </div>
       )}
 
+      {/* 5. MODAL: PORTAL TALK DETAILS */}
+      {selectedTalk && (
+        <PortalTalkDetailModal 
+          item={selectedTalk} 
+          onClose={() => setSelectedTalk(null)} 
+          onConfirm={handleConfirmAttendance}
+        />
+      )}
+
+      {/* 6. MODAL: PORTAL TRAINING DETAILS */}
+      {selectedTraining && (
+        <PortalTrainingDetailModal 
+          item={selectedTraining} 
+          onClose={() => setSelectedTraining(null)} 
+          onConfirm={handleConfirmTraining}
+        />
+      )}
+
+    </div>
+  )
+}
+
+function PortalTalkDetailModal({ item, onClose, onConfirm }: { item: any; onClose: () => void; onConfirm: (talkId: string) => Promise<void> }) {
+  const talk = item.talk
+  const [loading, setLoading] = useState(false)
+  if (!talk) return null
+
+  const handleConfirm = async () => {
+    setLoading(true)
+    try {
+      await onConfirm(talk.id)
+      onClose()
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4 animate-in fade-in duration-200">
+      <div className="w-full max-w-lg bg-white rounded-[2rem] md:rounded-[2.5rem] shadow-2xl overflow-hidden border border-slate-100 animate-in zoom-in-95 duration-200 flex flex-col max-h-[85vh] text-left">
+        {/* Header */}
+        <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-emerald-100 text-emerald-600 rounded-xl flex items-center justify-center shadow-inner">
+              <MessageSquare size={20} />
+            </div>
+            <div>
+              <h3 className="font-black text-slate-800 text-base">Detalles de la Charla</h3>
+              <p className="text-[9px] font-black text-emerald-600 uppercase tracking-widest mt-0.5">SOMA & Seguridad</p>
+            </div>
+          </div>
+          <button 
+            onClick={onClose}
+            className="p-2 hover:bg-slate-100 rounded-xl text-slate-400 hover:text-slate-600 transition-colors"
+          >
+            <X size={18} />
+          </button>
+        </div>
+
+        {/* Content */}
+        <div className="p-6 overflow-y-auto space-y-5 flex-1 custom-scrollbar">
+          <div className="bg-slate-50 p-5 rounded-2xl border border-slate-100 space-y-3">
+            <h4 className="font-bold text-slate-800 text-base leading-snug">{talk.topic}</h4>
+            <div className="grid grid-cols-1 gap-2 text-xs font-semibold text-slate-600">
+              <div className="flex items-center gap-2">
+                <span className="text-slate-400">Fecha:</span>
+                <span className="text-slate-800 font-bold">{new Date(talk.date).toLocaleDateString()}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-slate-400">Lugar:</span>
+                <span className="text-slate-800 font-bold">{talk.location || 'General'}</span>
+              </div>
+            </div>
+          </div>
+
+          {talk.material_url && (
+            <div className="space-y-2">
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Material de Apoyo:</span>
+              <a 
+                href={talk.material_url} 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 text-xs font-bold text-emerald-600 hover:text-emerald-700 bg-emerald-50 px-4 py-2 rounded-xl transition-all w-full justify-center shadow-sm"
+              >
+                <FileText size={14} />
+                <span>Ver Recurso Adjunto</span>
+              </a>
+            </div>
+          )}
+
+          <div className="space-y-2">
+            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Tu Estado de Asistencia:</span>
+            {item.status === 'confirmado' ? (
+              <div className="flex items-center gap-2 p-4 bg-emerald-50 rounded-2xl border border-emerald-100 text-emerald-700">
+                <CheckCircle2 size={18} className="stroke-[3]" />
+                <div>
+                  <div className="text-xs font-black uppercase tracking-wider">Asistencia Confirmada</div>
+                  {item.confirmed_at && (
+                    <div className="text-[9px] text-emerald-600/80 mt-0.5">Fecha de registro: {new Date(item.confirmed_at).toLocaleString()}</div>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <div className="flex flex-col gap-3 p-4 bg-amber-50 rounded-2xl border border-amber-100">
+                <div className="flex items-center gap-2 text-amber-700">
+                  <Clock size={18} className="stroke-[3]" />
+                  <div className="text-xs font-black uppercase tracking-wider">Asistencia Pendiente</div>
+                </div>
+                <button
+                  onClick={handleConfirm}
+                  disabled={loading}
+                  className="w-full h-11 bg-blue-600 hover:bg-blue-700 text-white font-black text-xs rounded-xl uppercase tracking-widest transition-all shadow-md shadow-blue-100 flex items-center justify-center gap-2 disabled:opacity-50"
+                >
+                  {loading && <Loader2 size={12} className="animate-spin" />}
+                  Confirmar Asistencia
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="p-4 border-t border-slate-100 flex justify-end bg-slate-50">
+          <button 
+            onClick={onClose}
+            className="px-5 py-2 bg-slate-800 hover:bg-slate-900 text-white font-bold text-xs rounded-xl transition-all shadow-sm active:scale-95"
+          >
+            Cerrar
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function PortalTrainingDetailModal({ item, onClose, onConfirm }: { item: any; onClose: () => void; onConfirm: (trainingId: string) => Promise<void> }) {
+  const training = item.training
+  const [loading, setLoading] = useState(false)
+  if (!training) return null
+
+  const handleConfirm = async () => {
+    setLoading(true)
+    try {
+      await onConfirm(training.id)
+      onClose()
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const isExpired = training.expiry_date && new Date(training.expiry_date) < new Date()
+
+  return (
+    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4 animate-in fade-in duration-200">
+      <div className="w-full max-w-lg bg-white rounded-[2rem] md:rounded-[2.5rem] shadow-2xl overflow-hidden border border-slate-100 animate-in zoom-in-95 duration-200 flex flex-col max-h-[85vh] text-left">
+        {/* Header */}
+        <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-indigo-100 text-indigo-600 rounded-xl flex items-center justify-center shadow-inner">
+              <GraduationCap size={20} />
+            </div>
+            <div>
+              <h3 className="font-black text-slate-800 text-base">Detalles de la Capacitación</h3>
+              <p className="text-[9px] font-black text-indigo-600 uppercase tracking-widest mt-0.5">SOMA & Seguridad</p>
+            </div>
+          </div>
+          <button 
+            onClick={onClose}
+            className="p-2 hover:bg-slate-100 rounded-xl text-slate-400 hover:text-slate-600 transition-colors"
+          >
+            <X size={18} />
+          </button>
+        </div>
+
+        {/* Content */}
+        <div className="p-6 overflow-y-auto space-y-5 flex-1 custom-scrollbar">
+          <div className="bg-slate-50 p-5 rounded-2xl border border-slate-100 space-y-3">
+            <div className="flex justify-between items-start gap-2">
+              <h4 className="font-bold text-slate-800 text-base leading-snug">{training.title}</h4>
+              {training.expiry_date && (
+                <span className={`px-2 py-1 rounded-full text-[8px] font-black uppercase tracking-widest shrink-0 ${
+                  isExpired ? 'bg-rose-50 text-rose-600 border border-rose-100' : 'bg-emerald-50 text-emerald-600 border border-emerald-100'
+                }`}>
+                  {isExpired ? 'Vencido' : 'Vigente'}
+                </span>
+              )}
+            </div>
+            
+            <div className="grid grid-cols-1 gap-2 text-xs font-semibold text-slate-600">
+              <div className="flex items-center gap-2">
+                <span className="text-slate-400">Fecha Realización:</span>
+                <span className="text-slate-800 font-bold">{new Date(training.date).toLocaleDateString()}</span>
+              </div>
+              {training.expiry_date && (
+                <div className="flex items-center gap-2">
+                  <span className="text-slate-400">Vencimiento:</span>
+                  <span className="text-slate-800 font-bold">{new Date(training.expiry_date).toLocaleDateString()}</span>
+                </div>
+              )}
+              <div className="flex items-center gap-2">
+                <span className="text-slate-400">Instructor:</span>
+                <span className="text-slate-800 font-bold">{training.trainer || 'N/A'}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Description */}
+          <div className="space-y-2">
+            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Descripción:</span>
+            <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 text-xs text-slate-600 font-medium whitespace-pre-wrap">
+              {training.description || 'Sin descripción.'}
+            </div>
+          </div>
+
+          {/* Material de Apoyo */}
+          {training.material_url && (
+            <div className="space-y-2">
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Material de Apoyo:</span>
+              <a 
+                href={training.material_url} 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 text-xs font-bold text-blue-600 hover:text-blue-700 bg-blue-50 px-4 py-2 rounded-xl transition-all w-full justify-center shadow-sm"
+              >
+                <FileText size={14} />
+                <span>Ver Recurso Adjunto</span>
+              </a>
+            </div>
+          )}
+
+          <div className="space-y-2">
+            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Tu Estado de Participación:</span>
+            {item.status === 'completado' ? (
+              <div className="flex items-center gap-2 p-4 bg-emerald-50 rounded-2xl border border-emerald-100 text-emerald-700">
+                <CheckCircle2 size={18} className="stroke-[3]" />
+                <div>
+                  <div className="text-xs font-black uppercase tracking-wider">Capacitación Completada</div>
+                </div>
+              </div>
+            ) : (
+              <div className="flex flex-col gap-3 p-4 bg-amber-50 rounded-2xl border border-amber-100">
+                <div className="flex items-center gap-2 text-amber-700">
+                  <Clock size={18} className="stroke-[3]" />
+                  <div className="text-xs font-black uppercase tracking-wider">Participación Pendiente</div>
+                </div>
+                <button
+                  onClick={handleConfirm}
+                  disabled={loading}
+                  className="w-full h-11 bg-blue-600 hover:bg-blue-700 text-white font-black text-xs rounded-xl uppercase tracking-widest transition-all shadow-md shadow-blue-100 flex items-center justify-center gap-2 disabled:opacity-50"
+                >
+                  {loading && <Loader2 size={12} className="animate-spin" />}
+                  Confirmar Participación
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="p-4 border-t border-slate-100 flex justify-end bg-slate-50">
+          <button 
+            onClick={onClose}
+            className="px-5 py-2 bg-slate-800 hover:bg-slate-900 text-white font-bold text-xs rounded-xl transition-all shadow-sm active:scale-95"
+          >
+            Cerrar
+          </button>
+        </div>
+      </div>
     </div>
   )
 }

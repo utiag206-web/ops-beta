@@ -3,7 +3,7 @@ import { Suspense } from 'react'
 import Link from 'next/link'
 import { AlertCircle, ShieldAlert } from 'lucide-react'
 import { getDashboardStats } from './actions'
-import { getUserSession } from '@/lib/auth'
+import { getUserSession, getActiveViewMode } from '@/lib/auth'
 import { DashboardShell } from '@/components/dashboard/dashboard-shell'
 import { AdminDashboardSkeleton } from '@/components/dashboard/dashboard-skeletons'
 import os from 'os'
@@ -12,6 +12,11 @@ export const dynamic = 'force-dynamic'
 
 export default async function DashboardPage() {
   const { extendedUser } = await getUserSession()
+  const viewMode = await getActiveViewMode()
+
+  if (viewMode === 'WORKER' && extendedUser?.company_slug) {
+    redirect(`/w/${extendedUser.company_slug}`)
+  }
   
   const role = extendedUser?.role_id?.toLowerCase()
   if ((role === 'super_admin' || role === 'superadmin') && !extendedUser?.is_impersonating) {

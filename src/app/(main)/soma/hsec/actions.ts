@@ -110,3 +110,60 @@ export async function getSomaStats() {
         alerts: alerts || []
     }
 }
+
+export async function updateHsecStop(id: string, payload: {
+  type: 'acto_inseguro' | 'condicion_insegura'
+  category: string
+  area_location: string
+  description: string
+  status: 'abierta' | 'cerrada'
+}) {
+  const { extendedUser } = await getUserSession()
+  const companyId = await getStrictCompanyId()
+  if (!companyId) return { error: 'No autorizado o sin contexto de empresa' }
+
+  const supabase = await createAdminClient()
+  const updateData: any = {
+    type: payload.type,
+    category: payload.category,
+    area_location: payload.area_location,
+    description: payload.description,
+    status: payload.status
+  }
+  if (payload.status === 'cerrada') {
+    updateData.closed_at = new Date().toISOString()
+  } else {
+    updateData.closed_at = null
+  }
+
+  const { error } = await applyIsolation(
+    supabase.from('soma_hsec_stop').update(updateData),
+    companyId,
+    extendedUser.role_id
+  ).eq('id', id)
+
+  if (error) return { error: error.message }
+
+  revalidatePath('/dashboard')
+  revalidatePath('/soma/hsec')
+  return { success: true }
+}
+
+export async function deleteHsecStop(id: string) {
+  const { extendedUser } = await getUserSession()
+  const companyId = await getStrictCompanyId()
+  if (!companyId) return { error: 'No autorizado' }
+
+  const supabase = await createAdminClient()
+  const { error } = await applyIsolation(
+    supabase.from('soma_hsec_stop').delete(),
+    companyId,
+    extendedUser.role_id
+  ).eq('id', id)
+
+  if (error) return { error: error.message }
+
+  revalidatePath('/dashboard')
+  revalidatePath('/soma/hsec')
+  return { success: true }
+}

@@ -1,6 +1,6 @@
 import { getBonuses } from './actions'
 import { getWorkersShort } from '../workers/actions'
-import { getUserSession } from '@/lib/auth'
+import { getUserSession, getActiveViewMode } from '@/lib/auth'
 
 export const dynamic = 'force-dynamic'
 import { BonusList } from '@/components/bonuses/bonus-list'
@@ -9,9 +9,10 @@ import { Coins, LayoutGrid } from 'lucide-react'
 
 export default async function BonusesPage() {
   const { extendedUser } = await getUserSession()
+  const viewMode = await getActiveViewMode()
   const userRole = extendedUser?.role_id?.toLowerCase() || ''
-  const isWorker = userRole === 'trabajador'
-  const canManage = ['admin', 'gerente', 'administracion', 'super_admin', 'superadmin'].includes(userRole)
+  const isWorker = userRole === 'trabajador' || viewMode === 'WORKER'
+  const canManage = ['admin', 'gerente', 'administracion', 'super_admin', 'superadmin'].includes(userRole) && viewMode !== 'WORKER'
 
   const [bonuses, workers] = await Promise.all([
     getBonuses(),
@@ -35,7 +36,7 @@ export default async function BonusesPage() {
             {isWorker ? 'Mi Historial de Bonificaciones' : 'Bonificaciones Registradas'}
           </h2>
         </div>
-        <BonusList bonuses={bonuses} isAdmin={canManage} isWorker={isWorker} />
+        <BonusList bonuses={bonuses} isAdmin={canManage} isWorker={isWorker} workers={workers} />
       </div>
     </div>
   )

@@ -84,16 +84,30 @@ export function EditWorkerModal({ isOpen, onClose, worker }: EditWorkerModalProp
               </label>
             </div>
 
-            <div>
-              <label htmlFor="name" className="block text-sm font-medium text-slate-700 mb-1">Nombre Completo *</label>
-              <input
-                id="name"
-                name="name"
-                type="text"
-                required
-                defaultValue={worker.name}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent outline-none transition-all text-slate-900 bg-white"
-              />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label htmlFor="name" className="block text-sm font-medium text-slate-700 mb-1">Nombres *</label>
+                <input
+                  id="name"
+                  name="name"
+                  type="text"
+                  required
+                  defaultValue={worker.name}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent outline-none transition-all text-slate-900 bg-white"
+                />
+              </div>
+              <div>
+                <label htmlFor="last_name" className="block text-sm font-medium text-slate-700 mb-1">Apellidos *</label>
+                <input
+                  id="last_name"
+                  name="last_name"
+                  type="text"
+                  required
+                  defaultValue={worker.last_name || ''}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent outline-none transition-all text-slate-900 bg-white"
+                  placeholder="Ej. Pérez Gómez"
+                />
+              </div>
             </div>
             
             <div className="grid grid-cols-2 gap-4">
