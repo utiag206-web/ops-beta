@@ -538,7 +538,7 @@ export default function WorkerPortalClient({ company, session }: WorkerPortalCli
         {/* Glow circles */}
         <div className="absolute top-[-50%] right-[-20%] w-[80%] h-[150%] rounded-full bg-blue-600/20 blur-[100px]" />
         
-        <div className="max-w-4xl mx-auto flex items-center justify-between relative z-10">
+        <div className="max-w-4xl mx-auto flex flex-col md:flex-row md:items-center md:justify-between gap-6 relative z-10">
           <div className="flex items-center gap-4">
             {session.companyLogo ? (
               <div className="h-12 flex items-center justify-center">
@@ -564,13 +564,13 @@ export default function WorkerPortalClient({ company, session }: WorkerPortalCli
             </div>
           </div>
           
-          <div className="flex items-center gap-3">
+          <div className="flex items-center flex-wrap gap-2 sm:gap-3 justify-start md:justify-end w-full md:w-auto">
             {session.roleId && session.roleId.toLowerCase() !== 'trabajador' && (
               <>
                 <Link 
                   href="/dashboard"
                   onClick={handleGoToAdmin}
-                  className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-2xl text-[10px] font-black uppercase tracking-wider flex items-center gap-2 transition-all active:scale-95 border border-white/25 cursor-pointer"
+                  className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-2xl text-[10px] font-black uppercase tracking-wider flex items-center gap-2 transition-all active:scale-95 border border-white/25 cursor-pointer shrink-0"
                 >
                   <ArrowLeft size={14} />
                   <span>Volver</span>
@@ -578,7 +578,7 @@ export default function WorkerPortalClient({ company, session }: WorkerPortalCli
                 <Link 
                   href="/dashboard"
                   onClick={handleGoToAdmin}
-                  className="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-wider flex items-center gap-2 transition-all active:scale-95 shadow-md shadow-emerald-950/20 cursor-pointer border border-emerald-400/30"
+                  className="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-wider flex items-center gap-2 transition-all active:scale-95 shadow-md shadow-emerald-950/20 cursor-pointer border border-emerald-400/30 shrink-0"
                 >
                   <LayoutDashboard size={14} />
                   <span>Panel de Gestión</span>
@@ -588,7 +588,7 @@ export default function WorkerPortalClient({ company, session }: WorkerPortalCli
             
             <button 
               onClick={handleLogout}
-              className="w-10 h-10 bg-white/10 hover:bg-red-500/20 border border-white/20 rounded-2xl flex items-center justify-center text-white hover:text-red-300 active:scale-95 transition-all cursor-pointer"
+              className="w-10 h-10 bg-white/10 hover:bg-red-500/20 border border-white/20 rounded-2xl flex items-center justify-center text-white hover:text-red-300 active:scale-95 transition-all cursor-pointer shrink-0"
               title="Cerrar sesión"
             >
               <LogOut size={18} />
