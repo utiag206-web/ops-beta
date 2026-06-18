@@ -11,7 +11,7 @@ import {
   Loader2
 } from 'lucide-react'
 
-export function StatWidget({ title, value, icon: Icon, color, bg, href, trend }: any) {
+export function StatWidget({ title, value, icon: Icon, color, bg, href, trend, badge }: any) {
   const content = (
     <div className="bg-white p-6 md:p-8 rounded-2xl md:rounded-[2rem] shadow-sm border border-slate-100 flex flex-col justify-between gap-5 md:gap-7 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 group h-full relative overflow-hidden">
       <div className="absolute -right-4 -top-4 w-24 h-24 bg-slate-50 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-2xl" />
@@ -20,6 +20,11 @@ export function StatWidget({ title, value, icon: Icon, color, bg, href, trend }:
         <div className={`${bg} p-4 rounded-[1.25rem] group-hover:scale-110 transition-transform duration-300 shrink-0 shadow-sm border border-slate-100/50`}>
           <Icon className={color} size={28} strokeWidth={2.5} />
         </div>
+        {badge && (
+          <div className={`flex items-center gap-1 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider ${badge.color || 'bg-rose-50 border border-rose-100 text-rose-600'}`}>
+            {badge.text}
+          </div>
+        )}
         {trend && (
           <div className={`flex items-center gap-1 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider ${
             trend.type === 'up' ? 'bg-emerald-50 border border-emerald-100 text-emerald-600' : 'bg-rose-50 border border-rose-100 text-rose-600'
@@ -168,9 +173,14 @@ export function WelcomeHero({ userName, roleName, area, companyName, viewMode, c
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const isLocal = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+      let origin = window.location.origin
+      // Force public production domain for the QR code to bypass Vercel Authentication
+      if (window.location.hostname.includes('.vercel.app') && window.location.hostname !== 'next-prod-boilerplate.vercel.app') {
+        origin = 'https://next-prod-boilerplate.vercel.app'
+      }
       const url = isLocal && localIp && localIp !== '127.0.0.1'
         ? `http://${localIp}:${window.location.port}/w/${companySlug || 'empresa'}`
-        : `${window.location.origin}/w/${companySlug || 'empresa'}`
+        : `${origin}/w/${companySlug || 'empresa'}`
       setPortalUrl(url)
     }
   }, [companySlug, localIp])

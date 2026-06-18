@@ -564,23 +564,23 @@ export default function WorkerPortalClient({ company, session }: WorkerPortalCli
             </div>
           </div>
           
-          <div className="flex items-center flex-wrap gap-2 sm:gap-3 justify-start md:justify-end w-full md:w-auto">
+          <div className="flex items-center gap-2 w-full md:w-auto mt-2 md:mt-0">
             {session.roleId && session.roleId.toLowerCase() !== 'trabajador' && (
               <>
                 <Link 
                   href="/dashboard"
                   onClick={handleGoToAdmin}
-                  className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-2xl text-[10px] font-black uppercase tracking-wider flex items-center gap-2 transition-all active:scale-95 border border-white/25 cursor-pointer shrink-0"
+                  className="flex-1 md:flex-none justify-center px-3 py-2.5 bg-white/10 hover:bg-white/20 text-white rounded-2xl text-[9px] md:text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5 transition-all active:scale-95 border border-white/25 cursor-pointer shrink-0"
                 >
-                  <ArrowLeft size={14} />
+                  <ArrowLeft size={12} />
                   <span>Volver</span>
                 </Link>
                 <Link 
                   href="/dashboard"
                   onClick={handleGoToAdmin}
-                  className="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-wider flex items-center gap-2 transition-all active:scale-95 shadow-md shadow-emerald-950/20 cursor-pointer border border-emerald-400/30 shrink-0"
+                  className="flex-1 md:flex-none justify-center px-3 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-2xl text-[9px] md:text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5 transition-all active:scale-95 shadow-md shadow-emerald-950/20 cursor-pointer border border-emerald-400/30 shrink-0"
                 >
-                  <LayoutDashboard size={14} />
+                  <LayoutDashboard size={12} />
                   <span>Panel de Gestión</span>
                 </Link>
               </>
@@ -591,7 +591,7 @@ export default function WorkerPortalClient({ company, session }: WorkerPortalCli
               className="w-10 h-10 bg-white/10 hover:bg-red-500/20 border border-white/20 rounded-2xl flex items-center justify-center text-white hover:text-red-300 active:scale-95 transition-all cursor-pointer shrink-0"
               title="Cerrar sesión"
             >
-              <LogOut size={18} />
+              <LogOut size={16} />
             </button>
           </div>
         </div>
