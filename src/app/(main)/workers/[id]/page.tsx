@@ -2,16 +2,15 @@ import { getWorkerById, getWorkerDocuments, getWorkerChildren } from '../actions
 import { getUserSession } from '@/lib/auth'
 import { getPPEDeliveries } from '../../ppe/actions'
 import { getBonuses } from '../../bonuses/actions'
-import { getTransportPayments } from '../../transport/actions'
 import { getAttendance } from '../../attendance/actions'
 import { WorkerDocuments } from '@/components/workers/worker-documents'
 import { WorkerProfileForm } from '@/components/workers/worker-profile-form'
 import { WorkerChildren } from '@/components/workers/worker-children'
+import { WorkerPhotoUploader } from '@/components/workers/worker-photo-uploader'
 import { PPEList } from '@/components/ppe/ppe-list'
-import { BonusList } from '@/components/bonuses/bonus-list'
-import { TransportList } from '@/components/transport/transport-list'
+import { WorkerFinancialHistory } from '@/components/workers/worker-financial-history'
 import { AttendanceList } from '@/components/attendance/attendance-list'
-import { ArrowLeft, User, Phone, IdCard, Calendar, Briefcase, Shield, FileText, Coins, Bus, Clock } from 'lucide-react'
+import { ArrowLeft, User, Phone, IdCard, Calendar, Briefcase, Shield, FileText, Coins, Clock } from 'lucide-react'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 
@@ -23,6 +22,7 @@ export default async function WorkerDetailPage({
   const { id } = await params
   const { extendedUser } = await getUserSession()
   const canManage = ['admin', 'operaciones', 'super_admin', 'superadmin'].includes(extendedUser?.role_id || '')
+  const canFinancialManage = ['admin', 'gerente', 'administracion', 'super_admin', 'superadmin'].includes(extendedUser?.role_id || '')
   
   const worker = await getWorkerById(id)
 
@@ -30,11 +30,10 @@ export default async function WorkerDetailPage({
     notFound()
   }
 
-  const [documents, ppeDeliveries, bonuses, transportPayments, attendanceHistory, children] = await Promise.all([
+  const [documents, ppeDeliveries, bonuses, attendanceHistory, children] = await Promise.all([
     getWorkerDocuments(id),
     getPPEDeliveries(id),
     getBonuses(id),
-    getTransportPayments(id),
     getAttendance(id),
     getWorkerChildren(id)
   ])
@@ -50,7 +49,7 @@ export default async function WorkerDetailPage({
         </Link>
         <div>
           <h1 className="text-2xl font-bold text-slate-800">Perfil del Trabajador</h1>
-          <p className="text-slate-500">Gestiona la información y documentos de {worker.name}</p>
+          <p className="text-slate-500">Gestiona la información and documentos de {worker.name} {worker.last_name || ''}</p>
         </div>
       </div>
 
@@ -58,14 +57,15 @@ export default async function WorkerDetailPage({
         {/* Sidebar Info */}
         <div className="space-y-6">
           <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex flex-col items-center text-center">
-            <div className="w-24 h-24 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center mb-4 border-4 border-white shadow-sm overflow-hidden">
-              {worker.photo_url ? (
-                <img src={worker.photo_url} alt={worker.name} className="w-full h-full object-cover" />
-              ) : (
-                <User size={40} />
-              )}
+            <div className="mb-4">
+              <WorkerPhotoUploader 
+                workerId={worker.id} 
+                initialPhotoUrl={worker.photo_url} 
+                workerName={worker.name} 
+                canManage={canManage} 
+              />
             </div>
-            <h2 className="text-xl font-bold text-slate-800">{worker.name}</h2>
+            <h2 className="text-xl font-bold text-slate-800">{worker.name} {worker.last_name || ''}</h2>
             <p className="text-blue-600 font-medium">{worker.position}</p>
             
             <div className="mt-4 w-full pt-4 border-t border-slate-50 space-y-3 text-left">
@@ -85,9 +85,11 @@ export default async function WorkerDetailPage({
                 <Briefcase size={18} className="text-slate-400" />
                 <span className="text-sm">Estado: 
                   <span className={`ml-2 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
-                    worker.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-700'
+                    (worker.status?.toLowerCase() === 'active' || worker.status?.toLowerCase() === 'activo') 
+                      ? 'bg-green-100 text-green-700' 
+                      : 'bg-slate-100 text-slate-700'
                   }`}>
-                    {worker.status === 'active' ? 'Activo' : 'Inactivo'}
+                    {(worker.status?.toLowerCase() === 'active' || worker.status?.toLowerCase() === 'activo') ? 'Activo' : 'Inactivo'}
                   </span>
                 </span>
               </div>
@@ -116,18 +118,10 @@ export default async function WorkerDetailPage({
 
           <section>
             <h3 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
-              <Coins size={20} className="text-amber-500" />
-              Bonificaciones
+              <Coins size={20} className="text-emerald-500" />
+              Historial Financiero Consolidado
             </h3>
-            <BonusList bonuses={bonuses} isAdmin={true} />
-          </section>
-
-          <section>
-            <h3 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
-              <Bus size={20} className="text-indigo-500" />
-              Pasajes y Transporte
-            </h3>
-            <TransportList payments={transportPayments} />
+            <WorkerFinancialHistory bonuses={bonuses} worker={worker} isAdmin={canFinancialManage} />
           </section>
 
           <section>

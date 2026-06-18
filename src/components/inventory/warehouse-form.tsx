@@ -17,17 +17,22 @@ export function WarehouseForm({ isOpen, onClose, onSuccess, editingWarehouse }: 
   const [form, setForm] = useState({
     name: '',
     code: '',
+    area: '',
+    is_default: false
   })
 
   // Sincronizar formulario al abrir o cambiar de modo
   useEffect(() => {
     if (isOpen) {
-      setForm({
+      setForm(prev => ({
+        ...prev,
         name: editingWarehouse?.name || '',
         code: editingWarehouse?.code || '',
-      })
+        area: editingWarehouse?.area || '',
+        is_default: editingWarehouse?.is_default || false
+      }))
     }
-  }, [isOpen, editingWarehouse])
+  }, [isOpen, editingWarehouse?.id])
 
   if (!isOpen) return null
 
@@ -51,7 +56,11 @@ export function WarehouseForm({ isOpen, onClose, onSuccess, editingWarehouse }: 
         toast.error(res.error as string)
       } else {
         toast.success(editingWarehouse ? 'Almacén actualizado' : 'Almacén creado exitosamente')
-        if (res && 'data' in res) onSuccess?.(res.data)
+        if (res && 'data' in res && res.data) {
+          onSuccess?.(res.data)
+        } else {
+          onSuccess?.({ id: editingWarehouse?.id, ...form })
+        }
         onClose()
       }
     } catch (err: any) {
@@ -103,6 +112,34 @@ export function WarehouseForm({ isOpen, onClose, onSuccess, editingWarehouse }: 
               value={form.code}
               onChange={e => setForm(prev => ({...prev, code: e.target.value}))}
             />
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="text-[11px] font-black uppercase tracking-widest text-slate-400 px-1">Área Operativa <span className="text-rose-500">*</span></label>
+            <select
+              required
+              className="w-full bg-slate-50 border-2 border-transparent focus:border-indigo-500 focus:bg-white rounded-2xl p-4 text-sm font-bold transition-all outline-none text-slate-700 font-bold"
+              value={form.area}
+              onChange={e => setForm(prev => ({...prev, area: e.target.value}))}
+            >
+              <option value="">-- Seleccionar Área --</option>
+              <option value="General">General</option>
+              <option value="Cocina">Cocina</option>
+              <option value="Operaciones">Operaciones</option>
+            </select>
+          </div>
+
+          <div className="flex items-center gap-3 p-1">
+            <input 
+              type="checkbox"
+              id="is_default"
+              checked={form.is_default}
+              onChange={e => setForm(prev => ({...prev, is_default: e.target.checked}))}
+              className="w-5 h-5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+            />
+            <label htmlFor="is_default" className="text-xs font-bold text-slate-600 select-none cursor-pointer">
+              Almacén Principal (Defecto)
+            </label>
           </div>
 
           <div className="flex gap-4 pt-4">

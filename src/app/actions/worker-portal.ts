@@ -73,28 +73,32 @@ export async function getWorkerPortalStats() {
     const { date: today } = getCompanyLocalTime(ianaTimezone)
 
     // Fetch stats concurrently
-    const [att, ppe, docs, bns, trns, nextT, nextS] = await Promise.all([
+    const [att, ppe, docs, bns, trns, pmts, nextT, nextS] = await Promise.all([
       supabase.from('attendance').select('check_in, check_out, created_at').eq('worker_id', workerId).eq('date', today).maybeSingle(),
       supabase.from('ppe_deliveries').select('id', { count: 'exact', head: true }).eq('worker_id', workerId).or('status.eq.pending_signature,signature_url.is.null'),
       supabase.from('worker_documents').select('id', { count: 'exact', head: true }).eq('worker_id', workerId),
       supabase.from('bonuses').select('amount, status').eq('worker_id', workerId),
       supabase.from('transport_payments').select('amount, status').eq('worker_id', workerId),
+      supabase.from('worker_payments').select('amount, status').eq('worker_id', workerId),
       supabase.from('soma_trainings').select('title, date').eq('company_id', companyId).gte('date', today).order('date', { ascending: true }).limit(1).maybeSingle(),
       supabase.from('soma_talks').select('topic, date').eq('company_id', companyId).gte('date', today).order('date', { ascending: true }).limit(1).maybeSingle()
     ])
 
     const totalBonusesAmount = (bns.data || []).reduce((acc: number, b: any) => acc + (Number(b.amount) || 0), 0)
     const totalTransportAmount = (trns.data || []).reduce((acc: number, t: any) => acc + (Number(t.amount) || 0), 0)
+    const totalPaymentsAmount = (pmts.data || []).reduce((acc: number, p: any) => acc + (Number(p.amount) || 0), 0)
 
     const pendingBenefitsAmount = [
       ...(bns.data || []),
-      ...(trns.data || [])
+      ...(trns.data || []),
+      ...(pmts.data || [])
     ].filter((item: any) => item.status === 'pending')
      .reduce((acc: number, item: any) => acc + (Number(item.amount) || 0), 0)
 
     const paidBenefitsAmount = [
       ...(bns.data || []),
-      ...(trns.data || [])
+      ...(trns.data || []),
+      ...(pmts.data || [])
     ].filter((item: any) => item.status === 'paid')
      .reduce((acc: number, item: any) => acc + (Number(item.amount) || 0), 0)
 
@@ -113,6 +117,7 @@ export async function getWorkerPortalStats() {
       totalBonuses: bns.data?.length || 0,
       totalBonusesAmount,
       totalTransportAmount,
+      totalPaymentsAmount,
       pendingBenefitsAmount,
       paidBenefitsAmount,
       totalDocs: docs.count || 0,
@@ -180,14 +185,26 @@ export async function checkOutWorker() {
     const { workerId, companyId, companySlug } = session
     const supabase = await createAdminClient()
     const ianaTimezone = await getCompanyTimezone(companyId)
-    const { date: today, time: now } = getCompanyLocalTime(ianaTimezone)
+    const { time: now } = getCompanyLocalTime(ianaTimezone)
+    // Buscar el último registro de entrada (check-in) que no tenga salida (check-out)
+    const { data: activePunch, error: fetchErr } = await supabase
+      .from('attendance')
+      .select('id')
+      .eq('worker_id', workerId)
+      .is('check_out', null)
+      .order('date', { ascending: false })
+      .order('check_in', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+
+    if (fetchErr || !activePunch) {
+      return { success: false, error: 'No se encontró una marcación de entrada activa.' }
+    }
 
     const { error } = await supabase
       .from('attendance')
       .update({ check_out: now })
-      .eq('worker_id', workerId)
-      .eq('date', today)
-      .is('check_out', null)
+      .eq('id', activePunch.id)
 
     if (error) {
       console.error('[WORKER_PORTAL] Error checking out:', error)
@@ -324,7 +341,7 @@ export async function signWorkerPortalPPEDelivery(deliveryId: string, signatureB
       .from('ppe_deliveries')
       .update({
         status: 'signed',
-        signature_url: fileName
+        signature_url: publicUrl
       })
       .eq('id', deliveryId)
       .select()
@@ -352,9 +369,10 @@ export async function getWorkerPortalFinances() {
     const { workerId, companyId } = session
     const supabase = await createAdminClient()
 
-    const [bRes, tRes] = await Promise.all([
-      supabase.from('bonuses').select('*').eq('worker_id', workerId).order('date', { ascending: false }),
-      supabase.from('transport_payments').select('*').eq('worker_id', workerId).order('date', { ascending: false })
+    const [bRes, tRes, pRes] = await Promise.all([
+      supabase.from('bonuses').select('*').eq('company_id', companyId).eq('worker_id', workerId).order('date', { ascending: false }),
+      supabase.from('transport_payments').select('*').eq('company_id', companyId).eq('worker_id', workerId).order('date', { ascending: false }),
+      supabase.from('worker_payments').select('*').eq('company_id', companyId).eq('worker_id', workerId).order('date', { ascending: false })
     ])
 
     const bList = (bRes.data || []).map((b: any) => ({
@@ -366,13 +384,116 @@ export async function getWorkerPortalFinances() {
     const tList = (tRes.data || []).map((t: any) => ({
       ...t,
       type: 'pasaje',
-      concept: 'Reembolso de Pasaje / Movilidad'
+      concept: t.concept || 'Reembolso de Pasaje / Movilidad'
+    }))
+
+    const paymentTypeLabels: any = {
+      salary: 'Sueldo',
+      advance: 'Adelanto',
+      liquidation: 'Liquidación',
+      extra: 'Pago Extraordinario'
+    }
+
+    const pList = (pRes.data || []).map((p: any) => ({
+      ...p,
+      type: 'pago',
+      concept: `${paymentTypeLabels[p.payment_type] || 'Pago'} (${p.period || 'mensual'})`
     }))
 
     // Merge and sort by date descending
-    return [...bList, ...tList].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+    return [...bList, ...tList, ...pList].sort((a, b) => {
+      const dateDiff = new Date(b.date).getTime() - new Date(a.date).getTime()
+      if (dateDiff === 0 && a.created_at && b.created_at) {
+        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      }
+      return dateDiff
+    })
   } catch (error) {
     console.error('[WORKER_PORTAL] Error fetching financial benefits:', error)
+    return []
+  }
+}
+
+export async function getWorkerPortalSomaTalks() {
+  try {
+    const session = await getWorkerSession()
+    if (!session) return []
+    const { workerId, companyId } = session
+    const supabase = await createAdminClient()
+
+    // Fetch talks where this worker is a participant
+    const { data, error } = await supabase
+      .from('soma_talk_participants')
+      .select(`
+        id,
+        status,
+        confirmed_at,
+        talk:soma_talks(
+          id,
+          topic,
+          date,
+          location,
+          material_url,
+          leader:users!leader_id(name)
+        )
+      `)
+      .eq('worker_id', workerId)
+
+    if (error) {
+      console.error('[WORKER_PORTAL] Error fetching worker SOMA talks:', error)
+      return []
+    }
+
+    // Sort by date descending
+    return (data || []).sort((a: any, b: any) => {
+      const dateA = a.talk?.date ? new Date(a.talk.date).getTime() : 0
+      const dateB = b.talk?.date ? new Date(b.talk.date).getTime() : 0
+      return dateB - dateA
+    })
+  } catch (error) {
+    console.error('[WORKER_PORTAL] Unexpected error fetching SOMA talks:', error)
+    return []
+  }
+}
+
+export async function getWorkerPortalSomaTrainings() {
+  try {
+    const session = await getWorkerSession()
+    if (!session) return []
+    const { workerId, companyId } = session
+    const supabase = await createAdminClient()
+
+    // Fetch trainings where this worker is a participant
+    const { data, error } = await supabase
+      .from('soma_training_participants')
+      .select(`
+        id,
+        status,
+        training:soma_trainings(
+          id,
+          title,
+          description,
+          trainer,
+          date,
+          expiry_date,
+          material_url
+        )
+      `)
+      .eq('worker_id', workerId)
+
+    if (error) {
+      console.error('[WORKER_PORTAL] Error fetching worker SOMA trainings:', error)
+      return []
+    }
+
+    // Sort by date descending
+    return (data || []).sort((a: any, b: any) => {
+      const dateA = a.training?.date ? new Date(a.training.date).getTime() : 0
+      const dateB = b.training?.date ? new Date(b.training.date).getTime() : 0
+      return dateB - dateA
+    })
+  } catch (error) {
+    console.error('[WORKER_PORTAL] Unexpected error fetching SOMA trainings:', error)
     return []
   }
 }

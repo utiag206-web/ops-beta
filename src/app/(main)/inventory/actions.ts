@@ -34,7 +34,7 @@ export async function getWarehouses(allWarehouses?: boolean) {
   const supabase = await createAdminClient()
 
   let query = applyIsolation(
-    supabase.from('warehouses').select('id, name, code, area'),
+    supabase.from('warehouses').select('id, name, code, area, is_default'),
     companyId,
     extendedUser.role_id
   )
@@ -203,6 +203,60 @@ export async function getProducts() {
   return { data: enrichedProducts }
 }
 
+async function ensureProductCategory(companyId: string, categoryName: string) {
+  if (!categoryName || !companyId) return
+  const name = categoryName.trim()
+  if (!name) return
+
+  const supabase = await createAdminClient()
+  
+  // Attempt to insert the category (ON CONFLICT DO NOTHING)
+  const { error } = await supabase
+    .from('product_categories')
+    .insert([{ company_id: companyId, name }])
+    
+  if (error && error.code !== '23505') {
+    console.warn('ensureProductCategory insert failed (table might not exist yet):', error.message)
+  }
+}
+
+export async function getProductCategories() {
+  try {
+    const companyId = await getStrictCompanyId()
+    const supabase = await createAdminClient()
+    
+    // Query from the new product_categories table
+    const { data, error } = await supabase
+      .from('product_categories')
+      .select('name')
+      .eq('company_id', companyId)
+      
+    if (error) {
+      console.warn('Querying product_categories failed, falling back to products table:', error.message)
+      const { data: pData, error: pError } = await supabase
+        .from('products')
+        .select('category')
+        .eq('company_id', companyId)
+        
+      if (pError) throw pError
+      
+      const categories = Array.from(new Set(
+        (pData || [])
+          .map((p: any) => p.category?.trim())
+          .filter(Boolean)
+      )).sort()
+      
+      return { data: categories }
+    }
+    
+    const categories = (data || []).map((c: any) => c.name).sort()
+    return { data: categories }
+  } catch (error: any) {
+    console.error('getProductCategories error:', error)
+    return { error: error.message }
+  }
+}
+
 export async function createProduct(payload: {
   code: string
   name: string
@@ -229,6 +283,8 @@ export async function createProduct(payload: {
       equivalence: productPayload.equivalence || null,
       company_id: companyId
     }
+
+    await ensureProductCategory(companyId, sanitized.category)
 
     const { data: product, error: pError } = await supabase
       .from('products')
@@ -349,12 +405,18 @@ export async function updateProduct(id: string, payload: any) {
   delete sanitized.company_id
   delete sanitized.created_at
   delete sanitized.updated_at
+  delete sanitized.initial_location
+  delete sanitized.initial_stock
   
   if (sanitized.hasOwnProperty('expiry_date')) {
     sanitized.expiry_date = sanitized.has_expiry && sanitized.expiry_date ? sanitized.expiry_date : null
   }
   if (sanitized.hasOwnProperty('equivalence')) {
     sanitized.equivalence = sanitized.equivalence || null
+  }
+
+  if (sanitized.category) {
+    await ensureProductCategory(companyId, sanitized.category)
   }
 
   const { extendedUser } = await getUserSession()
@@ -401,6 +463,319 @@ export async function getInventoryStock() {
   }
 
   return { data }
+}
+
+export async function checkExistingProductCodes(codes: string[]) {
+  try {
+    const companyId = await getStrictCompanyId()
+    const supabase = await createAdminClient()
+    if (!codes || codes.length === 0) return { data: [] }
+
+    const { data, error } = await supabase
+      .from('products')
+      .select('code')
+      .eq('company_id', companyId)
+      .in('code', codes)
+
+    if (error) return { error: error.message }
+    return { data: data.map((p: any) => p.code) }
+  } catch (error: any) {
+    return { error: error.message }
+  }
+}
+
+export async function importProducts(productsData: any[]) {
+  try {
+    const companyId = await getStrictCompanyId()
+    const { extendedUser } = await getUserSession()
+    const supabase = await createAdminClient()
+
+    if (!extendedUser || !companyId) return { success: false, error: 'Acceso denegado.' }
+
+    // Retrieve existing products to perform a programmatic upsert
+    const { data: existingProducts, error: fetchError } = await supabase
+      .from('products')
+      .select('id, code')
+      .eq('company_id', companyId)
+
+    if (fetchError) {
+      console.error('Error fetching existing products for import:', fetchError)
+      return { success: false, error: fetchError.message }
+    }
+
+    const prodMap = new Map<string, string>()
+    existingProducts?.forEach(p => {
+      if (p.code) {
+        prodMap.set(p.code.toUpperCase().trim(), p.id)
+      }
+    })
+
+    const { data: warehouses } = await supabase
+      .from('warehouses')
+      .select('id, name, is_default')
+      .eq('company_id', companyId)
+
+    const whMap = new Map<string, string>()
+    warehouses?.forEach(wh => {
+      whMap.set(wh.name.toLowerCase().trim(), wh.id)
+    })
+
+    let defaultWarehouseId = warehouses?.find((w: any) => w.is_default)?.id || warehouses?.[0]?.id || null
+    const results = []
+
+    for (const p of productsData) {
+      const code = p.code?.toString().trim().toUpperCase()
+      if (!code || !p.name) continue
+
+      let category = (p.category || 'EPP').trim()
+      const lowerCat = category.toLowerCase()
+      if (lowerCat === 'epp') {
+        category = 'EPP'
+      } else {
+        // Capitalize first letter of custom categories for clean formatting
+        category = category.charAt(0).toUpperCase() + category.slice(1)
+      }
+
+      // Ensure the category exists in the product_categories table
+      await ensureProductCategory(companyId, category)
+
+      const unit = (p.unit || 'unidad').toLowerCase().trim()
+      
+      // Smart inference of product type
+      let inferredType = 'consumible'
+      const excelType = p.type ? p.type.toString().toLowerCase().trim() : ''
+      if (['consumible', 'no consumible', 'herramienta', 'equipo'].includes(excelType)) {
+        inferredType = excelType
+      } else {
+        const catLower = category.toLowerCase()
+        if (catLower.includes('herramienta') || catLower.includes('ferreteria') || catLower.includes('ferretería') || catLower.includes('madera')) {
+          inferredType = 'herramienta'
+        } else if (catLower.includes('epp') || catLower.includes('equipo')) {
+          inferredType = 'equipo'
+        } else if (catLower.includes('repuesto')) {
+          inferredType = 'no consumible'
+        }
+      }
+
+      const productPayload = {
+        company_id: companyId,
+        code,
+        name: p.name.toString().trim().toUpperCase(),
+        category, // Dynamic category!
+        unit: ['unidad', 'kg', 'litros', 'metros', 'par', 'caja', 'unidades', 'global'].includes(unit) ? unit : 'unidad',
+        type: inferredType,
+        min_stock: Number(p.stock_minimo) || 0,
+        has_expiry: false,
+        equivalence: p.equivalence || null,
+        expiry_date: null
+      }
+
+      let product = null
+      const existingId = prodMap.get(code)
+
+      if (existingId) {
+        const { data: updatedProduct, error: updateErr } = await supabase
+          .from('products')
+          .update(productPayload)
+          .eq('id', existingId)
+          .select()
+          .maybeSingle()
+
+        if (updateErr) {
+          console.error('Update product error during import:', updateErr)
+          continue
+        }
+        product = updatedProduct
+      } else {
+        const { data: insertedProduct, error: insertErr } = await supabase
+          .from('products')
+          .insert([productPayload])
+          .select()
+          .maybeSingle()
+
+        if (insertErr) {
+          console.error('Insert product error during import:', insertErr)
+          continue
+        }
+        product = insertedProduct
+      }
+
+      if (!product) continue
+
+      const initialStock = Number(p.stock_inicial) || 0
+      if (initialStock > 0) {
+        let warehouseId = defaultWarehouseId
+        const whName = p.almacen_destino?.toString().trim()
+        
+        if (whName) {
+          const matchKey = whName.toLowerCase()
+          if (whMap.has(matchKey)) {
+            warehouseId = whMap.get(matchKey)!
+          } else {
+            const { data: newWh, error: newWhErr } = await supabase
+              .from('warehouses')
+              .insert({
+                company_id: companyId,
+                name: whName,
+                code: whName.substring(0, 5).toUpperCase() + Math.floor(Math.random() * 100)
+              })
+              .select('id')
+              .single()
+
+            if (!newWhErr && newWh) {
+              warehouseId = newWh.id
+              whMap.set(matchKey, newWh.id)
+            }
+          }
+        }
+
+        if (warehouseId) {
+          await supabase.rpc('set_inventory_stock', {
+            p_product_id: product.id,
+            p_warehouse_id: warehouseId,
+            p_company_id: companyId,
+            p_quantity: initialStock
+          })
+
+          const { data: mtIng } = await supabase
+            .from('movement_types')
+            .select('id')
+            .eq('company_id', companyId)
+            .eq('code', 'ING')
+            .maybeSingle()
+
+          await supabase
+            .from('inventory_movements')
+            .insert([{
+              product_id: product.id,
+              warehouse_id: warehouseId,
+              company_id: companyId,
+              user_id: extendedUser.id,
+              movement_type_id: mtIng?.id || null,
+              type: 'ingreso',
+              quantity: initialStock,
+              observation: p.observaciones || 'Carga inicial masiva de productos',
+              document_type: 'ING',
+              document_number: 'IMPORTACION'
+            }])
+        }
+      }
+      results.push(product)
+    }
+
+    revalidatePath('/inventory/products')
+    revalidatePath('/inventory/stock')
+    revalidatePath('/inventory/history')
+    return { success: true, count: results.length }
+  } catch (err: any) {
+    console.error('importProducts error:', err)
+    return { success: false, error: err.message }
+  }
+}
+
+export async function importInitialStock(stockData: any[]) {
+  try {
+    const companyId = await getStrictCompanyId()
+    const { extendedUser } = await getUserSession()
+    const supabase = await createAdminClient()
+
+    if (!extendedUser || !companyId) return { success: false, error: 'Acceso denegado.' }
+
+    const { data: products } = await supabase
+      .from('products')
+      .select('id, code')
+      .eq('company_id', companyId)
+
+    const prodMap = new Map<string, string>()
+    products?.forEach(p => {
+      prodMap.set(p.code.toLowerCase().trim(), p.id)
+    })
+
+    const { data: warehouses } = await supabase
+      .from('warehouses')
+      .select('id, name')
+      .eq('company_id', companyId)
+
+    const whMap = new Map<string, string>()
+    warehouses?.forEach(wh => {
+      whMap.set(wh.name.toLowerCase().trim(), wh.id)
+    })
+
+    const { data: mtIng } = await supabase
+      .from('movement_types')
+      .select('id')
+      .eq('company_id', companyId)
+      .eq('code', 'ING')
+      .maybeSingle()
+
+    let count = 0
+
+    for (const item of stockData) {
+      const pCode = item.codigo_producto?.toString().trim().toLowerCase()
+      const whName = item.almacen?.toString().trim().toLowerCase()
+      const qty = Number(item.cantidad) || 0
+
+      if (!pCode || !whName || qty <= 0) continue
+
+      const productId = prodMap.get(pCode)
+      let warehouseId = whMap.get(whName)
+
+      if (!productId) continue
+
+      if (!warehouseId) {
+        const whRawName = item.almacen?.toString().trim()
+        const { data: newWh, error: newWhErr } = await supabase
+          .from('warehouses')
+          .insert({
+            company_id: companyId,
+            name: whRawName,
+            code: whRawName.substring(0, 5).toUpperCase() + Math.floor(Math.random() * 100)
+          })
+          .select('id')
+          .single()
+
+        if (!newWhErr && newWh) {
+          warehouseId = newWh.id
+          whMap.set(whName, newWh.id)
+        }
+      }
+
+      if (warehouseId) {
+        await supabase.rpc('set_inventory_stock', {
+          p_product_id: productId,
+          p_warehouse_id: warehouseId,
+          p_company_id: companyId,
+          p_quantity: qty
+        })
+
+        await supabase
+          .from('inventory_movements')
+          .insert([{
+            product_id: productId,
+            warehouse_id: warehouseId,
+            company_id: companyId,
+            user_id: extendedUser.id,
+            movement_type_id: mtIng?.id || null,
+            type: 'ingreso',
+            quantity: qty,
+            observation: 'Carga inicial masiva de stock',
+            document_type: 'ING',
+            document_number: 'IMPORT_STOCK'
+          }])
+
+        count++
+      }
+    }
+
+    revalidatePath('/inventory/stock')
+    revalidatePath('/inventory/history')
+    revalidatePath('/dashboard')
+    
+    return { success: true, count }
+  } catch (err: any) {
+    console.error('importInitialStock error:', err)
+    return { success: false, error: err.message }
+  }
 }
 
 export async function updateStockRecord(payload: {
@@ -821,7 +1196,7 @@ function capitalizeName(str: string) {
   return str.trim().toLowerCase().replace(/(^\w|\s\w)/g, m => m.toUpperCase());
 }
 
-export async function createWarehouse(payload: { name: string, code?: string, company_id?: string }) {
+export async function createWarehouse(payload: { name: string, code?: string, area?: string, is_default?: boolean, company_id?: string }) {
   const companyId = await getStrictCompanyId()
   const { extendedUser } = await getUserSession()
   const supabase = await createAdminClient()
@@ -846,10 +1221,21 @@ export async function createWarehouse(payload: { name: string, code?: string, co
     return { error: 'Ya existe un almacén con este nombre en tu empresa.' }
   }
 
+  const activeCompanyId = companyId || payload.company_id
+  if (payload.is_default && activeCompanyId) {
+    // Reset all other warehouses defaults for this company
+    await supabase
+      .from('warehouses')
+      .update({ is_default: false })
+      .eq('company_id', activeCompanyId)
+  }
+
   const { data, error } = await supabase.from('warehouses').insert([{
-    company_id: companyId || payload.company_id, // Allow explicit company_id for super_admin
+    company_id: activeCompanyId,
     name: normalizedName,
-    code: payload.code?.trim().toUpperCase() || null
+    code: payload.code?.trim().toUpperCase() || null,
+    area: payload.area || null,
+    is_default: payload.is_default || false
   }]).select('*').single()
 
   if (error) return { error: error.message }
@@ -857,7 +1243,7 @@ export async function createWarehouse(payload: { name: string, code?: string, co
   return { success: true, data }
 }
 
-export async function updateWarehouse(id: string, payload: { name: string, code?: string }) {
+export async function updateWarehouse(id: string, payload: { name: string, code?: string, area?: string, is_default?: boolean }) {
   const companyId = await getStrictCompanyId()
   const { extendedUser } = await getUserSession()
   const supabase = await createAdminClient()
@@ -883,19 +1269,31 @@ export async function updateWarehouse(id: string, payload: { name: string, code?
     return { error: 'Ya existe otro almacén con este nombre.' }
   }
 
-  const { error } = await supabase
+  if (payload.is_default && companyId) {
+    // Reset all other warehouses defaults for this company
+    await supabase
+      .from('warehouses')
+      .update({ is_default: false })
+      .eq('company_id', companyId)
+  }
+
+  const { data, error } = await supabase
     .from('warehouses')
     .update({ 
       name: normalizedName,
       code: payload.code?.trim().toUpperCase() || null,
+      area: payload.area || null,
+      is_default: payload.is_default || false,
       updated_at: new Date().toISOString()
     })
     .eq('id', id)
     .match(companyId ? { company_id: companyId } : {})
+    .select('*')
+    .single()
 
   if (error) return { error: error.message }
   revalidatePath('/configuracion/warehouses')
-  return { success: true }
+  return { success: true, data }
 }
 
 export async function deleteWarehouse(id: string) {

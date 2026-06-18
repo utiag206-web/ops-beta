@@ -52,7 +52,7 @@ export async function getWorkersShort() {
     supabase.from('workers').select('*'),
     companyId,
     extendedUser.role_id
-  ).order('name', { ascending: true })
+  ).eq('status', 'ACTIVO').order('name', { ascending: true })
 
   if (error) return []
   return data
@@ -69,6 +69,7 @@ export async function createWorker(prevState: any, formData: FormData) {
     }
 
     const name = formData.get('name') as string
+    const lastName = formData.get('last_name') as string
     const dni = formData.get('dni') as string
     const position = formData.get('position') as string
     const phone = (formData.get('phone') as string) || null
@@ -80,21 +81,38 @@ export async function createWorker(prevState: any, formData: FormData) {
 
     const supabase = await createAdminClient()
 
-    const { error } = await supabase
+    const { data: newWorker, error } = await supabase
       .from('workers')
       .insert({
         company_id: companyId,
         name,
+        last_name: lastName || null,
         dni,
         position,
         phone,
-        hire_date: hireDate,
+        hire_date: hireDate || null,
         status: 'ACTIVO'
       })
+      .select('id')
+      .single()
 
-    if (error) {
+    if (error || !newWorker) {
       console.error('Error insertando trabajador:', error)
       return { success: false, error: 'Hubo un error al guardar el trabajador.' }
+    }
+
+    // Sync phone number to worker_personal
+    const { error: personalErr } = await supabase
+      .from('worker_personal')
+      .upsert({
+        worker_id: newWorker.id,
+        company_id: companyId,
+        phone_number: phone,
+        updated_at: new Date().toISOString()
+      }, { onConflict: 'worker_id' })
+
+    if (personalErr) {
+      console.error('Error syncing phone to worker_personal:', personalErr.message)
     }
 
     revalidatePath('/workers')
@@ -116,6 +134,7 @@ export async function updateWorker(prevState: any, formData: FormData) {
 
     const id = formData.get('id') as string
     const name = formData.get('name') as string
+    const lastName = formData.get('last_name') as string
     const dni = formData.get('dni') as string
     const position = formData.get('position') as string
     const phone = (formData.get('phone') as string) || null
@@ -159,10 +178,11 @@ export async function updateWorker(prevState: any, formData: FormData) {
       .from('workers')
       .update({
         name,
+        last_name: lastName || null,
         dni,
         position,
         phone,
-        hire_date: hireDate,
+        hire_date: hireDate || null,
         status,
         photo_url
       })
@@ -172,6 +192,20 @@ export async function updateWorker(prevState: any, formData: FormData) {
     if (error) {
       console.error('Error actualizando trabajador:', error)
       return { success: false, error: 'Hubo un error al actualizar el trabajador.' }
+    }
+
+    // Sync phone number to worker_personal
+    const { error: personalErr } = await supabase
+      .from('worker_personal')
+      .upsert({
+        worker_id: id,
+        company_id: companyId,
+        phone_number: phone,
+        updated_at: new Date().toISOString()
+      }, { onConflict: 'worker_id' })
+
+    if (personalErr) {
+      console.error('Error syncing phone to worker_personal:', personalErr.message)
     }
 
     revalidatePath('/workers')
@@ -195,13 +229,43 @@ export async function deleteWorker(id: string) {
 
     const { error } = await supabase
       .from('workers')
-      .delete()
+      .update({ status: 'INACTIVO' })
       .eq('id', id)
       .eq('company_id', companyId)
 
     if (error) {
-      console.error('Error eliminando trabajador:', error)
-      return { success: false, error: 'Hubo un error al eliminar.' }
+      console.error('Error desactivando trabajador:', error)
+      return { success: false, error: 'Hubo un error al desactivar.' }
+    }
+
+    revalidatePath('/workers')
+    revalidatePath('/dashboard')
+    return { success: true, error: null }
+  } catch (error) {
+    return { success: false, error: 'Error inesperado.' }
+  }
+}
+
+export async function reactivateWorker(id: string) {
+  try {
+    const { extendedUser } = await getUserSession()
+    const companyId = await getStrictCompanyId()
+    const allowedRoles = ['admin', 'operaciones', 'super_admin', 'superadmin']
+    if (!extendedUser.role_id || !allowedRoles.includes(extendedUser.role_id)) {
+      return { success: false, error: 'No tienes permisos.' }
+    }
+
+    const supabase = await createAdminClient()
+
+    const { error } = await supabase
+      .from('workers')
+      .update({ status: 'ACTIVO' })
+      .eq('id', id)
+      .eq('company_id', companyId)
+
+    if (error) {
+      console.error('Error reactivando trabajador:', error)
+      return { success: false, error: 'Hubo un error al reactivar.' }
     }
 
     revalidatePath('/workers')
@@ -284,6 +348,8 @@ export async function uploadWorkerDocument(formData: FormData) {
     const name = formData.get('name') as string
     const fileType = formData.get('file_type') as string
     const file = formData.get('file') as File
+    const issueDate = (formData.get('issue_date') as string) || null
+    const expiryDate = (formData.get('expiry_date') as string) || null
 
     const companyId = await getStrictCompanyId()
 
@@ -331,7 +397,9 @@ export async function uploadWorkerDocument(formData: FormData) {
         file_type: fileType,
         file_url: publicUrl,
         file_path: storagePath,
-        size: file.size
+        size: file.size,
+        issue_date: issueDate,
+        expiry_date: expiryDate
       })
 
     if (dbError) {
@@ -399,7 +467,10 @@ export async function importWorkers(workersData: any[]) {
   // Prepare data with company_id
   const workersToInsert = workersData.map((worker: any) => ({
     name: worker.name,
+    last_name: worker.last_name || null,
     dni: worker.dni?.toString(),
+    document_number: worker.dni?.toString(),
+    cod: worker.cod || null,
     position: worker.position,
     phone: worker.phone?.toString(),
     hire_date: worker.hire_date || new Date().toISOString().split('T')[0],
@@ -418,6 +489,43 @@ export async function importWorkers(workersData: any[]) {
   if (error) {
     console.error('Error importing workers:', error)
     return { success: false, error: error.message }
+  }
+
+  if (data && data.length > 0) {
+    // Inicializar worker_personal y worker_financial en lote para evitar datos huérfanos
+    const personalToUpsert = data.map((w: any) => {
+      const orig = workersToInsert.find((x: any) => x.dni === w.dni);
+      return {
+        worker_id: w.id,
+        company_id: companyId,
+        phone_number: orig?.phone || null,
+        updated_at: new Date().toISOString()
+      };
+    });
+
+    const financialToUpsert = data.map((w: any) => ({
+      worker_id: w.id,
+      company_id: companyId,
+      daily_rate: 0,
+      monthly_salary: 0,
+      updated_at: new Date().toISOString()
+    }));
+
+    const { error: personalErr } = await supabase
+      .from('worker_personal')
+      .upsert(personalToUpsert, { onConflict: 'worker_id' });
+
+    if (personalErr) {
+      console.error('Error importing worker_personal rows:', personalErr.message);
+    }
+
+    const { error: financialErr } = await supabase
+      .from('worker_financial')
+      .upsert(financialToUpsert, { onConflict: 'worker_id' });
+
+    if (financialErr) {
+      console.error('Error importing worker_financial rows:', financialErr.message);
+    }
   }
 
   revalidatePath('/workers')
@@ -446,16 +554,17 @@ export async function updateWorkerFullProfile(id: string, payload: {
       .from('workers')
       .update({
         name: payload.laboral.name,
-        last_name: payload.laboral.last_name,
+        last_name: payload.laboral.last_name || null,
         dni: payload.laboral.document_number || payload.laboral.dni,
         document_number: payload.laboral.document_number || payload.laboral.dni,
-        cod: payload.laboral.cod,
+        cod: payload.laboral.cod || null,
         position: payload.laboral.position,
-        guardia: payload.laboral.guardia,
-        condition: payload.laboral.condition,
-        work_system: payload.laboral.work_system,
-        hire_date: payload.laboral.hire_date,
-        termination_date: payload.laboral.termination_date,
+        guardia: payload.laboral.guardia || null,
+        condition: payload.laboral.condition || null,
+        work_system: payload.laboral.work_system || null,
+        phone: payload.personal.phone_number || null,
+        hire_date: payload.laboral.hire_date || null,
+        termination_date: payload.laboral.termination_date || null,
         status: payload.laboral.current_status || payload.laboral.status || 'ACTIVO',
         updated_at: new Date().toISOString()
       })
@@ -479,13 +588,20 @@ export async function updateWorkerFullProfile(id: string, payload: {
       failedFields.push('datos_financieros')
     }
 
+    const sanitizedPersonal = {
+      ...payload.personal,
+      birth_date: payload.personal.birth_date || null,
+      marital_status: payload.personal.marital_status || null,
+      gender: payload.personal.gender || null
+    }
+
     // 3. Upsert personal
     const { error: err3 } = await supabase
       .from('worker_personal')
       .upsert({
         worker_id: id,
         company_id: companyId,
-        ...payload.personal,
+        ...sanitizedPersonal,
         updated_at: new Date().toISOString()
       }, { onConflict: 'worker_id' })
 
@@ -622,6 +738,64 @@ export async function deleteWorkerChild(id: string, workerId: string) {
     return { success: true, error: null }
   } catch (error) {
     return { success: false, error: 'Error inesperado.' }
+  }
+}
+
+export async function uploadWorkerPhoto(workerId: string, formData: FormData) {
+  try {
+    const { extendedUser } = await getUserSession()
+    const companyId = await getStrictCompanyId()
+    const allowedRoles = ['admin', 'operaciones', 'super_admin', 'superadmin']
+    if (!extendedUser.role_id || !allowedRoles.includes(extendedUser.role_id)) {
+      return { success: false, error: 'No tienes permisos para subir fotografías.' }
+    }
+
+    const photoFile = formData.get('photo') as File | null
+    if (!photoFile || photoFile.size === 0) {
+      return { success: false, error: 'No se ha proporcionado ningún archivo.' }
+    }
+
+    const supabase = await createAdminClient()
+
+    const fileExt = photoFile.name.split('.').pop()
+    const fileName = `${companyId}/${workerId}-${Date.now()}.${fileExt}`
+
+    const { data: uploadData, error: uploadError } = await supabase.storage
+      .from('worker_photos')
+      .upload(fileName, photoFile, {
+        cacheControl: '3600',
+        upsert: true
+      })
+
+    if (uploadError) {
+      console.error('Error uploading photo:', uploadError)
+      return { success: false, error: 'Error al subir la fotografía a almacenamiento.' }
+    }
+
+    const { data: publicUrlData } = supabase.storage
+      .from('worker_photos')
+      .getPublicUrl(fileName)
+
+    const photo_url = publicUrlData.publicUrl
+
+    const { error: dbError } = await supabase
+      .from('workers')
+      .update({ photo_url })
+      .eq('id', workerId)
+
+    if (dbError) {
+      console.error('Error updating worker photo URL:', dbError)
+      return { success: false, error: 'La fotografía se subió pero no se pudo asociar al trabajador.' }
+    }
+
+    revalidatePath(`/workers/${workerId}`)
+    revalidatePath('/workers')
+    revalidatePath('/dashboard')
+    
+    return { success: true, photo_url }
+  } catch (error: any) {
+    console.error('Unexpected upload error:', error)
+    return { success: false, error: error.message || 'Error inesperado al subir la foto.' }
   }
 }
 

@@ -355,36 +355,50 @@ async function syncOperationsInventory(
     }
 
     // 3. Cargar Catálogo de Mapeo Activo
-    let { data: mappings } = await supabase
+    let { data: existingMappings } = await supabase
       .from('operations_product_mapping')
       .select('column_name, product_id, unit_ratio')
       .eq('company_id', companyId)
       .eq('operation_type', sourceType)
       .eq('is_active', true)
 
-    if (!mappings || mappings.length === 0) {
-      // Auto-crear mapeos de forma dinámica buscando productos del catálogo de la empresa por nombre/código
+    let mappings = existingMappings || []
+
+    // Identificar columnas esperadas y reglas de auto-mapeo
+    const rules: Record<string, string[]> = {
+      // Columnas de Control de Maderas
+      boards_2in: ['tabla', 'board'],
+      rajas: ['raja'],
+      strut_8in: ['puntal 8', 'strut 8'],
+      strut_6in: ['puntal 6', 'strut 6'],
+      strut_4in: ['puntal 4', 'strut 4'],
+      // Columnas de Control de Producción
+      nails_qty: ['clavo', 'nail'],
+      cambuchos: ['cambucho', 'gambucho'],
+      chocolate_qty: ['chocolate'],
+      pita_meters: ['pita']
+    }
+
+    const expectedCols = sourceType === 'production' 
+      ? ['nails_qty', 'cambuchos', 'chocolate_qty', 'pita_meters']
+      : ['boards_2in', 'rajas', 'strut_8in', 'strut_6in', 'strut_4in']
+
+    const mappedCols = mappings.map((m: any) => m.column_name)
+    const missingCols = expectedCols.filter(col => !mappedCols.includes(col))
+
+    if (missingCols.length > 0) {
+      console.log(`[SYNC_INV] Missing mappings for: ${missingCols.join(', ')}. Auto-creating...`)
       const { data: companyProducts } = await supabase
         .from('products')
         .select('id, name, code')
         .eq('company_id', companyId)
 
       if (companyProducts && companyProducts.length > 0) {
-        const rules: Record<string, string[]> = {
-          // Columnas de Control de Maderas
-          boards_2in: ['tabla', 'board'],
-          rajas: ['raja'],
-          strut_8in: ['puntal 8', 'strut 8'],
-          strut_6in: ['puntal 6', 'strut 6'],
-          strut_4in: ['puntal 4', 'strut 4'],
-          // Columnas de Control de Producción
-          nails_qty: ['clavo', 'nail'],
-          cambuchos: ['cambucho'],
-          chocolate_qty: ['chocolate']
-        }
-
         const autoMappings: any[] = []
-        for (const [colName, keywords] of Object.entries(rules)) {
+        for (const colName of missingCols) {
+          const keywords = rules[colName]
+          if (!keywords) continue
+
           const matchedProduct = companyProducts.find((p: any) => {
             const pName = (p.name || '').toLowerCase()
             const pCode = (p.code || '').toLowerCase()
@@ -414,7 +428,7 @@ async function syncOperationsInventory(
           }
 
           if (insertedMappings) {
-            mappings = insertedMappings
+            mappings = [...mappings, ...insertedMappings]
           }
         }
       }

@@ -23,6 +23,7 @@ import { registerPettyCashTransaction } from '@/app/(main)/caja-chica/actions'
 import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase/client'
 import { useRbac } from '@/components/providers/rbac-provider'
+import { getWarehouses } from '@/app/(main)/inventory/actions'
 
 interface AddTransactionModalProps {
   isOpen: boolean
@@ -30,6 +31,7 @@ interface AddTransactionModalProps {
   onSuccess: () => void
   area: string
   initialData?: any
+  currentBalance?: number
 }
 
 const CATEGORIES = [
@@ -45,11 +47,12 @@ const CATEGORIES = [
   { id: 'transferencia', label: 'Transferencia Interna', icon: '💸' },
 ]
 
-export function AddTransactionModal({ isOpen, onClose, onSuccess, area, initialData }: AddTransactionModalProps) {
+export function AddTransactionModal({ isOpen, onClose, onSuccess, area, initialData, currentBalance }: AddTransactionModalProps) {
   const { role_id } = useRbac()
   const [loading, setLoading] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [targetArea, setTargetArea] = useState('')
+  const [warehouses, setWarehouses] = useState<string[]>(['Administración'])
   const [formData, setFormData] = useState({
     type: initialData?.type || 'egreso' as 'ingreso' | 'egreso',
     category: initialData?.category || 'otros',
@@ -61,10 +64,29 @@ export function AddTransactionModal({ isOpen, onClose, onSuccess, area, initialD
     voucher_url: initialData?.voucher_url || ''
   })
 
+  // Cargar almacenes dinámicamente al abrir
+  React.useEffect(() => {
+    if (isOpen) {
+      async function loadWarehouses() {
+        try {
+          const res = await getWarehouses(true)
+          if (res.data) {
+            const list = Array.from(new Set(['Administración', ...res.data.map((w: any) => w.name)]))
+            setWarehouses(list)
+          }
+        } catch (err) {
+          console.error('Error fetching warehouses:', err)
+        }
+      }
+      loadWarehouses()
+    }
+  }, [isOpen])
+
   // Sync state when initialData changes (for Edit mode)
   React.useEffect(() => {
     if (initialData) {
-      setFormData({
+      setFormData(prev => ({
+        ...prev,
         type: initialData.type,
         category: initialData.category,
         reason: initialData.reason,
@@ -73,10 +95,11 @@ export function AddTransactionModal({ isOpen, onClose, onSuccess, area, initialD
         operation_number: initialData.operation_number || '',
         date: initialData.date,
         voucher_url: initialData.voucher_url || ''
-      })
+      }))
       setTargetArea(initialData.target_area || '')
     } else {
-      setFormData({
+      setFormData(prev => ({
+        ...prev,
         type: 'egreso',
         category: 'otros',
         reason: '',
@@ -85,10 +108,10 @@ export function AddTransactionModal({ isOpen, onClose, onSuccess, area, initialD
         operation_number: '',
         date: new Date().toISOString().split('T')[0],
         voucher_url: ''
-      })
+      }))
       setTargetArea('')
     }
-  }, [initialData, isOpen])
+  }, [initialData?.id, isOpen])
 
   if (!isOpen) return null
 
@@ -144,6 +167,11 @@ export function AddTransactionModal({ isOpen, onClose, onSuccess, area, initialD
       return
     }
 
+    if (formData.category === 'transferencia' && targetArea.toLowerCase() === area.toLowerCase()) {
+      toast.error('La caja de destino debe ser diferente de la caja de origen')
+      return
+    }
+
     setLoading(true)
     
     try {
@@ -188,7 +216,14 @@ export function AddTransactionModal({ isOpen, onClose, onSuccess, area, initialD
         <div className="p-6 md:p-8 border-b border-slate-50 flex justify-between items-center bg-slate-50/50">
           <div>
             <h2 className="text-xl md:text-2xl font-bold text-slate-800 tracking-tight">Registro de Movimiento</h2>
-            <p className="text-xs font-bold text-blue-600 uppercase tracking-widest mt-1">Caja Chica: {area}</p>
+            <div className="flex items-center flex-wrap gap-2 mt-1">
+              <span className="text-xs font-bold text-blue-600 uppercase tracking-widest">Caja Chica: {area}</span>
+              {currentBalance !== undefined && (
+                <span className="text-[10px] font-black bg-blue-100 text-blue-800 px-2.5 py-0.5 rounded-full uppercase tracking-wider">
+                  Saldo Disponible: S/ {Number(currentBalance).toFixed(2)}
+                </span>
+              )}
+            </div>
           </div>
           <button onClick={onClose} className="p-2.5 hover:bg-white rounded-full text-slate-400 transition-all shadow-sm">
             <X size={20} />
@@ -265,9 +300,11 @@ export function AddTransactionModal({ isOpen, onClose, onSuccess, area, initialD
           {/* CAJA CONTRA-PARTE (TRANSFERENCIAS) */}
           {formData.category === 'transferencia' && (
             <div className="space-y-2 animate-in fade-in slide-in-from-top-2 duration-200">
-              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2">
-                <Building size={12} /> {formData.type === 'egreso' ? 'Caja de Destino' : 'Caja de Origen'}
-              </label>
+              <div className="flex justify-between items-center ml-1">
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                  <Building size={12} /> {formData.type === 'egreso' ? 'Caja de Destino' : 'Caja de Origen'}
+                </label>
+              </div>
               <select 
                 required
                 value={targetArea}
@@ -275,7 +312,7 @@ export function AddTransactionModal({ isOpen, onClose, onSuccess, area, initialD
                 className="w-full px-4 py-4 bg-blue-50 border-transparent focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 rounded-2xl text-sm font-bold text-slate-700 transition-all outline-none appearance-none cursor-pointer"
               >
                 <option value="">-- Selecciona una Caja --</option>
-                {['Administración', 'Operaciones', 'Cocina']
+                {warehouses
                   .filter(a => a.toLowerCase() !== area.toLowerCase())
                   .map(a => (
                     <option key={a} value={a}>{a}</option>

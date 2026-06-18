@@ -72,13 +72,25 @@ export function AttendanceList({ records, isWorker = false }: AttendanceListProp
                   </div>
                 </td>
                 <td className="py-5 px-6 text-center">
-                  <span className={`text-[10px] font-bold px-3 py-1 rounded-lg uppercase border shadow-sm ${
-                    record.check_in && record.check_out 
-                      ? 'bg-emerald-50 text-emerald-700 border-emerald-100' 
-                      : 'bg-blue-50 text-blue-700 border-blue-100'
-                  }`}>
-                    {record.check_in && record.check_out ? 'Completo' : 'En Curso'}
-                  </span>
+                  {isWorker && record.check_in ? (
+                    record.check_in > '08:05:00' ? (
+                      <span className="text-[10px] font-black px-2.5 py-1 rounded-lg uppercase border bg-amber-50 text-amber-700 border-amber-100 shadow-sm">
+                        Tardanza
+                      </span>
+                    ) : (
+                      <span className="text-[10px] font-black px-2.5 py-1 rounded-lg uppercase border bg-emerald-50 text-emerald-700 border-emerald-100 shadow-sm">
+                        Puntual
+                      </span>
+                    )
+                  ) : (
+                    <span className={`text-[10px] font-bold px-3 py-1 rounded-lg uppercase border shadow-sm ${
+                      record.check_in && record.check_out 
+                        ? 'bg-emerald-50 text-emerald-700 border-emerald-100' 
+                        : 'bg-blue-50 text-blue-700 border-blue-100'
+                    }`}>
+                      {record.check_in && record.check_out ? 'Completo' : 'En Curso'}
+                    </span>
+                  )}
                 </td>
               </tr>
             ))}
@@ -102,13 +114,25 @@ export function AttendanceList({ records, isWorker = false }: AttendanceListProp
                   <p className="text-[10px] font-bold text-slate-400">{new Date(record.date).toLocaleDateString()}</p>
                 </div>
               </div>
-              <span className={`text-[10px] font-bold px-2.5 py-1 rounded-lg uppercase border shadow-sm ${
-                record.check_in && record.check_out 
-                  ? 'bg-emerald-50 text-emerald-700 border-emerald-100' 
-                  : 'bg-blue-50 text-blue-700 border-blue-100'
-              }`}>
-                {record.check_in && record.check_out ? 'Completo' : 'Activo'}
-              </span>
+              {isWorker && record.check_in ? (
+                record.check_in > '08:05:00' ? (
+                  <span className="text-[9px] font-black px-2 py-0.5 rounded border bg-amber-50 text-amber-700 border-amber-100">
+                    Tardanza
+                  </span>
+                ) : (
+                  <span className="text-[9px] font-black px-2 py-0.5 rounded border bg-emerald-50 text-emerald-700 border-emerald-100">
+                    Puntual
+                  </span>
+                )
+              ) : (
+                <span className={`text-[10px] font-bold px-2.5 py-1 rounded-lg uppercase border shadow-sm ${
+                  record.check_in && record.check_out 
+                    ? 'bg-emerald-50 text-emerald-700 border-emerald-100' 
+                    : 'bg-blue-50 text-blue-700 border-blue-100'
+                }`}>
+                  {record.check_in && record.check_out ? 'Completo' : 'Activo'}
+                </span>
+              )}
             </div>
 
             <div className="bg-slate-50 rounded-2xl p-4 grid grid-cols-2 gap-4 border border-slate-100/50">

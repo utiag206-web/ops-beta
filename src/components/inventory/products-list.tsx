@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { 
   Plus, Search, Filter, Hash, Box, 
   Trash2, Pencil, Package, AlertTriangle, 
-  Tag, Activity, LayoutGrid, Eye
+  Tag, Activity, LayoutGrid, Eye, FileSpreadsheet
 } from 'lucide-react'
 import { ProductForm } from './product-form'
 import { useUserRole } from '@/components/providers/rbac-provider'
@@ -106,13 +106,22 @@ export function ProductsList({ initialProducts }: { initialProducts: Product[] }
           <p className="text-slate-500 font-medium text-sm mt-1">Maestro de insumos e inventario base.</p>
         </div>
         {canModifyProducts && (
-          <button 
-            onClick={handleNew}
-            className="w-full md:w-auto bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-2xl font-bold flex items-center justify-center gap-2 transition-all shadow-lg shadow-indigo-100 active:scale-95"
-          >
-            <Plus size={20} strokeWidth={3} />
-            <span>Nuevo Producto</span>
-          </button>
+          <div className="flex flex-wrap gap-2 w-full md:w-auto">
+            <button 
+              onClick={() => router.push('/inventory/products/import')}
+              className="flex-1 md:flex-none bg-white border-2 border-indigo-200 hover:bg-indigo-50 text-indigo-600 px-6 py-3 rounded-2xl font-bold flex items-center justify-center gap-2 transition-all active:scale-95 text-sm"
+            >
+              <FileSpreadsheet size={18} />
+              <span>Importar</span>
+            </button>
+            <button 
+              onClick={handleNew}
+              className="flex-1 md:flex-none bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-2xl font-bold flex items-center justify-center gap-2 transition-all shadow-lg shadow-indigo-100 active:scale-95 text-sm"
+            >
+              <Plus size={20} strokeWidth={3} />
+              <span>Nuevo Producto</span>
+            </button>
+          </div>
         )}
       </div>
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">

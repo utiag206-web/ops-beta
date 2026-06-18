@@ -47,7 +47,6 @@ const navGroups = [
       { name: 'Logística de Personal', href: '/movements', icon: Ship, module: 'movements' },
       { name: 'Control de Activos', href: '/assets', icon: Package, module: 'assets' },
       { name: 'Requerimientos', href: '/requerimientos', icon: FileText, module: 'requerimientos' },
-      { name: 'Incidencias', href: '/incidencias?category=operativa', icon: AlertCircle, module: 'incidencias' },
       { name: 'Control Financiero', href: '/caja-chica', icon: Coins, module: 'caja-chica' },
     ]
   },
@@ -68,7 +67,7 @@ const navGroups = [
       { name: 'Plan de Capacitaciones', href: '/soma/capacitaciones', icon: GraduationCap, module: 'soma-capacitaciones' },
       { name: 'Charlas de Seguridad', href: '/soma/charlas', icon: MessageSquare, module: 'soma-charlas' },
       { name: 'Inspecciones HSEC', href: '/soma/hsec', icon: Eye, module: 'soma-hsec' },
-      { name: 'Reporte de Incidentes', href: '/incidencias?category=soma', icon: ShieldAlert, module: 'incidencias' },
+      { name: 'Incidencias SOMA', href: '/incidencias?category=soma', icon: ShieldAlert, module: 'incidencias' },
     ]
   },
   {
@@ -100,11 +99,13 @@ const navGroups = [
   }
 ]
 
+import { normalizeAreaName } from '@/lib/permissions'
+
 // Lógica de prioridad estricta para Sidebar (Refleja Dashboard)
 function getSidebarContext(role_id: string | undefined, area: string | null | undefined) {
   if (!role_id) return 'DEFAULT'
   const role = role_id.toLowerCase()
-  const cleanArea = area?.toLowerCase() || ''
+  const cleanArea = area ? normalizeAreaName(area) : ''
 
   if (role === 'super_admin' || role === 'superadmin') return 'SUPER_ADMIN'
   if (role === 'gerente') return 'GERENTE'
@@ -112,7 +113,8 @@ function getSidebarContext(role_id: string | undefined, area: string | null | un
   if (role === 'soma' || (role === 'jefe_area' && cleanArea === 'seguridad soma')) return 'SOMA'
   if (role === 'jefe_area' && cleanArea === 'cocina') return 'COCINA'
   if (role === 'operaciones' || (role === 'jefe_area' && cleanArea === 'operaciones')) return 'OPERACIONES'
-  if (role === 'almacen' || role === 'logistica' || (role === 'jefe_area' && ['almacén y mantenimiento', 'mecánica'].includes(cleanArea))) return 'ALMACEN'
+  if (role === 'supervisor') return 'SUPERVISOR'
+  if (role === 'almacen' || role === 'logistica' || (role === 'jefe_area' && ['almacen y mantenimiento', 'mecanica'].includes(cleanArea))) return 'ALMACEN'
   if (role === 'trabajador') return 'WORKER'
   return 'DEFAULT'
 }
@@ -135,6 +137,7 @@ export function Sidebar() {
   
   // Note: Resize listener moved to SidebarProvider for global stability
 
+  const isWorkerPure = role_id?.toLowerCase() === 'trabajador'
   const isEligible = user?.worker_id && !['admin', 'super_admin', 'superadmin'].includes(role_id?.toLowerCase() || '')
   const [viewMode, setViewMode] = useState<'OPERATIONAL' | 'WORKER'>('OPERATIONAL')
 
@@ -157,6 +160,10 @@ export function Sidebar() {
   }
 
   const handleItemClick = (groupId: string, href: string, itemName: string, e: React.MouseEvent) => {
+    if (isWorkerPure) {
+      document.cookie = 'view_mode=WORKER; path=/; max-age=31536000; SameSite=Lax'
+      return
+    }
     const targetMode = groupId === 'mi-portal-personal' ? 'WORKER' : 'OPERATIONAL'
     
     if (isEligible && targetMode !== viewMode) {
@@ -176,7 +183,6 @@ export function Sidebar() {
   }
 
   const area = user?.area
-  const isWorkerPure = role_id?.toLowerCase() === 'trabajador'
   const context = isEligible && !isWorkerPure ? getSidebarContext(role_id, area) : (viewMode === 'WORKER' ? 'WORKER' : getSidebarContext(role_id, area))
 
   const handleStopImpersonation = async () => {
@@ -260,7 +266,7 @@ export function Sidebar() {
           if (g.id === 'dashboard' || g.id === 'inventario') return g
           if (g.id === 'operaciones') return {
             ...g,
-            items: g.items.filter(i => ['workers', 'attendance', 'tareo', 'movements', 'assets', 'requerimientos', 'incidencias', 'caja-chica', 'produccion', 'maderas'].includes(i.module))
+            items: g.items.filter(i => ['workers', 'attendance', 'tareo', 'movements', 'assets', 'requerimientos', 'caja-chica', 'produccion', 'maderas'].includes(i.module))
           }
           if (g.id === 'gestion') return {
             ...g,
@@ -268,7 +274,26 @@ export function Sidebar() {
           }
           if (g.id === 'soma') return {
             ...g,
-            items: g.items.filter(i => ['soma-capacitaciones', 'soma-charlas'].includes(i.module))
+            items: g.items.filter(i => ['soma-capacitaciones', 'soma-charlas', 'incidencias'].includes(i.module))
+          }
+          if (g.id === 'configuracion') return { ...g, items: g.items.filter(i => i.module === 'profile') }
+          return { ...g, items: [] }
+        })
+
+      case 'SUPERVISOR':
+        return groups.map(g => {
+          if (g.id === 'dashboard') return g
+          if (g.id === 'operaciones') return {
+            ...g,
+            items: g.items.filter(i => ['workers', 'attendance', 'tareo', 'requerimientos'].includes(i.module))
+          }
+          if (g.id === 'gestion') return {
+            ...g,
+            items: g.items.filter(i => ['camp'].includes(i.module))
+          }
+          if (g.id === 'soma') return {
+            ...g,
+            items: g.items.filter(i => ['soma-capacitaciones', 'soma-charlas', 'incidencias'].includes(i.module))
           }
           if (g.id === 'configuracion') return { ...g, items: g.items.filter(i => i.module === 'profile') }
           return { ...g, items: [] }
@@ -294,18 +319,21 @@ export function Sidebar() {
           if (g.id === 'gestion') return {
             ...g,
             items: g.items.filter(i => ['documents', 'bonuses', 'ppe'].includes(i.module)).map(i => {
-              if (i.module === 'bonuses') return { ...i, name: 'Mis Bonos y Pasajes' }
+              if (i.module === 'bonuses') return { ...i, name: 'Mi Historial Financiero' }
               return i
             })
           }
           if (g.id === 'operaciones') return {
             ...g,
-            items: g.items.filter(i => ['attendance', 'requerimientos', 'incidencias'].includes(i.module)).map(i => {
+            items: g.items.filter(i => ['attendance', 'requerimientos'].includes(i.module)).map(i => {
               if (i.module === 'attendance') return { ...i, name: 'Mi Asistencia' }
               if (i.module === 'requerimientos') return { ...i, name: 'Solicitar Productos' }
-              if (i.module === 'incidencias') return { ...i, name: 'Reportar Incidencia' }
               return i
             })
+          }
+          if (g.id === 'soma') return {
+            ...g,
+            items: g.items.filter(i => i.module === 'incidencias').map(i => ({ ...i, name: 'Reportar Incidencia' }))
           }
           if (g.id === 'configuracion') return { ...g, items: g.items.filter(i => i.module === 'profile') }
           return { ...g, items: [] }
@@ -318,19 +346,36 @@ export function Sidebar() {
 
   let filteredGroups = getFilteredGroups().filter(group => group.items.length > 0)
 
-  if (isEligible && role_id?.toLowerCase() !== 'trabajador') {
+  const showWorkerOnly = viewMode === 'WORKER' || isWorkerPure
+
+  if (showWorkerOnly) {
     const personalGroup = {
       id: 'mi-portal-personal',
       label: 'MI PORTAL PERSONAL',
       items: [
-        { name: 'Mi Portal (Inicio)', href: '/dashboard', icon: UserCircle, module: 'dashboard' },
+        { name: 'Mi Portal (Inicio)', href: `/w/${user?.company_slug || 'empresa'}`, icon: UserCircle, module: 'dashboard' },
         { name: 'Mi Asistencia', href: '/attendance', icon: Clock, module: 'attendance' },
         { name: 'Mis Documentos', href: '/documents', icon: FileText, module: 'documents' },
         { name: 'Mis EPPs', href: '/ppe', icon: Shield, module: 'ppe' },
-        { name: 'Mis Bonos y Pasajes', href: '/bonuses', icon: Coins, module: 'bonuses' }
+        { name: 'Mi Historial Financiero', href: '/bonuses', icon: Coins, module: 'bonuses' }
       ]
     }
-    filteredGroups = [...filteredGroups, personalGroup]
+    filteredGroups = [personalGroup]
+  } else {
+    if (isEligible && !isWorkerPure) {
+      const personalGroup = {
+        id: 'mi-portal-personal',
+        label: 'MI PORTAL PERSONAL',
+        items: [
+          { name: 'Mi Portal (Inicio)', href: `/w/${user?.company_slug || 'empresa'}`, icon: UserCircle, module: 'dashboard' },
+          { name: 'Mi Asistencia', href: '/attendance', icon: Clock, module: 'attendance' },
+          { name: 'Mis Documentos', href: '/documents', icon: FileText, module: 'documents' },
+          { name: 'Mis EPPs', href: '/ppe', icon: Shield, module: 'ppe' },
+          { name: 'Mi Historial Financiero', href: '/bonuses', icon: Coins, module: 'bonuses' }
+        ]
+      }
+      filteredGroups = [...filteredGroups, personalGroup]
+    }
   }
 
   return (

@@ -365,7 +365,7 @@ export function WelcomeHero({ userName, roleName, area, companyName, viewMode, c
           <div className="flex flex-wrap items-center gap-3 mb-4">
             <span 
               style={{ color: '#ffffff' }}
-              className="bg-white/10 backdrop-blur-md text-[9px] font-extrabold px-4 py-1.5 rounded-lg uppercase tracking-wider border border-white/10"
+              className="bg-white/10 backdrop-blur-md text-[9px] font-extrabold px-4 py-1.5 rounded-lg keep-case tracking-wider border border-white/10"
             >
               {roleName} {area ? `| ${area === 'Almacén y Mantenimiento' ? 'Mecánica' : area}` : ''}
             </span>
@@ -393,7 +393,7 @@ export function WelcomeHero({ userName, roleName, area, companyName, viewMode, c
           </h1>
           <p 
             style={{ color: 'rgba(239, 246, 255, 0.85)' }}
-            className="text-xs md:text-sm font-bold leading-relaxed max-w-xl mt-3"
+            className="text-xs md:text-sm font-bold leading-relaxed max-w-xl mt-3 keep-case"
           >
             {content.text}
           </p>

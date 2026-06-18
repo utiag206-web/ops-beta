@@ -20,6 +20,7 @@ export function PPEList({ deliveries: initialDeliveries, isWorker = false }: PPE
   }, [initialDeliveries])
   const [signingId, setSigningId] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [previewSignatureUrl, setPreviewSignatureUrl] = useState<string | null>(null)
 
   const handleSign = async (signature: string) => {
     if (!signingId) return
@@ -118,9 +119,19 @@ export function PPEList({ deliveries: initialDeliveries, isWorker = false }: PPE
                       Firmar Recibido
                     </button>
                   ) : (delivery.status === 'signed' || delivery.status === 'delivered' && delivery.signature_url) ? (
-                    <div className="flex items-center justify-end gap-1.5 text-emerald-600 font-bold text-[10px] uppercase tracking-widest">
-                      <CheckCircle2 size={14} />
-                      Firmado
+                    <div className="flex items-center justify-end gap-3 font-bold text-[10px] uppercase tracking-widest">
+                      <div className="flex items-center gap-1.5 text-emerald-600">
+                        <CheckCircle2 size={14} />
+                        Firmado
+                      </div>
+                      {!isWorker && (
+                        <button
+                          onClick={() => setPreviewSignatureUrl(delivery.signature_url)}
+                          className="bg-slate-100 hover:bg-slate-200 text-slate-700 px-2.5 py-1.5 rounded-xl transition-all border border-slate-200 cursor-pointer"
+                        >
+                          Ver Firma
+                        </button>
+                      )}
                     </div>
                   ) : (
                     <span className="text-[10px] font-bold text-slate-400 uppercase italic">Digital</span>
@@ -180,9 +191,19 @@ export function PPEList({ deliveries: initialDeliveries, isWorker = false }: PPE
                   Firmar Ahora
                 </button>
               ) : (delivery.status === 'signed' || delivery.status === 'delivered' && delivery.signature_url) ? (
-                <div className="flex items-center gap-1.5 text-emerald-600 font-bold text-[10px] uppercase tracking-widest">
-                  <CheckCircle2 size={14} />
-                  Documento Firmado
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-1.5 text-emerald-600 font-bold text-[10px] uppercase tracking-widest">
+                    <CheckCircle2 size={14} />
+                    Documento Firmado
+                  </div>
+                  {!isWorker && (
+                    <button
+                      onClick={() => setPreviewSignatureUrl(delivery.signature_url)}
+                      className="bg-slate-100 hover:bg-slate-200 text-slate-700 px-2.5 py-1.5 rounded-xl text-[10px] font-bold border border-slate-200 cursor-pointer"
+                    >
+                      Ver Firma
+                    </button>
+                  )}
                 </div>
               ) : null}
             </div>
@@ -204,6 +225,33 @@ export function PPEList({ deliveries: initialDeliveries, isWorker = false }: PPE
               onCancel={() => setSigningId(null)}
             />
           )}
+        </div>
+      )}
+      {previewSignatureUrl && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[120] flex items-center justify-center p-4 animate-in fade-in duration-300">
+          <div className="bg-white rounded-[2rem] p-6 max-w-md w-full shadow-2xl border border-slate-100 animate-in zoom-in-95 duration-200 relative flex flex-col items-center">
+            <h3 className="text-lg font-bold text-slate-800 mb-4 uppercase tracking-tight">Firma Digital del Colaborador</h3>
+            <div className="border border-slate-200 rounded-2xl p-4 bg-slate-50 w-full flex items-center justify-center h-48 mb-6 overflow-hidden">
+              {previewSignatureUrl.startsWith('http://') || previewSignatureUrl.startsWith('https://') ? (
+                <img 
+                  src={previewSignatureUrl} 
+                  alt="Firma Digital" 
+                  className="max-h-full max-w-full object-contain mix-blend-multiply"
+                />
+              ) : (
+                <div className="text-center p-4">
+                  <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Firma Histórica</p>
+                  <p className="text-[10px] text-slate-400">La ruta completa de esta firma no está disponible en la base de datos.</p>
+                </div>
+              )}
+            </div>
+            <button 
+              onClick={() => setPreviewSignatureUrl(null)}
+              className="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs uppercase tracking-wider py-3.5 rounded-xl shadow-lg transition-all active:scale-95 cursor-pointer"
+            >
+              Cerrar Vista
+            </button>
+          </div>
         </div>
       )}
     </>

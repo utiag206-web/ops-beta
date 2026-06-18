@@ -32,17 +32,19 @@ export function StockForm({ isOpen, onClose, onSuccess, products, editingItem }:
   useEffect(() => {
     if (isOpen) {
       if (editingItem) {
-        setForm({
+        setForm(prev => ({
+          ...prev,
           product_id: editingItem.product_id,
           warehouse_id: editingItem.warehouse_id,
           quantity: editingItem.quantity
-        })
+        }))
       } else {
-        setForm({
+        setForm(prev => ({
+          ...prev,
           product_id: '',
           warehouse_id: '',
           quantity: 0
-        })
+        }))
       }
       
       const loadContext = async () => {
@@ -53,7 +55,7 @@ export function StockForm({ isOpen, onClose, onSuccess, products, editingItem }:
       }
       loadContext()
     }
-  }, [editingItem, isOpen])
+  }, [editingItem?.product_id, editingItem?.warehouse_id, isOpen])
 
   if (!isOpen) return null
 

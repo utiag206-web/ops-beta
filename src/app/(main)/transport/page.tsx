@@ -9,7 +9,7 @@ import { Bus } from 'lucide-react'
 export default async function TransportPage() {
   const [payments, workers] = await Promise.all([
     getTransportPayments(),
-    getWorkers()
+    getWorkers('ACTIVO')
   ])
 
   return (

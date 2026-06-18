@@ -8,7 +8,7 @@ export const dynamic = 'force-dynamic'
 export default async function CampPage() {
   const [initialRooms, workers, { extendedUser }] = await Promise.all([
     getCampRooms(),
-    getWorkers(),
+    getWorkers('ACTIVO'),
     getUserSession()
   ])
 

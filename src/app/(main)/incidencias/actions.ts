@@ -101,3 +101,65 @@ export async function createIncidencia(payload: {
   revalidatePath('/incidencias')
   return { success: true, data }
 }
+
+export async function updateIncidencia(id: string, payload: {
+  area_location: string
+  description: string
+  severity: string
+  event_date?: string
+  incident_category?: string
+  corrective_actions?: string
+  status: 'abierta' | 'cerrada'
+  photo_urls?: string[]
+}) {
+  const supabase = await createAdminClient()
+  const { extendedUser } = await getUserSession()
+  const companyId = await getStrictCompanyId()
+
+  if (!extendedUser?.id || !companyId) {
+    return { error: 'Sesión inválida.' }
+  }
+
+  const { error } = await applyIsolation(
+    supabase.from('incidencias').update({
+      area_location: payload.area_location,
+      description: payload.description,
+      severity: payload.severity,
+      event_date: payload.event_date,
+      incident_category: payload.incident_category,
+      corrective_actions: payload.corrective_actions,
+      status: payload.status,
+      photo_urls: payload.photo_urls || []
+    }),
+    companyId,
+    extendedUser.role_id
+  ).eq('id', id)
+
+  if (error) return { error: error.message }
+
+  revalidatePath('/dashboard')
+  revalidatePath('/incidencias')
+  return { success: true }
+}
+
+export async function deleteIncidencia(id: string) {
+  const supabase = await createAdminClient()
+  const { extendedUser } = await getUserSession()
+  const companyId = await getStrictCompanyId()
+
+  if (!extendedUser?.id || !companyId) {
+    return { error: 'Sesión inválida.' }
+  }
+
+  const { error } = await applyIsolation(
+    supabase.from('incidencias').delete(),
+    companyId,
+    extendedUser.role_id
+  ).eq('id', id)
+
+  if (error) return { error: error.message }
+
+  revalidatePath('/dashboard')
+  revalidatePath('/incidencias')
+  return { success: true }
+}

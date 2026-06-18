@@ -2,17 +2,19 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Upload, FileSpreadsheet, Check, AlertCircle, ArrowLeft, Loader2, Save } from 'lucide-react'
+import { Upload, FileSpreadsheet, Check, AlertCircle, ArrowLeft, Loader2, Save, Download } from 'lucide-react'
 import Link from 'next/link'
 import * as XLSX from 'xlsx'
 import { importWorkers } from '@/app/(main)/workers/actions'
 
 interface WorkerImportData {
   name: string
+  last_name?: string
   dni: string
   position: string
   phone: string
   hire_date?: string
+  cod?: string
 }
 
 export function WorkerImport() {
@@ -21,6 +23,46 @@ export function WorkerImport() {
   const [isPending, setIsPending] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [fileName, setFileName] = useState<string | null>(null)
+  
+  const downloadWorkerTemplate = () => {
+    const headers = [
+      'codigo',
+      'nombres',
+      'apellidos',
+      'dni',
+      'cargo',
+      'telefono',
+      'fecha_ingreso',
+      'area'
+    ]
+    const samples = [
+      {
+        codigo: 'T-0001',
+        nombres: 'Juan',
+        apellidos: 'Pérez',
+        dni: '12345678',
+        cargo: 'Ingeniero',
+        telefono: '987654321',
+        fecha_ingreso: '2026-01-10',
+        area: 'Operaciones'
+      },
+      {
+        codigo: 'T-0002',
+        nombres: 'María',
+        apellidos: 'Gómez',
+        dni: '23456789',
+        cargo: 'Técnico',
+        telefono: '912345678',
+        fecha_ingreso: '2026-01-12',
+        area: 'Mantenimiento'
+      }
+    ]
+
+    const ws = XLSX.utils.json_to_sheet(samples, { header: headers })
+    const wb = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(wb, ws, 'Plantilla Trabajadores')
+    XLSX.writeFile(wb, 'Plantilla_Trabajadores_Oficial.xlsx')
+  }
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -48,13 +90,44 @@ export function WorkerImport() {
           return null;
         };
 
-        const validatedData = jsonData.map((row: any) => ({
-          name: findValue(row, ['name', 'nombre', 'nombre completo', 'nombres', 'trabajador']),
-          dni: findValue(row, ['dni', 'documento', 'cedula', 'id']),
-          position: findValue(row, ['position', 'cargo', 'puesto', 'rol', 'ocupacion']),
-          phone: findValue(row, ['phone', 'telefono', 'celular', 'movil']),
-          hire_date: findValue(row, ['hire_date', 'fecha_ingreso', 'fecha ingreso', 'fecha de ingreso', 'hiredate'])
-        }))
+        const validatedData = jsonData.map((row: any) => {
+          let rawName = findValue(row, ['name', 'nombre', 'nombre completo', 'nombres', 'trabajador']) || '';
+          let rawLastName = findValue(row, ['last_name', 'last name', 'apellido', 'apellidos']) || '';
+
+          if (rawName && !rawLastName) {
+            // Si contiene una coma, se asume "Apellidos, Nombres"
+            if (rawName.includes(',')) {
+              const parts = rawName.split(',');
+              rawLastName = parts[0].trim();
+              rawName = parts[1].trim();
+            } else {
+              const words = rawName.trim().split(/\s+/);
+              if (words.length === 2) {
+                rawName = words[0];
+                rawLastName = words[1];
+              } else if (words.length === 3) {
+                rawName = words[0];
+                rawLastName = `${words[1]} ${words[2]}`;
+              } else if (words.length >= 4) {
+                // Los dos últimos son apellidos, el resto nombres
+                const lastNameWords = words.slice(-2);
+                const firstNameWords = words.slice(0, -2);
+                rawName = firstNameWords.join(' ');
+                rawLastName = lastNameWords.join(' ');
+              }
+            }
+          }
+
+          return {
+            name: rawName,
+            last_name: rawLastName || undefined,
+            dni: findValue(row, ['dni', 'documento', 'cedula', 'id']),
+            position: findValue(row, ['position', 'cargo', 'puesto', 'rol', 'ocupacion']),
+            phone: findValue(row, ['phone', 'telefono', 'celular', 'movil']),
+            hire_date: findValue(row, ['hire_date', 'fecha_ingreso', 'fecha ingreso', 'fecha de ingreso', 'hiredate']),
+            cod: findValue(row, ['cod', 'codigo', 'código']) || undefined
+          }
+        })
 
         // Filter valid rows (must have name and DNI)
         const validRows = validatedData.filter(row => row.name && row.dni)
@@ -126,22 +199,29 @@ export function WorkerImport() {
               <Upload size={32} />
             </div>
             <h3 className="text-lg font-bold text-slate-800">Selecciona tu archivo</h3>
-            <p className="text-slate-500 text-sm mt-1 text-center max-w-xs">
+            <p className="text-slate-500 text-sm mt-1 text-center max-w-xs mb-4">
               Sube un archivo .xlsx, .xls o .csv con las columnas: <br/>
-              <span className="font-mono text-xs font-bold bg-white px-1 rounded shadow-sm text-blue-600">Nombre, DNI, Cargo, Teléfono</span>
+              <span className="font-mono text-xs font-bold bg-white px-1 rounded shadow-sm text-blue-600 block mt-2">codigo, nombres, apellidos, dni, cargo, telefono, fecha_ingreso, area</span>
             </p>
             
-            <label className="mt-6">
-              <span className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-lg font-medium cursor-pointer transition-all shadow-md">
-                Explorar Archivos
-              </span>
-              <input 
-                type="file" 
-                className="hidden" 
-                accept=".xlsx, .xls, .csv" 
-                onChange={handleFileUpload}
-              />
-            </label>
+            <div className="flex flex-wrap gap-4 justify-center mt-4">
+              <button 
+                onClick={downloadWorkerTemplate}
+                className="bg-white border-2 border-blue-200 hover:bg-blue-50 text-blue-600 px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all flex items-center gap-2 shadow-sm"
+              >
+                <Download size={16} className="text-blue-600" /> Descargar Plantilla
+              </button>
+              <label className="bg-blue-600 hover:bg-blue-700 !text-white px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest cursor-pointer transition-all shadow-md flex items-center gap-2">
+                <Upload size={16} className="!text-white" />
+                <span className="!text-white">Explorar Archivos</span>
+                <input 
+                  type="file" 
+                  className="hidden" 
+                  accept=".xlsx, .xls, .csv" 
+                  onChange={handleFileUpload}
+                />
+              </label>
+            </div>
           </div>
         ) : (
           <div className="space-y-6">
@@ -180,7 +260,9 @@ export function WorkerImport() {
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="bg-slate-50">
-                    <th className="px-4 py-3 text-xs font-bold text-slate-500 uppercase tracking-wider">Nombre</th>
+                    <th className="px-4 py-3 text-xs font-bold text-slate-500 uppercase tracking-wider">Código</th>
+                    <th className="px-4 py-3 text-xs font-bold text-slate-500 uppercase tracking-wider">Nombres</th>
+                    <th className="px-4 py-3 text-xs font-bold text-slate-500 uppercase tracking-wider">Apellidos</th>
                     <th className="px-4 py-3 text-xs font-bold text-slate-500 uppercase tracking-wider">DNI</th>
                     <th className="px-4 py-3 text-xs font-bold text-slate-500 uppercase tracking-wider">Cargo</th>
                     <th className="px-4 py-3 text-xs font-bold text-slate-500 uppercase tracking-wider">Teléfono</th>
@@ -190,7 +272,9 @@ export function WorkerImport() {
                 <tbody className="divide-y divide-slate-100">
                   {data.map((row, i) => (
                     <tr key={i} className="hover:bg-slate-50 transition-colors">
+                      <td className="px-4 py-3 text-sm font-bold text-indigo-600 font-mono">{row.cod || ''}</td>
                       <td className="px-4 py-3 text-sm font-medium text-slate-700">{row.name}</td>
+                      <td className="px-4 py-3 text-sm text-slate-600">{row.last_name || ''}</td>
                       <td className="px-4 py-3 text-sm text-slate-600">{row.dni}</td>
                       <td className="px-4 py-3 text-sm text-slate-600">{row.position}</td>
                       <td className="px-4 py-3 text-sm text-slate-600">{row.phone}</td>

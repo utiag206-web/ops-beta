@@ -74,7 +74,14 @@ export default function DocumentsClient({ initialDocuments, workers, userRole }:
         setErrorMsg(result.error || 'Error al registrar documento')
       } else {
         setShowForm(false)
-        setFormData({ worker_id: '', name: '', file_type: '', issue_date: new Date().toISOString().split('T')[0], expiry_date: '' })
+        setFormData(prev => ({
+          ...prev,
+          worker_id: '',
+          name: '',
+          file_type: '',
+          issue_date: new Date().toISOString().split('T')[0],
+          expiry_date: ''
+        }))
         setFile(null)
         if (result?.data) {
           setDocuments(prev => [result.data, ...prev])
@@ -142,8 +149,8 @@ export default function DocumentsClient({ initialDocuments, workers, userRole }:
               </select>
             </div>
             <div className="space-y-2">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Vencimiento</label>
-              <input type="date" required className="w-full bg-slate-50 border-2 border-slate-100 rounded-xl p-3 font-bold outline-none focus:border-blue-600 text-slate-800"
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Vencimiento (Opcional)</label>
+              <input type="date" className="w-full bg-slate-50 border-2 border-slate-100 rounded-xl p-3 font-bold outline-none focus:border-blue-600 text-slate-800"
                 value={formData.expiry_date} onChange={e => setFormData(prev => ({...prev, expiry_date: e.target.value}))} />
             </div>
             <div className="space-y-2">
@@ -190,7 +197,7 @@ export default function DocumentsClient({ initialDocuments, workers, userRole }:
                   </td>
                   <td className="px-8 py-5">
                     <div className="font-bold text-slate-700">
-                      {doc.expiry_date ? new Date(doc.expiry_date).toLocaleDateString('es-PE') : '—'}
+                      {doc.expiry_date ? new Date(doc.expiry_date).toLocaleDateString('es-PE') : 'Sin vencimiento'}
                     </div>
                   </td>
                   <td className="px-8 py-5">

@@ -90,14 +90,27 @@ export async function checkOut() {
 
   const supabase = await createAdminClient()
   const ianaTimezone = await getCompanyTimezone(companyId)
-  const { date: today, time: now } = getCompanyLocalTime(ianaTimezone)
+  const { time: now } = getCompanyLocalTime(ianaTimezone)
+
+  // Buscar el último registro de entrada (check-in) que no tenga salida (check-out)
+  const { data: activePunch, error: fetchErr } = await supabase
+    .from('attendance')
+    .select('id')
+    .eq('worker_id', extendedUser.worker_id)
+    .is('check_out', null)
+    .order('date', { ascending: false })
+    .order('check_in', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
+  if (fetchErr || !activePunch) {
+    return { success: false, error: 'No se encontró una marcación de entrada activa.' }
+  }
 
   const { error } = await supabase
     .from('attendance')
     .update({ check_out: now })
-    .eq('worker_id', extendedUser.worker_id)
-    .eq('date', today)
-    .is('check_out', null)
+    .eq('id', activePunch.id)
 
   if (error) {
     console.error('Error checking out:', error)

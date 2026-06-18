@@ -28,7 +28,8 @@ import {
   Hash,
   Edit2,
   Trash2,
-  MoreVertical
+  MoreVertical,
+  AlertCircle
 } from 'lucide-react'
 import { getPettyCashStats, getPettyCashTransactions, deletePettyCashTransaction } from './actions'
 import { useRbac } from '@/components/providers/rbac-provider'
@@ -36,6 +37,7 @@ import { AddTransactionModal } from '@/components/caja-chica/add-transaction-mod
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { toast } from 'sonner'
+import { normalizeAreaName } from '@/lib/permissions'
 
 const CATEGORY_MAP: any = {
   alimentos: { label: 'Alimentos', icon: '🍎' },
@@ -60,6 +62,24 @@ export default function CajaChicaPage() {
   const [selectedTransaction, setSelectedTransaction] = useState<any>(null)
   const [filter, setFilter] = useState('all')
   const [area, setArea] = useState(user?.area || 'Cocina')
+  const [noAreaConfigured, setNoAreaConfigured] = useState(false)
+  const [warehouses, setWarehouses] = useState<string[]>(['Administración', 'Cocina', 'Operaciones'])
+
+  useEffect(() => {
+    async function fetchWarehouses() {
+      try {
+        const { getWarehouses } = await import('@/app/(main)/inventory/actions')
+        const res = await getWarehouses(true)
+        if (res.data) {
+          const list = Array.from(new Set(['Administración', ...res.data.map((w: any) => w.name)]))
+          setWarehouses(list)
+        }
+      } catch (err) {
+        console.error('Error fetching warehouses in page:', err)
+      }
+    }
+    fetchWarehouses()
+  }, [])
 
   async function loadData() {
     setLoading(true)
@@ -80,15 +100,28 @@ export default function CajaChicaPage() {
   useEffect(() => {
     // Si no somos admin/gerente, forzar el área según el rol
     if (!['admin', 'gerente', 'super_admin', 'superadmin'].includes(role_id || '')) {
-      if (role_id === 'administracion') {
-        setArea('Administración')
-      } else if (role_id === 'operaciones') {
-        setArea('Operaciones')
-      } else if (user?.area) {
-        setArea(user.area)
+      const target = (role_id === 'administracion' ? 'Administración' : (role_id === 'operaciones' ? 'Operaciones' : user?.area)) || ''
+      
+      if (!target) {
+        setNoAreaConfigured(true)
+        return
       }
+      
+      setNoAreaConfigured(false)
+      
+      // Buscar el nombre de caja exacto en la lista de almacenes (normalización)
+      const normTarget = normalizeAreaName(target)
+      const match = warehouses.find(w => normalizeAreaName(w) === normTarget)
+      
+      if (match) {
+        setArea(match)
+      } else {
+        setArea(target) // Fallback al texto original
+      }
+    } else {
+      setNoAreaConfigured(false)
     }
-  }, [user, role_id])
+  }, [user, role_id, warehouses])
 
   useEffect(() => {
     loadData()
@@ -119,6 +152,27 @@ export default function CajaChicaPage() {
     yape: <Phone className="w-4 h-4 text-indigo-600" />
   }
 
+  if (noAreaConfigured) {
+    return (
+      <div className="min-h-[50vh] flex flex-col justify-center items-center p-6 text-center">
+        <div className="w-full max-w-md bg-white border border-slate-100 rounded-[2.5rem] p-8 shadow-xl space-y-6 relative overflow-hidden">
+          <div className="w-16 h-16 bg-amber-50/50 text-amber-600 rounded-3xl border border-amber-200/50 flex items-center justify-center mx-auto animate-pulse">
+            <AlertCircle size={36} />
+          </div>
+          
+          <div className="space-y-2">
+            <h1 className="text-xl font-black text-slate-800 uppercase tracking-tight">Caja Chica Deshabilitada</h1>
+            <p className="text-xs font-bold text-amber-600 uppercase tracking-widest">Área No Asignada</p>
+          </div>
+          
+          <p className="text-slate-500 text-sm leading-relaxed">
+            Tu cuenta no tiene un área asignada en el sistema. Contacta con el Administrador para configurar tu área en tu perfil de usuario y habilitar el acceso a Caja Chica.
+          </p>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-8 animate-in fade-in duration-700 pb-20">
       {/* Header Section */}
@@ -137,9 +191,9 @@ export default function CajaChicaPage() {
                   onChange={(e) => setArea(e.target.value)}
                   className="bg-transparent border-none p-0 text-3xl font-bold text-slate-800 tracking-tight focus:ring-0 outline-none cursor-pointer hover:text-blue-600 transition-colors"
                 >
-                  <option value="Cocina">Caja Chica: Cocina</option>
-                  <option value="Operaciones">Caja Chica: Operaciones</option>
-                  <option value="Administración">Caja Chica: Administración</option>
+                  {warehouses.map(w => (
+                    <option key={w} value={w}>Caja Chica: {w}</option>
+                  ))}
                 </select>
               </div>
             ) : (
@@ -390,6 +444,7 @@ export default function CajaChicaPage() {
         }}
         area={area}
         initialData={selectedTransaction}
+        currentBalance={stats?.balance || 0}
       />
     </div>
   )

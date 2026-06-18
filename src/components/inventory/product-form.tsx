@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { X, Loader2, CheckCircle2, Box, Info, Eye } from 'lucide-react'
-import { createProduct, updateProduct } from '@/app/(main)/inventory/actions'
+import { createProduct, updateProduct, getProductCategories } from '@/app/(main)/inventory/actions'
 import { toast } from 'sonner'
 
 interface ProductFormProps {
@@ -30,16 +30,27 @@ const initialState = {
 export function ProductForm({ isOpen, onClose, onSuccess, editingProduct, isViewOnly }: ProductFormProps) {
   const [loading, setLoading] = useState(false)
   const [form, setForm] = useState(initialState)
+  const [existingCategories, setExistingCategories] = useState<string[]>([])
+
+  useEffect(() => {
+    if (isOpen) {
+      getProductCategories().then(res => {
+        if (res.data) {
+          setExistingCategories(res.data)
+        }
+      })
+    }
+  }, [isOpen])
 
   useEffect(() => {
     if (isOpen) {
       if (editingProduct) {
-        setForm(editingProduct)
+        setForm(prev => ({ ...prev, ...editingProduct }))
       } else {
-        setForm(initialState)
+        setForm(prev => ({ ...prev, ...initialState }))
       }
     }
-  }, [editingProduct, isOpen])
+  }, [editingProduct?.id, isOpen])
 
   if (!isOpen) return null
 
@@ -114,21 +125,21 @@ export function ProductForm({ isOpen, onClose, onSuccess, editingProduct, isView
             </div>
             <div className="space-y-1.5">
               <label className="text-[11px] font-black uppercase tracking-widest text-slate-400 px-1">Rubro / Categoría</label>
-              <select 
+              <input 
                 required
                 disabled={isViewOnly}
-                className="w-full bg-slate-50 border-2 border-transparent focus:border-indigo-500 focus:bg-white rounded-2xl p-4 text-sm font-bold transition-all outline-none disabled:opacity-70 appearance-none"
+                type="text"
+                list="category-suggestions"
+                placeholder="Ej: EPP, Herramientas, Alimentos"
+                className="w-full bg-slate-50 border-2 border-transparent focus:border-indigo-500 focus:bg-white rounded-2xl p-4 text-sm font-bold transition-all outline-none disabled:opacity-70"
                 value={form.category}
                 onChange={e => setForm(prev => ({...prev, category: e.target.value}))}
-              >
-                <option value="EPP">EPP</option>
-                <option value="herramientas">Herramientas</option>
-                <option value="alimentos">Alimentos</option>
-                <option value="limpieza">Limpieza</option>
-                <option value="repuestos">Repuestos</option>
-                <option value="oficina">Oficina</option>
-                <option value="otro">Otro</option>
-              </select>
+              />
+              <datalist id="category-suggestions">
+                {existingCategories.map(c => (
+                  <option key={c} value={c} />
+                ))}
+              </datalist>
             </div>
           </div>
 

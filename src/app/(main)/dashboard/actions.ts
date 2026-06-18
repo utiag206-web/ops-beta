@@ -31,6 +31,14 @@ export async function getDashboardStats() {
       activeView: viewMode
     }
 
+    // Helper function to parse database timestamp safely using local timezone YYYY-MM-DD
+    const getLocalDateString = (dateVal: any, timezone: string) => {
+      if (!dateVal) return ''
+      const dateObj = new Date(dateVal)
+      if (isNaN(dateObj.getTime())) return ''
+      return dateObj.toLocaleDateString('sv-SE', { timeZone: timezone })
+    }
+
     // 1. PRIORIDAD ESTRICTA PARA DATA FETCHING
     const userRoleLower = user.role_id?.toLowerCase() || ''
     const userAreaLower = user.area?.toLowerCase() || ''
@@ -49,15 +57,15 @@ export async function getDashboardStats() {
       sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
       const sevenDaysAgoStr = sevenDaysAgo.toISOString().split('T')[0]
 
-      const [u, w, p, cashTotal, inc, reqs, movsToday, critical, weekly, comps, pendingBonuses, pendingTransport, assets, weeklyAttendance, weeklyWorkerMovements, weeklyRequirements] = await Promise.all([
+      const [u, w, p, cashTotal, inc, reqs, movsToday, stockAlertQuery, weekly, comps, pendingBonuses, pendingTransport, assets, weeklyAttendance, weeklyWorkerMovements, weeklyRequirements] = await Promise.all([
         applyIsolation(supabase.from('users').select('id', { count: 'exact', head: true }), companyId, user.role_id),
         applyIsolation(supabase.from('workers').select('id', { count: 'exact', head: true }), companyId, user.role_id),
-        applyIsolation(supabase.from('products').select('id', { count: 'exact', head: true }), companyId, user.role_id),
+        applyIsolation(supabase.from('products').select('id, min_stock'), companyId, user.role_id),
         applyIsolation(supabase.from('petty_cash_transactions').select('amount, type'), companyId, user.role_id),
         applyIsolation(supabase.from('incidencias').select('id', { count: 'exact', head: true }), companyId, user.role_id).eq('status', 'abierta'),
         applyIsolation(supabase.from('requirements').select('id', { count: 'exact', head: true }), companyId, user.role_id).eq('status', 'pendiente'),
         applyIsolation(supabase.from('worker_movements').select('id', { count: 'exact', head: true }), companyId, user.role_id).gte('created_at', today),
-        applyIsolation(supabase.from('inventory_stock').select('id', { count: 'exact', head: true }), companyId, user.role_id).lt('quantity', 5),
+        applyIsolation(supabase.from('inventory_stock').select('product_id, quantity, products(min_stock)'), companyId, user.role_id),
         applyIsolation(supabase.from('inventory_movements').select('created_at, type, effect, quantity'), companyId, user.role_id).gte('created_at', sevenDaysAgoStr),
         supabase.from('companies').select('id', { count: 'exact', head: true }).eq('status', 'active'),
         applyIsolation(supabase.from('bonuses').select('id', { count: 'exact', head: true }), companyId, user.role_id).eq('status', 'pending'),
@@ -75,6 +83,31 @@ export async function getDashboardStats() {
         return t.type === 'ingreso' ? acc + val : acc - val
       }, 0)
 
+      // Calculate critical products count in memory (Grouped Stock Alert)
+      const productsList = p.data || []
+      const totalProductsCount = productsList.length
+      
+      const stockData = stockAlertQuery.data || []
+      const groups: Record<string, number> = {}
+      const minStockMap: Record<string, number> = {}
+      
+      // Initialize groups with 0 stock and set minStockMap for all products in catalog
+      productsList.forEach((prod: any) => {
+        groups[prod.id] = 0
+        minStockMap[prod.id] = prod.min_stock || 0
+      })
+      
+      // Add quantities from inventory_stock
+      stockData.forEach((item: any) => {
+        const pid = item.product_id
+        if (groups[pid] !== undefined) {
+          groups[pid] += item.quantity || 0
+        }
+      })
+      
+      // Calculate critical products count (products below minimum stock)
+      const criticalProductsCount = Object.keys(minStockMap).filter(pid => groups[pid] <= minStockMap[pid]).length
+
       const activityMap: Record<string, number> = {}
       stats.weeklyMovements = {}
       for (let i = 0; i < 7; i++) {
@@ -90,7 +123,7 @@ export async function getDashboardStats() {
         items.forEach((m: any) => {
           const dateVal = m.date || m.created_at
           if (!dateVal) return
-          const date = dateVal.split('T')[0]
+          const date = getLocalDateString(dateVal, ianaTimezone)
           if (activityMap[date] !== undefined) {
             activityMap[date] += 1
           }
@@ -105,7 +138,7 @@ export async function getDashboardStats() {
       if (weekly.data) {
         weekly.data.forEach((m: any) => {
           if (!m.created_at) return
-          const date = m.created_at.split('T')[0]
+          const date = getLocalDateString(m.created_at, ianaTimezone)
           
           // Sumamos volúmenes de inventario (opcional para el detalle)
           if (stats.weeklyMovements[date]) {
@@ -127,7 +160,8 @@ export async function getDashboardStats() {
         movementsToday: movsToday.count || 0,
         activeCompanies: isSuperAdmin ? (comps.count || 1) : 1, // El admin solo ve su propia empresa
         pendingRequirementsCount: reqs.count || 0,
-        criticalProductsCount: critical.count || 0,
+        criticalProductsCount: criticalProductsCount,
+        totalProducts: totalProductsCount,
         pendingBonusesCount: pendingBonuses.count || 0,
         pendingTransportCount: pendingTransport.count || 0,
         assetsCount: assets?.count || 0,
@@ -161,13 +195,26 @@ export async function getDashboardStats() {
     else if (isCocina) {
       const [cash, stock, movs, reqs] = await Promise.all([
         applyIsolation(supabase.from('petty_cash_transactions').select('amount, type'), companyId, user.role_id).ilike('area', 'Cocina'),
-        applyIsolation(supabase.from('inventory_stock').select('quantity, warehouses!inner(area)'), companyId, user.role_id).ilike('warehouses.area', 'Cocina'),
+        applyIsolation(supabase.from('inventory_stock').select('product_id, quantity, products(min_stock), warehouses!inner(area)'), companyId, user.role_id).ilike('warehouses.area', 'Cocina'),
         applyIsolation(supabase.from('inventory_movements').select('quantity, type, warehouses!inner(area), products(name)'), companyId, user.role_id).gte('created_at', today).ilike('warehouses.area', 'Cocina'),
         applyIsolation(supabase.from('requirements').select('*'), companyId, user.role_id).ilike('area', 'Cocina').eq('status', 'pendiente')
       ])
 
+      // Calculate Kitchen critical products in memory
+      const stockDataKitchen = stock.data || []
+      const groupsKitchen: Record<string, number> = {}
+      const minStockMapKitchen: Record<string, number> = {}
+      stockDataKitchen.forEach((item: any) => {
+        if (!item.products) return
+        const pid = item.product_id
+        groupsKitchen[pid] = (groupsKitchen[pid] || 0) + (item.quantity || 0)
+        minStockMapKitchen[pid] = item.products.min_stock || 0
+      })
+      const criticalProductsKitchen = Object.keys(groupsKitchen).filter(pid => groupsKitchen[pid] <= minStockMapKitchen[pid]).length
+
       stats.kitchen = {
-        criticalProducts: (stock?.data || []).filter((s: any) => s.quantity < 5).length,
+        criticalProducts: criticalProductsKitchen,
+        totalProducts: Object.keys(groupsKitchen).length,
         consumptionToday: (movs.data || []).filter((m: any) => m.type === 'salida').reduce((acc: number, m: any) => acc + (Number(m.quantity) || 0), 0),
         incomingToday: (movs.data || []).filter((m: any) => m.type === 'ingreso').reduce((acc: number, m: any) => acc + (Number(m.quantity) || 0), 0),
         balance: (cash?.data || []).reduce((acc: number, t: any) => t.type === 'ingreso' ? acc + (Number(t.amount) || 0) : acc - (Number(t.amount) || 0), 0),
@@ -201,19 +248,31 @@ export async function getDashboardStats() {
       }
     }
     else if (isAlmacen) {
-      const [prods, crit, movs, reqs, trs] = await Promise.all([
+      const [prods, stockAlertQueryLogistics, movs, reqs, trs] = await Promise.all([
         applyIsolation(supabase.from('products').select('id', { count: 'exact', head: true }), companyId, user.role_id),
-        applyIsolation(supabase.from('inventory_stock').select('id', { count: 'exact', head: true }), companyId, user.role_id).lt('quantity', 5),
+        applyIsolation(supabase.from('inventory_stock').select('product_id, quantity, products(min_stock)'), companyId, user.role_id),
         applyIsolation(supabase.from('inventory_movements').select('type'), companyId, user.role_id).gte('created_at', today),
         applyIsolation(supabase.from('requirements').select('id', { count: 'exact', head: true }), companyId, user.role_id).eq('status', 'pendiente'),
         applyIsolation(supabase.from('inventory_movements').select('id', { count: 'exact', head: true }), companyId, user.role_id).eq('document_type', 'TRS').eq('observation', 'PENDIENTE')
       ])
       
       const movsData = movs.data || []
+
+      // Calculate Logistics critical products in memory
+      const stockDataLogistics = stockAlertQueryLogistics.data || []
+      const groupsLogistics: Record<string, number> = {}
+      const minStockMapLogistics: Record<string, number> = {}
+      stockDataLogistics.forEach((item: any) => {
+        if (!item.products) return
+        const pid = item.product_id
+        groupsLogistics[pid] = (groupsLogistics[pid] || 0) + (item.quantity || 0)
+        minStockMapLogistics[pid] = item.products.min_stock || 0
+      })
+      const criticalProductsLogistics = Object.keys(groupsLogistics).filter(pid => groupsLogistics[pid] <= minStockMapLogistics[pid]).length
       
       stats.logistics = {
         registeredProducts: prods.count || 0,
-        criticalProducts: crit.count || 0,
+        criticalProducts: criticalProductsLogistics,
         incomingToday: movsData.filter((m: any) => m.type === 'ingreso').length,
         outgoingToday: movsData.filter((m: any) => m.type === 'salida').length,
         pendingTransfers: trs.count || 0,
@@ -257,8 +316,16 @@ export async function getDashboardStats() {
 
     // 3. FETCH TRANSVERSAL SOMA PARA TODOS
     const [lastTalk, lastTrain] = await Promise.all([
-      applyIsolation(supabase.from('soma_talks').select('topic, date'), companyId, user.role_id).order('date', { ascending: false }).limit(1).maybeSingle(),
-      applyIsolation(supabase.from('soma_trainings').select('title, date'), companyId, user.role_id).order('date', { ascending: false }).limit(1).maybeSingle()
+      applyIsolation(
+        supabase.from('soma_talks').select('id, topic, date, location, photo_url, target_area, material_url, leader:users!leader_id(name)'), 
+        companyId, 
+        user.role_id
+      ).order('date', { ascending: false }).limit(1).maybeSingle(),
+      applyIsolation(
+        supabase.from('soma_trainings').select('id, title, date, trainer, expiry_date'), 
+        companyId, 
+        user.role_id
+      ).order('date', { ascending: false }).limit(1).maybeSingle()
     ])
     stats.transversalSoma = {
       lastTalk: lastTalk.data,

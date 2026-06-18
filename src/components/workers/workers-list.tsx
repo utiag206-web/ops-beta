@@ -3,9 +3,11 @@
 import { useState } from 'react'
 import { AddWorkerModal } from '@/components/workers/add-worker-modal'
 import { EditWorkerModal } from '@/components/workers/edit-worker-modal'
-import { deleteWorker } from '@/app/(main)/workers/actions'
-import { Search, UserMinus, MoreVertical, Edit2, Trash2, Loader2, User, Folder, Upload, Plus, Filter } from 'lucide-react'
+import { deleteWorker, reactivateWorker } from '@/app/(main)/workers/actions'
+import { Search, UserMinus, UserCheck, Edit2, Trash2, Loader2, User, Folder, Upload, Plus, Filter } from 'lucide-react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
+import { toast } from 'sonner'
 
 type Worker = {
   id: string
@@ -20,23 +22,58 @@ type Worker = {
 }
 
 export function WorkersList({ workers, canManage = false }: { workers: Worker[], canManage?: boolean }) {
+  const router = useRouter()
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)
   const [editingWorker, setEditingWorker] = useState<Worker | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
   const [isDeleting, setIsDeleting] = useState<string | null>(null) // the worker id currently being deleted
+  const [activeTab, setActiveTab] = useState<'activo' | 'inactivo'>('activo')
 
   const filteredWorkers = workers.filter(worker => {
+    const isWorkerActive = worker.status?.toUpperCase() === 'ACTIVO' || worker.status?.toUpperCase() === 'ACTIVE'
+    const statusMatch = activeTab === 'activo' ? isWorkerActive : !isWorkerActive
+
     const nameMatch = (worker.name || '').toLowerCase().includes(searchTerm.toLowerCase())
     const dniMatch = (worker.dni || '').includes(searchTerm)
     const positionMatch = (worker.position || '').toLowerCase().includes(searchTerm.toLowerCase())
-    return nameMatch || dniMatch || positionMatch
+    return statusMatch && (nameMatch || dniMatch || positionMatch)
   })
 
   const handleDelete = async (id: string, name: string) => {
-    if (confirm(`¿Estás seguro que deseas eliminar a ${name}? Esta acción no se puede deshacer.`)) {
+    if (confirm(`¿Estás seguro que deseas desactivar a ${name}? Mantendrá su historial pero ya no figurará en la lista de colaboradores activos.`)) {
       setIsDeleting(id)
-      await deleteWorker(id)
-      setIsDeleting(null)
+      try {
+        const res = await deleteWorker(id)
+        if (res.success) {
+          toast.success('Colaborador desactivado correctamente')
+          router.refresh()
+        } else {
+          toast.error(res.error || 'Error al desactivar el colaborador')
+        }
+      } catch (err: any) {
+        toast.error('Error al desactivar: ' + err.message)
+      } finally {
+        setIsDeleting(null)
+      }
+    }
+  }
+
+  const handleReactivate = async (id: string, name: string) => {
+    if (confirm(`¿Deseas reactivar a ${name}? Volverá a figurar en la lista de colaboradores activos.`)) {
+      setIsDeleting(id)
+      try {
+        const res = await reactivateWorker(id)
+        if (res.success) {
+          toast.success('Colaborador reactivado correctamente')
+          router.refresh()
+        } else {
+          toast.error(res.error || 'Error al reactivar el colaborador')
+        }
+      } catch (err: any) {
+        toast.error('Error al reactivar: ' + err.message)
+      } finally {
+        setIsDeleting(null)
+      }
     }
   }
 
@@ -87,6 +124,29 @@ export function WorkersList({ workers, canManage = false }: { workers: Worker[],
       </div>
       
       <div className="bg-white rounded-2xl md:rounded-[2rem] shadow-sm border border-slate-100 overflow-hidden">
+        {/* Pestañas de Estado */}
+        <div className="flex border-b border-slate-100 bg-slate-50/30 px-6 pt-4">
+          <button
+            onClick={() => setActiveTab('activo')}
+            className={`pb-4 px-6 text-xs font-black uppercase tracking-wider border-b-2 transition-all cursor-pointer ${
+              activeTab === 'activo' 
+                ? 'border-blue-600 text-blue-600' 
+                : 'border-transparent text-slate-400 hover:text-slate-600'
+            }`}
+          >
+            Activos ({workers.filter(w => w.status?.toUpperCase() === 'ACTIVO' || w.status?.toUpperCase() === 'ACTIVE').length})
+          </button>
+          <button
+            onClick={() => setActiveTab('inactivo')}
+            className={`pb-4 px-6 text-xs font-black uppercase tracking-wider border-b-2 transition-all cursor-pointer ${
+              activeTab === 'inactivo' 
+                ? 'border-blue-600 text-blue-600' 
+                : 'border-transparent text-slate-400 hover:text-slate-600'
+            }`}
+          >
+            Inactivos ({workers.filter(w => w.status?.toUpperCase() !== 'ACTIVO' && w.status?.toUpperCase() !== 'ACTIVE').length})
+          </button>
+        </div>
         {filteredWorkers.length > 0 ? (
           <>
             {/* Desktop Table View */}
@@ -132,11 +192,11 @@ export function WorkersList({ workers, canManage = false }: { workers: Worker[],
                       </td>
                       <td className="py-5 px-6 text-center">
                         <span className={`text-[10px] font-bold px-3 py-1 rounded-lg uppercase border shadow-sm ${
-                          worker.status === 'active' 
+                          (worker.status?.toLowerCase() === 'active' || worker.status?.toLowerCase() === 'activo') 
                             ? 'bg-emerald-50 text-emerald-700 border-emerald-100' 
                             : 'bg-slate-50 text-slate-500 border-slate-100'
                         }`}>
-                          {worker.status === 'active' ? 'Activo' : 'Inactivo'}
+                          {(worker.status?.toLowerCase() === 'active' || worker.status?.toLowerCase() === 'activo') ? 'Activo' : 'Inactivo'}
                         </span>
                       </td>
                       <td className="py-5 px-6 text-right">
@@ -157,18 +217,33 @@ export function WorkersList({ workers, canManage = false }: { workers: Worker[],
                               >
                                 <Edit2 size={16} />
                               </button>
-                              <button 
-                                onClick={() => handleDelete(worker.id, worker.name)}
-                                disabled={isDeleting === worker.id}
-                                className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all disabled:opacity-50"
-                                title="Eliminar"
-                              >
-                                {isDeleting === worker.id ? (
-                                  <Loader2 size={16} className="animate-spin" />
-                                ) : (
-                                  <Trash2 size={16} />
-                                )}
-                              </button>
+                              {activeTab === 'activo' ? (
+                                <button 
+                                  onClick={() => handleDelete(worker.id, worker.name)}
+                                  disabled={isDeleting === worker.id}
+                                  className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all disabled:opacity-50"
+                                  title="Desactivar Colaborador"
+                                >
+                                  {isDeleting === worker.id ? (
+                                    <Loader2 size={16} className="animate-spin" />
+                                  ) : (
+                                    <UserMinus size={16} />
+                                  )}
+                                </button>
+                              ) : (
+                                <button 
+                                  onClick={() => handleReactivate(worker.id, worker.name)}
+                                  disabled={isDeleting === worker.id}
+                                  className="p-2 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-xl transition-all disabled:opacity-50"
+                                  title="Reactivar Colaborador"
+                                >
+                                  {isDeleting === worker.id ? (
+                                    <Loader2 size={16} className="animate-spin" />
+                                  ) : (
+                                    <UserCheck size={16} />
+                                  )}
+                                </button>
+                              )}
                             </>
                           )}
                         </div>
@@ -195,11 +270,11 @@ export function WorkersList({ workers, canManage = false }: { workers: Worker[],
                       <div>
                         <p className="text-base font-bold text-slate-800 uppercase tracking-tight leading-tight mb-1">{worker.name}</p>
                         <span className={`text-[9px] font-bold px-2 py-0.5 rounded-md uppercase border ${
-                          worker.status === 'active' 
+                          (worker.status?.toLowerCase() === 'active' || worker.status?.toLowerCase() === 'activo') 
                             ? 'bg-emerald-50 text-emerald-700 border-emerald-100' 
                             : 'bg-slate-50 text-slate-500 border-slate-100'
                         }`}>
-                          {worker.status === 'active' ? 'Activo' : 'Inactivo'}
+                          {(worker.status?.toLowerCase() === 'active' || worker.status?.toLowerCase() === 'activo') ? 'Activo' : 'Inactivo'}
                         </span>
                       </div>
                     </div>
@@ -233,14 +308,25 @@ export function WorkersList({ workers, canManage = false }: { workers: Worker[],
                         <Edit2 size={14} />
                         Editar
                       </button>
-                      <button 
-                        onClick={() => handleDelete(worker.id, worker.name)}
-                        disabled={isDeleting === worker.id}
-                        className="flex-1 flex items-center justify-center gap-2 bg-rose-50 border border-rose-100 text-rose-600 py-2.5 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all active:scale-95 shadow-sm"
-                      >
-                        {isDeleting === worker.id ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
-                        Eliminar
-                      </button>
+                      {activeTab === 'activo' ? (
+                        <button 
+                          onClick={() => handleDelete(worker.id, worker.name)}
+                          disabled={isDeleting === worker.id}
+                          className="flex-1 flex items-center justify-center gap-2 bg-rose-50 border border-rose-100 text-rose-600 py-2.5 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all active:scale-95 shadow-sm"
+                        >
+                          {isDeleting === worker.id ? <Loader2 size={14} className="animate-spin" /> : <UserMinus size={14} />}
+                          Desactivar
+                        </button>
+                      ) : (
+                        <button 
+                          onClick={() => handleReactivate(worker.id, worker.name)}
+                          disabled={isDeleting === worker.id}
+                          className="flex-1 flex items-center justify-center gap-2 bg-emerald-50 border border-emerald-100 text-emerald-600 py-2.5 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all active:scale-95 shadow-sm"
+                        >
+                          {isDeleting === worker.id ? <Loader2 size={14} className="animate-spin" /> : <UserCheck size={14} />}
+                          Reactivar
+                        </button>
+                      )}
                     </div>
                   )}
                 </div>

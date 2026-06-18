@@ -72,7 +72,7 @@ export async function signPPEDelivery(deliveryId: string, signatureBase64: strin
     const companyId = await getStrictCompanyId()
     if (!companyId || !extendedUser) return { success: false, error: 'No autorizado' }
 
-    const supabase = await createClient()
+    const supabase = await createAdminClient()
     
     // 0. Verify record exists and belongs to company
     const { data: existing, error: fetchErr } = await applyIsolation(
@@ -113,7 +113,7 @@ export async function signPPEDelivery(deliveryId: string, signatureBase64: strin
     const { data: updateData, error: updateError } = await applyIsolation(
       adminClient.from('ppe_deliveries').update({
         status: 'signed',
-        signature_url: fileName
+        signature_url: publicUrl
       }),
       companyId,
       extendedUser.role_id

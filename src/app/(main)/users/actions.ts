@@ -69,7 +69,7 @@ export async function getAvailableWorkers() {
     supabase.from('workers').select('id, name, dni, position'),
     companyId,
     extendedUser.role_id
-  ).order('name', { ascending: true })
+  ).eq('status', 'ACTIVO').order('name', { ascending: true })
 
   if (error) {
     console.error('Error fetching available workers:', error)

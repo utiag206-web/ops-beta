@@ -9,7 +9,7 @@ import {
   Tag, Pencil, LayoutGrid, Plus,
   ChevronDown, ChevronUp, Clock, User, MessageSquare,
   ArrowUpRight, ArrowDownLeft, Settings2, Globe, Locate,
-  Box, Loader2
+  Box, Loader2, FileSpreadsheet
 } from 'lucide-react'
 import { StockForm } from './stock-form'
 import * as XLSX from 'xlsx'
@@ -32,6 +32,7 @@ interface Movement {
   document_number?: string
   reference?: string
   responsible_name?: string
+  products?: { name: string, code: string, unit: string }
 }
 
 interface StockItem {
@@ -186,6 +187,16 @@ export function InventoryStockList({
               title="Sincronizar Totales"
             >
               <Clock size={18} />
+            </button>
+          )}
+
+          {canWrite && (
+            <button 
+              onClick={() => router.push('/inventory/stock/import')}
+              className="flex-1 md:flex-none bg-white border-2 border-emerald-100 hover:bg-emerald-50/50 text-emerald-700 px-4 md:px-6 py-2.5 md:py-3 rounded-xl md:rounded-2xl font-bold flex items-center justify-center gap-2 transition-all active:scale-95 text-xs md:text-sm"
+            >
+              <FileSpreadsheet size={16} />
+              <span>Importar Stock</span>
             </button>
           )}
 
@@ -508,6 +519,16 @@ function MovementDetailModal({
 
         {/* Detailed Fields Grid */}
         <div className="space-y-4 flex-1">
+          <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Descripción del Producto</p>
+            <p className="text-sm font-bold text-slate-700 uppercase">
+              {movement.products?.name || 'N/A'}
+            </p>
+            <p className="text-[9px] font-semibold text-slate-400 mt-1">
+              Código / SKU: <span className="font-bold text-slate-600 font-mono">{movement.products?.code || 'N/A'}</span>
+            </p>
+          </div>
+
           <div className="grid grid-cols-2 gap-4">
             <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Concepto / Tipo</p>

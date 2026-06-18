@@ -33,7 +33,17 @@ export default function UppercaseEnforcer() {
         const uppercased = originalValue.toUpperCase()
         
         if (originalValue !== uppercased) {
-          target.value = uppercased
+          const prototype = target.tagName === 'TEXTAREA' 
+            ? HTMLTextAreaElement.prototype 
+            : HTMLInputElement.prototype
+          const descriptor = Object.getOwnPropertyDescriptor(prototype, 'value')
+          
+          if (descriptor && descriptor.set) {
+            descriptor.set.call(target, uppercased)
+            target.dispatchEvent(new Event('input', { bubbles: true }))
+          } else {
+            target.value = uppercased
+          }
           
           if (start !== null && end !== null) {
             target.setSelectionRange(start, end)

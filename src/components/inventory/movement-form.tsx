@@ -30,6 +30,7 @@ export function MovementForm({ isOpen, onClose, onSuccess, products }: MovementF
   const [movementTypes, setMovementTypes] = useState<any[]>([])
   const [purchaseOrders, setPurchaseOrders] = useState<any[]>([])
   const [poItems, setPoItems] = useState<any[]>([])
+  const [dropdownOpen, setDropdownOpen] = useState(false)
   
   const [form, setForm] = useState({
     product_id: '',
@@ -89,20 +90,31 @@ export function MovementForm({ isOpen, onClose, onSuccess, products }: MovementF
       }
       load()
     } else {
-      setForm({
+      setForm(prev => ({
+        ...prev,
         product_id: '', movement_type_id: '', quantity: 0, warehouse_id: '',
         target_warehouse_id: '', document_type: '', document_number: '', reference: '',
         responsible_name: '', observation: '',
         entry_origin: 'MANUAL', outbound_type: 'EXTERNAL', po_id: '', invoice_type: 'FACTURA',
         invoice_number: '', guide_number: '', 
         document_date: new Date().toISOString().split('T')[0]
-      })
+      }))
       setPoItems([])
       setReceivedQtys({})
       setAdjType('plus')
       setProductSearch('')
     }
   }, [isOpen])
+
+  // Sync productSearch when product_id is set/changed elsewhere (like SKU typing)
+  useEffect(() => {
+    if (isOpen && form.product_id) {
+      const prod = products.find(p => p.id === form.product_id)
+      if (prod && productSearch !== prod.name) {
+        setProductSearch(prod.name)
+      }
+    }
+  }, [form.product_id, products, isOpen])
 
   const isKitchenUser = userArea === 'Cocina'
   const sourceWarehouses = isKitchenUser 
@@ -152,7 +164,7 @@ export function MovementForm({ isOpen, onClose, onSuccess, products }: MovementF
         document_number: '' 
       }))
     }
-  }, [isTransfer, form.outbound_type, isOpen, activeMovementType])
+  }, [isTransfer, form.outbound_type, isOpen, activeMovementType?.id])
 
   // Carga de items de OC
   useEffect(() => {
@@ -344,7 +356,7 @@ export function MovementForm({ isOpen, onClose, onSuccess, products }: MovementF
             </div>
 
             {/* Campos Comunes: Almacén y Producto (Decoupled) */}
-            <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-end">
               <div className="md:col-span-3 space-y-1.5">
                 <label className="text-[11px] font-black uppercase tracking-widest text-slate-400 px-1">Ubicación <span className="text-rose-500">*</span></label>
                 <select 
@@ -376,27 +388,50 @@ export function MovementForm({ isOpen, onClose, onSuccess, products }: MovementF
                 />
               </div>
 
-              <div className="md:col-span-6 space-y-1.5">
+              <div className="md:col-span-6 space-y-1.5 relative">
                 <label className="text-[11px] font-black uppercase tracking-widest text-slate-400 px-1">Descripción del Producto <span className="text-rose-500">*</span></label>
-                <div className="flex flex-col gap-1">
+                <div className="relative">
                   <input 
                     type="text"
-                    placeholder="Filtrar producto por nombre o código..."
-                    className="w-full bg-slate-50 border-2 border-transparent focus:border-indigo-500 rounded-2xl px-4 py-2 text-xs font-bold transition-all outline-none uppercase"
-                    value={productSearch}
-                    onChange={e => setProductSearch(e.target.value)}
-                  />
-                  <select 
                     required
-                    className="w-full bg-slate-50 border-2 border-transparent focus:border-indigo-500 rounded-2xl p-4 text-sm font-bold transition-all outline-none"
-                    value={form.product_id}
-                    onChange={e => setForm(prev => ({...prev, product_id: e.target.value}))}
-                  >
-                    <option value="">Selección de producto ({slicedProducts.length} de {filteredProducts.length})...</option>
-                    {slicedProducts.map(p => (
-                      <option key={p.id} value={p.id}>{p.name.toUpperCase()} ({p.code.toUpperCase()})</option>
-                    ))}
-                  </select>
+                    placeholder="Filtrar producto por nombre..."
+                    className="w-full bg-slate-50 border-2 border-transparent focus:border-indigo-500 rounded-2xl p-4 text-sm font-bold transition-all outline-none uppercase"
+                    value={productSearch}
+                    onFocus={() => setDropdownOpen(true)}
+                    onBlur={() => setTimeout(() => setDropdownOpen(false), 250)}
+                    onChange={e => {
+                      setProductSearch(e.target.value)
+                      setDropdownOpen(true)
+                      const currentSelected = products.find(p => p.id === form.product_id)
+                      if (currentSelected && e.target.value.toLowerCase() !== currentSelected.name.toLowerCase()) {
+                        setForm(prev => ({ ...prev, product_id: '' }))
+                      }
+                    }}
+                  />
+                  {dropdownOpen && filteredProducts.length > 0 && (
+                    <div className="absolute z-50 left-0 right-0 mt-1 bg-white border border-slate-200 rounded-2xl shadow-xl max-h-60 overflow-y-auto custom-scrollbar">
+                      {slicedProducts.map(p => (
+                        <div
+                          key={p.id}
+                          onClick={() => {
+                            setForm(prev => ({...prev, product_id: p.id}))
+                            setProductSearch(p.name)
+                            setDropdownOpen(false)
+                          }}
+                          className={`px-4 py-3 text-sm font-bold cursor-pointer hover:bg-indigo-50 hover:text-indigo-600 transition-colors uppercase ${
+                            p.id === form.product_id ? 'bg-indigo-50 text-indigo-700' : 'text-slate-700'
+                          }`}
+                        >
+                          {p.name}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {dropdownOpen && filteredProducts.length === 0 && (
+                    <div className="absolute z-50 left-0 right-0 mt-1 bg-white border border-slate-200 rounded-2xl shadow-xl p-4 text-center text-xs text-slate-400 font-bold uppercase">
+                      Sin coincidencias
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

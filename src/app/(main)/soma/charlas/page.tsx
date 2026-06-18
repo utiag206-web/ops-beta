@@ -4,10 +4,10 @@ import { useState, useEffect } from 'react'
 import { 
   MessageSquare, Plus, Search, Calendar, Users, 
   MapPin, Camera, ChevronRight, X, Loader2,
-  CheckCircle2, Info, FileText
+  CheckCircle2, Info, FileText, Eye, Pencil, Trash2, Clock
 } from 'lucide-react'
 import { toast } from 'sonner'
-import { getSomaTalks, createSomaTalk, getCurrentUser, confirmSomaTalk } from '../actions'
+import { getSomaTalks, createSomaTalk, getCurrentUser, confirmSomaTalk, updateSomaTalk, deleteSomaTalk, completeTalkParticipant } from '../actions'
 import { getWorkers } from '@/app/(main)/workers/actions'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
@@ -22,6 +22,19 @@ export default function CharlasSomaPage() {
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedTalk, setSelectedTalk] = useState<any | null>(null)
+  const [editTalk, setEditTalk] = useState<any | null>(null)
+
+  const handleDelete = async (id: string) => {
+    if (!confirm('¿Estás seguro de que deseas eliminar este registro de charla de 5 minutos? Esta acción no se puede deshacer.')) return
+    try {
+      const res = await deleteSomaTalk(id)
+      if (res.error) throw new Error(res.error)
+      toast.success('Charla eliminada correctamente')
+      loadData()
+    } catch (err: any) {
+      toast.error(err.message || 'Error al eliminar charla')
+    }
+  }
 
   const user = rbacUser
 
@@ -44,6 +57,10 @@ export default function CharlasSomaPage() {
       ])
       setTalks(tData || [])
       setWorkers(wData || [])
+      setSelectedTalk((prev: any) => {
+        if (!prev) return null
+        return (tData || []).find((t: any) => t.id === prev.id) || null
+      })
     } catch (error) {
       console.error("Critical error in loadData:", error)
       toast.error('Error al cargar datos')
@@ -74,6 +91,27 @@ export default function CharlasSomaPage() {
     )
   )
 
+  // Stats calculations
+  const talkRates = talks.map(t => {
+    const total = t.participants?.length || 0
+    if (total === 0) return 0
+    const confirmed = t.participants?.filter((p: any) => p.status === 'confirmado').length || 0
+    return (confirmed / total) * 100
+  })
+  const avgAttendanceRate = talkRates.length > 0 ? Math.round(talkRates.reduce((a, b) => a + b, 0) / talkRates.length) : 0
+
+  const uniqueConfirmedWorkers = new Set<string>()
+  talks.forEach(t => {
+    t.participants?.forEach((p: any) => {
+      if (p.status === 'confirmado' && p.worker?.id) {
+        uniqueConfirmedWorkers.add(p.worker.id)
+      }
+    })
+  })
+  const uniqueCount = uniqueConfirmedWorkers.size
+  const totalWorkers = workers.length
+  const participationRate = totalWorkers > 0 ? Math.round((uniqueCount / totalWorkers) * 100) : 0
+
   return (
     <div className="space-y-8 animate-in fade-in duration-700">
       {/* Header */}
@@ -98,33 +136,37 @@ export default function CharlasSomaPage() {
         )}
       </div>
 
-      {/* Monthly Summary Card */}
-      <div className="bg-white p-6 sm:p-10 rounded-2xl sm:rounded-[2rem] shadow-xl shadow-slate-200/50 border border-slate-100 flex flex-col md:flex-row items-center justify-between gap-6 sm:gap-8">
-        <div className="flex items-center gap-4 sm:gap-6 text-left w-full md:w-auto">
-          <div className="w-12 h-12 sm:w-14 sm:h-14 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center shrink-0">
+      {/* Monthly Summary Cards */}
+      <div className="bg-white p-6 sm:p-10 rounded-2xl sm:rounded-[2rem] shadow-xl shadow-slate-200/50 border border-slate-100 grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8">
+        <div className="flex items-center gap-4 sm:gap-6 text-left w-full">
+          <div className="w-12 h-12 sm:w-14 sm:h-14 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center shrink-0 shadow-inner">
             <Calendar size={24} className="sm:w-7 sm:h-7" />
           </div>
           <div>
-            <div className="text-xs font-bold text-slate-400 uppercase tracking-widest leading-none">Charlas registradas</div>
+            <div className="text-xs font-bold text-slate-400 uppercase tracking-widest leading-none">Charlas Registradas</div>
             <div className="text-2xl sm:text-4xl font-black text-slate-800 mt-1 sm:mt-2">{talks.length}</div>
           </div>
         </div>
-        <div className="h-px w-full md:w-px md:h-12 bg-slate-100" />
-        <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto">
-          <div className="bg-blue-50 p-4 sm:px-6 sm:py-4 rounded-2xl sm:rounded-3xl flex items-center gap-4 text-left w-full sm:w-auto">
-            <Users className="text-blue-500 shrink-0" size={20} />
-            <div>
-              <div className="text-[9px] font-bold text-blue-400 uppercase tracking-widest leading-none mb-1">Total Asistentes</div>
-              <div className="text-lg font-black text-blue-700">{talks.reduce((acc, t) => acc + (t.participants?.length || 0), 0)}</div>
-            </div>
+        
+        <div className="flex items-center gap-4 sm:gap-6 text-left w-full border-t md:border-t-0 md:border-l border-slate-100 pt-4 md:pt-0 md:pl-6">
+          <div className="w-12 h-12 sm:w-14 sm:h-14 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center shrink-0 shadow-inner">
+            <CheckCircle2 size={24} className="sm:w-7 sm:h-7" />
           </div>
-          <div className="bg-emerald-50 p-4 sm:px-6 sm:py-4 rounded-2xl sm:rounded-3xl flex items-center gap-4 text-left w-full sm:w-auto">
-            <CheckCircle2 className="text-emerald-500 shrink-0" size={20} />
-            <div>
-              <div className="text-[9px] font-bold text-emerald-400 uppercase tracking-widest leading-none mb-1">Tu Estado</div>
-              <div className="text-lg font-black text-emerald-700 uppercase">
-                {user?.role_id === 'soma' ? 'SOMA' : talks.some(t => t.participants?.some((p: any) => p.worker?.id === user?.worker_id)) ? 'ACTIVO' : 'PENDIENTE'}
-              </div>
+          <div>
+            <div className="text-xs font-bold text-slate-400 uppercase tracking-widest leading-none">Asistencia Promedio</div>
+            <div className="text-2xl sm:text-4xl font-black text-slate-800 mt-1 sm:mt-2">{avgAttendanceRate}%</div>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-4 sm:gap-6 text-left w-full border-t md:border-t-0 md:border-l border-slate-100 pt-4 md:pt-0 md:pl-6">
+          <div className="w-12 h-12 sm:w-14 sm:h-14 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center shrink-0 shadow-inner">
+            <Users size={24} className="sm:w-7 sm:h-7" />
+          </div>
+          <div>
+            <div className="text-xs font-bold text-slate-400 uppercase tracking-widest leading-none">Participación Colectiva</div>
+            <div className="text-2xl sm:text-4xl font-black text-slate-800 mt-1 sm:mt-2">
+              {uniqueCount} <span className="text-sm font-bold text-slate-400">/ {totalWorkers}</span>
+              <span className="text-xs font-black text-indigo-600 ml-2 bg-indigo-50 px-2 py-0.5 rounded-full">{participationRate}%</span>
             </div>
           </div>
         </div>
@@ -227,10 +269,29 @@ export default function CharlasSomaPage() {
                     )}
                     <button 
                       onClick={(e) => { e.stopPropagation(); setSelectedTalk(t); }}
-                      className="p-3 hover:bg-emerald-50 rounded-xl text-slate-400 hover:text-emerald-600 transition-all"
+                      className="p-3 bg-slate-50 hover:bg-slate-100 rounded-xl text-slate-400 hover:text-emerald-600 transition-all shadow-sm"
+                      title="Ver Detalles"
                     >
-                      <ChevronRight size={18} />
+                      <Eye size={18} />
                     </button>
+                    {isSomaRole && (
+                      <>
+                        <button 
+                          onClick={(e) => { e.stopPropagation(); setEditTalk(t); }}
+                          className="p-3 bg-slate-50 hover:bg-slate-100 rounded-xl text-slate-400 hover:text-amber-600 transition-all shadow-sm"
+                          title="Editar"
+                        >
+                          <Pencil size={18} />
+                        </button>
+                        <button 
+                          onClick={(e) => { e.stopPropagation(); handleDelete(t.id); }}
+                          className="p-3 bg-slate-50 hover:bg-rose-50 rounded-xl text-slate-400 hover:text-rose-600 transition-all shadow-sm"
+                          title="Eliminar"
+                        >
+                          <Trash2 size={18} />
+                        </button>
+                      </>
+                    )}
                   </div>
                 </div>
               </div>
@@ -252,6 +313,17 @@ export default function CharlasSomaPage() {
         <ViewTalkDetailsModal 
           talk={selectedTalk} 
           onClose={() => setSelectedTalk(null)} 
+          onUpdate={loadData}
+        />
+      )}
+
+      {editTalk && (
+        <EditTalkModal 
+          isOpen={!!editTalk} 
+          onClose={() => setEditTalk(null)} 
+          workers={workers}
+          talk={editTalk}
+          onSuccess={loadData}
         />
       )}
     </div>
@@ -471,8 +543,32 @@ function AddTalkModal({ isOpen, onClose, workers, onSuccess }: any) {
   )
 }
 
-function ViewTalkDetailsModal({ talk, onClose }: { talk: any; onClose: () => void }) {
+function ViewTalkDetailsModal({ talk, onClose, onUpdate }: { talk: any; onClose: () => void; onUpdate?: () => void }) {
+  const [confirmingId, setConfirmingId] = useState<string | null>(null)
+
   if (!talk) return null
+
+  const totalParticipants = talk.participants?.length || 0
+  const attendedCount = talk.participants?.filter((p: any) => p.status === 'confirmado').length || 0
+  const pendingCount = totalParticipants - attendedCount
+  const attendanceRate = totalParticipants > 0 ? Math.round((attendedCount / totalParticipants) * 100) : 0
+
+  const handleConfirmParticipant = async (participantId: string) => {
+    setConfirmingId(participantId)
+    try {
+      const res = await completeTalkParticipant(participantId)
+      if (res.error) {
+        toast.error(res.error)
+      } else {
+        toast.success('Asistencia confirmada con éxito')
+        if (onUpdate) onUpdate()
+      }
+    } catch (err: any) {
+      toast.error(err.message || 'Error al confirmar asistencia')
+    } finally {
+      setConfirmingId(null)
+    }
+  }
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
@@ -498,7 +594,7 @@ function ViewTalkDetailsModal({ talk, onClose }: { talk: any; onClose: () => voi
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto p-8 space-y-6 custom-scrollbar">
+        <div className="flex-1 overflow-y-auto p-8 space-y-6 custom-scrollbar text-left">
           {/* Main Info Card */}
           <div className="bg-slate-50 p-6 rounded-3xl border border-slate-100 space-y-4">
             <h3 className="text-xl font-bold text-slate-800 tracking-tight leading-tight">{talk.topic}</h3>
@@ -541,6 +637,36 @@ function ViewTalkDetailsModal({ talk, onClose }: { talk: any; onClose: () => voi
             )}
           </div>
 
+          {/* Estadísticas de Asistencia Card */}
+          <div className="bg-emerald-50/30 p-6 rounded-3xl border border-emerald-100 flex flex-col md:flex-row items-center justify-between gap-6">
+            <div className="flex items-center gap-4 text-left w-full md:w-auto">
+              <div className="w-12 h-12 bg-emerald-100 text-emerald-600 rounded-2xl flex items-center justify-center shrink-0">
+                <CheckCircle2 size={24} />
+              </div>
+              <div>
+                <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest font-bold">Tasa de Asistencia</div>
+                <div className="text-2xl font-black text-slate-800 mt-1">{attendanceRate}%</div>
+              </div>
+            </div>
+            
+            <div className="h-px w-full md:w-px md:h-12 bg-emerald-100" />
+
+            <div className="flex gap-6 w-full md:w-auto justify-around">
+              <div className="text-center md:text-left">
+                <div className="text-[9px] font-bold text-emerald-600 uppercase tracking-widest font-bold">Asistieron</div>
+                <div className="text-xl font-black text-emerald-700 mt-1">{attendedCount}</div>
+              </div>
+              <div className="text-center md:text-left">
+                <div className="text-[9px] font-bold text-amber-600 uppercase tracking-widest font-bold">Pendientes</div>
+                <div className="text-xl font-black text-amber-700 mt-1">{pendingCount}</div>
+              </div>
+              <div className="text-center md:text-left">
+                <div className="text-[9px] font-bold text-slate-400 uppercase tracking-widest font-bold">Total Dirigido</div>
+                <div className="text-xl font-black text-slate-700 mt-1">{totalParticipants}</div>
+              </div>
+            </div>
+          </div>
+
           {/* Photo Evidence if available */}
           {talk.photo_url && (
             <div className="space-y-2">
@@ -559,7 +685,7 @@ function ViewTalkDetailsModal({ talk, onClose }: { talk: any; onClose: () => voi
           <div className="space-y-3">
             <div className="flex items-center justify-between px-1">
               <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest">
-                Asistentes Registrados ({talk.participants?.length || 0})
+                Asistentes Registrados ({totalParticipants})
               </h4>
             </div>
             
@@ -585,10 +711,27 @@ function ViewTalkDetailsModal({ talk, onClose }: { talk: any; onClose: () => voi
                       </div>
                     </div>
                     
-                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest bg-emerald-50 text-emerald-600 shadow-sm border border-emerald-100">
-                      <CheckCircle2 size={12} className="stroke-[3]" />
-                      <span>Asistió</span>
-                    </span>
+                    {p.status === 'confirmado' ? (
+                      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest bg-emerald-50 text-emerald-600 shadow-sm border border-emerald-100">
+                        <CheckCircle2 size={12} className="stroke-[3]" />
+                        <span>Asistió</span>
+                      </span>
+                    ) : (
+                      <div className="flex items-center gap-2">
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest bg-amber-50 text-amber-600 shadow-sm border border-amber-100">
+                          <Clock size={12} className="stroke-[3]" />
+                          <span>Pendiente</span>
+                        </span>
+                        <button
+                          disabled={confirmingId !== null}
+                          onClick={() => handleConfirmParticipant(p.id)}
+                          className="px-3 py-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-[10px] font-bold tracking-wider uppercase transition-all flex items-center gap-1 disabled:opacity-50 active:scale-95"
+                        >
+                          {confirmingId === p.id && <Loader2 size={10} className="animate-spin" />}
+                          <span>Confirmar</span>
+                        </button>
+                      </div>
+                    )}
                   </div>
                 ))
               )}
@@ -606,6 +749,222 @@ function ViewTalkDetailsModal({ talk, onClose }: { talk: any; onClose: () => voi
           </button>
         </div>
 
+      </div>
+    </div>
+  )
+}
+
+function EditTalkModal({ isOpen, onClose, workers, talk, onSuccess }: any) {
+  const [loading, setLoading] = useState(false)
+  const [formData, setFormData] = useState({
+    topic: talk?.topic || '',
+    date: talk?.date || '',
+    location: talk?.location || '',
+    target_area: talk?.target_area || '',
+    material_url: talk?.material_url || '',
+    participants: (talk?.participants || []).map((p: any) => p.worker?.id || p.worker_id || p.id) as string[]
+  })
+
+  useEffect(() => {
+    if (talk) {
+      setFormData({
+        topic: talk.topic || '',
+        date: talk.date ? new Date(talk.date).toISOString().split('T')[0] : '',
+        location: talk.location || '',
+        target_area: talk.target_area || '',
+        material_url: talk.material_url || '',
+        participants: (talk.participants || []).map((p: any) => p.worker?.id || p.worker_id || p.id)
+      })
+    }
+  }, [talk])
+
+  if (!isOpen) return null
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    if (formData.participants.length === 0) {
+      toast.warning('Selecciona al menos un asistente')
+      return
+    }
+    setLoading(true)
+    try {
+      const res = await updateSomaTalk(talk.id, formData)
+      if (res.error) throw new Error(res.error)
+      toast.success('Charla actualizada exitosamente')
+      onSuccess()
+      onClose()
+    } catch (error: any) {
+      toast.error(error.message)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const toggleParticipant = (id: string) => {
+    setFormData(prev => ({
+      ...prev,
+      participants: prev.participants.includes(id)
+        ? prev.participants.filter(p => p !== id)
+        : [...prev.participants, id]
+    }))
+  }
+
+  const selectAll = () => {
+    setFormData(prev => ({
+      ...prev,
+      participants: prev.participants.length === workers.length ? [] : workers.map((w: any) => w.id)
+    }))
+  }
+
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
+      <div className="bg-white w-full max-w-2xl rounded-[2.5rem] shadow-[0_20px_50px_rgba(0,0,0,0.3)] overflow-hidden animate-in zoom-in-95 duration-200 flex flex-col max-h-[90vh]">
+        <div className="p-8 border-b border-slate-50 flex justify-between items-center bg-emerald-50/30">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 bg-amber-500 text-white rounded-2xl flex items-center justify-center shadow-lg shadow-amber-200">
+              <Pencil size={24} />
+            </div>
+            <div>
+              <h2 className="text-2xl font-black text-slate-800 tracking-tight">Editar Charla</h2>
+              <p className="text-slate-400 font-bold text-sm tracking-tight text-emerald-500 uppercase">Modificar Registro SOMA</p>
+            </div>
+          </div>
+          <button onClick={onClose} className="p-2 hover:bg-slate-100 rounded-full transition-colors text-slate-400">
+            <X size={24} />
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-5 md:p-8 custom-scrollbar">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-8 text-left">
+            <div className="space-y-6">
+              <div className="space-y-3">
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] ml-2">Tema de la Charla</label>
+                <input 
+                  required
+                  type="text" 
+                  value={formData.topic.toUpperCase()}
+                  onChange={e => setFormData(prev => ({...prev, topic: e.target.value.toUpperCase()}))}
+                  placeholder="EJ: USO CORRECTO DE ARNÉS DE SEGURIDAD"
+                  className="w-full px-6 md:px-8 py-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-emerald-500 font-bold text-slate-700 shadow-sm uppercase"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                <div className="space-y-3">
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] ml-2">Fecha</label>
+                  <input 
+                    required
+                    type="date" 
+                    value={formData.date}
+                    onChange={e => setFormData(prev => ({...prev, date: e.target.value}))}
+                    className="w-full px-6 md:px-8 py-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-emerald-500 font-bold text-slate-700 shadow-sm"
+                  />
+                </div>
+                <div className="space-y-3">
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] ml-2">Lugar / Frente</label>
+                  <input 
+                    type="text" 
+                    value={formData.location.toUpperCase()}
+                    onChange={e => setFormData(prev => ({...prev, location: e.target.value.toUpperCase()}))}
+                    placeholder="EJ: TALLER NORTE"
+                    className="w-full px-6 md:px-8 py-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-emerald-500 font-bold text-slate-700 shadow-sm uppercase"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 gap-6">
+                <div className="space-y-3">
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] ml-2">Área Asignada (Transversal)</label>
+                  <select 
+                    value={formData.target_area}
+                    onChange={e => setFormData(prev => ({...prev, target_area: e.target.value}))}
+                    className="w-full px-6 md:px-8 py-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-emerald-500 font-bold text-slate-700 shadow-sm"
+                  >
+                    <option value="">Todas las áreas</option>
+                    <option value="Operaciones">Operaciones</option>
+                    <option value="Cocina">Cocina</option>
+                    <option value="Administración">Administración</option>
+                    <option value="Mecánica">Mecánica</option>
+                  </select>
+                </div>
+                <div className="space-y-3">
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] ml-2">URL Material de Apoyo (Opcional)</label>
+                  <input 
+                    type="url" 
+                    value={formData.material_url}
+                    onChange={e => setFormData(prev => ({...prev, material_url: e.target.value}))}
+                    placeholder="https://docs.google.com/..."
+                    className="w-full px-6 md:px-8 py-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-emerald-500 font-bold text-slate-700 shadow-sm"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Selection Column */}
+            <div className="flex flex-col bg-slate-50/80 rounded-[2rem] p-6 md:p-8 border border-slate-100 shadow-inner h-[380px] max-h-[380px]">
+               <div className="flex items-center justify-between mb-6">
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] flex items-center gap-2">
+                  <Users size={14} /> Asistentes ({formData.participants.length})
+                </label>
+                <button 
+                  type="button" 
+                  onClick={selectAll}
+                  className="text-[10px] font-bold text-emerald-600 hover:text-emerald-700 uppercase tracking-widest bg-emerald-50 px-3 py-1.5 rounded-lg transition-all"
+                >
+                  {formData.participants.length === workers.length ? 'Deseleccionar todos' : 'Seleccionar todos'}
+                </button>
+               </div>
+              
+              <div className="flex-1 overflow-y-auto space-y-2 pr-4 custom-scrollbar h-[250px] max-h-[250px]">
+                {workers.map((w: any) => (
+                  <button
+                    key={w.id}
+                    type="button"
+                    onClick={() => toggleParticipant(w.id)}
+                    className={`w-full flex items-center justify-between p-4 rounded-xl transition-all ${
+                      formData.participants.includes(w.id) 
+                        ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-100 translate-x-1' 
+                        : 'bg-white text-slate-600 hover:bg-emerald-50 hover:shadow-lg'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold ${
+                        formData.participants.includes(w.id) ? 'bg-white/20' : 'bg-slate-100'
+                      }`}>
+                        {w.name.charAt(0)}
+                      </div>
+                      <div className="text-left">
+                        <div className="font-bold text-sm tracking-tight">{w.name} {w.last_name || ''}</div>
+                        <div className={`text-[10px] ${formData.participants.includes(w.id) ? 'text-white/60' : 'text-slate-400'}`}>
+                          {w.position}
+                        </div>
+                      </div>
+                    </div>
+                    {formData.participants.includes(w.id) && <CheckCircle2 size={16} />}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-12 flex justify-end gap-6 pt-10 border-t border-slate-50">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-10 py-4 font-bold text-slate-400 hover:text-rose-500 transition-colors"
+            >
+              Cancelar
+            </button>
+            <button
+              disabled={loading}
+              type="submit"
+              className="flex items-center gap-3 px-12 py-4 bg-emerald-600 text-white font-bold rounded-2xl shadow-xl shadow-emerald-100 hover:bg-emerald-700 hover:scale-105 active:scale-95 transition-all disabled:opacity-50"
+            >
+              {loading && <Loader2 className="w-5 h-5 animate-spin" />}
+              Actualizar Registro
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   )

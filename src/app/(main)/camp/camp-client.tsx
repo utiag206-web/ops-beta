@@ -74,17 +74,18 @@ export default function CampClient({ initialRooms, workers, userRole, userArea }
   }
 
   const resetForm = () => {
-    setFormData({ module: '', room_number: '', bed_number: '', worker_id: null })
+    setFormData(prev => ({ ...prev, module: '', room_number: '', bed_number: '', worker_id: null }))
   }
 
   const handleEdit = (room: any) => {
     setEditingId(room.id)
-    setFormData({
+    setFormData(prev => ({
+      ...prev,
       module: room.module,
       room_number: room.room_number,
       bed_number: room.bed_number,
       worker_id: room.worker_id
-    })
+    }))
     setShowForm(true)
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }

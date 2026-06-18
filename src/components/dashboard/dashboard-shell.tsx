@@ -1,5 +1,6 @@
 'use client'
-
+ 
+import { useState } from 'react'
 import Link from 'next/link'
 import { 
   Users, UserCheck, ShieldAlert, BadgeDollarSign, 
@@ -45,7 +46,8 @@ export function DashboardShell({ user, stats, localIp }: DashboardShellProps) {
   const companyName = user.company_name || "Empresa"
   const viewMode = stats.activeView === 'WORKER' ? 'WORKER' : getViewMode(user.role_id, user.area)
 
-
+  const [selectedTalk, setSelectedTalk] = useState<any>(null)
+  const [selectedTraining, setSelectedTraining] = useState<any>(null)
 
   const renderDashboardWidgets = () => {
     switch (viewMode) {
@@ -71,7 +73,7 @@ export function DashboardShell({ user, stats, localIp }: DashboardShellProps) {
               />
               <StatWidget 
                 title="Incidentes Abiertos" value={stats.admin?.openIncidents?.toString() || '0'} 
-                icon={ShieldAlert} color="text-rose-600" bg="bg-rose-50" href="/incidencias"
+                icon={ShieldAlert} color="text-rose-600" bg="bg-rose-50" href="/incidencias?category=soma"
               />
             </div>
 
@@ -185,19 +187,19 @@ export function DashboardShell({ user, stats, localIp }: DashboardShellProps) {
               />
               <StatWidget 
                 title="Incidencias" value={stats.admin?.openIncidents?.toString() || '0'} 
-                icon={ShieldAlert} color="text-rose-600" bg="bg-rose-50" href="/incidencias"
+                icon={ShieldAlert} color="text-rose-600" bg="bg-rose-50" href="/incidencias?category=soma"
               />
               <StatWidget 
-                title="Movimientos" value={stats.admin?.movementsToday?.toString() || '0'} 
-                icon={Truck} color="text-blue-600" bg="bg-blue-50" href="/movements"
+                title="Gestión de Personal" value={stats.admin?.movementsToday?.toString() || '0'} 
+                icon={UserCheck} color="text-blue-600" bg="bg-blue-50" href="/movements"
               />
               <StatWidget 
                 title="Requerimientos" value={stats.admin?.pendingRequirementsCount?.toString() || '0'} 
                 icon={FileText} color="text-rose-500" bg="bg-rose-50" href="/requerimientos"
               />
               <StatWidget 
-                title="Stock Crítico" value={stats.admin?.criticalProductsCount?.toString() || '0'} 
-                icon={AlertTriangle} color="text-rose-700" bg="bg-rose-50" href="/inventory/stock"
+                title="Control de Inventario" value={stats.admin?.totalProducts?.toString() || '0'} 
+                icon={Boxes} color="text-indigo-600" bg="bg-indigo-50" href="/inventory/stock"
               />
               <StatWidget 
                 title="Activos Controlados" value={stats.admin?.assetsCount?.toString() || '0'} 
@@ -260,14 +262,7 @@ export function DashboardShell({ user, stats, localIp }: DashboardShellProps) {
                           </div>
                           <Plus className="text-white/40 group-hover:rotate-90 transition-transform" size={16} />
                        </Link>
-                       <Link href="/movements" className="flex items-center justify-between p-4 bg-white/10 hover:bg-white/20 border border-white/10 rounded-2xl transition-all group">
-                          <div className="flex items-center gap-3">
-                            <Truck className="text-indigo-300" size={18} />
-                            <span className="text-[10px] font-black text-white uppercase tracking-widest">Nuevo Movimiento</span>
-                          </div>
-                          <Plus className="text-white/40 group-hover:rotate-90 transition-transform" size={16} />
-                       </Link>
-                       <Link href="/incidencias" className="flex items-center justify-between p-4 bg-white/10 hover:bg-white/20 border border-white/10 rounded-2xl transition-all group">
+                       <Link href="/incidencias?category=soma" className="flex items-center justify-between p-4 bg-white/10 hover:bg-white/20 border border-white/10 rounded-2xl transition-all group">
                           <div className="flex items-center gap-3">
                             <ShieldAlert className="text-rose-300" size={18} />
                             <span className="text-[10px] font-black text-white uppercase tracking-widest">Registrar Incidencia</span>
@@ -281,7 +276,7 @@ export function DashboardShell({ user, stats, localIp }: DashboardShellProps) {
                           </div>
                           <Plus className="text-white/40 group-hover:rotate-90 transition-transform" size={16} />
                        </Link>
-                       <Link href="/inventory" className="flex items-center justify-between p-4 bg-white/10 hover:bg-white/20 border border-white/10 rounded-2xl transition-all group">
+                       <Link href="/inventory/stock" className="flex items-center justify-between p-4 bg-white/10 hover:bg-white/20 border border-white/10 rounded-2xl transition-all group">
                           <div className="flex items-center gap-3">
                             <Package className="text-emerald-300" size={18} />
                             <span className="text-[10px] font-black text-white uppercase tracking-widest">Ingreso Inventario</span>
@@ -294,11 +289,11 @@ export function DashboardShell({ user, stats, localIp }: DashboardShellProps) {
 
                 <div className="bg-white rounded-[2rem] p-8 border border-slate-100 shadow-sm">
                    <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-6 flex items-center gap-2">
-                     <AlertTriangle size={14} className="text-rose-500" /> Alerta de Stock
+                     <AlertTriangle size={14} className="text-rose-500" /> Alerta de Inventario
                    </h4>
                    <div className="space-y-4">
                       <div className="flex items-center justify-between p-4 bg-rose-50 rounded-2xl border border-rose-100">
-                         <span className="text-xs font-bold text-slate-800 uppercase tracking-tight">Insumos Críticos</span>
+                         <span className="text-xs font-bold text-slate-800 uppercase tracking-tight">Productos con Bajo Stock</span>
                          <span className="text-lg font-bold text-rose-600">{stats.admin?.criticalProductsCount}</span>
                       </div>
                       <Link href="/inventory/stock" className="block text-center text-[10px] font-bold text-blue-600 uppercase tracking-widest hover:underline">Ver Inventario Total</Link>
@@ -371,11 +366,11 @@ export function DashboardShell({ user, stats, localIp }: DashboardShellProps) {
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
                   <StatWidget 
                     title="Incidencias Abiertas" value={stats.soma?.openIncidents?.toString() || '0'} 
-                    icon={AlertTriangle} color="text-orange-600" bg="bg-orange-50" href="/incidencias"
+                    icon={AlertTriangle} color="text-orange-600" bg="bg-orange-50" href="/incidencias?category=soma"
                   />
                   <StatWidget 
                     title="Incidentes Críticos" value={stats.soma?.criticalIncidents?.toString() || '0'} 
-                    icon={ShieldAlert} color="text-rose-600" bg="bg-rose-50" href="/incidencias"
+                    icon={ShieldAlert} color="text-rose-600" bg="bg-rose-50" href="/incidencias?category=soma"
                   />
                   <StatWidget 
                     title="STOPs Abiertas" value={stats.soma?.openStops?.toString() || '0'} 
@@ -404,8 +399,8 @@ export function DashboardShell({ user, stats, localIp }: DashboardShellProps) {
         return (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
                   <StatWidget 
-                    title="Productos Críticos" value={stats.kitchen?.criticalProducts?.toString() || '0'} 
-                    icon={AlertTriangle} color="text-rose-600" bg="bg-rose-50" href="/inventory/stock"
+                    title="Control de Inventario" value={stats.kitchen?.totalProducts?.toString() || '0'} 
+                    icon={Boxes} color="text-indigo-600" bg="bg-indigo-50" href="/inventory/stock"
                   />
                   <StatWidget 
                     title="Consumo Hoy" value={`${stats.kitchen?.consumptionToday || '0'} UND`} 
@@ -442,12 +437,12 @@ export function DashboardShell({ user, stats, localIp }: DashboardShellProps) {
                     icon={ClipboardCheck} color="text-rose-600" bg="bg-rose-50" href="/requerimientos"
                   />
                   <StatWidget 
-                    title="Movimientos Hoy" value={stats.ops?.movementsToday?.toString() || '0'} 
-                    icon={Truck} color="text-indigo-600" bg="bg-indigo-50" href="/movements"
+                    title="Gestión de Personal" value={stats.ops?.movementsToday?.toString() || '0'} 
+                    icon={UserCheck} color="text-indigo-600" bg="bg-indigo-50" href="/movements"
                   />
                   <StatWidget 
                     title="Incidencias Abiertas" value={stats.ops?.openIncidents?.toString() || '0'} 
-                    icon={AlertTriangle} color="text-rose-600" bg="bg-rose-50" href="/incidencias"
+                    icon={AlertTriangle} color="text-rose-600" bg="bg-rose-50" href="/incidencias?category=soma"
                   />
                   <StatWidget 
                     title="Transferencias" value={stats.ops?.transfersToday?.toString() || '0'} 
@@ -472,8 +467,8 @@ export function DashboardShell({ user, stats, localIp }: DashboardShellProps) {
                     icon={LayoutGrid} color="text-indigo-600" bg="bg-indigo-50" href="/inventory/products"
                   />
                   <StatWidget 
-                    title="Productos Críticos" value={stats.logistics?.criticalProducts?.toString() || '0'} 
-                    icon={AlertTriangle} color="text-rose-600" bg="bg-rose-50" href="/inventory/stock"
+                    title="Stock Crítico" value={stats.logistics?.criticalProducts?.toString() || '0'} 
+                    icon={Boxes} color="text-rose-600" bg="bg-rose-50" href="/inventory/stock"
                   />
                   <StatWidget 
                     title="Entradas Hoy" value={stats.logistics?.incomingToday?.toString() || '0'} 
@@ -583,20 +578,26 @@ export function DashboardShell({ user, stats, localIp }: DashboardShellProps) {
               </div>
               <div className="flex flex-wrap gap-6">
                  {stats.transversalSoma.lastTalk && (
-                    <div className="bg-white border border-slate-100 p-5 rounded-2xl flex items-center gap-5 hover:border-blue-200 hover:shadow-lg transition-all">
+                    <div 
+                      onClick={() => setSelectedTalk(stats.transversalSoma.lastTalk)}
+                      className="bg-white border border-slate-100 p-5 rounded-2xl flex items-center gap-5 hover:border-blue-200 hover:shadow-lg transition-all cursor-pointer"
+                    >
                        <div className="w-12 h-12 rounded-xl bg-blue-50 text-blue-500 flex items-center justify-center"><MessageSquare size={24}/></div>
                        <div>
                          <span className="block text-[10px] uppercase font-bold text-blue-600 tracking-widest mb-1">Última Charla</span>
-                         <span className="block text-slate-800 font-bold">{stats.transversalSoma.lastTalk.topic}</span>
+                         <span className="block text-slate-800 font-bold keep-case">{stats.transversalSoma.lastTalk.topic}</span>
                        </div>
                     </div>
                  )}
                  {stats.transversalSoma.lastTraining && (
-                    <div className="bg-white border border-slate-100 p-5 rounded-2xl flex items-center gap-5 hover:border-emerald-200 hover:shadow-lg transition-all">
+                    <div 
+                      onClick={() => setSelectedTraining(stats.transversalSoma.lastTraining)}
+                      className="bg-white border border-slate-100 p-5 rounded-2xl flex items-center gap-5 hover:border-emerald-200 hover:shadow-lg transition-all cursor-pointer"
+                    >
                        <div className="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-500 flex items-center justify-center"><GraduationCap size={24}/></div>
                        <div>
                          <span className="block text-[10px] uppercase font-bold text-emerald-600 tracking-widest mb-1">Capacitación</span>
-                         <span className="block text-slate-800 font-bold">{stats.transversalSoma.lastTraining.title}</span>
+                         <span className="block text-slate-800 font-bold keep-case">{stats.transversalSoma.lastTraining.title}</span>
                        </div>
                     </div>
                  )}
@@ -612,7 +613,7 @@ export function DashboardShell({ user, stats, localIp }: DashboardShellProps) {
             title="Siguimiento de Incidencias"
             icon={Activity}
             color="text-orange-600"
-            href="/incidencias"
+            href="/incidencias?category=soma"
             items={stats.recentIncidents.map((i: any) => ({
               title: i.equipment_name || 'Incidente Reportado',
               subtitle: i.description,
@@ -656,6 +657,133 @@ export function DashboardShell({ user, stats, localIp }: DashboardShellProps) {
             <div className="space-y-10">
               <div className="bg-white p-10 rounded-[2rem] shadow-xl border border-slate-100"><BonusList bonuses={stats.personalStats.bonuses} isWorker={true} /></div>
               <div className="bg-white p-10 rounded-[2rem] shadow-xl border border-slate-100"><TransportList payments={stats.personalStats.transport} isWorker={true} /></div>
+            </div>
+          </div>
+        </div>
+      )}
+ 
+      {/* Modal Detalle Charla */}
+      {selectedTalk && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl p-8 max-w-lg w-full shadow-2xl border border-slate-100 animate-in zoom-in-95 duration-200 relative">
+            <button 
+              onClick={() => setSelectedTalk(null)}
+              className="absolute top-6 right-6 text-slate-400 hover:text-slate-600 font-bold text-sm bg-slate-100 hover:bg-slate-200 w-8 h-8 rounded-full flex items-center justify-center transition-all cursor-pointer"
+            >
+              ✕
+            </button>
+            <div className="flex items-center gap-4 mb-6">
+              <div className="w-12 h-12 rounded-xl bg-blue-50 text-blue-500 flex items-center justify-center shrink-0">
+                <MessageSquare size={24} />
+              </div>
+              <div className="min-w-0">
+                <span className="block text-[10px] uppercase font-bold text-blue-600 tracking-widest">Detalle de Charla HSEC</span>
+                <h3 className="text-xl font-bold text-slate-800 mt-0.5 keep-case truncate">{selectedTalk.topic}</h3>
+              </div>
+            </div>
+            <div className="space-y-4 text-sm font-medium text-slate-600">
+              <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 space-y-3">
+                <div className="flex justify-between border-b border-slate-200 pb-2">
+                  <span className="text-slate-400 font-bold text-[10px]">Fecha:</span>
+                  <span className="text-slate-800 font-bold keep-case">{selectedTalk.date ? new Date(selectedTalk.date + 'T12:00:00').toLocaleDateString() : '—'}</span>
+                </div>
+                <div className="flex justify-between border-b border-slate-200 pb-2">
+                  <span className="text-slate-400 font-bold text-[10px]">Ubicación / Frente:</span>
+                  <span className="text-slate-800 font-bold keep-case">{selectedTalk.location || 'No especificado'}</span>
+                </div>
+                <div className="flex justify-between border-b border-slate-200 pb-2">
+                  <span className="text-slate-400 font-bold text-[10px]">Líder de Charla:</span>
+                  <span className="text-slate-800 font-bold keep-case">{selectedTalk.leader?.name || 'No especificado'}</span>
+                </div>
+                {selectedTalk.target_area && (
+                  <div className="flex justify-between border-b border-slate-200 pb-2">
+                    <span className="text-slate-400 font-bold text-[10px]">Área Objetivo:</span>
+                    <span className="text-slate-800 font-bold keep-case">{selectedTalk.target_area}</span>
+                  </div>
+                )}
+                {selectedTalk.material_url && (
+                  <div className="flex justify-between pt-1">
+                    <span className="text-slate-400 font-bold text-[10px]">Material de Apoyo:</span>
+                    <a 
+                      href={selectedTalk.material_url} 
+                      target="_blank" 
+                      rel="noopener noreferrer" 
+                      className="text-blue-600 font-bold hover:underline flex items-center gap-1 keep-case"
+                    >
+                      Descargar Material <ArrowRight size={12} />
+                    </a>
+                  </div>
+                )}
+              </div>
+              {selectedTalk.photo_url && (
+                <div className="mt-4">
+                  <span className="block text-slate-400 font-bold text-[10px] mb-2">Evidencia Fotográfica:</span>
+                  <div className="relative aspect-video w-full rounded-2xl overflow-hidden border border-slate-200 bg-slate-50">
+                    <img 
+                      src={selectedTalk.photo_url} 
+                      alt="Evidencia fotográfica" 
+                      className="object-contain w-full h-full"
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+            <div className="mt-6 flex justify-end">
+              <button 
+                onClick={() => setSelectedTalk(null)}
+                className="bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs uppercase tracking-wider px-6 py-3 rounded-2xl shadow-lg transition-all active:scale-95 cursor-pointer"
+              >
+                Cerrar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Detalle Capacitación */}
+      {selectedTraining && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl p-8 max-w-lg w-full shadow-2xl border border-slate-100 animate-in zoom-in-95 duration-200 relative">
+            <button 
+              onClick={() => setSelectedTraining(null)}
+              className="absolute top-6 right-6 text-slate-400 hover:text-slate-600 font-bold text-sm bg-slate-100 hover:bg-slate-200 w-8 h-8 rounded-full flex items-center justify-center transition-all cursor-pointer"
+            >
+              ✕
+            </button>
+            <div className="flex items-center gap-4 mb-6">
+              <div className="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-500 flex items-center justify-center shrink-0">
+                <GraduationCap size={24} />
+              </div>
+              <div className="min-w-0">
+                <span className="block text-[10px] uppercase font-bold text-emerald-600 tracking-widest">Detalle de Capacitación</span>
+                <h3 className="text-xl font-bold text-slate-800 mt-0.5 keep-case truncate">{selectedTraining.title}</h3>
+              </div>
+            </div>
+            <div className="space-y-4 text-sm font-medium text-slate-600">
+              <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 space-y-3">
+                <div className="flex justify-between border-b border-slate-200 pb-2">
+                  <span className="text-slate-400 font-bold text-[10px]">Fecha Realización:</span>
+                  <span className="text-slate-800 font-bold keep-case">{selectedTraining.date ? new Date(selectedTraining.date + 'T12:00:00').toLocaleDateString() : '—'}</span>
+                </div>
+                <div className="flex justify-between border-b border-slate-200 pb-2">
+                  <span className="text-slate-400 font-bold text-[10px]">Expositor / Capacitador:</span>
+                  <span className="text-slate-800 font-bold keep-case">{selectedTraining.trainer || 'No especificado'}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-400 font-bold text-[10px]">Fecha de Vencimiento:</span>
+                  <span className={`font-bold keep-case ${selectedTraining.expiry_date && new Date(selectedTraining.expiry_date) < new Date() ? 'text-rose-600' : 'text-emerald-600'}`}>
+                    {selectedTraining.expiry_date ? new Date(selectedTraining.expiry_date + 'T12:00:00').toLocaleDateString() : 'No vence'}
+                  </span>
+                </div>
+              </div>
+            </div>
+            <div className="mt-6 flex justify-end">
+              <button 
+                onClick={() => setSelectedTraining(null)}
+                className="bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs uppercase tracking-wider px-6 py-3 rounded-2xl shadow-lg transition-all active:scale-95 cursor-pointer"
+              >
+                Cerrar
+              </button>
             </div>
           </div>
         </div>

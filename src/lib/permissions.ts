@@ -90,7 +90,8 @@ export const ROLE_PERMISSIONS: Record<string, string[]> = {
     'requerimientos', // Solo para solicitar
     'incidencias',    // Reportar incidencia personal/campo
     'ppe',           // Mis EPP
-    'profile'
+    'profile',
+    'soma'
   ],
 
   // 6. ADMINISTRACIÓN: Finanzas, pagos y auditoría parcial
@@ -140,6 +141,27 @@ export const ROLE_PERMISSIONS: Record<string, string[]> = {
     'requerimientos',
     'profile'
   ],
+  supervisor: [
+    'dashboard',
+    'workers',
+    'attendance',
+    'tareo',
+    'requerimientos',
+    'camp',
+    'soma-capacitaciones',
+    'soma-charlas',
+    'incidencias',
+    'profile'
+  ],
+}
+
+export function normalizeAreaName(name: string): string {
+  if (!name) return ''
+  return name
+    .trim()
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
 }
 
 export function getPermissionsByRole(role_id: string, area?: string | null): string[] {
@@ -151,10 +173,26 @@ export function getPermissionsByRole(role_id: string, area?: string | null): str
 
   // Lógica de área para jefes de área o roles específicos si fuera necesario
   if (normalizedRole === 'jefe_area') {
-    if (area === 'Seguridad SOMA') return ROLE_PERMISSIONS['soma']
-    if (area === 'Cocina') return [...ROLE_PERMISSIONS['almacen'], 'caja-chica']
-    if (area === 'Operaciones') return ROLE_PERMISSIONS['operaciones']
-    if (area === 'Almacén y Mantenimiento' || area === 'Mecánica') return ROLE_PERMISSIONS['almacen']
+    const normArea = area ? normalizeAreaName(area) : ''
+    let permissions: string[] = []
+    
+    if (normArea === 'seguridad soma') {
+      permissions = ROLE_PERMISSIONS['soma']
+    } else if (normArea === 'cocina') {
+      permissions = [...ROLE_PERMISSIONS['almacen'], 'caja-chica']
+    } else if (normArea === 'operaciones') {
+      permissions = ROLE_PERMISSIONS['operaciones']
+    } else if (['almacen y mantenimiento', 'mecanica'].includes(normArea)) {
+      permissions = ROLE_PERMISSIONS['almacen']
+    } else {
+      permissions = ['dashboard', 'profile']
+    }
+    
+    // Si tiene un área registrada, permitirle dinámicamente acceder al módulo de Caja Chica
+    if (area && !permissions.includes('caja-chica')) {
+      permissions = [...permissions, 'caja-chica']
+    }
+    return permissions
   }
 
   // Fallback de seguridad: Si no hay permisos, al menos dashboard y perfil

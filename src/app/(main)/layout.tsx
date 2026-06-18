@@ -1,6 +1,6 @@
 import { Sidebar } from '@/components/layout/sidebar'
 import { Header } from '@/components/layout/header'
-import { getUserSession } from '@/lib/auth'
+import { getUserSession, getActiveViewMode } from '@/lib/auth'
 import { OnboardingCheck } from '@/components/auth/onboarding-check'
 import { RbacProvider } from '@/components/providers/rbac-provider'
 import { SidebarProvider } from '@/components/providers/sidebar-provider'
@@ -15,6 +15,7 @@ export default async function DashboardLayout({
 }) {
   const session = await getUserSession()
   const extendedUser = session?.extendedUser
+  const viewMode = await getActiveViewMode()
   
   const headersList = await headers()
   const pathname = (headersList.get('x-pathname') || '').split('?')[0]
@@ -30,7 +31,7 @@ export default async function DashboardLayout({
   const moduleName = pathname.split('/')[1]
   const userRole = extendedUser?.role_id?.toLowerCase()
   
-  console.log(`[LAYOUT] 🏁 Path: ${pathname} | User: ${extendedUser?.email || 'ANONYMOUS'} | Role: ${userRole}`)
+  console.log(`[LAYOUT] 🏁 Path: ${pathname} | User: ${extendedUser?.email || 'ANONYMOUS'} | Role: ${userRole} | ViewMode: ${viewMode}`)
   
   // 1. Mandatory Session Guard
   if (!extendedUser) {
@@ -55,8 +56,8 @@ export default async function DashboardLayout({
   }
 
   // 5. Worker Specific Guards (Optimized PRE-DEPLOY: No redundant DB fetch)
-  if (userRole === 'trabajador') {
-    if (extendedUser.worker_id && !extendedUser.worker_status) {
+  if (userRole === 'trabajador' || viewMode === 'WORKER') {
+    if (userRole === 'trabajador' && extendedUser.worker_id && !extendedUser.worker_status) {
        console.warn(`[LAYOUT] ⚠️ Worker profile missing or inactive for ${extendedUser.email}`)
        redirect('/login')
     }
@@ -70,8 +71,9 @@ export default async function DashboardLayout({
   // 6. Generic RBAC Guard
   const cleanModule = moduleName || 'dashboard'
   if (cleanModule !== 'dashboard' && cleanModule !== 'profile') {
-    if (!hasPermission(userRole as string, cleanModule, extendedUser?.area)) {
-      console.warn(`[RBAC_GATEWAY] Access Denied: ${userRole} to /${cleanModule}`)
+    const checkRole = viewMode === 'WORKER' ? 'trabajador' : userRole
+    if (!hasPermission(checkRole as string, cleanModule, extendedUser?.area)) {
+      console.warn(`[RBAC_GATEWAY] Access Denied: ${checkRole} to /${cleanModule}`)
       redirect('/dashboard')
     }
   }

@@ -1,6 +1,6 @@
 import { getPPEDeliveries } from './actions'
 import { getWorkers } from '../workers/actions'
-import { getUserSession } from '@/lib/auth'
+import { getUserSession, getActiveViewMode } from '@/lib/auth'
 
 export const dynamic = 'force-dynamic'
 import { PPEList } from '@/components/ppe/ppe-list'
@@ -9,11 +9,12 @@ import { Shield } from 'lucide-react'
 
 export default async function PPEPage() {
   const { extendedUser } = await getUserSession()
-  const isWorker = extendedUser?.role_id === 'trabajador'
+  const viewMode = await getActiveViewMode()
+  const isWorker = extendedUser?.role_id === 'trabajador' || viewMode === 'WORKER'
 
   const [deliveries, workers] = await Promise.all([
-    getPPEDeliveries(),
-    isWorker ? Promise.resolve([]) : getWorkers()
+    getPPEDeliveries(isWorker ? extendedUser?.worker_id : undefined),
+    isWorker ? Promise.resolve([]) : getWorkers('ACTIVO')
   ])
 
   return (

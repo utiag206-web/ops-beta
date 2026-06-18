@@ -1,9 +1,9 @@
-import React from 'react'
+import React, { Suspense } from 'react'
 import { cookies } from 'next/headers'
 import { getWorkerSession } from '@/app/actions/worker-auth'
 import { resolveCompany } from '@/app/actions/worker-portal'
 import WorkerPortalClient from './WorkerPortalClient'
-import { AlertTriangle, Home, ShieldAlert } from 'lucide-react'
+import { AlertTriangle, Home, ShieldAlert, Loader2 } from 'lucide-react'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 export const dynamic = 'force-dynamic'
@@ -69,16 +69,17 @@ export default async function WorkerPortalPage({ params }: PageProps) {
     session = { ...session, isMismatched: true }
   }
 
-  // 3.5 Redirect hybrid/operational users with active session directly to /dashboard
-  if (session && !session.isMismatched && session.roleId && session.roleId.toLowerCase() !== 'trabajador') {
-    redirect('/dashboard')
-  }
-
   // 4. Render the client side portal
   return (
-    <WorkerPortalClient 
-      company={company}
-      session={session}
-    />
+    <Suspense fallback={
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+        <Loader2 className="animate-spin text-blue-600" size={36} />
+      </div>
+    }>
+      <WorkerPortalClient 
+        company={company}
+        session={session}
+      />
+    </Suspense>
   )
 }

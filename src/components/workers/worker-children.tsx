@@ -41,18 +41,20 @@ export function WorkerChildren({ workerId, initialChildren, canManage = false }:
   const handleOpenModal = (child?: WorkerChild) => {
     if (child) {
       setEditingChild(child)
-      setFormData({
+      setFormData(prev => ({
+        ...prev,
         nombre: child.nombre,
         fecha_nacimiento: child.fecha_nacimiento,
         genero: child.genero || 'M'
-      })
+      }))
     } else {
       setEditingChild(null)
-      setFormData({
+      setFormData(prev => ({
+        ...prev,
         nombre: '',
         fecha_nacimiento: '',
         genero: 'M'
-      })
+      }))
     }
     setIsModalOpen(true)
   }

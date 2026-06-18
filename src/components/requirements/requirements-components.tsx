@@ -63,7 +63,8 @@ export function CreateRequirementModal({ isOpen, onClose, onSuccess }: CreateReq
 
   useEffect(() => {
     if (isOpen) {
-      setForm({
+      setForm(prev => ({
+        ...prev,
         title: '',
         description: '',
         type: 'insumo',
@@ -73,7 +74,7 @@ export function CreateRequirementModal({ isOpen, onClose, onSuccess }: CreateReq
         tool_type: '',
         specialty: '',
         people_count: 1
-      })
+      }))
       setSearchQuery('')
       setShowDropdown(false)
 
@@ -171,7 +172,7 @@ export function CreateRequirementModal({ isOpen, onClose, onSuccess }: CreateReq
                 required
                 className="w-full bg-slate-50 border-2 border-transparent focus:border-indigo-500 focus:bg-white rounded-2xl p-3.5 text-xs font-bold transition-all outline-none"
                 value={form.type}
-                onChange={e => setForm({...form, type: e.target.value})}
+                onChange={e => setForm(prev => ({...prev, type: e.target.value}))}
               >
                 <option value="insumo">Insumo / Producto</option>
                 <option value="herramienta">Herramienta</option>
@@ -511,7 +512,7 @@ export function ReportIncidentModal({
 }: { 
   isOpen: boolean, 
   onClose: () => void,
-  onSuccess?: () => void,
+  onSuccess?: (category?: string) => void,
   initialCategory?: string 
 }) {
   const [loading, setLoading] = useState(false)
@@ -529,7 +530,8 @@ export function ReportIncidentModal({
 
   useEffect(() => {
     if (isOpen) {
-      setForm({
+      setForm(prev => ({
+        ...prev,
         type: 'operacion',
         area_location: '',
         description: '',
@@ -537,7 +539,7 @@ export function ReportIncidentModal({
         event_date: new Date().toISOString().split('T')[0],
         incident_category: initialCategory === 'soma' ? 'soma' : (initialCategory || 'personal'),
         corrective_actions: ''
-      })
+      }))
       setFiles([])
     }
   }, [isOpen, initialCategory])
@@ -601,7 +603,7 @@ export function ReportIncidentModal({
 
       if (res.success) {
         toast.success('Incidencia reportada correctamente')
-        onSuccess?.()
+        onSuccess?.(form.incident_category)
         onClose()
       } else {
         toast.error(res.error || 'Error al reportar incidencia')

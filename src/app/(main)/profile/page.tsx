@@ -140,7 +140,7 @@ export default async function ProfilePage() {
       <div className="space-y-6">
         <h3 className="text-2xl font-black text-slate-800 px-2">Configuración Detallada</h3>
         <div className={extendedUser.is_impersonating ? "opacity-60 pointer-events-none grayscale-[0.5]" : ""}>
-          <AccountForm user={extendedUser} />
+          <AccountForm key={`${extendedUser.name}-${extendedUser.email}`} user={extendedUser} />
         </div>
       </div>
 

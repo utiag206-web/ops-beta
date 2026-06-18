@@ -1,24 +1,28 @@
 import { getWorkerDocuments } from './actions'
 import { getWorkers } from '../workers/actions'
-import { getUserSession } from '@/lib/auth'
+import { getUserSession, getActiveViewMode } from '@/lib/auth'
 import DocumentsClient from './documents-client'
 
 export const dynamic = 'force-dynamic'
 
 export default async function DocumentsPage() {
-  const [initialDocuments, workers, { extendedUser }] = await Promise.all([
+  const viewMode = await getActiveViewMode()
+  const { extendedUser } = await getUserSession()
+  const userRole = extendedUser?.role_id?.toLowerCase() || 'trabajador'
+  const isWorker = userRole === 'trabajador' || viewMode === 'WORKER'
+
+  const [initialDocuments, workers] = await Promise.all([
     getWorkerDocuments(),
-    getWorkers(),
-    getUserSession()
+    isWorker ? Promise.resolve([]) : getWorkers('ACTIVO')
   ])
 
-  const userRole = extendedUser?.role_id || 'trabajador'
+  const effectiveRole = isWorker ? 'trabajador' : userRole
 
   return (
     <DocumentsClient 
       initialDocuments={initialDocuments} 
       workers={workers} 
-      userRole={userRole} 
+      userRole={effectiveRole} 
     />
   )
 }

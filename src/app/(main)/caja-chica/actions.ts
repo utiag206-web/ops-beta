@@ -3,12 +3,25 @@
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { getUserSession, requirePermission, getStrictCompanyId, applyIsolation } from '@/lib/auth'
 import { revalidatePath } from 'next/cache'
+import { normalizeAreaName } from '@/lib/permissions'
 
 export async function getPettyCashStats(area: string) {
   const { extendedUser } = await getUserSession()
   const companyId = await getStrictCompanyId()
   
   if (!extendedUser || !companyId) throw new Error('No autorizado')
+
+  // Blindaje de seguridad por Área
+  const role = extendedUser.role_id?.toLowerCase()
+  const isAdmin = ['admin', 'gerente', 'super_admin', 'superadmin'].includes(role)
+  let finalArea = area
+  
+  if (!isAdmin) {
+    if (!extendedUser.area) {
+      throw new Error('No autorizado: Tu usuario no tiene un área asignada. Contacta al administrador.')
+    }
+    finalArea = extendedUser.area
+  }
   
   const supabase = await createAdminClient()
   const today = new Date()
@@ -19,7 +32,7 @@ export async function getPettyCashStats(area: string) {
     supabase.from('petty_cash_transactions').select('amount, type'),
     companyId,
     extendedUser.role_id
-  ).ilike('area', area)
+  ).ilike('area', finalArea)
 
   const balance = (allTransactions || []).reduce((acc: number, t: any) => {
     return t.type === 'ingreso' ? acc + Number(t.amount) : acc - Number(t.amount)
@@ -31,7 +44,7 @@ export async function getPettyCashStats(area: string) {
     companyId,
     extendedUser.role_id
   )
-    .ilike('area', area)
+    .ilike('area', finalArea)
     .gte('date', firstDayOfMonth)
 
   const monthIncome = (monthTransactions || [])
@@ -56,13 +69,25 @@ export async function getPettyCashTransactions(area: string) {
 
   if (!extendedUser || !companyId) return { error: 'No autorizado' }
 
+  // Blindaje de seguridad por Área
+  const role = extendedUser.role_id?.toLowerCase()
+  const isAdmin = ['admin', 'gerente', 'super_admin', 'superadmin'].includes(role)
+  let finalArea = area
+  
+  if (!isAdmin) {
+    if (!extendedUser.area) {
+      return { error: 'No autorizado: Tu usuario no tiene un área asignada. Contacta al administrador.' }
+    }
+    finalArea = extendedUser.area
+  }
+
   const supabase = await createAdminClient()
   const { data, error } = await applyIsolation(
     supabase.from('petty_cash_transactions').select('*, responsible:users!responsible_id(name)'),
     companyId,
     extendedUser.role_id
   )
-    .ilike('area', area) // [SYNC_NORMALIZATION]
+    .ilike('area', finalArea) // [SYNC_NORMALIZATION]
     .order('date', { ascending: false })
     .order('created_at', { ascending: false })
     .limit(100)
@@ -88,18 +113,16 @@ export async function registerPettyCashTransaction(payload: {
 
   if (!extendedUser || !companyId) return { error: 'No autorizado' }
 
-  // [BLINDAJE_ESTRICTO] El área se determina por el rol si no es administrador
+  // [BLINDAJE_ESTRICTO] El área se determina dinámicamente si no es administrador
   let finalArea = payload.area
   const role = extendedUser.role_id?.toLowerCase()
+  const isAdmin = ['admin', 'gerente', 'super_admin', 'superadmin'].includes(role)
   
-  if (role !== 'admin' && role !== 'gerente') {
-    if (role === 'operaciones') {
-      finalArea = 'Operaciones'
-    } else if (role === 'administracion') {
-      finalArea = 'Administración'
-    } else if (extendedUser.area === 'Cocina') {
-      finalArea = 'Cocina'
+  if (!isAdmin) {
+    if (!extendedUser.area) {
+      return { error: 'No autorizado: Tu usuario no tiene un área asignada. Contacta al administrador.' }
     }
+    finalArea = extendedUser.area
   }
 
   let finalType = payload.type
@@ -126,7 +149,7 @@ export async function registerPettyCashTransaction(payload: {
       return { error: 'No autorizado: Solo los roles de gestión y administración central pueden transferir fondos.' }
     }
 
-    if (!payload.target_area || payload.target_area === finalArea) {
+    if (!payload.target_area || payload.target_area.toLowerCase() === finalArea.toLowerCase()) {
       return { error: 'Debes seleccionar una caja de contraparte válida y diferente de la actual.' }
     }
 
@@ -142,44 +165,26 @@ export async function registerPettyCashTransaction(payload: {
 
     // Generar un ID de transferencia para relacionarlas en operation_number
     const transferRef = payload.operation_number || `TRF-${Date.now()}-${Math.floor(Math.random() * 1000)}`
+    const enrichedReason = `${payload.reason} [TRF: ${sourceArea} -> ${destArea}]`
 
-    // 1. Insertar el egreso en la caja de origen
-    const { error: errorOut } = await supabase
-      .from('petty_cash_transactions')
-      .insert([{
-        reason: `[TRANSFERENCIA] Enviado a ${destArea}: ${payload.reason}`,
-        amount: payload.amount,
-        payment_method: payload.payment_method,
-        type: 'egreso',
-        category: 'transferencia',
-        operation_number: transferRef,
-        voucher_url: payload.voucher_url,
-        date: payload.date || new Date().toISOString().split('T')[0],
-        area: sourceArea,
-        company_id: companyId,
-        responsible_id: extendedUser.id
-      }])
+    // Realizar transferencia atómica mediante función RPC en PostgreSQL
+    const { error: rpcError } = await supabase.rpc('register_petty_cash_transfer', {
+      p_company_id: companyId,
+      p_responsible_id: extendedUser.id,
+      p_source_area: sourceArea,
+      p_dest_area: destArea,
+      p_amount: payload.amount,
+      p_reason: enrichedReason,
+      p_payment_method: payload.payment_method,
+      p_operation_number: transferRef,
+      p_date: payload.date || new Date().toISOString().split('T')[0],
+      p_voucher_url: payload.voucher_url || null
+    })
 
-    if (errorOut) return { error: `Error al registrar egreso en ${sourceArea}: ${errorOut.message}` }
-
-    // 2. Insertar el ingreso en la caja de destino
-    const { error: errorIn } = await supabase
-      .from('petty_cash_transactions')
-      .insert([{
-        reason: `[TRANSFERENCIA] Recibido de ${sourceArea}: ${payload.reason}`,
-        amount: payload.amount,
-        payment_method: payload.payment_method,
-        type: 'ingreso',
-        category: 'transferencia',
-        operation_number: transferRef,
-        voucher_url: payload.voucher_url,
-        date: payload.date || new Date().toISOString().split('T')[0],
-        area: destArea,
-        company_id: companyId,
-        responsible_id: extendedUser.id
-      }])
-
-    if (errorIn) return { error: `Error al registrar ingreso en ${destArea}: ${errorIn.message}` }
+    if (rpcError) {
+      console.error('[PETTY_CASH_RPC_ERROR]:', rpcError)
+      return { error: `Error en transferencia: ${rpcError.message}` }
+    }
 
     revalidatePath('/dashboard')
     revalidatePath('/caja-chica')
@@ -239,7 +244,7 @@ export async function deletePettyCashTransaction(id: string) {
   ).eq('id', id).maybeSingle()
 
   let deleteQuery
-  if (currentTx && currentTx.category === 'transferencia' && currentTx.operation_number && currentTx.operation_number.startsWith('TRF-')) {
+  if (currentTx && currentTx.category === 'transferencia' && currentTx.operation_number) {
     // Es una transferencia vinculada, eliminamos ambas por su operation_number
     deleteQuery = applyIsolation(
       supabase.from('petty_cash_transactions').delete(),
@@ -278,11 +283,48 @@ export async function updatePettyCashTransaction(id: string, payload: Partial<{
   if (!extendedUser || !companyId) return { error: 'No autorizado' }
   const supabase = await createAdminClient()
 
-  const { error } = await applyIsolation(
-    supabase.from('petty_cash_transactions').update(payload),
+  // Obtener la transacción actual para ver si es transferencia
+  const { data: currentTx } = await applyIsolation(
+    supabase.from('petty_cash_transactions').select('category, operation_number, reason, area'),
     companyId,
     extendedUser.role_id
-  ).eq('id', id)
+  ).eq('id', id).maybeSingle()
+
+  const role = extendedUser.role_id?.toLowerCase()
+  const isAdmin = ['admin', 'gerente', 'super_admin', 'superadmin'].includes(role)
+  
+  if (!isAdmin) {
+    if (!extendedUser.area) {
+      return { error: 'No autorizado: Tu usuario no tiene un área asignada. Contacta al administrador.' }
+    }
+    if (!currentTx || normalizeAreaName(currentTx.area) !== normalizeAreaName(extendedUser.area)) {
+      return { error: 'No tienes permisos para actualizar transacciones de otras áreas.' }
+    }
+  }
+
+  let updateQuery
+  if (currentTx && currentTx.category === 'transferencia' && currentTx.operation_number) {
+    let updatedPayload = { ...payload }
+    if (payload.reason) {
+      const trfMatch = currentTx.reason.match(/\[TRF: .*? -> .*?\]/)
+      if (trfMatch && !payload.reason.includes('[TRF:')) {
+        updatedPayload.reason = `${payload.reason} ${trfMatch[0]}`
+      }
+    }
+    updateQuery = applyIsolation(
+      supabase.from('petty_cash_transactions').update(updatedPayload),
+      companyId,
+      extendedUser.role_id
+    ).eq('operation_number', currentTx.operation_number).eq('category', 'transferencia')
+  } else {
+    updateQuery = applyIsolation(
+      supabase.from('petty_cash_transactions').update(payload),
+      companyId,
+      extendedUser.role_id
+    ).eq('id', id)
+  }
+
+  const { error } = await updateQuery
 
   if (error) return { error: error.message }
   
