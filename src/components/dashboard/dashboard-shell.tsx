@@ -469,6 +469,13 @@ export function DashboardShell({ user, stats, localIp }: DashboardShellProps) {
                   <StatWidget 
                     title="Control de Inventario" value={stats.logistics?.registeredProducts?.toString() || '0'} 
                     icon={Boxes} color="text-indigo-600" bg="bg-indigo-50" href="/inventory/stock"
+                    badge={stats.logistics?.criticalProducts > 0 ? {
+                      text: `${stats.logistics.criticalProducts} Críticos`,
+                      color: 'bg-rose-50 border border-rose-100 text-rose-600'
+                    } : {
+                      text: 'Stock Estable',
+                      color: 'bg-emerald-50 border border-emerald-100 text-emerald-600'
+                    }}
                   />
                   <StatWidget 
                     title="Entradas Hoy" value={stats.logistics?.incomingToday?.toString() || '0'} 
