@@ -232,11 +232,18 @@ export function PPEList({ deliveries: initialDeliveries, isWorker = false }: PPE
           <div className="bg-white rounded-[2rem] p-6 max-w-md w-full shadow-2xl border border-slate-100 animate-in zoom-in-95 duration-200 relative flex flex-col items-center">
             <h3 className="text-lg font-bold text-slate-800 mb-4 uppercase tracking-tight">Firma Digital del Colaborador</h3>
             <div className="border border-slate-200 rounded-2xl p-4 bg-slate-50 w-full flex items-center justify-center h-48 mb-6 overflow-hidden">
-              <img 
-                src={previewSignatureUrl} 
-                alt="Firma Digital" 
-                className="max-h-full max-w-full object-contain mix-blend-multiply"
-              />
+              {previewSignatureUrl.startsWith('http://') || previewSignatureUrl.startsWith('https://') ? (
+                <img 
+                  src={previewSignatureUrl} 
+                  alt="Firma Digital" 
+                  className="max-h-full max-w-full object-contain mix-blend-multiply"
+                />
+              ) : (
+                <div className="text-center p-4">
+                  <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Firma Histórica</p>
+                  <p className="text-[10px] text-slate-400">La ruta completa de esta firma no está disponible en la base de datos.</p>
+                </div>
+              )}
             </div>
             <button 
               onClick={() => setPreviewSignatureUrl(null)}

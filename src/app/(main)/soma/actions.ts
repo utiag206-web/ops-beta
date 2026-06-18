@@ -130,33 +130,57 @@ export async function updateSomaTraining(id: string, payload: {
     return { error: `Error actualizando capacitación: ${uError.message}` }
   }
 
-  // 2. Update participants: delete existing and insert new
-  const { error: dError } = await supabase
+  // 2. Fetch existing participants
+  const { data: existingParticipants } = await supabase
     .from('soma_training_participants')
-    .delete()
+    .select('worker_id, status, id')
     .eq('training_id', id)
     .eq('company_id', companyId)
 
-  if (dError) {
-    console.error('[SOMA] ERROR_DELETE_PARTICIPANTES_CAPACITACION:', dError)
-    return { error: `Error actualizando participantes: ${dError.message}` }
+  const existingMap = new Map((existingParticipants || []).map(p => [p.worker_id, p]))
+
+  // Determine who to delete and who to insert
+  const newWorkerIds = new Set(payload.participants)
+  const toDeleteIds: string[] = []
+  
+  for (const exp of (existingParticipants || [])) {
+    if (!newWorkerIds.has(exp.worker_id)) {
+      toDeleteIds.push(exp.id)
+    }
   }
 
-  if (payload.participants.length > 0) {
-    const participantsData = payload.participants.map(workerId => ({
-      training_id: id,
-      worker_id: workerId,
-      company_id: companyId,
-      status: 'pendiente'
-    }))
+  const toInsertData: any[] = []
+  for (const wid of payload.participants) {
+    if (!existingMap.has(wid)) {
+      toInsertData.push({
+        training_id: id,
+        worker_id: wid,
+        company_id: companyId,
+        status: 'pendiente'
+      })
+    }
+  }
 
-    const { error: pError } = await supabase
+  // Delete removed participants
+  if (toDeleteIds.length > 0) {
+    const { error: dError } = await supabase
       .from('soma_training_participants')
-      .insert(participantsData)
+      .delete()
+      .in('id', toDeleteIds)
+    if (dError) {
+      console.error('[SOMA] ERROR_DELETE_PARTICIPANTES_CAPACITACION:', dError)
+      return { error: `Error actualizando participantes (eliminación): ${dError.message}` }
+    }
+  }
 
-    if (pError) {
-      console.error('[SOMA] ERROR_INSERT_PARTICIPANTES_CAPACITACION:', pError)
-      return { error: `Error insertando nuevos participantes: ${pError.message}` }
+  // Insert new participants
+  if (toInsertData.length > 0) {
+    const { error: iError } = await supabase
+      .from('soma_training_participants')
+      .insert(toInsertData)
+    if (iError) {
+      console.error('[SOMA] ERROR_INSERT_PARTICIPANTES_CAPACITACION:', iError)
+      return { error: `Error actualizando participantes (inserción): ${iError.message}` }
     }
   }
 

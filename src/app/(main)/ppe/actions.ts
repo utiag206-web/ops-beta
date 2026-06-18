@@ -113,7 +113,7 @@ export async function signPPEDelivery(deliveryId: string, signatureBase64: strin
     const { data: updateData, error: updateError } = await applyIsolation(
       adminClient.from('ppe_deliveries').update({
         status: 'signed',
-        signature_url: fileName
+        signature_url: publicUrl
       }),
       companyId,
       extendedUser.role_id

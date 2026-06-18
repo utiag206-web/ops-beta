@@ -161,30 +161,23 @@ export function InventoryMovementsList({
             </thead>
             <tbody className="divide-y divide-slate-50">
               {(() => {
-                // Lógica de Kardex: Calcular saldos acumulados (Orden Cronológico Inverso)
-                // Para que el saldo sea consistente, empezamos desde el saldo ACTUAL y restamos/sumamos hacia atrás.
-                
+                // Lógica de Kardex: Calcular saldos acumulados (Orden Cronológico Inverso) sobre la lista COMPLETA de movimientos
+                // Para que el saldo sea consistente y no se altere por filtros client-side de texto, empezamos desde el saldo ACTUAL y restamos/sumamos hacia atrás.
                 let currentRunningBalances: Record<string, number> = { ...initialBalances }
                 
                 // 1. Ordenar por fecha DESC (lo más reciente primero)
-                const sortedDesc = [...filteredMovements].sort((a, b) => 
+                const sortedDesc = [...movements].sort((a, b) => 
                   new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
                 )
 
-                const displayMovements = sortedDesc.map(m => {
+                const movementsWithBalance = sortedDesc.map(m => {
                   const key = `${m.product_id}|${m.warehouse_id}`
-                  
-                  // El saldo mostrado en esta fila es el saldo que quedó DESPUÉS del movimiento.
-                  // Para la fila más reciente, ese saldo es el inicial (actual).
                   const balanceAfter = currentRunningBalances[key] || 0
                   
                   const effect = m.movement_types?.effect
                   const type = (m.type || '').toLowerCase()
                   const qty = Math.abs(Number(m.quantity))
 
-                  // Ahora calculamos cuál era el saldo ANTES de este movimiento para la siguiente iteración (hacia atrás)
-                  // Si fue ingreso (+), el saldo anterior era menor.
-                  // Si fue salida (-), el saldo anterior era mayor.
                   if (effect === 'IN' || type === 'ingreso') {
                     currentRunningBalances[key] = (currentRunningBalances[key] || 0) - qty
                   } else if (effect === 'OUT' || type === 'salida') {
@@ -194,7 +187,20 @@ export function InventoryMovementsList({
                   }
 
                   return { ...m, running_balance: balanceAfter }
-                }).filter(m => !!m.products)
+                })
+
+                // 2. Filtrar client-side por texto sobre los movimientos que ya tienen sus saldos correctos calculados
+                const displayMovements = movementsWithBalance.filter(m => {
+                  if (!m.products) return false
+                  const productName = (m.products.name || '').toLowerCase()
+                  const productCode = (m.products.code || '').toLowerCase()
+                  const observation = (m.observation || '').toLowerCase()
+                  const search = searchTerm.toLowerCase()
+                  
+                  return productName.includes(search) || 
+                         productCode.includes(search) || 
+                         observation.includes(search)
+                })
 
                 return displayMovements.length > 0 ? displayMovements.map((m) => {
                   if (!m.products) return null;

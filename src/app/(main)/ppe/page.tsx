@@ -14,7 +14,7 @@ export default async function PPEPage() {
 
   const [deliveries, workers] = await Promise.all([
     getPPEDeliveries(isWorker ? extendedUser?.worker_id : undefined),
-    isWorker ? Promise.resolve([]) : getWorkers()
+    isWorker ? Promise.resolve([]) : getWorkers('ACTIVO')
   ])
 
   return (

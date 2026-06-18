@@ -191,13 +191,29 @@ export async function importAssets(assetsData: any[]) {
         status = 'fuera de servicio'
       }
 
+      const rawAcquisitionDate = asset.fecha_adquisicion || asset.acquisition_date
+      let acquisitionDate: string | null = null
+      if (rawAcquisitionDate) {
+        if (typeof rawAcquisitionDate === 'number') {
+          const dateObj = new Date((rawAcquisitionDate - 25569) * 86400 * 1000)
+          acquisitionDate = dateObj.toISOString().split('T')[0]
+        } else {
+          const parsedDate = new Date(rawAcquisitionDate)
+          if (!isNaN(parsedDate.getTime())) {
+            acquisitionDate = parsedDate.toISOString().split('T')[0]
+          }
+        }
+      }
+
       const assetPayload = {
         company_id: companyId,
         code,
         name: fullName,
         type,
         status,
-        location: (asset.location || 'ALMACEN CENTRAL').toString().toUpperCase().trim()
+        location: (asset.location || 'ALMACEN CENTRAL').toString().toUpperCase().trim(),
+        acquisition_date: acquisitionDate,
+        observations: (asset.observaciones || asset.observations || '').toString().trim() || null
       }
 
       const existingId = assetMap.get(code)

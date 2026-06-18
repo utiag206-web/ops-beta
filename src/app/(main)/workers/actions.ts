@@ -52,7 +52,7 @@ export async function getWorkersShort() {
     supabase.from('workers').select('*'),
     companyId,
     extendedUser.role_id
-  ).order('name', { ascending: true })
+  ).eq('status', 'ACTIVO').order('name', { ascending: true })
 
   if (error) return []
   return data
@@ -489,6 +489,43 @@ export async function importWorkers(workersData: any[]) {
   if (error) {
     console.error('Error importing workers:', error)
     return { success: false, error: error.message }
+  }
+
+  if (data && data.length > 0) {
+    // Inicializar worker_personal y worker_financial en lote para evitar datos huérfanos
+    const personalToUpsert = data.map((w: any) => {
+      const orig = workersToInsert.find((x: any) => x.dni === w.dni);
+      return {
+        worker_id: w.id,
+        company_id: companyId,
+        phone_number: orig?.phone || null,
+        updated_at: new Date().toISOString()
+      };
+    });
+
+    const financialToUpsert = data.map((w: any) => ({
+      worker_id: w.id,
+      company_id: companyId,
+      daily_rate: 0,
+      monthly_salary: 0,
+      updated_at: new Date().toISOString()
+    }));
+
+    const { error: personalErr } = await supabase
+      .from('worker_personal')
+      .upsert(personalToUpsert, { onConflict: 'worker_id' });
+
+    if (personalErr) {
+      console.error('Error importing worker_personal rows:', personalErr.message);
+    }
+
+    const { error: financialErr } = await supabase
+      .from('worker_financial')
+      .upsert(financialToUpsert, { onConflict: 'worker_id' });
+
+    if (financialErr) {
+      console.error('Error importing worker_financial rows:', financialErr.message);
+    }
   }
 
   revalidatePath('/workers')

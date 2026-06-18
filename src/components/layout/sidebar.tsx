@@ -99,11 +99,13 @@ const navGroups = [
   }
 ]
 
+import { normalizeAreaName } from '@/lib/permissions'
+
 // Lógica de prioridad estricta para Sidebar (Refleja Dashboard)
 function getSidebarContext(role_id: string | undefined, area: string | null | undefined) {
   if (!role_id) return 'DEFAULT'
   const role = role_id.toLowerCase()
-  const cleanArea = area?.toLowerCase() || ''
+  const cleanArea = area ? normalizeAreaName(area) : ''
 
   if (role === 'super_admin' || role === 'superadmin') return 'SUPER_ADMIN'
   if (role === 'gerente') return 'GERENTE'
@@ -112,7 +114,7 @@ function getSidebarContext(role_id: string | undefined, area: string | null | un
   if (role === 'jefe_area' && cleanArea === 'cocina') return 'COCINA'
   if (role === 'operaciones' || (role === 'jefe_area' && cleanArea === 'operaciones')) return 'OPERACIONES'
   if (role === 'supervisor') return 'SUPERVISOR'
-  if (role === 'almacen' || role === 'logistica' || (role === 'jefe_area' && ['almacén y mantenimiento', 'mecánica'].includes(cleanArea))) return 'ALMACEN'
+  if (role === 'almacen' || role === 'logistica' || (role === 'jefe_area' && ['almacen y mantenimiento', 'mecanica'].includes(cleanArea))) return 'ALMACEN'
   if (role === 'trabajador') return 'WORKER'
   return 'DEFAULT'
 }

@@ -13,7 +13,7 @@ export default async function DocumentsPage() {
 
   const [initialDocuments, workers] = await Promise.all([
     getWorkerDocuments(),
-    isWorker ? Promise.resolve([]) : getWorkers()
+    isWorker ? Promise.resolve([]) : getWorkers('ACTIVO')
   ])
 
   const effectiveRole = isWorker ? 'trabajador' : userRole
