@@ -31,7 +31,13 @@ export function StatWidget({ title, value, icon: Icon, color, bg, href, trend }:
 
       <div className="relative z-10 mt-2">
         <p className="text-[11px] font-extrabold text-slate-500 uppercase tracking-[0.18em] mb-2 leading-none">{title}</p>
-        <p className="text-3xl md:text-4xl font-black text-slate-900 tracking-tighter group-hover:text-blue-600 transition-colors leading-none">{value}</p>
+        <p className={`font-black text-slate-900 group-hover:text-blue-600 transition-colors leading-none ${
+          String(value || '').length > 12 
+            ? 'text-lg sm:text-xl md:text-2xl tracking-tight' 
+            : String(value || '').length > 8 
+              ? 'text-xl sm:text-2xl md:text-3xl tracking-tight' 
+              : 'text-3xl md:text-4xl tracking-tighter'
+        }`}>{value}</p>
       </div>
     </div>
   )

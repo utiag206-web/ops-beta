@@ -467,8 +467,8 @@ export function DashboardShell({ user, stats, localIp }: DashboardShellProps) {
                     icon={LayoutGrid} color="text-indigo-600" bg="bg-indigo-50" href="/inventory/products"
                   />
                   <StatWidget 
-                    title="Stock Crítico" value={stats.logistics?.criticalProducts?.toString() || '0'} 
-                    icon={Boxes} color="text-rose-600" bg="bg-rose-50" href="/inventory/stock"
+                    title="Control de Inventario" value={stats.logistics?.registeredProducts?.toString() || '0'} 
+                    icon={Boxes} color="text-indigo-600" bg="bg-indigo-50" href="/inventory/stock"
                   />
                   <StatWidget 
                     title="Entradas Hoy" value={stats.logistics?.incomingToday?.toString() || '0'} 
