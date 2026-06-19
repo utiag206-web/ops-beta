@@ -2,6 +2,22 @@ import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
 export async function updateSession(request: NextRequest) {
+  // Redirect worker to portal if session exists and they access landing or login
+  const workerSessionCookie = request.cookies.get('worker_session')?.value
+  if (workerSessionCookie && (request.nextUrl.pathname === '/' || request.nextUrl.pathname === '/login')) {
+    try {
+      const session = JSON.parse(decodeURIComponent(workerSessionCookie))
+      if (session?.companySlug) {
+        console.log(`[MIDDLEWARE] 🔄 Worker session found. Redirecting to portal: /w/${session.companySlug}`)
+        const url = request.nextUrl.clone()
+        url.pathname = `/w/${session.companySlug}`
+        return NextResponse.redirect(url)
+      }
+    } catch (e) {
+      console.error('[MIDDLEWARE] Error parsing worker session:', e)
+    }
+  }
+
   let supabaseResponse = NextResponse.next({
     request,
   })

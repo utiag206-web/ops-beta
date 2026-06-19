@@ -27,12 +27,12 @@ export default function LandingPage() {
 
       {/* Navbar */}
       <header className="sticky top-0 z-50 w-full border-b border-slate-200/50 bg-white/70 backdrop-blur-xl">
-        <div className="container mx-auto flex h-20 items-center justify-between px-6 lg:px-12">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-600 text-white font-bold text-lg shadow-lg shadow-blue-200">
+        <div className="container mx-auto flex h-20 items-center justify-between px-4 sm:px-6 lg:px-12">
+          <div className="flex items-center gap-2.5">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-600 text-white font-bold text-lg shadow-lg shadow-blue-200 shrink-0">
               IO
             </div>
-            <span className="text-2xl font-bold tracking-tight text-slate-900">
+            <span className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900">
               Inthaly<span className="text-blue-600">Ops</span>
             </span>
           </div>
@@ -42,16 +42,16 @@ export default function LandingPage() {
             <a href="#how-it-works" className="text-sm font-medium text-slate-600 transition-colors hover:text-blue-600">Cómo funciona</a>
           </nav>
 
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 sm:gap-4 animate-in fade-in duration-300">
             <Link 
               href="/login" 
-              className="text-sm font-semibold text-slate-900 transition-colors hover:text-blue-600"
+              className="text-sm font-semibold text-slate-900 transition-colors hover:text-blue-600 px-2.5 py-1.5"
             >
-              Iniciar sesión
+              Acceder
             </Link>
             <Link 
               href="/register" 
-              className="flex h-11 items-center justify-center rounded-full bg-blue-600 px-6 text-sm font-semibold text-white shadow-lg shadow-blue-200 transition-all hover:bg-blue-700 hover:shadow-blue-300 active:scale-95"
+              className="hidden sm:flex h-10 items-center justify-center rounded-full bg-blue-600 px-5 text-sm font-semibold text-white shadow-lg shadow-blue-200 transition-all hover:bg-blue-700 hover:shadow-blue-300 active:scale-95"
             >
               Registrarse
             </Link>
@@ -61,36 +61,36 @@ export default function LandingPage() {
 
       <main className="flex-1">
         {/* Hero Section */}
-        <section className="relative overflow-hidden pt-24 pb-32 lg:pt-32 lg:pb-48">
-          <div className="container mx-auto px-6 lg:px-12">
-            <div className="grid items-center gap-16 lg:grid-cols-2">
-              <div className="flex flex-col gap-8 text-center lg:text-left">
+        <section className="relative overflow-hidden pt-16 pb-24 sm:pt-24 sm:pb-32 lg:pt-32 lg:pb-48">
+          <div className="container mx-auto px-4 sm:px-6 lg:px-12">
+            <div className="grid items-center gap-12 sm:gap-16 lg:grid-cols-2">
+              <div className="flex flex-col gap-6 sm:gap-8 text-center lg:text-left">
 
                 
-                <h1 className="text-5xl font-black tracking-tight text-slate-900 sm:text-6xl xl:text-7xl">
+                <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-black tracking-tight text-slate-900 leading-[1.15]">
                   Gestiona tu equipo con <span className="text-gradient">inteligencia</span>
                 </h1>
                 
-                <p className="mx-auto max-w-xl text-lg leading-relaxed text-slate-600 lg:mx-0 lg:text-xl">
-                  Control de trabajadores, asistencia, productividad y operaciones en una sola plataforma robusta y fácil de usar.
+                <p className="mx-auto max-w-xl text-base sm:text-lg leading-relaxed text-slate-600 lg:mx-0 lg:text-xl">
+                  Control de trabajadores, asistencia, productividad and operaciones en una sola plataforma robusta y fácil de usar.
                 </p>
                 
-                <div className="flex flex-col gap-4 sm:flex-row sm:justify-center lg:justify-start">
+                <div className="flex flex-col gap-3.5 sm:flex-row sm:justify-center lg:justify-start w-full sm:w-auto max-w-sm sm:max-w-none mx-auto lg:mx-0">
                   <Link 
                     href="/login" 
-                    className="flex h-14 items-center justify-center rounded-full border border-slate-200 bg-white px-10 text-lg font-semibold text-slate-900 shadow-sm transition-all hover:bg-slate-50 hover:border-slate-300 active:scale-95"
+                    className="flex h-14 w-full sm:w-auto items-center justify-center rounded-full border border-slate-200 bg-white px-10 text-lg font-semibold text-slate-900 shadow-sm transition-all hover:bg-slate-50 hover:border-slate-300 active:scale-95"
                   >
                     Iniciar sesión
                   </Link>
                   <Link 
                     href="/register" 
-                    className="flex h-14 items-center justify-center rounded-full bg-blue-600 px-10 text-lg font-bold text-white shadow-xl shadow-blue-200 transition-all hover:bg-blue-700 hover:shadow-blue-300 active:scale-95"
+                    className="flex h-14 w-full sm:w-auto items-center justify-center rounded-full bg-blue-600 px-10 text-lg font-bold text-white shadow-xl shadow-blue-200 transition-all hover:bg-blue-700 hover:shadow-blue-300 active:scale-95"
                   >
                     Registrarse
                   </Link>
                 </div>
 
-                <div className="mt-8 flex items-center justify-center gap-8 grayscale opacity-50 lg:justify-start">
+                <div className="mt-6 sm:mt-8 flex items-center justify-center gap-8 grayscale opacity-50 lg:justify-start">
                   <Zap className="h-8 w-8" />
                   <Globe className="h-8 w-8" />
                   <Lock className="h-8 w-8" />
@@ -98,13 +98,13 @@ export default function LandingPage() {
               </div>
 
               <div className="relative mx-auto w-full max-w-2xl lg:max-w-none">
-                <div className="animate-float relative z-10 overflow-hidden rounded-2xl border border-white/20 bg-white/50 p-2 shadow-2xl backdrop-blur-sm">
+                <div className="animate-float relative z-10 overflow-hidden rounded-2xl border border-white/20 bg-white/50 p-1.5 sm:p-2 shadow-2xl backdrop-blur-sm">
                   <Image 
                     src="/images/landing-hero.png" 
                     alt="InthalyOps Dashboard" 
                     width={1000} 
                     height={800} 
-                    className="rounded-xl shadow-inner"
+                    className="rounded-xl shadow-inner w-full h-auto"
                     priority
                   />
                 </div>
@@ -172,7 +172,7 @@ export default function LandingPage() {
           <div className="container mx-auto px-6 lg:px-12">
             <div className="grid items-center gap-16 lg:grid-cols-2">
               <div className="order-2 lg:order-1">
-                <div className="relative rounded-3xl bg-slate-900 p-8 shadow-2xl overflow-hidden">
+                <div className="relative rounded-3xl bg-slate-900 p-6 sm:p-8 shadow-2xl overflow-hidden">
                   <div className="flex items-center gap-2 mb-6">
                     <div className="h-3 w-3 rounded-full bg-red-500" />
                     <div className="h-3 w-3 rounded-full bg-yellow-500" />
@@ -222,7 +222,7 @@ export default function LandingPage() {
         {/* CTA Section */}
         <section className="relative py-24">
           <div className="container mx-auto px-6 lg:px-12">
-            <div className="relative overflow-hidden rounded-[2.5rem] bg-blue-600 px-8 py-20 text-center shadow-2xl shadow-blue-200 lg:px-20 lg:py-28">
+            <div className="relative overflow-hidden rounded-2xl sm:rounded-[2.5rem] bg-blue-600 px-6 sm:px-8 py-16 sm:py-20 text-center shadow-2xl shadow-blue-200 lg:px-20 lg:py-28">
               {/* Pattern Background */}
               <div className="absolute inset-0 opacity-10" style={{ backgroundImage: "radial-gradient(circle at 2px 2px, white 1px, transparent 0)", backgroundSize: "40px 40px" }} />
               
