@@ -8,6 +8,13 @@ import Link from 'next/link'
 import { redirect } from 'next/navigation'
 export const dynamic = 'force-dynamic'
 
+export async function generateMetadata({ params }: PageProps) {
+  const { companySlug } = await params
+  return {
+    manifest: `/manifest.json?context=worker&companySlug=${companySlug}`
+  }
+}
+
 interface PageProps {
   params: Promise<{
     companySlug: string
