@@ -2,7 +2,7 @@
   "name": "InthalyOps",
   "short_name": "Ops",
   "description": "Plataforma de gestión de trabajadores",
-  "start_url": "/dashboard",
+  "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#2563eb",
