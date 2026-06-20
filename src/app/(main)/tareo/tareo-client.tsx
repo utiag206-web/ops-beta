@@ -8,6 +8,7 @@ import {
   getTareoConfig, upsertTareoConfig, getTareoNotes, upsertTareoNote,
   getAttendancePunches, syncAttendancePunches, getTareoDashboardData
 } from './actions'
+import { createClient } from '@/lib/supabase/client'
 
 interface Worker {
   id: string
@@ -115,6 +116,17 @@ export default function TareoClient({ initialCycles, workers, userRole }: TareoP
 
   useEffect(() => {
     loadData()
+
+    const supabase = createClient()
+    const channel = supabase.channel('tareo_attendance_changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'attendance' }, () => {
+        loadData()
+      })
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
   }, [loadData])
 
   const filteredWorkers = useMemo(() => {

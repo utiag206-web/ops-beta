@@ -173,11 +173,7 @@ export function WelcomeHero({ userName, roleName, area, companyName, viewMode, c
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const isLocal = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
-      let origin = window.location.origin
-      // Force public production domain for the QR code to bypass Vercel Authentication
-      if (window.location.hostname.includes('.vercel.app') && window.location.hostname !== 'next-prod-boilerplate.vercel.app') {
-        origin = 'https://next-prod-boilerplate.vercel.app'
-      }
+      const origin = window.location.origin
       const url = isLocal && localIp && localIp !== '127.0.0.1'
         ? `http://${localIp}:${window.location.port}/w/${companySlug || 'empresa'}`
         : `${origin}/w/${companySlug || 'empresa'}`

@@ -49,6 +49,7 @@ interface WorkerPortalClientProps {
     roleId?: string
     area?: string | null
     isMismatched?: boolean
+    photoUrl?: string | null
   } | null
 }
 
@@ -540,7 +541,11 @@ export default function WorkerPortalClient({ company, session }: WorkerPortalCli
         
         <div className="max-w-4xl mx-auto flex flex-col md:flex-row md:items-center md:justify-between gap-6 relative z-10">
           <div className="flex items-center gap-4">
-            {session.companyLogo ? (
+            {session.photoUrl ? (
+              <div className="h-12 w-12 rounded-2xl overflow-hidden border-2 border-white/20 shadow-lg shrink-0">
+                <img src={session.photoUrl} alt={session.name} className="w-full h-full object-cover" />
+              </div>
+            ) : session.companyLogo ? (
               <div className="h-12 flex items-center justify-center">
                 <img src={session.companyLogo} alt={session.companyName} className="max-h-full max-w-[140px] object-contain" />
               </div>

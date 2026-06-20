@@ -182,7 +182,8 @@ export async function loginWorker(companySlug: string, identifier: string, pin: 
       companyLogo: company.logo_url,
       companySlug: slugify(company.name),
       roleId: userRole,
-      area: userArea
+      area: userArea,
+      photoUrl: worker.photo_url || null
     }
 
     const cookieStore = await cookies()
@@ -246,7 +247,8 @@ export async function getWorkerSession() {
             companyLogo: user.company_logo,
             companySlug: user.company_slug || slugify(user.company_name || 'empresa'),
             roleId: user.role_id,
-            area: user.area
+            area: user.area,
+            photoUrl: worker.photo_url || null
           }
           
           cookieStore.set('worker_session', JSON.stringify(sessionData), {

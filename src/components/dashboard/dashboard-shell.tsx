@@ -1,7 +1,9 @@
 'use client'
  
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
+import { createClient } from '@/lib/supabase/client'
 import { 
   Users, UserCheck, ShieldAlert, BadgeDollarSign, 
   Package, Boxes, ClipboardCheck, Activity, 
@@ -48,6 +50,20 @@ export function DashboardShell({ user, stats, localIp }: DashboardShellProps) {
 
   const [selectedTalk, setSelectedTalk] = useState<any>(null)
   const [selectedTraining, setSelectedTraining] = useState<any>(null)
+  const router = useRouter()
+
+  useEffect(() => {
+    const supabase = createClient()
+    const channel = supabase.channel('dashboard_changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'attendance' }, () => {
+        router.refresh()
+      })
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [router])
 
   const renderDashboardWidgets = () => {
     switch (viewMode) {
