@@ -6,18 +6,18 @@ import CampClient from './camp-client'
 export const dynamic = 'force-dynamic'
 
 export default async function CampPage() {
-  const [initialRooms, workers, { extendedUser }] = await Promise.all([
-    getCampRooms(),
-    getWorkers('ACTIVO'),
-    getUserSession()
-  ])
+ const [initialRooms, workers, { extendedUser }] = await Promise.all([
+ getCampRooms(),
+ getWorkers('active'),
+ getUserSession()
+ ])
 
-  return (
-    <CampClient 
-      initialRooms={initialRooms} 
-      workers={workers} 
-      userRole={extendedUser?.role_id || 'worker'} 
-      userArea={extendedUser?.area || null}
-    />
-  )
+ return (
+ <CampClient 
+ initialRooms={initialRooms} 
+ workers={workers} 
+ userRole={extendedUser?.role_id || 'worker'} 
+ userArea={extendedUser?.area || null}
+ />
+ )
 }

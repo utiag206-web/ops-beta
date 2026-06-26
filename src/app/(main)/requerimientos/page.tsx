@@ -8,30 +8,30 @@ import { OperationsDashboardSkeleton } from '@/components/dashboard/dashboard-sk
 export const dynamic = 'force-dynamic'
 
 export const metadata = {
-  title: 'Requerimientos | Sistema de Gestión',
-  description: 'Gestión de solicitudes y requerimientos internos.',
+ title: 'Requerimientos | Sistema de Gestión',
+ description: 'Gestión de solicitudes y requerimientos internos.',
 }
 
 export default async function Page() {
-  const { extendedUser } = await getUserSession()
+ const { extendedUser } = await getUserSession()
 
-  if (!extendedUser) {
-    redirect('/login')
-  }
+ if (!extendedUser) {
+ redirect('/login')
+ }
 
-  const userRole = extendedUser.role_id || 'trabajador'
+ const userRole = extendedUser.role_id || 'trabajador'
 
-  return (
-    <div className="container mx-auto px-4 py-8 text-slate-800">
-      <Suspense fallback={<OperationsDashboardSkeleton />}>
-        <RequirementsFetcher userRole={userRole} />
-      </Suspense>
-    </div>
-  )
+ return (
+ <div className="container mx-auto px-4 py-8 text-slate-800">
+ <Suspense fallback={<OperationsDashboardSkeleton />}>
+ <RequirementsFetcher userRole={userRole} />
+ </Suspense>
+ </div>
+ )
 }
 
 async function RequirementsFetcher({ userRole }: { userRole: string }) {
-  const initialData = await getRequirements({ status: 'todos', priority: 'todas' })
-  // Si hay un error en backend, res.data será undefined, pasamos [] por seguridad
-  return <RequirementsPage userRole={userRole} initialData={initialData.data || []} />
+ const initialData = await getRequirements({ status: 'todos', priority: 'todas' })
+ // Si hay un error en backend, res.data será undefined, pasamos [] por seguridad
+ return <RequirementsPage userRole={userRole} initialData={initialData.data || []} />
 }

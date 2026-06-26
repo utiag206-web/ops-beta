@@ -3,8 +3,8 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-inter);
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
   
   /* INTHALY Branding */
   --color-primary: var(--primary);
@@ -95,9 +95,9 @@ input::placeholder {
 }
 
 .nth-sidebar .nth-nav-group-label {
-  color: rgba(255, 255, 255, 0.8) !important; /* Aumentado por legibilidad */
-  font-weight: 700 !important;
-  letter-spacing: 0.2em !important;
+  color: rgba(255, 255, 255, 0.9) !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.05em !important;
   text-shadow: 0 1px 2px rgba(0,0,0,0.1);
 }
 
@@ -147,26 +147,7 @@ input::placeholder {
 }
 
 /* --- VISUAL UPPERCASE SYSTEM-WIDE NORMALIZATION --- */
-input[type="text"],
-input[type="search"],
-textarea,
-select,
-option,
-td,
-th,
-p:not(.keep-case):not(.keep-case *),
-span:not(.keep-case):not(.keep-case *),
-div:not(.keep-case):not(.keep-case *):not(.nth-sidebar):not(.nth-sidebar *):not(.keep-case-container *),
-label:not(.keep-case):not(.keep-case *),
-h1:not(.keep-case):not(.keep-case *),
-h2:not(.keep-case):not(.keep-case *),
-h3:not(.keep-case):not(.keep-case *),
-h4:not(.keep-case):not(.keep-case *),
-h5:not(.keep-case):not(.keep-case *),
-h6:not(.keep-case):not(.keep-case *) {
-  text-transform: uppercase;
-}
-
+/* Mantener mayúsculas solo para los datos de entrada según requerimiento del usuario */
 input[type="text"],
 input[type="search"],
 textarea,
@@ -175,11 +156,9 @@ option {
   text-transform: uppercase;
 }
 
-/* Exclude emails, passwords and components that need mixed case */
+/* Exclude emails, passwords */
 input[type="email"],
-input[type="password"],
-.keep-case,
-.keep-case * {
+input[type="password"] {
   text-transform: none !important;
 }
 
@@ -210,25 +189,50 @@ h3 {
 label, 
 .form-label, 
 .text-\[10px\].font-bold.text-slate-400 {
-  font-size: 0.7rem !important; /* text-[11px] equivalent */
-  font-weight: 800 !important; /* font-extrabold */
-  letter-spacing: 0.15em !important; /* tracking-widest */
-  color: #64748b !important; /* slate-500 (improved contrast over slate-400) */
-  text-transform: uppercase !important;
+  font-size: 0.75rem !important;
+  font-weight: 600 !important; /* rebajado de 800 */
+  color: #64748b !important; 
 }
 
 th {
-  font-size: 0.725rem !important; /* text-xs */
-  font-weight: 800 !important;
-  letter-spacing: 0.12em !important;
-  color: #475569 !important; /* slate-600 */
-  text-transform: uppercase !important;
-  background-color: #f8fafc !important; /* light background fill */
+  font-size: 0.75rem !important; 
+  font-weight: 600 !important;
+  color: #475569 !important; 
+  background-color: #f8fafc !important;
+  padding-top: 0.75rem !important;
+  padding-bottom: 0.75rem !important; 
 }
 
 td {
-  font-size: 0.825rem !important;
+  font-size: 0.8125rem !important;
   color: #334155;
+  padding-top: 0.75rem !important;
+  padding-bottom: 0.75rem !important;
+}
+
+/* --- HIGH DENSITY UI (ERP STYLE) --- */
+.space-y-6 > :not([hidden]) ~ :not([hidden]) {
+  margin-top: 1rem !important; /* from 1.5rem to 1rem */
+}
+
+.space-y-8 > :not([hidden]) ~ :not([hidden]) {
+  margin-top: 1.25rem !important; /* from 2rem to 1.25rem */
+}
+
+.p-8 {
+  padding: 1.25rem !important; /* from 2rem to 1.25rem */
+}
+
+.p-6 {
+  padding: 1rem !important; /* from 1.5rem to 1rem */
+}
+
+.rounded-\[2rem\] {
+  border-radius: 1rem !important;
+}
+
+.rounded-\[2\.5rem\] {
+  border-radius: 1.25rem !important;
 }
 
 /* Metric / KPI highlighting */

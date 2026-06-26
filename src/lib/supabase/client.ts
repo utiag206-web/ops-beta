@@ -1,9 +1,9 @@
 import { createBrowserClient } from '@supabase/ssr'
 
 export function createClient() {
-  const anonKey = process.env.NEXT_PUBLIC_SB_PUB || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-  return createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    anonKey!
-  )
+ const anonKey = process.env.NEXT_PUBLIC_SB_PUB || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+ return createBrowserClient(
+ process.env.NEXT_PUBLIC_SUPABASE_URL!,
+ anonKey!
+ )
 }

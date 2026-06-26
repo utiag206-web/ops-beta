@@ -8,334 +8,334 @@ import { Search, Shield, UserX, UserCheck, MoreVertical, ShieldAlert, BadgeCheck
 import { useRouter } from 'next/navigation'
 
 type User = {
-  id: string
-  name: string
-  email: string
-  role_id: string
-  area: string
-  status: string
-  created_at: string
+ id: string
+ name: string
+ email: string
+ role_id: string
+ area: string
+ status: string
+ created_at: string
 }
 
 export function UsersList({ initialUsers, availableWorkers, currentUserRole }: { initialUsers: User[], availableWorkers: any[], currentUserRole?: string }) {
-  const router = useRouter()
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false)
-  const [editingUser, setEditingUser] = useState<User | null>(null)
-  const [searchTerm, setSearchTerm] = useState('')
-  const canManage = ['admin', 'gerente', 'super_admin', 'administracion'].includes(currentUserRole?.toLowerCase() || '')
+ const router = useRouter()
+ const [isAddModalOpen, setIsAddModalOpen] = useState(false)
+ const [editingUser, setEditingUser] = useState<User | null>(null)
+ const [searchTerm, setSearchTerm] = useState('')
+ const canManage = ['admin', 'gerente', 'super_admin', 'administracion'].includes(currentUserRole?.toLowerCase() || '')
 
-  // Estado reactivo local para actualizaciones de UI a 0ms de retardo
-  const [users, setUsers] = useState(initialUsers)
-  const [prevInitialUsers, setPrevInitialUsers] = useState(initialUsers)
-  if (initialUsers !== prevInitialUsers) {
-    setUsers(initialUsers)
-    setPrevInitialUsers(initialUsers)
-  }
+ // Estado reactivo local para actualizaciones de UI a 0ms de retardo
+ const [users, setUsers] = useState(initialUsers)
+ const [prevInitialUsers, setPrevInitialUsers] = useState(initialUsers)
+ if (initialUsers !== prevInitialUsers) {
+ setUsers(initialUsers)
+ setPrevInitialUsers(initialUsers)
+ }
 
-  // Combine users and unlinked workers for a unified view
-  const safeUsers = Array.isArray(users) ? users : []
-  const safeWorkers = Array.isArray(availableWorkers) ? availableWorkers : []
+ // Combine users and unlinked workers for a unified view
+ const safeUsers = Array.isArray(users) ? users : []
+ const safeWorkers = Array.isArray(availableWorkers) ? availableWorkers : []
 
-  const unifiedList = [
-    ...safeUsers.map(u => ({ ...u, type: 'user' })),
-    ...safeWorkers
-      .filter(w => w && !safeUsers.some(u => u && (u as any).worker_id === w.id))
-      .map(w => ({
-        id: w.id,
-        name: w.name || 'Trabajador sin nombre',
-        email: 'Sin cuenta',
-        role_id: 'trabajador',
-        area: '',
-        status: 'no_account',
-        type: 'worker',
-        created_at: ''
-      }))
-  ]
+ const unifiedList = [
+ ...safeUsers.map(u => ({ ...u, type: 'user' })),
+ ...safeWorkers
+ .filter(w => w && !safeUsers.some(u => u && (u as any).worker_id === w.id))
+ .map(w => ({
+ id: w.id,
+ name: w.name || 'Trabajador sin nombre',
+ email: 'Sin cuenta',
+ role_id: 'trabajador',
+ area: '',
+ status: 'no_account',
+ type: 'worker',
+ created_at: ''
+ }))
+ ]
 
-  const filteredItems = unifiedList.filter(item => {
-    const s = searchTerm.toLowerCase()
-    const name = (item.name || '').toLowerCase()
-    const email = (item.email || '').toLowerCase()
-    return name.includes(s) || email.includes(s)
-  })
+ const filteredItems = unifiedList.filter(item => {
+ const s = searchTerm.toLowerCase()
+ const name = (item.name || '').toLowerCase()
+ const email = (item.email || '').toLowerCase()
+ return name.includes(s) || email.includes(s)
+ })
 
-  const handleStatusToggle = async (id: string, currentStatus: string) => {
-    const newStatus = currentStatus === 'active' ? 'inactive' : 'active'
-    const originalUsers = [...users]
-    
-    // Actualización local inmediata (0ms)
-    setUsers(prev => prev.map(u => u.id === id ? { ...u, status: newStatus } : u))
-    
-    const res = await updateUserStatus(id, newStatus as 'active' | 'inactive')
-    if (!res.success) {
-      alert(res.error)
-      setUsers(originalUsers) // rollback en caso de error
-    } else {
-      router.refresh()
-    }
-  }
+ const handleStatusToggle = async (id: string, currentStatus: string) => {
+ const newStatus = currentStatus === 'active' ? 'inactive' : 'active'
+ const originalUsers = [...users]
+ 
+ // Actualización local inmediata (0ms)
+ setUsers(prev => prev.map(u => u.id === id ? { ...u, status: newStatus } : u))
+ 
+ const res = await updateUserStatus(id, newStatus as 'active' | 'inactive')
+ if (!res.success) {
+ alert(res.error)
+ setUsers(originalUsers) // rollback en caso de error
+ } else {
+ router.refresh()
+ }
+ }
 
-  const handleRoleChange = async (id: string, newRole: string) => {
-    const originalUsers = [...users]
-    
-    // Actualización local inmediata (0ms)
-    setUsers(prev => prev.map(u => u.id === id ? { ...u, role_id: newRole } : u))
-    
-    const res = await updateUserRole(id, newRole)
-    if (!res.success) {
-      alert(res.error)
-      setUsers(originalUsers) // rollback en caso de error
-    } else {
-      router.refresh()
-    }
-  }
+ const handleRoleChange = async (id: string, newRole: string) => {
+ const originalUsers = [...users]
+ 
+ // Actualización local inmediata (0ms)
+ setUsers(prev => prev.map(u => u.id === id ? { ...u, role_id: newRole } : u))
+ 
+ const res = await updateUserRole(id, newRole)
+ if (!res.success) {
+ alert(res.error)
+ setUsers(originalUsers) // rollback en caso de error
+ } else {
+ router.refresh()
+ }
+ }
 
-  const handleAreaChange = async (id: string, newArea: string) => {
-    const originalUsers = [...users]
-    
-    // Actualización local inmediata (0ms)
-    setUsers(prev => prev.map(u => u.id === id ? { ...u, area: newArea } : u))
-    
-    const res = await updateUserArea(id, newArea)
-    if (!res.success) {
-      alert(res.error)
-      setUsers(originalUsers) // rollback en caso de error
-    } else {
-      router.refresh()
-    }
-  }
-  
-  const handleDelete = async (id: string, name: string) => {
-    if (!confirm(`¿Estás seguro de que deseas eliminar permanentemente al usuario ${name}? Esta acción no se puede deshacer.`)) return
-    
-    const originalUsers = [...users]
-    
-    // Actualización local inmediata (0ms)
-    setUsers(prev => prev.filter(u => u.id !== id))
-    
-    const res = await deleteUser(id)
-    if (!res.success) {
-      alert(res.error)
-      setUsers(originalUsers) // rollback en caso de error
-    } else {
-      router.refresh()
-    }
-  }
+ const handleAreaChange = async (id: string, newArea: string) => {
+ const originalUsers = [...users]
+ 
+ // Actualización local inmediata (0ms)
+ setUsers(prev => prev.map(u => u.id === id ? { ...u, area: newArea } : u))
+ 
+ const res = await updateUserArea(id, newArea)
+ if (!res.success) {
+ alert(res.error)
+ setUsers(originalUsers) // rollback en caso de error
+ } else {
+ router.refresh()
+ }
+ }
+ 
+ const handleDelete = async (id: string, name: string) => {
+ if (!confirm(`¿Estás seguro de que deseas eliminar permanentemente al usuario ${name}? Esta acción no se puede deshacer.`)) return
+ 
+ const originalUsers = [...users]
+ 
+ // Actualización local inmediata (0ms)
+ setUsers(prev => prev.filter(u => u.id !== id))
+ 
+ const res = await deleteUser(id)
+ if (!res.success) {
+ alert(res.error)
+ setUsers(originalUsers) // rollback en caso de error
+ } else {
+ router.refresh()
+ }
+ }
 
-  return (
-    <div className="space-y-6">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white p-8 rounded-[2rem] shadow-sm border border-slate-50">
-        <div>
-          <h1 className="text-3xl font-bold text-slate-800 tracking-tight flex items-center gap-3">
-            <div className="bg-blue-100 p-2 rounded-xl">
-              <Shield className="text-blue-600" size={24} />
-            </div>
-            Gestión de Equipo
-          </h1>
-          <p className="text-slate-500 font-medium text-sm mt-1">Administra los accesos y roles de tu personal.</p>
-        </div>
-        {canManage && (
-          <button 
-            onClick={() => setIsAddModalOpen(true)}
-            className="w-full md:w-auto bg-blue-600 hover:bg-blue-700 text-white px-8 py-4 rounded-2xl font-bold transition-all flex items-center justify-center gap-3 shadow-lg shadow-blue-100 active:scale-95"
-          >
-            <UserPlus size={20} strokeWidth={3} />
-            <span>Invitar Usuario</span>
-          </button>
-        )}
-      </div>
+ return (
+ <div className="space-y-6">
+ <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white p-8 rounded-[2rem] shadow-sm border border-slate-50">
+ <div>
+ <h1 className="text-3xl font-bold text-slate-800 tracking-tight flex items-center gap-3">
+ <div className="bg-blue-100 p-2 rounded-xl">
+ <Shield className="text-blue-600" size={24} />
+ </div>
+ Gestión de Equipo
+ </h1>
+ <p className="text-slate-500 font-medium text-sm mt-1">Administra los accesos y roles de tu personal.</p>
+ </div>
+ {canManage && (
+ <button 
+ onClick={() => setIsAddModalOpen(true)}
+ className="w-full md:w-auto bg-blue-600 hover:bg-blue-700 text-white px-8 py-4 rounded-2xl font-bold transition-all flex items-center justify-center gap-3 shadow-lg shadow-blue-100 active:scale-95"
+ >
+ <UserPlus size={20} strokeWidth={3} />
+ <span>Invitar Usuario</span>
+ </button>
+ )}
+ </div>
 
-      <div className="bg-white rounded-[2rem] shadow-sm border border-slate-100 overflow-hidden">
-        <div className="p-6 border-b border-slate-100 bg-slate-50/50">
-          <div className="relative max-w-sm">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-            <input 
-              type="text" 
-              placeholder="Buscar por nombre o correo..." 
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-12 pr-4 py-3 border-2 border-white focus:border-blue-500 rounded-2xl outline-none text-slate-900 bg-white shadow-sm transition-all text-sm font-bold"
-            />
-          </div>
-        </div>
+ <div className="bg-white rounded-[2rem] shadow-sm border border-slate-100 overflow-hidden">
+ <div className="p-6 border-b border-slate-100 bg-slate-50/50">
+ <div className="relative max-w-sm">
+ <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+ <input 
+ type="text" 
+ placeholder="Buscar por nombre o correo..." 
+ value={searchTerm}
+ onChange={(e) => setSearchTerm(e.target.value)}
+ className="w-full pl-12 pr-4 py-3 border-2 border-white focus:border-blue-500 rounded-2xl outline-none text-slate-900 bg-white shadow-sm transition-all text-sm font-bold"
+ />
+ </div>
+ </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-left">
-            <thead>
-              <tr className="bg-slate-50/50 border-b border-slate-100">
-                <th className="py-5 px-8 text-[11px] font-bold text-slate-400 uppercase tracking-widest">Nombre / Trabajador</th>
-                <th className="py-5 text-[11px] font-bold text-slate-400 uppercase tracking-widest">Correo / Cuenta</th>
-                <th className="py-5 text-[11px] font-bold text-slate-400 uppercase tracking-widest">Rol / Acceso</th>
-                <th className="py-5 text-[11px] font-bold text-slate-400 uppercase tracking-widest">Área / Depto.</th>
-                <th className="py-5 text-[11px] font-bold text-slate-400 uppercase tracking-widest text-center">Estado</th>
-                <th className="py-5 px-8 text-[11px] font-bold text-slate-400 uppercase tracking-widest text-right">Acciones</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-50">
-              {filteredItems.filter(Boolean).map((item) => {
-                if (!item || !item.id) return null;
-                const isUser = item.type === 'user';
-                const isWorker = item.type === 'worker';
-                
-                return (
-                <tr key={item.id} className="hover:bg-slate-50/50 transition-colors group">
-                  <td className="py-6 px-8">
-                    <div className="flex flex-col">
-                      <span className="text-base font-bold text-slate-800 uppercase tracking-tight">
-                        {item.name || 'Sin Nombre'}
-                      </span>
-                      {isWorker && <span className="text-[10px] text-blue-500 font-bold uppercase tracking-widest mt-0.5">Ficha Trabajador</span>}
-                    </div>
-                  </td>
-                  <td className="py-6">
-                    <span className={`text-sm font-bold keep-case ${isWorker ? 'text-slate-400 italic' : 'text-slate-600'}`}>
-                      {item.email || (isUser ? 'Correo no definido' : 'Sin cuenta')}
-                    </span>
-                  </td>
-                  <td className="py-6">
-                    {isUser ? (
-                        canManage ? (
-                          <select 
-                            value={item.role_id || 'trabajador'}
-                            onChange={(e) => handleRoleChange(item.id, e.target.value)}
-                            className="bg-transparent border-none text-blue-600 text-sm font-bold uppercase tracking-tighter focus:ring-0 cursor-pointer p-0"
-                          >
-                            <option value="admin">Administrador</option>
-                            <option value="gerente">Gerente</option>
-                            <option value="operaciones">Operaciones</option>
-                            <option value="almacen">Almacén</option>
-                            <option value="soma">SOMA / Seguridad</option>
-                            <option value="supervisor">Supervisor</option>
-                            <option value="jefe_area">Jefe de Área</option>
-                            <option value="trabajador">Trabajador</option>
-                          </select>
-                        ) : (
-                          <span className="text-xs font-bold text-blue-600 uppercase tracking-tighter bg-blue-50 px-2 py-0.5 rounded-md">
-                            {item.role_id || 'trabajador'}
-                          </span>
-                        )
-                    ) : (
-                      <span className="text-xs font-bold text-slate-400 uppercase tracking-tighter">Sin acceso</span>
-                    )}
-                  </td>
-                  <td className="py-6">
-                    {isUser ? (
-                        canManage ? (
-                          <select 
-                            value={item.area || ''}
-                            onChange={(e) => handleAreaChange(item.id, e.target.value)}
-                            className="bg-transparent border-none text-slate-600 text-xs font-bold uppercase tracking-tighter focus:ring-0 cursor-pointer p-0"
-                          >
-                            <option value="">Sin Asignar</option>
-                            <option value="Gerencia General">Gerencia General</option>
-                            <option value="Administración">Administración</option>
-                            <option value="Operaciones">Operaciones</option>
-                            <option value="Mecánica">Mecánica</option>
-                            <option value="Seguridad SOMA">Seguridad SOMA</option>
-                            <option value="Cocina">Cocina</option>
-                          </select>
-                        ) : (
-                          <span className="text-xs font-bold text-slate-600 uppercase tracking-tighter">
-                            {item.area || 'General'}
-                          </span>
-                        )
-                    ) : (
-                      <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">-</span>
-                    )}
-                  </td>
-                  <td className="py-6 text-center">
-                    {item.status === 'active' ? (
-                      <span className="inline-flex items-center gap-1.5 bg-emerald-50 text-emerald-700 px-3 py-1 rounded-lg text-[10px] font-bold uppercase border border-emerald-100 shadow-sm">
-                        <UserCheck size={12} /> Activo
-                      </span>
-                    ) : item.status === 'inactive' ? (
-                      <span className="inline-flex items-center gap-1.5 bg-slate-50 text-slate-400 px-3 py-1 rounded-lg text-[10px] font-bold uppercase border border-slate-100 shadow-sm">
-                        <UserX size={12} /> Inactivo
-                      </span>
-                    ) : (
-                      <span className="inline-flex items-center gap-1.5 bg-amber-50 text-amber-600 px-3 py-1 rounded-lg text-[10px] font-bold uppercase border border-amber-100 shadow-sm">
-                        <Shield size={12} /> Sin acceso
-                      </span>
-                    )}
-                  </td>
-                  <td className="py-6 px-8 text-right">
-                    <div className="flex items-center justify-end gap-3 transition-all">
-                      {canManage && isUser && (
-                        <>
-                          <button 
-                            onClick={() => setEditingUser(item)}
-                            className="p-2.5 rounded-xl border border-slate-100 text-blue-600 bg-white hover:bg-blue-50 hover:border-blue-100 transition-all shadow-sm"
-                            title="Editar Detalles"
-                          >
-                            <Edit size={18} />
-                          </button>
+ <div className="overflow-x-auto">
+ <table className="w-full text-left">
+ <thead>
+ <tr className="bg-slate-50/50 border-b border-slate-100">
+ <th className="py-5 px-8 text-[11px] font-bold text-slate-400 tracking-tight">Nombre / Trabajador</th>
+ <th className="py-5 text-[11px] font-bold text-slate-400 tracking-tight">Correo / Cuenta</th>
+ <th className="py-5 text-[11px] font-bold text-slate-400 tracking-tight">Rol / Acceso</th>
+ <th className="py-5 text-[11px] font-bold text-slate-400 tracking-tight">Área / Depto.</th>
+ <th className="py-5 text-[11px] font-bold text-slate-400 tracking-tight text-center">Estado</th>
+ <th className="py-5 px-8 text-[11px] font-bold text-slate-400 tracking-tight text-right">Acciones</th>
+ </tr>
+ </thead>
+ <tbody className="divide-y divide-slate-50">
+ {filteredItems.filter(Boolean).map((item) => {
+ if (!item || !item.id) return null;
+ const isUser = item.type === 'user';
+ const isWorker = item.type === 'worker';
+ 
+ return (
+ <tr key={item.id} className="hover:bg-slate-50/50 transition-colors group">
+ <td className="py-6 px-8">
+ <div className="flex flex-col">
+ <span className="text-base font-bold text-slate-800 tracking-tight">
+ {item.name || 'Sin Nombre'}
+ </span>
+ {isWorker && <span className="text-[10px] text-blue-500 font-bold tracking-tight mt-0.5">Ficha Trabajador</span>}
+ </div>
+ </td>
+ <td className="py-6">
+ <span className={`text-sm font-bold keep-case ${isWorker ? 'text-slate-400 italic' : 'text-slate-600'}`}>
+ {item.email || (isUser ? 'Correo no definido' : 'Sin cuenta')}
+ </span>
+ </td>
+ <td className="py-6">
+ {isUser ? (
+ canManage ? (
+ <select 
+ value={item.role_id || 'trabajador'}
+ onChange={(e) => handleRoleChange(item.id, e.target.value)}
+ className="bg-transparent border-none text-blue-600 text-sm font-bold tracking-tighter focus:ring-0 cursor-pointer p-0"
+ >
+ <option value="admin">Administrador</option>
+ <option value="gerente">Gerente</option>
+ <option value="operaciones">Operaciones</option>
+ <option value="almacen">Almacén</option>
+ <option value="soma">SOMA / Seguridad</option>
+ <option value="supervisor">Supervisor</option>
+ <option value="jefe_area">Jefe de Área</option>
+ <option value="trabajador">Trabajador</option>
+ </select>
+ ) : (
+ <span className="text-xs font-bold text-blue-600 tracking-tighter bg-blue-50 px-2 py-0.5 rounded-md">
+ {item.role_id || 'trabajador'}
+ </span>
+ )
+ ) : (
+ <span className="text-xs font-bold text-slate-400 tracking-tighter">Sin acceso</span>
+ )}
+ </td>
+ <td className="py-6">
+ {isUser ? (
+ canManage ? (
+ <select 
+ value={item.area || ''}
+ onChange={(e) => handleAreaChange(item.id, e.target.value)}
+ className="bg-transparent border-none text-slate-600 text-xs font-bold tracking-tighter focus:ring-0 cursor-pointer p-0"
+ >
+ <option value="">Sin Asignar</option>
+ <option value="Gerencia General">Gerencia General</option>
+ <option value="Administración">Administración</option>
+ <option value="Operaciones">Operaciones</option>
+ <option value="Mecánica">Mecánica</option>
+ <option value="Seguridad SOMA">Seguridad SOMA</option>
+ <option value="Cocina">Cocina</option>
+ </select>
+ ) : (
+ <span className="text-xs font-bold text-slate-600 tracking-tighter">
+ {item.area || 'General'}
+ </span>
+ )
+ ) : (
+ <span className="text-xs font-bold text-slate-400 tracking-tight">-</span>
+ )}
+ </td>
+ <td className="py-6 text-center">
+ {item.status === 'active' ? (
+ <span className="inline-flex items-center gap-1.5 bg-emerald-50 text-emerald-700 px-3 py-1 rounded-lg text-[10px] font-bold border border-emerald-100 shadow-sm">
+ <UserCheck size={12} /> Activo
+ </span>
+ ) : item.status === 'inactive' ? (
+ <span className="inline-flex items-center gap-1.5 bg-slate-50 text-slate-400 px-3 py-1 rounded-lg text-[10px] font-bold border border-slate-100 shadow-sm">
+ <UserX size={12} /> Inactivo
+ </span>
+ ) : (
+ <span className="inline-flex items-center gap-1.5 bg-amber-50 text-amber-600 px-3 py-1 rounded-lg text-[10px] font-bold border border-amber-100 shadow-sm">
+ <Shield size={12} /> Sin acceso
+ </span>
+ )}
+ </td>
+ <td className="py-6 px-8 text-right">
+ <div className="flex items-center justify-end gap-3 transition-all">
+ {canManage && isUser && (
+ <>
+ <button 
+ onClick={() => setEditingUser(item)}
+ className="p-2.5 rounded-xl border border-slate-100 text-blue-600 bg-white hover:bg-blue-50 hover:border-blue-100 transition-all shadow-sm"
+ title="Editar Detalles"
+ >
+ <Edit size={18} />
+ </button>
 
-                          <button 
-                            onClick={() => handleStatusToggle(item.id, item.status)}
-                            className={`p-2.5 rounded-xl border transition-all shadow-sm ${
-                              item.status === 'active' 
-                              ? 'border-slate-100 text-slate-400 bg-white hover:bg-rose-50 hover:text-rose-600 hover:border-rose-100' 
-                              : 'border-emerald-100 text-emerald-600 bg-emerald-50 hover:bg-emerald-600 hover:text-white'
-                            }`}
-                            title={item.status === 'active' ? 'Desactivar Usuario' : 'Activar Usuario'}
-                          >
-                            {item.status === 'active' ? <UserX size={18} /> : <UserCheck size={18} />}
-                          </button>
-                          
-                          <button 
-                            onClick={() => handleDelete(item.id, item.name)}
-                            className="p-2.5 rounded-xl border border-slate-100 text-slate-400 bg-white hover:bg-rose-50 hover:text-rose-600 hover:border-rose-100 transition-all shadow-sm"
-                            title="Eliminar Usuario"
-                          >
-                            <Trash2 size={18} />
-                          </button>
-                        </>
-                      )}
-                      
-                      {canManage && isWorker && (
-                        <button 
-                          onClick={() => setIsAddModalOpen(true)}
-                          className="flex items-center gap-2 text-[10px] font-bold px-4 py-2 rounded-xl border border-blue-100 text-blue-600 bg-blue-50 hover:bg-blue-600 hover:text-white transition-all uppercase tracking-tighter shadow-sm"
-                          title="Invitar a crear cuenta"
-                        >
-                          <UserPlus size={14} />
-                          <span>Invitar</span>
-                        </button>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              )})}
-              {filteredItems.length === 0 && (
-                <tr>
-                  <td colSpan={5} className="py-32 text-center text-slate-400 font-bold">
-                    No se encontraron usuarios o trabajadores registrados.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
+ <button 
+ onClick={() => handleStatusToggle(item.id, item.status)}
+ className={`p-2.5 rounded-xl border transition-all shadow-sm ${
+ item.status === 'active' 
+ ? 'border-slate-100 text-slate-400 bg-white hover:bg-rose-50 hover:text-rose-600 hover:border-rose-100' 
+ : 'border-emerald-100 text-emerald-600 bg-emerald-50 hover:bg-emerald-600 hover:text-white'
+ }`}
+ title={item.status === 'active' ? 'Desactivar Usuario' : 'Activar Usuario'}
+ >
+ {item.status === 'active' ? <UserX size={18} /> : <UserCheck size={18} />}
+ </button>
+ 
+ <button 
+ onClick={() => handleDelete(item.id, item.name)}
+ className="p-2.5 rounded-xl border border-slate-100 text-slate-400 bg-white hover:bg-rose-50 hover:text-rose-600 hover:border-rose-100 transition-all shadow-sm"
+ title="Eliminar Usuario"
+ >
+ <Trash2 size={18} />
+ </button>
+ </>
+ )}
+ 
+ {canManage && isWorker && (
+ <button 
+ onClick={() => setIsAddModalOpen(true)}
+ className="flex items-center gap-2 text-[10px] font-bold px-4 py-2 rounded-xl border border-blue-100 text-blue-600 bg-blue-50 hover:bg-blue-600 hover:text-white transition-all tracking-tighter shadow-sm"
+ title="Invitar a crear cuenta"
+ >
+ <UserPlus size={14} />
+ <span>Invitar</span>
+ </button>
+ )}
+ </div>
+ </td>
+ </tr>
+ )})}
+ {filteredItems.length === 0 && (
+ <tr>
+ <td colSpan={5} className="py-32 text-center text-slate-400 font-bold">
+ No se encontraron usuarios o trabajadores registrados.
+ </td>
+ </tr>
+ )}
+ </tbody>
+ </table>
+ </div>
+ </div>
 
-      <AddUserModal 
-        isOpen={isAddModalOpen} 
-        onClose={() => setIsAddModalOpen(false)} 
-        availableWorkers={availableWorkers}
-      />
+ <AddUserModal 
+ isOpen={isAddModalOpen} 
+ onClose={() => setIsAddModalOpen(false)} 
+ availableWorkers={availableWorkers}
+ />
 
-      <EditUserModal 
-        isOpen={!!editingUser} 
-        onClose={() => setEditingUser(null)} 
-        onSuccess={(updatedData?: any) => {
-          if (updatedData) {
-            setUsers(prev => prev.map(u => u.id === updatedData.id ? { ...u, ...updatedData } : u))
-          }
-          router.refresh()
-          setEditingUser(null)
-        }} 
-        user={editingUser}
-      />
-    </div>
-  )
+ <EditUserModal 
+ isOpen={!!editingUser} 
+ onClose={() => setEditingUser(null)} 
+ onSuccess={(updatedData?: any) => {
+ if (updatedData) {
+ setUsers(prev => prev.map(u => u.id === updatedData.id ? { ...u, ...updatedData } : u))
+ }
+ router.refresh()
+ setEditingUser(null)
+ }} 
+ user={editingUser}
+ />
+ </div>
+ )
 }

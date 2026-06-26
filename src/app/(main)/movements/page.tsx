@@ -6,17 +6,17 @@ import MovementsClient from './movements-client'
 export const dynamic = 'force-dynamic'
 
 export default async function MovementsPage() {
-  const [initialMovements, workers, { extendedUser }] = await Promise.all([
-    getMovements(),
-    getWorkersShort(),
-    getUserSession()
-  ])
+ const [initialMovements, workers, { extendedUser }] = await Promise.all([
+ getMovements(),
+ getWorkersShort(),
+ getUserSession()
+ ])
 
-  return (
-    <MovementsClient 
-      initialMovements={initialMovements} 
-      workers={workers} 
-      userRole={extendedUser?.role_id || 'worker'} 
-    />
-  )
+ return (
+ <MovementsClient 
+ initialMovements={initialMovements} 
+ workers={workers} 
+ userRole={extendedUser?.role_id || 'worker'} 
+ />
+ )
 }
