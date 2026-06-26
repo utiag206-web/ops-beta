@@ -9,94 +9,94 @@ import { hasPermission } from '@/lib/permissions'
 import { redirect } from 'next/navigation'
 
 export default async function DashboardLayout({
-  children,
+ children,
 }: {
-  children: React.ReactNode
+ children: React.ReactNode
 }) {
-  const session = await getUserSession()
-  const extendedUser = session?.extendedUser
-  const viewMode = await getActiveViewMode()
-  
-  const headersList = await headers()
-  const pathname = (headersList.get('x-pathname') || '').split('?')[0]
-  
-  // 1. Mandatory Session Guard
-  if (!extendedUser) {
-    if (pathname !== '/dashboard' && pathname !== '/login') {
-       redirect('/login')
-    }
-    if (pathname !== '/dashboard') return null
-  }
+ const session = await getUserSession()
+ const extendedUser = session?.extendedUser
+ const viewMode = await getActiveViewMode()
+ 
+ const headersList = await headers()
+ const pathname = (headersList.get('x-pathname') || '').split('?')[0]
+ 
+ // 1. Mandatory Session Guard
+ if (!extendedUser) {
+ if (pathname !== '/dashboard' && pathname !== '/login') {
+ redirect('/login')
+ }
+ if (pathname !== '/dashboard') return null
+ }
 
-  const moduleName = pathname.split('/')[1]
-  const userRole = extendedUser?.role_id?.toLowerCase()
-  
-  console.log(`[LAYOUT] 🏁 Path: ${pathname} | User: ${extendedUser?.email || 'ANONYMOUS'} | Role: ${userRole} | ViewMode: ${viewMode}`)
-  
-  // 1. Mandatory Session Guard
-  if (!extendedUser) {
-    console.log(`[LAYOUT] 🛑 No extendedUser found. Redirecting to /login. (Auth user might exist but DB profile is missing)`)
-    redirect('/login')
-  }
+ const moduleName = pathname.split('/')[1]
+ const userRole = extendedUser?.role_id?.toLowerCase()
+ 
+ console.log(`[LAYOUT] 🏁 Path: ${pathname} | User: ${extendedUser?.email || 'ANONYMOUS'} | Role: ${userRole} | ViewMode: ${viewMode}`)
+ 
+ // 1. Mandatory Session Guard
+ if (!extendedUser) {
+ console.log(`[LAYOUT] 🛑 No extendedUser found. Redirecting to /login. (Auth user might exist but DB profile is missing)`)
+ redirect('/login')
+ }
 
-  // 2. Variables for Guards
-  const isSuperAdmin = userRole === 'super_admin' || userRole === 'superadmin'
-  const isImpersonating = !!extendedUser?.is_impersonating
+ // 2. Variables for Guards
+ const isSuperAdmin = userRole === 'super_admin' || userRole === 'superadmin'
+ const isImpersonating = !!extendedUser?.is_impersonating
 
-  // 3. Super Admin Global Guard
-  if (isSuperAdmin && !isImpersonating && !pathname.startsWith('/super-admin')) {
-    console.log(`[LAYOUT] 🛡️ SuperAdmin detected outside /super-admin. Redirecting to /super-admin`)
-    redirect('/super-admin')
-  }
+ // 3. Super Admin Global Guard
+ if (isSuperAdmin && !isImpersonating && !pathname.startsWith('/super-admin')) {
+ console.log(`[LAYOUT] 🛡️ SuperAdmin detected outside /super-admin. Redirecting to /super-admin`)
+ redirect('/super-admin')
+ }
 
-  // 4. Access Control Block for non-SuperAdmins
-  if (!isSuperAdmin && pathname.startsWith('/super-admin')) {
-    console.log(`[LAYOUT] ⛔ Non-SuperAdmin tried to access /super-admin. Redirecting to /dashboard`)
-    redirect('/dashboard')
-  }
+ // 4. Access Control Block for non-SuperAdmins
+ if (!isSuperAdmin && pathname.startsWith('/super-admin')) {
+ console.log(`[LAYOUT] ⛔ Non-SuperAdmin tried to access /super-admin. Redirecting to /dashboard`)
+ redirect('/dashboard')
+ }
 
-  // 5. Worker Specific Guards (Optimized PRE-DEPLOY: No redundant DB fetch)
-  if (userRole === 'trabajador' || viewMode === 'WORKER') {
-    if (userRole === 'trabajador' && extendedUser.worker_id && !extendedUser.worker_status) {
-       console.warn(`[LAYOUT] ⚠️ Worker profile missing or inactive for ${extendedUser.email}`)
-       redirect('/login')
-    }
+ // 5. Worker Specific Guards (Optimized PRE-DEPLOY: No redundant DB fetch)
+ if (userRole === 'trabajador' || viewMode === 'WORKER') {
+ if (userRole === 'trabajador' && extendedUser.worker_id && !extendedUser.worker_status) {
+ console.warn(`[LAYOUT] ⚠️ Worker profile missing or inactive for ${extendedUser.email}`)
+ redirect('/login')
+ }
 
-    const forbiddenSegments = ['/global', '/admin', '/users', '/workers', '/company', '/inventory', '/movements', '/caja-chica', '/configuracion']
-    if (forbiddenSegments.some(segment => pathname.startsWith(segment))) {
-       redirect('/dashboard')
-    }
-  }
+ const forbiddenSegments = ['/global', '/admin', '/users', '/workers', '/company', '/inventory', '/movements', '/caja-chica', '/configuracion']
+ if (forbiddenSegments.some(segment => pathname.startsWith(segment))) {
+ redirect('/dashboard')
+ }
+ }
 
-  // 6. Generic RBAC Guard
-  const cleanModule = moduleName || 'dashboard'
-  if (cleanModule !== 'dashboard' && cleanModule !== 'profile') {
-    const checkRole = viewMode === 'WORKER' ? 'trabajador' : userRole
-    if (!hasPermission(checkRole as string, cleanModule, extendedUser?.area)) {
-      console.warn(`[RBAC_GATEWAY] Access Denied: ${checkRole} to /${cleanModule}`)
-      redirect('/dashboard')
-    }
-  }
+ // 6. Generic RBAC Guard
+ const cleanModule = moduleName || 'dashboard'
+ if (cleanModule !== 'dashboard' && cleanModule !== 'profile') {
+ const checkRole = viewMode === 'WORKER' ? 'trabajador' : userRole
+ if (!hasPermission(checkRole as string, cleanModule, extendedUser?.area)) {
+ console.warn(`[RBAC_GATEWAY] Access Denied: ${checkRole} to /${cleanModule}`)
+ redirect('/dashboard')
+ }
+ }
 
-  return (
-    <RbacProvider 
-      role_id={extendedUser?.role_id} 
-      permissions={(extendedUser as any)?.permissions}
-      user={extendedUser}
-    >
-      <SidebarProvider>
-        <div className="flex h-screen bg-slate-50 overflow-hidden relative">
-          <Sidebar />
-          <div className="flex-1 flex flex-col h-screen overflow-hidden relative">
-            <Header />
-            <main className="flex-1 overflow-y-auto p-4 md:p-8 bg-slate-50/50">
-              <div className="max-w-7xl mx-auto">
-                {children}
-              </div>
-            </main>
-          </div>
-        </div>
-      </SidebarProvider>
-    </RbacProvider>
-  )
+ return (
+ <RbacProvider 
+ role_id={extendedUser?.role_id} 
+ permissions={(extendedUser as any)?.permissions}
+ user={extendedUser}
+ >
+ <SidebarProvider>
+ <div className="flex h-screen bg-slate-50 overflow-hidden relative">
+ <Sidebar />
+ <div className="flex-1 flex flex-col h-screen overflow-hidden relative">
+ <Header />
+ <main className="flex-1 overflow-y-auto p-4 md:p-8 bg-slate-50/50">
+ <div className="max-w-7xl mx-auto">
+ {children}
+ </div>
+ </main>
+ </div>
+ </div>
+ </SidebarProvider>
+ </RbacProvider>
+ )
 }

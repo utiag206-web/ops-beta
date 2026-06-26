@@ -2,22 +2,22 @@
 
 import React, { useState } from 'react'
 import { 
-  X, 
-  Plus, 
-  DollarSign, 
-  Calendar, 
-  FileText, 
-  CreditCard,
-  Banknote,
-  Phone,
-  Loader2,
-  ArrowUpCircle,
-  ArrowDownCircle,
-  Tag,
-  Hash,
-  Paperclip,
-  CheckCircle2,
-  Building
+ X, 
+ Plus, 
+ DollarSign, 
+ Calendar, 
+ FileText, 
+ CreditCard,
+ Banknote,
+ Phone,
+ Loader2,
+ ArrowUpCircle,
+ ArrowDownCircle,
+ Tag,
+ Hash,
+ Paperclip,
+ CheckCircle2,
+ Building
 } from 'lucide-react'
 import { registerPettyCashTransaction } from '@/app/(main)/caja-chica/actions'
 import { toast } from 'sonner'
@@ -26,417 +26,417 @@ import { useRbac } from '@/components/providers/rbac-provider'
 import { getWarehouses } from '@/app/(main)/inventory/actions'
 
 interface AddTransactionModalProps {
-  isOpen: boolean
-  onClose: () => void
-  onSuccess: () => void
-  area: string
-  initialData?: any
-  currentBalance?: number
+ isOpen: boolean
+ onClose: () => void
+ onSuccess: () => void
+ area: string
+ initialData?: any
+ currentBalance?: number
 }
 
 const CATEGORIES = [
-  { id: 'alimentos', label: 'Alimentos', icon: '🍎' },
-  { id: 'transporte', label: 'Transporte', icon: '🚗' },
-  { id: 'mantenimiento', label: 'Mantenimiento', icon: '🔧' },
-  { id: 'utiles', label: 'Útiles', icon: '📚' },
-  { id: 'emergencia', label: 'Emergencia', icon: '🚨' },
-  { id: 'otros', label: 'Otros', icon: '📦' },
-  { id: 'fondo_inicial', label: 'Fondo Inicial', icon: '🏦' },
-  { id: 'reposicion', label: 'Reposición', icon: '🔄' },
-  { id: 'reembolso', label: 'Reembolso', icon: '💰' },
-  { id: 'transferencia', label: 'Transferencia Interna', icon: '💸' },
+ { id: 'alimentos', label: 'Alimentos', icon: '🍎' },
+ { id: 'transporte', label: 'Transporte', icon: '🚗' },
+ { id: 'mantenimiento', label: 'Mantenimiento', icon: '🔧' },
+ { id: 'utiles', label: 'Útiles', icon: '📚' },
+ { id: 'emergencia', label: 'Emergencia', icon: '🚨' },
+ { id: 'otros', label: 'Otros', icon: '📦' },
+ { id: 'fondo_inicial', label: 'Fondo Inicial', icon: '🏦' },
+ { id: 'reposicion', label: 'Reposición', icon: '🔄' },
+ { id: 'reembolso', label: 'Reembolso', icon: '💰' },
+ { id: 'transferencia', label: 'Transferencia Interna', icon: '💸' },
 ]
 
 export function AddTransactionModal({ isOpen, onClose, onSuccess, area, initialData, currentBalance }: AddTransactionModalProps) {
-  const { role_id } = useRbac()
-  const [loading, setLoading] = useState(false)
-  const [uploading, setUploading] = useState(false)
-  const [targetArea, setTargetArea] = useState('')
-  const [warehouses, setWarehouses] = useState<string[]>(['Administración'])
-  const [formData, setFormData] = useState({
-    type: initialData?.type || 'egreso' as 'ingreso' | 'egreso',
-    category: initialData?.category || 'otros',
-    reason: initialData?.reason || '',
-    amount: initialData?.amount?.toString() || '',
-    payment_method: (initialData?.payment_method || 'efectivo') as 'efectivo' | 'transferencia' | 'yape',
-    operation_number: initialData?.operation_number || '',
-    date: initialData?.date || new Date().toISOString().split('T')[0],
-    voucher_url: initialData?.voucher_url || ''
-  })
+ const { role_id } = useRbac()
+ const [loading, setLoading] = useState(false)
+ const [uploading, setUploading] = useState(false)
+ const [targetArea, setTargetArea] = useState('')
+ const [warehouses, setWarehouses] = useState<string[]>(['Administración'])
+ const [formData, setFormData] = useState({
+ type: initialData?.type || 'egreso' as 'ingreso' | 'egreso',
+ category: initialData?.category || 'otros',
+ reason: initialData?.reason || '',
+ amount: initialData?.amount?.toString() || '',
+ payment_method: (initialData?.payment_method || 'efectivo') as 'efectivo' | 'transferencia' | 'yape',
+ operation_number: initialData?.operation_number || '',
+ date: initialData?.date || new Date().toISOString().split('T')[0],
+ voucher_url: initialData?.voucher_url || ''
+ })
 
-  // Cargar almacenes dinámicamente al abrir
-  React.useEffect(() => {
-    if (isOpen) {
-      async function loadWarehouses() {
-        try {
-          const res = await getWarehouses(true)
-          if (res.data) {
-            const list = Array.from(new Set(['Administración', ...res.data.map((w: any) => w.name)]))
-            setWarehouses(list)
-          }
-        } catch (err) {
-          console.error('Error fetching warehouses:', err)
-        }
-      }
-      loadWarehouses()
-    }
-  }, [isOpen])
+ // Cargar almacenes dinámicamente al abrir
+ React.useEffect(() => {
+ if (isOpen) {
+ async function loadWarehouses() {
+ try {
+ const res = await getWarehouses(true)
+ if (res.data) {
+ const list = Array.from(new Set(['Administración', ...res.data.map((w: any) => w.name)]))
+ setWarehouses(list)
+ }
+ } catch (err) {
+ console.error('Error fetching warehouses:', err)
+ }
+ }
+ loadWarehouses()
+ }
+ }, [isOpen])
 
-  // Sync state when initialData changes (for Edit mode)
-  React.useEffect(() => {
-    if (initialData) {
-      setFormData(prev => ({
-        ...prev,
-        type: initialData.type,
-        category: initialData.category,
-        reason: initialData.reason,
-        amount: initialData.amount.toString(),
-        payment_method: initialData.payment_method,
-        operation_number: initialData.operation_number || '',
-        date: initialData.date,
-        voucher_url: initialData.voucher_url || ''
-      }))
-      setTargetArea(initialData.target_area || '')
-    } else {
-      setFormData(prev => ({
-        ...prev,
-        type: 'egreso',
-        category: 'otros',
-        reason: '',
-        amount: '',
-        payment_method: 'efectivo',
-        operation_number: '',
-        date: new Date().toISOString().split('T')[0],
-        voucher_url: ''
-      }))
-      setTargetArea('')
-    }
-  }, [initialData?.id, isOpen])
+ // Sync state when initialData changes (for Edit mode)
+ React.useEffect(() => {
+ if (initialData) {
+ setFormData(prev => ({
+ ...prev,
+ type: initialData.type,
+ category: initialData.category,
+ reason: initialData.reason,
+ amount: initialData.amount.toString(),
+ payment_method: initialData.payment_method,
+ operation_number: initialData.operation_number || '',
+ date: initialData.date,
+ voucher_url: initialData.voucher_url || ''
+ }))
+ setTargetArea(initialData.target_area || '')
+ } else {
+ setFormData(prev => ({
+ ...prev,
+ type: 'egreso',
+ category: 'otros',
+ reason: '',
+ amount: '',
+ payment_method: 'efectivo',
+ operation_number: '',
+ date: new Date().toISOString().split('T')[0],
+ voucher_url: ''
+ }))
+ setTargetArea('')
+ }
+ }, [initialData?.id, isOpen])
 
-  if (!isOpen) return null
+ if (!isOpen) return null
 
-  async function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0]
-    if (!file) return
+ async function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
+ const file = e.target.files?.[0]
+ if (!file) return
 
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error('El archivo excede los 5MB permitidos')
-      return
-    }
+ if (file.size > 5 * 1024 * 1024) {
+ toast.error('El archivo excede los 5MB permitidos')
+ return
+ }
 
-    setUploading(true)
-    try {
-      const { uploadFilesAction } = await import('@/app/actions/storage')
-      
-      const reader = new FileReader()
-      const base64Promise = new Promise<string>((resolve) => {
-        reader.onload = () => resolve(reader.result as string)
-        reader.readAsDataURL(file)
-      })
-      
-      const base64 = await base64Promise
-      const result = await uploadFilesAction(
-        [{ name: file.name, type: file.type, base64 }],
-        'petty-cash',
-        'caja-chica',
-        area.toLowerCase().replace(/\s+/g, '_')
-      )
+ setUploading(true)
+ try {
+ const { uploadFilesAction } = await import('@/app/actions/storage')
+ 
+ const reader = new FileReader()
+ const base64Promise = new Promise<string>((resolve) => {
+ reader.onload = () => resolve(reader.result as string)
+ reader.readAsDataURL(file)
+ })
+ 
+ const base64 = await base64Promise
+ const result = await uploadFilesAction(
+ [{ name: file.name, type: file.type, base64 }],
+ 'petty-cash',
+ 'caja-chica',
+ area.toLowerCase().replace(/\s+/g, '_')
+ )
 
-      if (result.success && result.urls?.[0]) {
-        setFormData(prev => ({ ...prev, voucher_url: result.urls[0] }))
-        toast.success('Comprobante subido correctamente')
-      } else {
-        throw new Error(result.error || 'No se obtuvo la URL pública')
-      }
-    } catch (error: any) {
-      toast.error('Error al subir comprobante: ' + error.message)
-    } finally {
-      setUploading(false)
-    }
-  }
+ if (result.success && result.urls?.[0]) {
+ setFormData(prev => ({ ...prev, voucher_url: result.urls[0] }))
+ toast.success('Comprobante subido correctamente')
+ } else {
+ throw new Error(result.error || 'No se obtuvo la URL pública')
+ }
+ } catch (error: any) {
+ toast.error('Error al subir comprobante: ' + error.message)
+ } finally {
+ setUploading(false)
+ }
+ }
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault()
-    if (!formData.reason || !formData.amount || !formData.category) {
-      toast.error('Por favor completa los campos obligatorios')
-      return
-    }
+ async function handleSubmit(e: React.FormEvent) {
+ e.preventDefault()
+ if (!formData.reason || !formData.amount || !formData.category) {
+ toast.error('Por favor completa los campos obligatorios')
+ return
+ }
 
-    if (formData.category === 'transferencia' && !targetArea) {
-      toast.error('Por favor selecciona la caja de contraparte para la transferencia')
-      return
-    }
+ if (formData.category === 'transferencia' && !targetArea) {
+ toast.error('Por favor selecciona la caja de contraparte para la transferencia')
+ return
+ }
 
-    if (formData.category === 'transferencia' && targetArea.toLowerCase() === area.toLowerCase()) {
-      toast.error('La caja de destino debe ser diferente de la caja de origen')
-      return
-    }
+ if (formData.category === 'transferencia' && targetArea.toLowerCase() === area.toLowerCase()) {
+ toast.error('La caja de destino debe ser diferente de la caja de origen')
+ return
+ }
 
-    setLoading(true)
-    
-    try {
-      if (initialData?.id) {
-        // Mode: EDIT
-        const { updatePettyCashTransaction } = await import('@/app/(main)/caja-chica/actions')
-        const result = await updatePettyCashTransaction(initialData.id, {
-          ...formData,
-          amount: Number(formData.amount)
-        })
-        if (result.error) toast.error(result.error)
-        else {
-          toast.success('Movimiento actualizado correctamente')
-          onSuccess()
-        }
-      } else {
-        // Mode: CREATE
-        const { registerPettyCashTransaction } = await import('@/app/(main)/caja-chica/actions')
-        const result = await registerPettyCashTransaction({
-          ...formData,
-          amount: Number(formData.amount),
-          area,
-          category: formData.category,
-          target_area: targetArea
-        })
-        if (result.error) toast.error(result.error)
-        else {
-          toast.success('Movimiento registrado correctamente')
-          onSuccess()
-        }
-      }
-    } catch (err: any) {
-      toast.error('Error al procesar: ' + err.message)
-    } finally {
-      setLoading(false)
-    }
-  }
+ setLoading(true)
+ 
+ try {
+ if (initialData?.id) {
+ // Mode: EDIT
+ const { updatePettyCashTransaction } = await import('@/app/(main)/caja-chica/actions')
+ const result = await updatePettyCashTransaction(initialData.id, {
+ ...formData,
+ amount: Number(formData.amount)
+ })
+ if (result.error) toast.error(result.error)
+ else {
+ toast.success('Movimiento actualizado correctamente')
+ onSuccess()
+ }
+ } else {
+ // Mode: CREATE
+ const { registerPettyCashTransaction } = await import('@/app/(main)/caja-chica/actions')
+ const result = await registerPettyCashTransaction({
+ ...formData,
+ amount: Number(formData.amount),
+ area,
+ category: formData.category,
+ target_area: targetArea
+ })
+ if (result.error) toast.error(result.error)
+ else {
+ toast.success('Movimiento registrado correctamente')
+ onSuccess()
+ }
+ }
+ } catch (err: any) {
+ toast.error('Error al procesar: ' + err.message)
+ } finally {
+ setLoading(false)
+ }
+ }
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
-      <div className="bg-white w-full max-w-xl rounded-[2rem] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300 max-h-[90vh] flex flex-col">
-        <div className="p-6 md:p-8 border-b border-slate-50 flex justify-between items-center bg-slate-50/50">
-          <div>
-            <h2 className="text-xl md:text-2xl font-bold text-slate-800 tracking-tight">Registro de Movimiento</h2>
-            <div className="flex items-center flex-wrap gap-2 mt-1">
-              <span className="text-xs font-bold text-blue-600 uppercase tracking-widest">Caja Chica: {area}</span>
-              {currentBalance !== undefined && (
-                <span className="text-[10px] font-black bg-blue-100 text-blue-800 px-2.5 py-0.5 rounded-full uppercase tracking-wider">
-                  Saldo Disponible: S/ {Number(currentBalance).toFixed(2)}
-                </span>
-              )}
-            </div>
-          </div>
-          <button onClick={onClose} className="p-2.5 hover:bg-white rounded-full text-slate-400 transition-all shadow-sm">
-            <X size={20} />
-          </button>
-        </div>
+ return (
+ <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
+ <div className="bg-white w-full max-w-xl rounded-[2rem] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300 max-h-[90vh] flex flex-col">
+ <div className="p-6 md:p-8 border-b border-slate-50 flex justify-between items-center bg-slate-50/50">
+ <div>
+ <h2 className="text-xl md:text-2xl font-bold text-slate-800 tracking-tight">Registro de Movimiento</h2>
+ <div className="flex items-center flex-wrap gap-2 mt-1">
+ <span className="text-xs font-bold text-blue-600 tracking-tight">Caja Chica: {area}</span>
+ {currentBalance !== undefined && (
+ <span className="text-[10px] font-black bg-blue-100 text-blue-800 px-2.5 py-0.5 rounded-full tracking-normal">
+ Saldo Disponible: S/ {Number(currentBalance).toFixed(2)}
+ </span>
+ )}
+ </div>
+ </div>
+ <button onClick={onClose} className="p-2.5 hover:bg-white rounded-full text-slate-400 transition-all shadow-sm">
+ <X size={20} />
+ </button>
+ </div>
 
-        <form onSubmit={handleSubmit} className="p-6 md:p-8 space-y-6 overflow-y-auto flex-1 custom-scrollbar">
-          {/* TIPO DE MOVIMIENTO */}
-          <div className="grid grid-cols-2 gap-4 p-1.5 bg-slate-100 rounded-2xl border border-slate-200">
-            <button
-              type="button"
-              onClick={() => setFormData(prev => ({...prev, type: 'ingreso'}))}
-              className={`flex items-center justify-center gap-3 py-3.5 rounded-xl font-bold text-[11px] uppercase tracking-widest transition-all ${
-                formData.type === 'ingreso' 
-                ? 'bg-emerald-500 text-white shadow-lg' 
-                : 'text-slate-500 hover:bg-white/50'
-              }`}
-            >
-              <ArrowUpCircle size={18} /> INGRESO
-            </button>
-            <button
-              type="button"
-              onClick={() => setFormData(prev => ({...prev, type: 'egreso'}))}
-              className={`flex items-center justify-center gap-3 py-3.5 rounded-xl font-bold text-[11px] uppercase tracking-widest transition-all ${
-                formData.type === 'egreso' 
-                ? 'bg-rose-500 text-white shadow-lg' 
-                : 'text-slate-500 hover:bg-white/50'
-              }`}
-            >
-              <ArrowDownCircle size={18} /> EGRESO
-            </button>
-          </div>
+ <form onSubmit={handleSubmit} className="p-6 md:p-8 space-y-6 overflow-y-auto flex-1 custom-scrollbar">
+ {/* TIPO DE MOVIMIENTO */}
+ <div className="grid grid-cols-2 gap-4 p-1.5 bg-slate-100 rounded-2xl border border-slate-200">
+ <button
+ type="button"
+ onClick={() => setFormData(prev => ({...prev, type: 'ingreso'}))}
+ className={`flex items-center justify-center gap-3 py-3.5 rounded-xl font-bold text-[11px] tracking-widest transition-all ${
+ formData.type === 'ingreso' 
+ ? 'bg-emerald-500 text-white shadow-lg' 
+ : 'text-slate-500 hover:bg-white/50'
+ }`}
+ >
+ <ArrowUpCircle size={18} /> INGRESO
+ </button>
+ <button
+ type="button"
+ onClick={() => setFormData(prev => ({...prev, type: 'egreso'}))}
+ className={`flex items-center justify-center gap-3 py-3.5 rounded-xl font-bold text-[11px] tracking-widest transition-all ${
+ formData.type === 'egreso' 
+ ? 'bg-rose-500 text-white shadow-lg' 
+ : 'text-slate-500 hover:bg-white/50'
+ }`}
+ >
+ <ArrowDownCircle size={18} /> EGRESO
+ </button>
+ </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* CATEGORIA */}
-            <div className="space-y-2">
-              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2">
-                <Tag size={12} /> Categoría
-              </label>
-              <select 
-                required
-                value={formData.category}
-                onChange={e => setFormData(prev => ({...prev, category: e.target.value}))}
-                className="w-full px-4 py-4 bg-slate-50 border-transparent focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 rounded-2xl text-sm font-bold text-slate-700 transition-all outline-none appearance-none cursor-pointer"
-              >
-                {CATEGORIES.filter(c => {
-                  const isTransfer = c.id === 'transferencia'
-                  const isCentralRole = ['admin', 'gerente', 'super_admin', 'superadmin', 'administracion', 'finanzas', 'caja central'].includes((role_id || '').toLowerCase())
-                  if (isTransfer && !isCentralRole) return false
+ <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+ {/* CATEGORIA */}
+ <div className="space-y-2">
+ <label className="text-[10px] font-bold text-slate-400 tracking-tight ml-1 flex items-center gap-2">
+ <Tag size={12} /> Categoría
+ </label>
+ <select 
+ required
+ value={formData.category}
+ onChange={e => setFormData(prev => ({...prev, category: e.target.value}))}
+ className="w-full px-4 py-4 bg-slate-50 border-transparent focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 rounded-2xl text-sm font-bold text-slate-700 transition-all outline-none appearance-none cursor-pointer"
+ >
+ {CATEGORIES.filter(c => {
+ const isTransfer = c.id === 'transferencia'
+ const isCentralRole = ['admin', 'gerente', 'super_admin', 'superadmin', 'administracion', 'finanzas', 'caja central'].includes((role_id || '').toLowerCase())
+ if (isTransfer && !isCentralRole) return false
 
-                  if (formData.type === 'ingreso') return ['fondo_inicial', 'reposicion', 'reembolso', 'otros', 'transferencia'].includes(c.id)
-                  return !['fondo_inicial', 'reposicion', 'reembolso'].includes(c.id)
-                }).map(c => (
-                  <option key={c.id} value={c.id}>{c.icon} {c.label}</option>
-                ))}
-              </select>
-            </div>
+ if (formData.type === 'ingreso') return ['fondo_inicial', 'reposicion', 'reembolso', 'otros', 'transferencia'].includes(c.id)
+ return !['fondo_inicial', 'reposicion', 'reembolso'].includes(c.id)
+ }).map(c => (
+ <option key={c.id} value={c.id}>{c.icon} {c.label}</option>
+ ))}
+ </select>
+ </div>
 
-            {/* FECHA */}
-            <div className="space-y-2">
-              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2">
-                <Calendar size={12} /> Fecha
-              </label>
-              <input 
-                type="date"
-                required
-                value={formData.date}
-                onChange={e => setFormData(prev => ({...prev, date: e.target.value}))}
-                className="w-full px-4 py-4 bg-slate-50 border-transparent focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 rounded-2xl text-sm font-bold text-slate-700 transition-all outline-none"
-              />
-            </div>
-          </div>
+ {/* FECHA */}
+ <div className="space-y-2">
+ <label className="text-[10px] font-bold text-slate-400 tracking-tight ml-1 flex items-center gap-2">
+ <Calendar size={12} /> Fecha
+ </label>
+ <input 
+ type="date"
+ required
+ value={formData.date}
+ onChange={e => setFormData(prev => ({...prev, date: e.target.value}))}
+ className="w-full px-4 py-4 bg-slate-50 border-transparent focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 rounded-2xl text-sm font-bold text-slate-700 transition-all outline-none"
+ />
+ </div>
+ </div>
 
-          {/* CAJA CONTRA-PARTE (TRANSFERENCIAS) */}
-          {formData.category === 'transferencia' && (
-            <div className="space-y-2 animate-in fade-in slide-in-from-top-2 duration-200">
-              <div className="flex justify-between items-center ml-1">
-                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
-                  <Building size={12} /> {formData.type === 'egreso' ? 'Caja de Destino' : 'Caja de Origen'}
-                </label>
-              </div>
-              <select 
-                required
-                value={targetArea}
-                onChange={e => setTargetArea(e.target.value)}
-                className="w-full px-4 py-4 bg-blue-50 border-transparent focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 rounded-2xl text-sm font-bold text-slate-700 transition-all outline-none appearance-none cursor-pointer"
-              >
-                <option value="">-- Selecciona una Caja --</option>
-                {warehouses
-                  .filter(a => a.toLowerCase() !== area.toLowerCase())
-                  .map(a => (
-                    <option key={a} value={a}>{a}</option>
-                  ))
-                }
-              </select>
-            </div>
-          )}
+ {/* CAJA CONTRA-PARTE (TRANSFERENCIAS) */}
+ {formData.category === 'transferencia' && (
+ <div className="space-y-2 animate-in fade-in slide-in-from-top-2 duration-200">
+ <div className="flex justify-between items-center ml-1">
+ <label className="text-[10px] font-bold text-slate-400 tracking-tight flex items-center gap-2">
+ <Building size={12} /> {formData.type === 'egreso' ? 'Caja de Destino' : 'Caja de Origen'}
+ </label>
+ </div>
+ <select 
+ required
+ value={targetArea}
+ onChange={e => setTargetArea(e.target.value)}
+ className="w-full px-4 py-4 bg-blue-50 border-transparent focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 rounded-2xl text-sm font-bold text-slate-700 transition-all outline-none appearance-none cursor-pointer"
+ >
+ <option value="">-- Selecciona una Caja --</option>
+ {warehouses
+ .filter(a => a.toLowerCase() !== area.toLowerCase())
+ .map(a => (
+ <option key={a} value={a}>{a}</option>
+ ))
+ }
+ </select>
+ </div>
+ )}
 
-          <div className="space-y-2">
-            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2">
-              <FileText size={12} /> Motivo / Concepto
-            </label>
-            <input 
-              type="text"
-              required
-              placeholder="Ej: Insumos para almuerzo"
-              value={formData.reason}
-              onChange={e => setFormData(prev => ({...prev, reason: e.target.value}))}
-              className="w-full px-4 py-4 bg-slate-50 border-transparent focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 rounded-2xl text-sm font-bold text-slate-700 transition-all outline-none"
-            />
-          </div>
+ <div className="space-y-2">
+ <label className="text-[10px] font-bold text-slate-400 tracking-tight ml-1 flex items-center gap-2">
+ <FileText size={12} /> Motivo / Concepto
+ </label>
+ <input 
+ type="text"
+ required
+ placeholder="Ej: Insumos para almuerzo"
+ value={formData.reason}
+ onChange={e => setFormData(prev => ({...prev, reason: e.target.value}))}
+ className="w-full px-4 py-4 bg-slate-50 border-transparent focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 rounded-2xl text-sm font-bold text-slate-700 transition-all outline-none"
+ />
+ </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* MONTO */}
-            <div className="space-y-2">
-              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2">
-                 <DollarSign size={12} /> Monto (S/)
-              </label>
-              <input 
-                type="number"
-                step="0.01"
-                required
-                placeholder="0.00"
-                value={formData.amount}
-                onChange={e => setFormData(prev => ({...prev, amount: e.target.value}))}
-                className="w-full px-4 py-4 bg-emerald-50/50 border-transparent focus:bg-white focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 rounded-2xl text-xl font-black text-slate-800 transition-all outline-none"
-              />
-            </div>
+ <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+ {/* MONTO */}
+ <div className="space-y-2">
+ <label className="text-[10px] font-bold text-slate-400 tracking-tight ml-1 flex items-center gap-2">
+ <DollarSign size={12} /> Monto (S/)
+ </label>
+ <input 
+ type="number"
+ step="0.01"
+ required
+ placeholder="0.00"
+ value={formData.amount}
+ onChange={e => setFormData(prev => ({...prev, amount: e.target.value}))}
+ className="w-full px-4 py-4 bg-emerald-50/50 border-transparent focus:bg-white focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 rounded-2xl text-xl font-black text-slate-800 transition-all outline-none"
+ />
+ </div>
 
-            {/* NRO OPERACION */}
-            <div className={`space-y-2 transition-all duration-300 ${['transferencia', 'yape'].includes(formData.payment_method) ? 'opacity-100' : 'opacity-40'}`}>
-              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2">
-                 <Hash size={12} /> Nro Operación (Opc)
-              </label>
-              <input 
-                type="text"
-                placeholder="01234..."
-                value={formData.operation_number}
-                onChange={e => setFormData(prev => ({...prev, operation_number: e.target.value}))}
-                className="w-full px-4 py-4 bg-slate-50 border-transparent focus:bg-white focus:border-slate-500 rounded-2xl text-sm font-bold text-slate-700 transition-all outline-none"
-              />
-            </div>
-          </div>
+ {/* NRO OPERACION */}
+ <div className={`space-y-2 transition-all duration-300 ${['transferencia', 'yape'].includes(formData.payment_method) ? 'opacity-100' : 'opacity-40'}`}>
+ <label className="text-[10px] font-bold text-slate-400 tracking-tight ml-1 flex items-center gap-2">
+ <Hash size={12} /> Nro Operación (Opc)
+ </label>
+ <input 
+ type="text"
+ placeholder="01234..."
+ value={formData.operation_number}
+ onChange={e => setFormData(prev => ({...prev, operation_number: e.target.value}))}
+ className="w-full px-4 py-4 bg-slate-50 border-transparent focus:bg-white focus:border-slate-500 rounded-2xl text-sm font-bold text-slate-700 transition-all outline-none"
+ />
+ </div>
+ </div>
 
-          {/* METODO DE PAGO */}
-          <div className="space-y-3">
-            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Método de Pago</label>
-            <div className="grid grid-cols-3 gap-3">
-              {[
-                { id: 'efectivo', icon: Banknote, label: 'Efectivo', color: 'hover:text-emerald-600 hover:bg-emerald-50' },
-                { id: 'transferencia', icon: CreditCard, label: 'Transf.', color: 'hover:text-blue-600 hover:bg-blue-50' },
-                { id: 'yape', icon: Phone, label: 'Yape', color: 'hover:text-indigo-600 hover:bg-indigo-50' }
-              ].map(m => (
-                <button
-                  key={m.id}
-                  type="button"
-                  onClick={() => setFormData(prev => ({...prev, payment_method: m.id as any}))}
-                  className={`flex flex-col items-center gap-2 py-4 rounded-2xl border transition-all ${
-                    formData.payment_method === m.id 
-                    ? 'bg-slate-900 border-slate-900 text-white shadow-lg' 
-                    : `bg-white border-slate-100 text-slate-400 ${m.color}`
-                  }`}
-                >
-                  <m.icon size={20} />
-                  <span className="text-[10px] font-bold uppercase tracking-widest">{m.label}</span>
-                </button>
-              ))}
-            </div>
-          </div>
+ {/* METODO DE PAGO */}
+ <div className="space-y-3">
+ <label className="text-[10px] font-bold text-slate-400 tracking-tight ml-1">Método de Pago</label>
+ <div className="grid grid-cols-3 gap-3">
+ {[
+ { id: 'efectivo', icon: Banknote, label: 'Efectivo', color: 'hover:text-emerald-600 hover:bg-emerald-50' },
+ { id: 'transferencia', icon: CreditCard, label: 'Transf.', color: 'hover:text-blue-600 hover:bg-blue-50' },
+ { id: 'yape', icon: Phone, label: 'Yape', color: 'hover:text-indigo-600 hover:bg-indigo-50' }
+ ].map(m => (
+ <button
+ key={m.id}
+ type="button"
+ onClick={() => setFormData(prev => ({...prev, payment_method: m.id as any}))}
+ className={`flex flex-col items-center gap-2 py-4 rounded-2xl border transition-all ${
+ formData.payment_method === m.id 
+ ? 'bg-slate-900 border-slate-900 text-white shadow-lg' 
+ : `bg-white border-slate-100 text-slate-400 ${m.color}`
+ }`}
+ >
+ <m.icon size={20} />
+ <span className="text-[10px] font-bold tracking-tight">{m.label}</span>
+ </button>
+ ))}
+ </div>
+ </div>
 
-          {/* COMPROBANTE - FILE UPLOAD */}
-          <div className="space-y-2">
-            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2">
-               <Paperclip size={12} /> Comprobante (Opc)
-            </label>
-            <div className="relative">
-              <input 
-                type="file"
-                accept=".jpg,.png,.pdf,.webp"
-                onChange={handleFileUpload}
-                className="hidden"
-                id="voucher-upload"
-              />
-              <label 
-                htmlFor="voucher-upload"
-                className={`w-full flex items-center justify-center gap-3 py-4 border-2 border-dashed rounded-2xl transition-all cursor-pointer ${
-                  formData.voucher_url 
-                  ? 'bg-emerald-50 border-emerald-200 text-emerald-600' 
-                  : 'bg-slate-50 border-slate-200 text-slate-400 hover:bg-slate-100'
-                }`}
-              >
-                {uploading ? <Loader2 className="w-5 h-5 animate-spin" /> 
-                : formData.voucher_url ? <CheckCircle2 className="w-5 h-5" /> 
-                : <Paperclip className="w-5 h-5" />}
-                <span className="text-xs font-bold uppercase tracking-widest">
-                  {formData.voucher_url ? 'Comprobante Listo' : 'Subir Imagen / PDF'}
-                </span>
-              </label>
-            </div>
-          </div>
+ {/* COMPROBANTE - FILE UPLOAD */}
+ <div className="space-y-2">
+ <label className="text-[10px] font-bold text-slate-400 tracking-tight ml-1 flex items-center gap-2">
+ <Paperclip size={12} /> Comprobante (Opc)
+ </label>
+ <div className="relative">
+ <input 
+ type="file"
+ accept=".jpg,.png,.pdf,.webp"
+ onChange={handleFileUpload}
+ className="hidden"
+ id="voucher-upload"
+ />
+ <label 
+ htmlFor="voucher-upload"
+ className={`w-full flex items-center justify-center gap-3 py-4 border-2 border-dashed rounded-2xl transition-all cursor-pointer ${
+ formData.voucher_url 
+ ? 'bg-emerald-50 border-emerald-200 text-emerald-600' 
+ : 'bg-slate-50 border-slate-200 text-slate-400 hover:bg-slate-100'
+ }`}
+ >
+ {uploading ? <Loader2 className="w-5 h-5 animate-spin" /> 
+ : formData.voucher_url ? <CheckCircle2 className="w-5 h-5" /> 
+ : <Paperclip className="w-5 h-5" />}
+ <span className="text-xs font-bold tracking-tight">
+ {formData.voucher_url ? 'Comprobante Listo' : 'Subir Imagen / PDF'}
+ </span>
+ </label>
+ </div>
+ </div>
 
-          <button 
-            type="submit"
-            disabled={loading || uploading}
-            className={`w-full py-5 text-white font-bold rounded-[1.5rem] transition-all shadow-xl flex items-center justify-center gap-3 disabled:opacity-50 ${
-              formData.type === 'ingreso' ? 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-200' : 'bg-slate-900 hover:bg-slate-800 shadow-slate-200'
-            }`}
-          >
-            {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Plus size={20} />}
-            REGISTRAR {formData.type.toUpperCase()}
-          </button>
-        </form>
-      </div>
-    </div>
-  )
+ <button 
+ type="submit"
+ disabled={loading || uploading}
+ className={`w-full py-5 text-white font-bold rounded-[1.5rem] transition-all shadow-xl flex items-center justify-center gap-3 disabled:opacity-50 ${
+ formData.type === 'ingreso' ? 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-200' : 'bg-slate-900 hover:bg-slate-800 shadow-slate-200'
+ }`}
+ >
+ {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Plus size={20} />}
+ REGISTRAR {formData.type.toUpperCase()}
+ </button>
+ </form>
+ </div>
+ </div>
+ )
 }

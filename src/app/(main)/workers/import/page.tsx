@@ -3,12 +3,12 @@ import { getUserSession } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 
 export default async function WorkerImportPage() {
-  const { extendedUser } = await getUserSession()
-  const canManage = ['admin', 'operaciones', 'super_admin', 'superadmin'].includes(extendedUser?.role_id || '')
+ const { extendedUser } = await getUserSession()
+ const canManage = ['admin', 'operaciones', 'super_admin', 'superadmin'].includes(extendedUser?.role_id || '')
 
-  if (!canManage) {
-    redirect('/workers')
-  }
+ if (!canManage) {
+ redirect('/workers')
+ }
 
-  return <WorkerImport />
+ return <WorkerImport />
 }

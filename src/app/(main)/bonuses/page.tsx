@@ -8,36 +8,36 @@ import { AddBonusContainer } from '@/components/bonuses/add-bonus-container'
 import { Coins, LayoutGrid } from 'lucide-react'
 
 export default async function BonusesPage() {
-  const { extendedUser } = await getUserSession()
-  const viewMode = await getActiveViewMode()
-  const userRole = extendedUser?.role_id?.toLowerCase() || ''
-  const isWorker = userRole === 'trabajador' || viewMode === 'WORKER'
-  const canManage = ['admin', 'gerente', 'administracion', 'super_admin', 'superadmin'].includes(userRole) && viewMode !== 'WORKER'
+ const { extendedUser } = await getUserSession()
+ const viewMode = await getActiveViewMode()
+ const userRole = extendedUser?.role_id?.toLowerCase() || ''
+ const isWorker = userRole === 'trabajador' || viewMode === 'WORKER'
+ const canManage = ['admin', 'gerente', 'administracion', 'super_admin', 'superadmin'].includes(userRole) && viewMode !== 'WORKER'
 
-  const [bonuses, workers] = await Promise.all([
-    getBonuses(),
-    canManage ? getWorkersShort() : Promise.resolve([])
-  ])
+ const [bonuses, workers] = await Promise.all([
+ getBonuses(),
+ canManage ? getWorkersShort() : Promise.resolve([])
+ ])
 
-  return (
-    <div className="space-y-8">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-800">Gestión de Bonos</h1>
-          <p className="text-slate-500">Historial y registro de bonificaciones para el personal</p>
-        </div>
-        {canManage && <AddBonusContainer workers={workers} />}
-      </div>
+ return (
+ <div className="space-y-8">
+ <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+ <div>
+ <h1 className="text-2xl font-bold text-slate-800">Gestión de Bonos</h1>
+ <p className="text-slate-500">Historial y registro de bonificaciones para el personal</p>
+ </div>
+ {canManage && <AddBonusContainer workers={workers} />}
+ </div>
 
-      <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
-            <Coins className="text-amber-500" size={20} />
-            {isWorker ? 'Mi Historial de Bonificaciones' : 'Bonificaciones Registradas'}
-          </h2>
-        </div>
-        <BonusList bonuses={bonuses} isAdmin={canManage} isWorker={isWorker} workers={workers} />
-      </div>
-    </div>
-  )
+ <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+ <div className="flex items-center justify-between mb-6">
+ <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+ <Coins className="text-amber-500" size={20} />
+ {isWorker ? 'Mi Historial de Bonificaciones' : 'Bonificaciones Registradas'}
+ </h2>
+ </div>
+ <BonusList bonuses={bonuses} isAdmin={canManage} isWorker={isWorker} workers={workers} />
+ </div>
+ </div>
+ )
 }

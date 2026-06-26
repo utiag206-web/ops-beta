@@ -10,5 +10,5 @@ import React from 'react'
  * the component structure in the layout.
  */
 export function OnboardingCheck({ children }: { children: React.ReactNode, userRole?: string }) {
-  return <React.Fragment>{children}</React.Fragment>
+ return <React.Fragment>{children}</React.Fragment>
 }

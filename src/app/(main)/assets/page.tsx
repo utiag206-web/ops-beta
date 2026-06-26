@@ -8,27 +8,27 @@ import { redirect } from 'next/navigation'
 export const dynamic = 'force-dynamic'
 
 export default async function AssetsPage() {
-  const { extendedUser } = await getUserSession()
-  if (!extendedUser) redirect('/login')
+ const { extendedUser } = await getUserSession()
+ if (!extendedUser) redirect('/login')
 
-  return (
-    <Suspense fallback={<OperationsDashboardSkeleton />}>
-      <AssetsFetcher />
-    </Suspense>
-  )
+ return (
+ <Suspense fallback={<OperationsDashboardSkeleton />}>
+ <AssetsFetcher />
+ </Suspense>
+ )
 }
 
 async function AssetsFetcher() {
-  const { data, error } = await getAssets()
+ const { data, error } = await getAssets()
 
-  if (error) {
-    return (
-      <div className="p-8 bg-rose-50 border border-rose-100 rounded-[2rem] text-rose-700">
-        <p className="font-black">Error al cargar activos:</p>
-        <p className="text-sm font-medium">{error}</p>
-      </div>
-    )
-  }
+ if (error) {
+ return (
+ <div className="p-8 bg-rose-50 border border-rose-100 rounded-[2rem] text-rose-700">
+ <p className="font-black">Error al cargar activos:</p>
+ <p className="text-sm font-medium">{error}</p>
+ </div>
+ )
+ }
 
-  return <AssetsList initialAssets={data || []} />
+ return <AssetsList initialAssets={data || []} />
 }
