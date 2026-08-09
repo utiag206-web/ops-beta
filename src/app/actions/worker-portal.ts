@@ -273,27 +273,15 @@ export async function registerWorkerPunch(
         if (address) attPayload.check_in_address = address
       }
       
-      let attAction = existingAtt 
-        ? supabase.from('attendance').update(attPayload).eq('id', existingAtt.id)
-        : supabase.from('attendance').insert([{ worker_id: workerId, company_id: companyId, date: today, ...attPayload }])
-
-      let { error: attErr } = await attAction
-      if (attErr) {
-        delete attPayload.check_in_lat
-        delete attPayload.check_in_lng
-        delete attPayload.latitude
-        delete attPayload.longitude
-        delete attPayload.check_in_address
+      let { data, error: attErr } = await supabase.from('attendance')
+        .upsert(
+          { worker_id: workerId, company_id: companyId, date: today, ...attPayload },
+          { onConflict: 'worker_id,date', ignoreDuplicates: false }
+        )
         
-        let retryAction = existingAtt
-          ? supabase.from('attendance').update(attPayload).eq('id', existingAtt.id)
-          : supabase.from('attendance').insert([{ worker_id: workerId, company_id: companyId, date: today, ...attPayload }])
-          
-        const { error: retryAttErr } = await retryAction
-        if (retryAttErr) {
-          console.error('[WORKER_PORTAL] Fatal error inserting attendance:', retryAttErr)
-          return { success: false, error: `DB Error (att): ${retryAttErr.message}` }
-        }
+      if (attErr) {
+        console.error('[WORKER_PORTAL] Fatal error upserting attendance:', attErr)
+        return { success: false, error: `DB Error (att): ${attErr.message}` }
       }
     } else if (existingAtt) {
       const updateData: any = { updated_at: new Date().toISOString() }
@@ -320,7 +308,7 @@ export async function registerWorkerPunch(
         }
       }
 
-      let { error: updateErr } = await supabase.from('attendance').update(updateData).eq('id', existingAtt.id)
+      let { error: updateErr } = await supabase.from('attendance').update(updateData).eq('worker_id', workerId).eq('date', today)
       if (updateErr && (updateErr.code === '42703' || updateErr.message?.includes('column'))) {
         // Strip extra gps address fields
         delete updateData.break_start_lat
@@ -332,7 +320,7 @@ export async function registerWorkerPunch(
         delete updateData.check_out_lat
         delete updateData.check_out_lng
         delete updateData.check_out_address
-        await supabase.from('attendance').update(updateData).eq('id', existingAtt.id)
+        await supabase.from('attendance').update(updateData).eq('worker_id', workerId).eq('date', today)
       }
     }
 

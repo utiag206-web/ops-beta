@@ -177,22 +177,36 @@ export function AttendanceList({ records, isWorker = false }: AttendanceListProp
  )}
  </div>
 
- <div className="bg-slate-50 rounded-2xl p-4 grid grid-cols-2 gap-4 border border-slate-100/50">
- <div className="space-y-1">
- <p className="text-[9px] font-bold text-slate-400 tracking-tight flex items-center gap-1.5">
- <div className="w-1.5 h-1.5 rounded-full bg-emerald-500"></div>
- Ingreso
- </p>
- <p className="text-lg font-bold text-slate-700 tabular-nums">{record.check_in || '--:--'}</p>
- </div>
- <div className="space-y-1 text-right border-l border-slate-200 pl-4">
- <p className="text-[9px] font-bold text-slate-400 tracking-tight flex items-center justify-end gap-1.5">
- Salida
- <div className="w-1.5 h-1.5 rounded-full bg-amber-500"></div>
- </p>
- <p className="text-lg font-bold text-slate-700 tabular-nums">{record.check_out || '--:--'}</p>
- </div>
- </div>
+        <div className="bg-slate-50 rounded-2xl p-4 grid grid-cols-4 gap-2 border border-slate-100/50">
+          <div className="space-y-1">
+            <p className="text-[9px] font-bold text-slate-400 tracking-tight flex items-center gap-1.5">
+              <div className="w-1.5 h-1.5 rounded-full bg-emerald-500"></div>
+              Entrada
+            </p>
+            <p className="text-lg font-bold text-slate-700 tabular-nums">{record.check_in || '--:--'}</p>
+          </div>
+          <div className="space-y-1 border-l border-slate-200 pl-2">
+            <p className="text-[9px] font-bold text-slate-400 tracking-tight flex items-center gap-1.5">
+              <div className="w-1.5 h-1.5 rounded-full bg-orange-500"></div>
+              I. Refrig.
+            </p>
+            <p className="text-lg font-bold text-slate-700 tabular-nums">{record.break_start || '--:--'}</p>
+          </div>
+          <div className="space-y-1 border-l border-slate-200 pl-2">
+            <p className="text-[9px] font-bold text-slate-400 tracking-tight flex items-center gap-1.5">
+              <div className="w-1.5 h-1.5 rounded-full bg-teal-500"></div>
+              F. Refrig.
+            </p>
+            <p className="text-lg font-bold text-slate-700 tabular-nums">{record.break_end || '--:--'}</p>
+          </div>
+          <div className="space-y-1 border-l border-slate-200 pl-2">
+            <p className="text-[9px] font-bold text-slate-400 tracking-tight flex items-center gap-1.5">
+              <div className="w-1.5 h-1.5 rounded-full bg-amber-500"></div>
+              Salida
+            </p>
+            <p className="text-lg font-bold text-slate-700 tabular-nums">{record.check_out || '--:--'}</p>
+          </div>
+        </div>
 
  <div className="flex items-center gap-2 pt-1 opacity-60">
  <div className="w-5 h-5 rounded-full bg-slate-200 flex items-center justify-center text-slate-500">

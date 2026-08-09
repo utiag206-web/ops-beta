@@ -359,7 +359,7 @@ export function calculateMonthlyTareoEngine(
 
       // Verificar si es HOY para los KPIs ejecutivos de presentes/ausentes
       if (dayObj.dateString === today) {
-        if (['AD', 'P', 'AN', 'C', 'DF'].includes(evalResult.status)) {
+        if (['AD', 'P', 'AN', 'C', 'DF'].includes(evalResult.status) || (evalResult.status === 'INC' && evalResult.punchInTime)) {
           presentesHoy++
         } else {
           ausentesHoy++
