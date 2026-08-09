@@ -60,9 +60,22 @@ body {
 }
 
 
-/* Fix for form text visibility */
+/* Fix for form text visibility and select dropdown typography */
 input, select, textarea {
   @apply text-slate-900;
+}
+
+select {
+  font-size: 0.875rem !important; /* 14px text-sm */
+  line-height: 1.25rem !important;
+}
+
+select option {
+  font-size: 0.875rem !important; /* 14px text-sm */
+  font-weight: 500 !important;
+  padding: 6px 10px !important;
+  color: #0f172a !important;
+  background-color: #ffffff !important;
 }
 
 input::placeholder {

@@ -29,9 +29,11 @@ import {
  Edit2,
  Trash2,
  MoreVertical,
- AlertCircle
+ AlertCircle,
+ FileSpreadsheet
 } from 'lucide-react'
 import { getPettyCashStats, getPettyCashTransactions, deletePettyCashTransaction } from './actions'
+import { exportPettyCashToExcel } from '@/lib/export-utils'
 import { useRbac } from '@/components/providers/rbac-provider'
 import { AddTransactionModal } from '@/components/caja-chica/add-transaction-modal'
 import { format } from 'date-fns'
@@ -61,9 +63,24 @@ export default function CajaChicaPage() {
  const [isModalOpen, setIsModalOpen] = useState(false)
  const [selectedTransaction, setSelectedTransaction] = useState<any>(null)
  const [filter, setFilter] = useState('all')
+ const [searchTerm, setSearchTerm] = useState('')
  const [area, setArea] = useState(user?.area || 'Cocina')
  const [noAreaConfigured, setNoAreaConfigured] = useState(false)
  const [warehouses, setWarehouses] = useState<string[]>(['Administración', 'Cocina', 'Operaciones'])
+ const [companyInfo, setCompanyInfo] = useState<any>(null)
+
+ useEffect(() => {
+ async function fetchCompany() {
+ try {
+ const { getCompanyProfile } = await import('@/app/(main)/company/actions')
+ const comp = await getCompanyProfile()
+ if (comp) setCompanyInfo(comp)
+ } catch (err) {
+ console.error('Error fetching company profile:', err)
+ }
+ }
+ fetchCompany()
+ }, [])
 
  useEffect(() => {
  async function fetchWarehouses() {
@@ -142,9 +159,38 @@ export default function CajaChicaPage() {
  setIsModalOpen(true)
  }
 
- const filteredTransactions = transactions.filter(t => 
- filter === 'all' || t.type === filter
- )
+ const filteredTransactions = transactions.filter(t => {
+ const matchesFilter = filter === 'all' || t.type === filter
+ const search = searchTerm.toLowerCase().trim()
+ const matchesSearch = !search || 
+ (t.reason && t.reason.toLowerCase().includes(search)) ||
+ (t.responsible?.name && t.responsible.name.toLowerCase().includes(search)) ||
+ (t.operation_number && String(t.operation_number).toLowerCase().includes(search)) ||
+ (CATEGORY_MAP[t.category]?.label && CATEGORY_MAP[t.category].label.toLowerCase().includes(search))
+ return matchesFilter && matchesSearch
+ })
+
+ const handleExportExcel = () => {
+ if (filteredTransactions.length === 0) {
+ toast.error('No hay movimientos visibles para exportar con los filtros actuales.')
+ return
+ }
+
+ try {
+ exportPettyCashToExcel({
+ transactions: filteredTransactions,
+ areaName: area,
+ companyInfo: companyInfo,
+ userName: user?.name,
+ filterType: filter,
+ searchTerm: searchTerm
+ })
+ toast.success('Reporte de Caja Chica exportado exitosamente.')
+ } catch (err) {
+ console.error('Error al exportar Excel:', err)
+ toast.error('Ocurrió un error al generar el reporte en Excel.')
+ }
+ }
 
  const methodIcons: any = {
  efectivo: <Banknote className="w-4 h-4 text-emerald-600" />,
@@ -205,16 +251,27 @@ export default function CajaChicaPage() {
  </div>
  </div>
  
+ <div className="flex flex-wrap items-center gap-3 relative z-10">
+ <button 
+ onClick={handleExportExcel}
+ className="flex items-center gap-2.5 px-6 py-4 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-[1.5rem] transition-all shadow-xl shadow-emerald-200 hover:scale-[1.02] active:scale-[0.98]"
+ title="Exportar movimientos visibles a Excel"
+ >
+ <FileSpreadsheet className="w-5 h-5" />
+ Exportar Excel
+ </button>
+
  <button 
  onClick={() => {
  setSelectedTransaction(null)
  setIsModalOpen(true)
  }}
- className="flex items-center gap-3 px-8 py-4 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-[1.5rem] transition-all shadow-xl shadow-blue-200 hover:scale-[1.02] active:scale-[0.98] relative z-10"
+ className="flex items-center gap-3 px-8 py-4 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-[1.5rem] transition-all shadow-xl shadow-blue-200 hover:scale-[1.02] active:scale-[0.98]"
  >
  <Plus className="w-5 h-5" />
  Registrar Movimiento
  </button>
+ </div>
  </div>
 
  {/* Stats Grid */}
@@ -285,7 +342,19 @@ export default function CajaChicaPage() {
  </span>
  </div>
  
- <div className="flex items-center gap-3 bg-slate-50 p-1.5 rounded-[1.5rem] border border-slate-100 w-full lg:w-auto overflow-x-auto no-scrollbar">
+ <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 w-full lg:w-auto">
+ <div className="relative flex-1 sm:w-64">
+ <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
+ <input
+ type="text"
+ placeholder="Buscar por concepto, op, responsable..."
+ value={searchTerm}
+ onChange={(e) => setSearchTerm(e.target.value)}
+ className="w-full bg-slate-50 border border-slate-100 rounded-xl py-2.5 pl-11 pr-4 text-xs font-bold text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+ />
+ </div>
+
+ <div className="flex items-center gap-2 bg-slate-50 p-1.5 rounded-[1.5rem] border border-slate-100 overflow-x-auto no-scrollbar">
  {[
  { id: 'all', label: 'Todos' },
  { id: 'ingreso', label: 'Ingresos' },
@@ -294,13 +363,14 @@ export default function CajaChicaPage() {
  <button 
  key={m.id}
  onClick={() => setFilter(m.id)}
- className={`px-6 py-3 text-[10px] font-bold tracking-widest rounded-xl transition-all whitespace-nowrap ${
+ className={`px-5 py-2.5 text-[10px] font-bold tracking-widest rounded-xl transition-all whitespace-nowrap ${
  filter === m.id ? 'bg-white text-blue-600 shadow-sm ring-1 ring-slate-100' : 'text-slate-400 hover:text-slate-600 hover:bg-white/50'
  }`}
  >
  {m.label}
  </button>
  ))}
+ </div>
  </div>
  </div>
 

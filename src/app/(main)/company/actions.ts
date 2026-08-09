@@ -3,6 +3,8 @@
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { getUserSession, getStrictCompanyId } from '@/lib/auth'
 import { revalidatePath } from 'next/cache'
+import { CompanyAuthSettings, packWorkingHoursWithAuthSettings } from '@/lib/company-auth-settings'
+import { CompanyHrSettings, packWorkingHoursWithHrSettings } from '@/lib/company-hr-settings'
 
 export async function getCompanyProfile() {
  try {
@@ -39,6 +41,8 @@ export async function updateCompanyProfile(formData: {
  timezone?: string
  working_hours?: string
  logo_url?: string
+ auth_settings?: CompanyAuthSettings
+ hr_settings?: CompanyHrSettings
 }) {
  try {
  const { extendedUser } = await getUserSession()
@@ -50,9 +54,15 @@ export async function updateCompanyProfile(formData: {
  }
 
  const supabase = await createAdminClient()
- const { error } = await supabase
- .from('companies')
- .update({
+
+ let packedWorkingHours = formData.working_hours || ''
+ if (formData.hr_settings) {
+ packedWorkingHours = packWorkingHoursWithHrSettings(packedWorkingHours, formData.hr_settings, formData.auth_settings)
+ } else if (formData.auth_settings) {
+ packedWorkingHours = packWorkingHoursWithAuthSettings(packedWorkingHours, formData.auth_settings)
+ }
+
+ const updatePayload: any = {
  name: formData.name,
  address: formData.address,
  phone: formData.phone,
@@ -60,12 +70,34 @@ export async function updateCompanyProfile(formData: {
  tax_id: formData.tax_id,
  industry: formData.industry,
  timezone: formData.timezone,
- working_hours: formData.working_hours,
+ working_hours: packedWorkingHours,
  logo_url: formData.logo_url
- })
+ }
+
+ if (formData.auth_settings) {
+ updatePayload.auth_settings = formData.auth_settings
+ }
+ if (formData.hr_settings) {
+ updatePayload.hr_settings = formData.hr_settings
+ }
+
+ const { error } = await supabase
+ .from('companies')
+ .update(updatePayload)
  .eq('id', companyId)
 
  if (error) {
+ if (error.code === '42703' || (error.message && (error.message.includes('auth_settings') || error.message.includes('hr_settings')))) {
+ delete updatePayload.auth_settings
+ delete updatePayload.hr_settings
+ const { error: retryErr } = await supabase
+ .from('companies')
+ .update(updatePayload)
+ .eq('id', companyId)
+
+ if (retryErr) return { success: false, error: retryErr.message }
+ return { success: true }
+ }
  console.error('Error updating company profile:', error)
  return { success: false, error: error.message }
  }
