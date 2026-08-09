@@ -172,11 +172,11 @@ export default function WorkerPortalClient({ company, session }: WorkerPortalCli
     try {
       const attData = await getWorkerAttendanceOnly()
       if (attData) {
-        setStats((prev: any) => prev ? {
-          ...prev,
+        setStats((prev: any) => ({
+          ...(prev || {}),
           todayAttendance: attData.todayAttendance,
           todayAttendanceDetail: attData.todayAttendanceDetail
-        } : null)
+        }))
       }
     } catch (e) {
       console.error(e)
@@ -365,11 +365,11 @@ export default function WorkerPortalClient({ company, session }: WorkerPortalCli
         toast.success(coords.lat ? 'Ingreso registrado con GPS.' : 'Ingreso registrado correctamente.')
         setIsLocationModalOpen(false)
         if (res.todayAttendance && res.todayAttendanceDetail) {
-          setStats((prev: any) => prev ? {
-            ...prev,
+          setStats((prev: any) => ({
+            ...(prev || {}),
             todayAttendance: res.todayAttendance,
             todayAttendanceDetail: res.todayAttendanceDetail
-          } : null)
+          }))
         } else {
           await reloadAttendanceStats()
         }
@@ -397,11 +397,11 @@ export default function WorkerPortalClient({ company, session }: WorkerPortalCli
         toast.success(coords.lat ? 'Inicio de refrigerio registrado con GPS.' : 'Inicio de refrigerio registrado.')
         setIsLocationModalOpen(false)
         if (res.todayAttendance && res.todayAttendanceDetail) {
-          setStats((prev: any) => prev ? {
-            ...prev,
+          setStats((prev: any) => ({
+            ...(prev || {}),
             todayAttendance: res.todayAttendance,
             todayAttendanceDetail: res.todayAttendanceDetail
-          } : null)
+          }))
         } else {
           await reloadAttendanceStats()
         }
@@ -429,11 +429,11 @@ export default function WorkerPortalClient({ company, session }: WorkerPortalCli
         toast.success(coords.lat ? 'Fin de refrigerio registrado con GPS.' : 'Fin de refrigerio registrado.')
         setIsLocationModalOpen(false)
         if (res.todayAttendance && res.todayAttendanceDetail) {
-          setStats((prev: any) => prev ? {
-            ...prev,
+          setStats((prev: any) => ({
+            ...(prev || {}),
             todayAttendance: res.todayAttendance,
             todayAttendanceDetail: res.todayAttendanceDetail
-          } : null)
+          }))
         } else {
           await reloadAttendanceStats()
         }
@@ -461,11 +461,11 @@ export default function WorkerPortalClient({ company, session }: WorkerPortalCli
         toast.success(coords.lat ? 'Salida registrada con GPS.' : 'Salida registrada correctamente.')
         setIsLocationModalOpen(false)
         if (res.todayAttendance && res.todayAttendanceDetail) {
-          setStats((prev: any) => prev ? {
-            ...prev,
+          setStats((prev: any) => ({
+            ...(prev || {}),
             todayAttendance: res.todayAttendance,
             todayAttendanceDetail: res.todayAttendanceDetail
-          } : null)
+          }))
         } else {
           await reloadAttendanceStats()
         }

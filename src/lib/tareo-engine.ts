@@ -282,7 +282,8 @@ export function calculateMonthlyTareoEngine(
   todayStr?: string
 ): { workerSummaries: Record<string, WorkerMonthlySummary>; kpis: ExecutiveTareoKPIs } {
   const dailyHours = settings.daily_hours || 8
-  const today = todayStr || new Date().toISOString().split('T')[0]
+  const tzDate = new Date(new Date().toLocaleString("en-US", {timeZone: "America/Lima"}));
+  const today = todayStr || `${tzDate.getFullYear()}-${String(tzDate.getMonth()+1).padStart(2, '0')}-${String(tzDate.getDate()).padStart(2, '0')}`
 
   // Agrupar marcaciones por worker-date
   const punchesMap = new Map<string, { type: 'in' | 'out'; timestamp: string }[]>()

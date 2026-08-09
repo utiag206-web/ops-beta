@@ -131,7 +131,7 @@ export default function TareoClient({ initialCycles, workers, userRole, companyI
     const channel1 = supabase.channel('tareo_attendance_changes')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'attendance' }, (payload) => {
         console.log('[REALTIME] Attendance event received:', payload)
-        loadData()
+        loadData(true)
       })
       .subscribe((status) => {
         console.log('[REALTIME] Attendance channel status:', status)
@@ -140,7 +140,7 @@ export default function TareoClient({ initialCycles, workers, userRole, companyI
     const channel2 = supabase.channel('tareo_attendance_logs_changes')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'attendance_logs' }, (payload) => {
         console.log('[REALTIME] Attendance logs event received:', payload)
-        loadData()
+        loadData(true)
       })
       .subscribe((status) => {
         console.log('[REALTIME] Attendance logs channel status:', status)
@@ -295,9 +295,6 @@ export default function TareoClient({ initialCycles, workers, userRole, companyI
         <div>
           <div className="flex items-center gap-2">
             <h1 className="text-2xl font-black text-slate-800 tracking-tight">Centro de Control de Tareo y Productividad</h1>
-            <span className="bg-blue-100 text-blue-800 text-[10px] font-black px-2.5 py-0.5 rounded-full uppercase tracking-wider">
-              Single Source of Truth
-            </span>
           </div>
           <p className="text-slate-500 font-medium text-xs sm:text-sm mt-0.5">
             Cálculo automatizado en tiempo real sincronizado con la Configuración de Empresa.
@@ -631,15 +628,15 @@ const WorkerRow = React.memo(function WorkerRow({
             {logged && (
               <div 
                 onClick={() => onOpenLogs(worker.id, d.dateString)}
-                className={`absolute bottom-0 right-0 p-0.5 cursor-pointer flex items-center justify-center transition-all hover:scale-125 z-10`}
-                title={hasGps ? "Ver registro (Incluye GPS)" : "Ver registro"}
+                className={`absolute bottom-0 right-0 p-0.5 cursor-pointer flex items-center justify-center transition-all hover:scale-110 z-10`}
+                title={hasGps ? "Ver registro (Incluye GPS)" : "Ver registro de marcaciones"}
               >
                 {hasGps ? (
-                  <div className="bg-white rounded-full shadow-md p-0.5 border border-slate-200">
-                    <MapPin size={12} className="text-rose-500 fill-rose-100" />
+                  <div className="bg-white rounded-full shadow-sm p-0.5 border border-blue-200">
+                    <MapPin size={10} className="text-blue-600 fill-blue-100" />
                   </div>
                 ) : (
-                  <div className="w-2 h-2 rounded-full bg-slate-300 shadow-sm border border-white" />
+                  <div className="w-2 h-2 rounded-full bg-blue-400 shadow-sm border border-white" />
                 )}
               </div>
             )}

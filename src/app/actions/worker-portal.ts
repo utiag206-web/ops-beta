@@ -206,6 +206,7 @@ export async function registerWorkerPunch(
   type: ShiftPunchType,
   coords?: { lat?: number; lng?: number; accuracy?: number; locationId?: string }
 ) {
+  noStore()
   try {
     const session = await getWorkerSession()
     if (!session) return { success: false, error: 'Sesión no válida o expirada.' }

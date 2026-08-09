@@ -77,10 +77,10 @@ export function AttendanceList({ records, isWorker = false }: AttendanceListProp
  <td className="py-5 px-6">
  <div className="flex flex-col">
  <span className="text-sm font-bold text-slate-600 capitalize">
- {new Date(record.date).toLocaleDateString('es-ES', { weekday: 'long' })}
+ {new Date(record.date + 'T12:00:00').toLocaleDateString('es-ES', { weekday: 'long' })}
  </span>
  <span className="text-[10px] font-bold text-slate-400 mt-0.5">
- {new Date(record.date).toLocaleDateString()}
+ {new Date(record.date + 'T12:00:00').toLocaleDateString()}
  </span>
  </div>
  </td>
@@ -151,9 +151,9 @@ export function AttendanceList({ records, isWorker = false }: AttendanceListProp
  </div>
  <div>
  <p className="text-sm font-bold text-slate-800 tracking-tight">
- {new Date(record.date).toLocaleDateString('es-ES', { weekday: 'long' })}
+ {new Date(record.date + 'T12:00:00').toLocaleDateString('es-ES', { weekday: 'long' })}
  </p>
- <p className="text-[10px] font-bold text-slate-400">{new Date(record.date).toLocaleDateString()}</p>
+ <p className="text-[10px] font-bold text-slate-400">{new Date(record.date + 'T12:00:00').toLocaleDateString()}</p>
  </div>
  </div>
  {isWorker && record.check_in ? (
