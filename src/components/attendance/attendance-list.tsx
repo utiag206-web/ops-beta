@@ -1,6 +1,9 @@
 'use client'
 
-import { Calendar, Clock, User, CheckCircle2, ArrowRight } from 'lucide-react'
+import { Calendar, Clock, User, CheckCircle2, ArrowRight, MapPin } from 'lucide-react'
+import { useEffect } from 'react'
+import { useRouter } from 'next/navigation'
+import { createClient } from '@/lib/supabase/client'
 
 interface AttendanceListProps {
  records: any[]
@@ -8,6 +11,22 @@ interface AttendanceListProps {
 }
 
 export function AttendanceList({ records, isWorker = false }: AttendanceListProps) {
+  const router = useRouter()
+
+  useEffect(() => {
+    const supabase = createClient()
+    const channel = supabase.channel('attendance_list_changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'attendance' }, () => {
+        console.log('[REALTIME] Attendance list updated')
+        router.refresh()
+      })
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [router])
+
  if (records.length === 0) {
  return (
  <div className="bg-white p-12 rounded-2xl border border-slate-100 text-center">
@@ -30,11 +49,18 @@ export function AttendanceList({ records, isWorker = false }: AttendanceListProp
  <th className="py-5 px-6 text-[11px] font-bold text-slate-400 tracking-tight">Colaborador</th>
  <th className="py-5 px-6 text-[11px] font-bold text-slate-400 tracking-tight">Día / Fecha</th>
  <th className="py-5 px-6 text-[11px] font-bold text-slate-400 tracking-tight">Marcación (Ingreso - Salida)</th>
+ <th className="py-5 px-6 text-[11px] font-bold text-slate-400 tracking-tight text-center">GPS</th>
  <th className="py-5 px-6 text-[11px] font-bold text-slate-400 tracking-tight text-center">Estado</th>
  </tr>
  </thead>
  <tbody className="divide-y divide-slate-50">
- {records.map((record) => (
+ {records.map((record) => {
+ const lat = record.check_in_lat || record.latitude
+ const lng = record.check_in_lng || record.longitude
+ const hasGps = lat !== undefined && lat !== null && lng !== undefined && lng !== null
+ const mapsUrl = hasGps ? `https://maps.google.com/?q=${lat},${lng}` : null
+
+ return (
  <tr key={record.id} className="hover:bg-slate-50/50 transition-colors group">
  <td className="py-5 px-6">
  <div className="flex items-center gap-3">
@@ -72,6 +98,22 @@ export function AttendanceList({ records, isWorker = false }: AttendanceListProp
  </div>
  </td>
  <td className="py-5 px-6 text-center">
+ {hasGps ? (
+ <a
+ href={mapsUrl!}
+ target="_blank"
+ rel="noreferrer"
+ className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold text-[10px] border border-indigo-100 transition-colors"
+ title={`Ubicación: ${lat}, ${lng}`}
+ >
+ <MapPin size={12} className="text-indigo-600" />
+ Ver Mapa
+ </a>
+ ) : (
+ <span className="text-[10px] text-slate-300 font-medium">--</span>
+ )}
+ </td>
+ <td className="py-5 px-6 text-center">
  {isWorker && record.check_in ? (
  record.check_in > '08:05:00' ? (
  <span className="text-[10px] font-black px-2.5 py-1 rounded-lg border bg-amber-50 text-amber-700 border-amber-100 shadow-sm">
@@ -93,7 +135,7 @@ export function AttendanceList({ records, isWorker = false }: AttendanceListProp
  )}
  </td>
  </tr>
- ))}
+ )})}
  </tbody>
  </table>
  </div>

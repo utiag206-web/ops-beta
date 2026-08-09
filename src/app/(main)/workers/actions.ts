@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { getUserSession, getStrictCompanyId, applyIsolation } from '@/lib/auth'
+import { generateAutomaticWorkerCodes } from '@/lib/company-hr-settings'
 
 export async function getWorkers(status?: string, isRecent?: boolean) {
  const { extendedUser } = await getUserSession()
@@ -127,6 +128,12 @@ export async function createWorker(prevState: any, formData: FormData) {
 
  const supabase = await createAdminClient()
 
+  let cod = (formData.get('cod') as string) || null
+  if (!cod) {
+  const generatedCodes = await generateAutomaticWorkerCodes(supabase, companyId, 1)
+  cod = generatedCodes[0]
+  }
+
   const { data: newWorker, error } = await supabase
   .from('workers')
   .insert({
@@ -134,6 +141,7 @@ export async function createWorker(prevState: any, formData: FormData) {
   name,
   last_name: lastName || null,
   dni,
+  cod,
   position,
   phone,
   hire_date: hireDate || null,
@@ -508,21 +516,33 @@ export async function deleteWorkerDocument(id: string, workerId: string, filePat
 export async function importWorkers(workersData: any[]) {
  const companyId = await getStrictCompanyId()
 
- const supabase = await createAdminClient()
- 
- // Prepare data with company_id
- const workersToInsert = workersData.map((worker: any) => ({
- name: worker.name,
- last_name: worker.last_name || null,
- dni: worker.dni?.toString(),
- document_number: worker.dni?.toString(),
- cod: worker.cod || null,
- position: worker.position,
- phone: worker.phone?.toString(),
- hire_date: worker.hire_date || new Date().toISOString().split('T')[0],
- company_id: companyId,
- status: 'active'
- }))
+  const supabase = await createAdminClient()
+  
+  const missingCodCount = workersData.filter((w: any) => !w.cod).length
+  let autoCodes: string[] = []
+  if (missingCodCount > 0) {
+  autoCodes = await generateAutomaticWorkerCodes(supabase, companyId, missingCodCount)
+  }
+
+  let autoIndex = 0
+  const workersToInsert = workersData.map((worker: any) => {
+  let finalCod = worker.cod || null
+  if (!finalCod) {
+  finalCod = autoCodes[autoIndex++]
+  }
+  return {
+  name: worker.name,
+  last_name: worker.last_name || null,
+  dni: worker.dni?.toString(),
+  document_number: worker.dni?.toString(),
+  cod: finalCod,
+  position: worker.position,
+  phone: worker.phone?.toString(),
+  hire_date: worker.hire_date || new Date().toISOString().split('T')[0],
+  company_id: companyId,
+  status: 'active'
+  }
+  })
 
  const { data, error } = await supabase
  .from('workers')

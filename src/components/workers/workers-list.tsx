@@ -1,10 +1,10 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { AddWorkerModal } from '@/components/workers/add-worker-modal'
 import { EditWorkerModal } from '@/components/workers/edit-worker-modal'
 import { deleteWorker, reactivateWorker, getWorkers, exportWorkersAllData } from '@/app/(main)/workers/actions'
-import { Search, UserMinus, UserCheck, Edit2, Trash2, Loader2, User, Folder, Upload, Plus, Filter, Download } from 'lucide-react'
+import { Search, UserMinus, UserCheck, Edit2, Trash2, Loader2, User, Folder, Upload, Plus, Filter, Download, CheckCircle2, Clock } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
@@ -30,6 +30,21 @@ export function WorkersList({ workers, canManage = false }: { workers: Worker[],
  const [isDeleting, setIsDeleting] = useState<string | null>(null) // the worker id currently being deleted
  const [activeTab, setActiveTab] = useState<'activo' | 'inactivo'>('activo')
  const [isExporting, setIsExporting] = useState(false)
+
+ useEffect(() => {
+   const { createClient } = require('@/lib/supabase/client')
+   const supabase = createClient()
+   const channel = supabase.channel('workers_list_changes')
+     .on('postgres_changes', { event: '*', schema: 'public', table: 'workers' }, () => {
+       console.log('[REALTIME] Workers list updated')
+       router.refresh()
+     })
+     .subscribe()
+
+   return () => {
+     supabase.removeChannel(channel)
+   }
+ }, [router])
 
  const handleExportExcel = async () => {
    setIsExporting(true)
@@ -261,22 +276,34 @@ export function WorkersList({ workers, canManage = false }: { workers: Worker[],
  <span className="text-sm font-bold text-slate-700 capitalize">{worker.position}</span>
  </div>
  </td>
- <td className="py-5 px-6 text-center">
- <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full border shadow-sm ${
- (worker.status?.toLowerCase() === 'active' || worker.status?.toLowerCase() === 'activo') 
- ? 'bg-emerald-50 text-emerald-700 border-emerald-200' 
- : 'bg-slate-100 text-slate-600 border-slate-200'
- }`}>
- <div className={`w-2 h-2 rounded-full ${
- (worker.status?.toLowerCase() === 'active' || worker.status?.toLowerCase() === 'activo') 
- ? 'bg-emerald-500 animate-pulse' 
- : 'bg-slate-400'
- }`} />
- <span className="text-[10px] font-black uppercase tracking-wider">
- {(worker.status?.toLowerCase() === 'active' || worker.status?.toLowerCase() === 'activo') ? 'Activo' : 'Inactivo'}
- </span>
- </div>
- </td>
+  <td className="py-5 px-6 text-center">
+  <div className="flex flex-col items-center gap-1.5">
+  <div className={`inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full border shadow-sm ${
+  (worker.status?.toLowerCase() === 'active' || worker.status?.toLowerCase() === 'activo') 
+  ? 'bg-emerald-50 text-emerald-700 border-emerald-200' 
+  : 'bg-slate-100 text-slate-600 border-slate-200'
+  }`}>
+  <div className={`w-2 h-2 rounded-full ${
+  (worker.status?.toLowerCase() === 'active' || worker.status?.toLowerCase() === 'activo') 
+  ? 'bg-emerald-500 animate-pulse' 
+  : 'bg-slate-400'
+  }`} />
+  <span className="text-[10px] font-black uppercase tracking-wider">
+  {(worker.status?.toLowerCase() === 'active' || worker.status?.toLowerCase() === 'activo') ? 'Activo' : 'Inactivo'}
+  </span>
+  </div>
+
+  {((worker as any).pin_changed || (worker as any).last_login_at) ? (
+  <span className="text-[9px] font-bold text-emerald-600 bg-emerald-50/80 border border-emerald-200/60 px-2 py-0.5 rounded-full flex items-center gap-1 shadow-xs">
+  <CheckCircle2 size={10} /> Cuenta Activa
+  </span>
+  ) : (
+  <span className="text-[9px] font-bold text-amber-700 bg-amber-50 border border-amber-200/70 px-2 py-0.5 rounded-full flex items-center gap-1 shadow-xs">
+  <Clock size={10} /> 1er Ingreso Pendiente
+  </span>
+  )}
+  </div>
+  </td>
  <td className="py-5 px-6 text-right">
  <div className="flex items-center justify-end gap-2 transition-all">
  <Link

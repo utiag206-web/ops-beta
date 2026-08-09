@@ -1,12 +1,20 @@
 'use server'
 
 import { cookies } from 'next/headers'
+import { unstable_noStore as noStore } from 'next/cache'
 import { createAdminClient } from '@/lib/supabase/server'
 import { getWorkerSession } from './worker-auth'
 import { revalidatePath } from 'next/cache'
 import { getCompanyTimezone, getCompanyLocalTime } from '@/lib/date-utils'
+import { evaluateDailyAttendance } from '@/lib/tareo-engine'
+import { getCompanyHrSettings } from '@/lib/company-hr-settings'
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+async function getAddressFromCoords(lat?: number, lng?: number): Promise<string | null> {
+  // TODO: Implement actual reverse geocoding
+  return null;
+}
 
 // Helper slugify to match dynamic resolution
 const slugify = (text: string) => {
@@ -30,28 +38,31 @@ export async function resolveCompany(companySlug: string) {
  if (!companySlug) return { success: false, error: 'Slug no proporcionado' }
  
  const supabase = await createAdminClient()
- const { data: companies, error } = await supabase
- .from('companies')
- .select('id, name, logo_url')
- 
- if (error || !companies) {
- console.error('[WORKER_PORTAL] Error resolving company slug:', error)
- return { success: false, error: 'Error al consultar la empresa' }
- }
+  const { data: companies, error } = await supabase
+  .from('companies')
+  .select('id, name, logo_url, working_hours')
+  
+  if (error || !companies) {
+  console.error('[WORKER_PORTAL] Error resolving company slug:', error)
+  return { success: false, error: 'Error al consultar la empresa' }
+  }
 
- const company = companies.find(c => (c as any).slug === companySlug || slugify(c.name) === companySlug)
- if (!company) {
- return { success: false, error: 'Empresa no encontrada' }
- }
+  const company = companies.find(c => (c as any).slug === companySlug || slugify(c.name) === companySlug)
+  if (!company) {
+  return { success: false, error: 'Empresa no encontrada' }
+  }
 
- return {
- success: true,
- company: {
- id: company.id,
- name: company.name,
- logo_url: company.logo_url,
- slug: slugify(company.name)
- }
+  const hrSettings = getCompanyHrSettings(company)
+
+  return {
+  success: true,
+  company: {
+  id: company.id,
+  name: company.name,
+  logo_url: company.logo_url,
+  slug: slugify(company.name),
+  gps_enabled: hrSettings.attendance_settings.enable_gps_tracking !== false
+  }
  }
  } catch (error: any) {
  console.error('[WORKER_PORTAL] Unexpected error in resolveCompany:', error)
@@ -63,6 +74,7 @@ export async function resolveCompany(companySlug: string) {
  * Fetches dashboard statistics specifically for the worker portal
  */
 export async function getWorkerPortalStats() {
+ noStore()
  try {
  const session = await getWorkerSession()
  if (!session) return null
@@ -72,153 +84,365 @@ export async function getWorkerPortalStats() {
  const ianaTimezone = await getCompanyTimezone(companyId)
  const { date: today } = getCompanyLocalTime(ianaTimezone)
 
- // Fetch stats concurrently
- const [att, ppe, docs, bns, trns, pmts, nextT, nextS] = await Promise.all([
- supabase.from('attendance').select('check_in, check_out, created_at').eq('worker_id', workerId).eq('date', today).maybeSingle(),
- supabase.from('ppe_deliveries').select('id', { count: 'exact', head: true }).eq('worker_id', workerId).or('status.eq.pending_signature,signature_url.is.null'),
- supabase.from('worker_documents').select('id', { count: 'exact', head: true }).eq('worker_id', workerId),
- supabase.from('bonuses').select('amount, status').eq('worker_id', workerId),
- supabase.from('transport_payments').select('amount, status').eq('worker_id', workerId),
- supabase.from('worker_payments').select('amount, status').eq('worker_id', workerId),
- supabase.from('soma_trainings').select('title, date').eq('company_id', companyId).gte('date', today).order('date', { ascending: true }).limit(1).maybeSingle(),
- supabase.from('soma_talks').select('topic, date').eq('company_id', companyId).gte('date', today).order('date', { ascending: true }).limit(1).maybeSingle()
- ])
+  // Fetch stats concurrently
+  const [att, ppe, docs, bns, trns, pmts, nextT, nextS] = await Promise.all([
+    supabase.from('attendance').select('id, date, check_in, break_start, break_end, check_out, check_in_lat, check_in_lng, check_out_lat, check_out_lng, break_start_lat, break_start_lng, break_end_lat, break_end_lng, check_in_address, check_out_address, break_start_address, break_end_address, created_at').eq('worker_id', workerId).eq('date', today).maybeSingle(),
+    supabase.from('ppe_deliveries').select('id', { count: 'exact', head: true }).eq('worker_id', workerId).or('status.eq.pending_signature,signature_url.is.null'),
+    supabase.from('worker_documents').select('id', { count: 'exact', head: true }).eq('worker_id', workerId),
+    supabase.from('bonuses').select('amount, status').eq('worker_id', workerId),
+    supabase.from('transport_payments').select('amount, status').eq('worker_id', workerId),
+    supabase.from('worker_payments').select('amount, status').eq('worker_id', workerId),
+    supabase.from('soma_trainings').select('title, date').eq('company_id', companyId).gte('date', today).order('date', { ascending: true }).limit(1).maybeSingle(),
+    supabase.from('soma_talks').select('topic, date').eq('company_id', companyId).gte('date', today).order('date', { ascending: true }).limit(1).maybeSingle()
+  ])
 
- const totalBonusesAmount = (bns.data || []).reduce((acc: number, b: any) => acc + (Number(b.amount) || 0), 0)
- const totalTransportAmount = (trns.data || []).reduce((acc: number, t: any) => acc + (Number(t.amount) || 0), 0)
- const totalPaymentsAmount = (pmts.data || []).reduce((acc: number, p: any) => acc + (Number(p.amount) || 0), 0)
+  const totalBonusesAmount = (bns.data || []).reduce((acc: number, b: any) => acc + (Number(b.amount) || 0), 0)
+  const totalTransportAmount = (trns.data || []).reduce((acc: number, t: any) => acc + (Number(t.amount) || 0), 0)
+  const totalPaymentsAmount = (pmts.data || []).reduce((acc: number, p: any) => acc + (Number(p.amount) || 0), 0)
 
- const pendingBenefitsAmount = [
- ...(bns.data || []),
- ...(trns.data || []),
- ...(pmts.data || [])
- ].filter((item: any) => item.status === 'pending')
- .reduce((acc: number, item: any) => acc + (Number(item.amount) || 0), 0)
+  const pendingBenefitsAmount = [
+    ...(bns.data || []),
+    ...(trns.data || []),
+    ...(pmts.data || [])
+  ].filter((item: any) => item.status === 'pending')
+  .reduce((acc: number, item: any) => acc + (Number(item.amount) || 0), 0)
 
- const paidBenefitsAmount = [
- ...(bns.data || []),
- ...(trns.data || []),
- ...(pmts.data || [])
- ].filter((item: any) => item.status === 'paid')
- .reduce((acc: number, item: any) => acc + (Number(item.amount) || 0), 0)
+  const paidBenefitsAmount = [
+    ...(bns.data || []),
+    ...(trns.data || []),
+    ...(pmts.data || [])
+  ].filter((item: any) => item.status === 'paid')
+  .reduce((acc: number, item: any) => acc + (Number(item.amount) || 0), 0)
 
- let statusText = 'SIN REGISTRO'
- if (att.data) {
- if (att.data.check_in && !att.data.check_out) {
- statusText = 'PRESENTE'
- } else if (att.data.check_in && att.data.check_out) {
- statusText = 'SALIDA'
- }
- }
+  let statusText = 'SIN REGISTRO'
+  if (att.data) {
+    if (att.data.check_in && !att.data.break_start && !att.data.check_out) {
+      statusText = 'PRESENTE'
+    } else if (att.data.check_in && att.data.break_start && !att.data.break_end && !att.data.check_out) {
+      statusText = 'EN REFRIGERIO'
+    } else if (att.data.check_in && att.data.break_start && att.data.break_end && !att.data.check_out) {
+      statusText = 'TURNO ACTIVO'
+    } else if (att.data.check_in && att.data.check_out) {
+      statusText = 'JORNADA COMPLETADA'
+    } else if (att.data.check_in) {
+      statusText = 'PRESENTE'
+    }
+  }
 
- return {
- todayAttendance: statusText,
- todayAttendanceDetail: att.data || null,
- totalBonuses: bns.data?.length || 0,
- totalBonusesAmount,
- totalTransportAmount,
- totalPaymentsAmount,
- pendingBenefitsAmount,
- paidBenefitsAmount,
- totalDocs: docs.count || 0,
- pendingPPE: ppe.count || 0,
- nextTraining: nextT.data?.title || 'No programada',
- nextTrainingDate: nextT.data?.date || null,
- nextTalk: nextS.data?.topic || 'No programada',
- nextTalkDate: nextS.data?.date || null,
- }
+  return {
+    todayAttendance: statusText,
+    todayAttendanceDetail: att.data || null,
+    totalBonuses: bns.data?.length || 0,
+    totalBonusesAmount,
+    totalTransportAmount,
+    totalPaymentsAmount,
+    pendingBenefitsAmount,
+    paidBenefitsAmount,
+    totalDocs: docs.count || 0,
+    pendingPPE: ppe.count || 0,
+    nextTraining: nextT.data?.title || 'No programada',
+    nextTrainingDate: nextT.data?.date || null,
+    nextTalk: nextS.data?.topic || 'No programada',
+    nextTalkDate: nextS.data?.date || null,
+  }
+  } catch (error) {
+    console.error('[WORKER_PORTAL] Error fetching stats:', error)
+    return null
+  }
+}
+
+/**
+ * Fast endpoint to just fetch attendance data for state machine changes
+ * avoiding fetching documents/bonuses/trainings
+ */
+export async function getWorkerAttendanceOnly() {
+ noStore()
+ try {
+  const session = await getWorkerSession()
+  if (!session) return null
+
+  const { workerId, companyId } = session
+  const supabase = await createAdminClient()
+  const ianaTimezone = await getCompanyTimezone(companyId)
+  const { date: today } = getCompanyLocalTime(ianaTimezone)
+
+  const att = await supabase.from('attendance')
+    .select('id, date, check_in, break_start, break_end, check_out, check_in_lat, check_in_lng, check_out_lat, check_out_lng, break_start_lat, break_start_lng, break_end_lat, break_end_lng, check_in_address, check_out_address, break_start_address, break_end_address, created_at')
+    .eq('worker_id', workerId)
+    .eq('date', today)
+    .maybeSingle()
+
+  let statusText = 'SIN REGISTRO'
+  if (att.data) {
+    if (att.data.check_in && !att.data.break_start && !att.data.check_out) {
+      statusText = 'PRESENTE'
+    } else if (att.data.check_in && att.data.break_start && !att.data.break_end && !att.data.check_out) {
+      statusText = 'EN REFRIGERIO'
+    } else if (att.data.check_in && att.data.break_start && att.data.break_end && !att.data.check_out) {
+      statusText = 'TURNO ACTIVO'
+    } else if (att.data.check_in && att.data.check_out) {
+      statusText = 'JORNADA COMPLETADA'
+    } else if (att.data.check_in) {
+      statusText = 'PRESENTE'
+    }
+  }
+
+  return {
+    todayAttendance: statusText,
+    todayAttendanceDetail: att.data || null,
+  }
  } catch (error) {
- console.error('[WORKER_PORTAL] Error fetching stats:', error)
- return null
+  console.error('[WORKER_PORTAL] Error fetching fast attendance:', error)
+  return null
  }
 }
 
+export type ShiftPunchType = 'in' | 'break_start' | 'break_end' | 'out' | 'shift_change' | 'commission' | 'permission' | 'exit_plant' | 'reentry' | 'pause'
+
 /**
- * Marks check-in attendance for the logged-in worker
+ * Unified Server Action for multi-stage attendance punching with atomic attendance_logs and attendance sync
  */
-export async function checkInWorker() {
- try {
- const session = await getWorkerSession()
- if (!session) return { success: false, error: 'Sesión no válida o expirada.' }
+export async function registerWorkerPunch(
+  type: ShiftPunchType,
+  coords?: { lat?: number; lng?: number; accuracy?: number; locationId?: string }
+) {
+  try {
+    const session = await getWorkerSession()
+    if (!session) return { success: false, error: 'Sesión no válida o expirada.' }
 
- const { workerId, companyId, companySlug } = session
- const supabase = await createAdminClient()
- const ianaTimezone = await getCompanyTimezone(companyId)
- const { date: today, time: now } = getCompanyLocalTime(ianaTimezone)
+    const { workerId, companyId, companySlug } = session
+    const supabase = await createAdminClient()
+    const ianaTimezone = await getCompanyTimezone(companyId)
+    const { date: today, time: now } = getCompanyLocalTime(ianaTimezone)
 
- const { data, error } = await supabase
- .from('attendance')
- .insert([{
- worker_id: workerId,
- company_id: companyId,
- date: today,
- check_in: now
- }])
- .select()
+    // Reverse geocoding address fetch
+    const address = await getAddressFromCoords(coords?.lat, coords?.lng)
+    const timestampISO = new Date().toISOString()
 
- if (error) {
- if (error.code === '23505') {
- return { success: false, error: 'Ya realizaste el ingreso hoy.' }
- }
- console.error('[WORKER_PORTAL] Error checking in:', error)
- return { success: false, error: 'Error de base de datos al registrar ingreso.' }
- }
+    // 1. ATOMIC INSERT INTO attendance_logs
+    const logPayload: any = {
+      company_id: companyId,
+      worker_id: workerId,
+      date_local: today,
+      type: type,
+      timestamp: timestampISO
+    }
 
- revalidatePath('/dashboard')
- revalidatePath('/attendance')
- revalidatePath('/reports')
- return { success: true, data: data[0] }
- } catch (error: any) {
- console.error('[WORKER_PORTAL] Unexpected check-in error:', error)
- return { success: false, error: 'Ocurrió un error inesperado al registrar el ingreso.' }
- }
+    if (coords?.lat !== undefined && coords?.lng !== undefined) {
+      logPayload.latitude = coords.lat
+      logPayload.longitude = coords.lng
+      logPayload.accuracy = coords.accuracy || null
+      if (address) logPayload.address = address
+    }
+
+    const { error: logErr } = await supabase.from('attendance_logs').insert([logPayload])
+    if (logErr) {
+      console.warn('[WORKER_PORTAL] Warning inserting attendance_log:', logErr.message)
+      delete logPayload.latitude
+      delete logPayload.longitude
+      delete logPayload.accuracy
+      delete logPayload.address
+      const { error: retryLogErr } = await supabase.from('attendance_logs').insert([logPayload])
+      if (retryLogErr) {
+        console.error('[WORKER_PORTAL] Fatal error inserting attendance_log:', retryLogErr)
+        return { success: false, error: `DB Error (logs): ${retryLogErr.message}` }
+      }
+    }
+
+    // 2. UPSERT / UPDATE attendance table summary
+    const { data: existingAtt } = await supabase
+      .from('attendance')
+      .select('id, check_in, break_start, break_end, check_out')
+      .eq('worker_id', workerId)
+      .eq('date', today)
+      .maybeSingle()
+
+    if (type === 'in') {
+      if (existingAtt?.check_in) {
+        return { success: false, error: 'Ya registraste la entrada del día de hoy.' }
+      }
+      const attPayload: any = {
+        check_in: now
+      }
+      if (coords?.lat !== undefined && coords?.lng !== undefined) {
+        attPayload.check_in_lat = coords.lat
+        attPayload.check_in_lng = coords.lng
+        attPayload.latitude = coords.lat
+        attPayload.longitude = coords.lng
+        if (address) attPayload.check_in_address = address
+      }
+      
+      let attAction = existingAtt 
+        ? supabase.from('attendance').update(attPayload).eq('id', existingAtt.id)
+        : supabase.from('attendance').insert([{ worker_id: workerId, company_id: companyId, date: today, ...attPayload }])
+
+      let { error: attErr } = await attAction
+      if (attErr) {
+        delete attPayload.check_in_lat
+        delete attPayload.check_in_lng
+        delete attPayload.latitude
+        delete attPayload.longitude
+        delete attPayload.check_in_address
+        
+        let retryAction = existingAtt
+          ? supabase.from('attendance').update(attPayload).eq('id', existingAtt.id)
+          : supabase.from('attendance').insert([{ worker_id: workerId, company_id: companyId, date: today, ...attPayload }])
+          
+        const { error: retryAttErr } = await retryAction
+        if (retryAttErr) {
+          console.error('[WORKER_PORTAL] Fatal error inserting attendance:', retryAttErr)
+          return { success: false, error: `DB Error (att): ${retryAttErr.message}` }
+        }
+      }
+    } else if (existingAtt) {
+      const updateData: any = { updated_at: new Date().toISOString() }
+      if (type === 'break_start') {
+        updateData.break_start = now
+        if (coords?.lat !== undefined) {
+          updateData.break_start_lat = coords.lat
+          updateData.break_start_lng = coords.lng
+          if (address) updateData.break_start_address = address
+        }
+      } else if (type === 'break_end') {
+        updateData.break_end = now
+        if (coords?.lat !== undefined) {
+          updateData.break_end_lat = coords.lat
+          updateData.break_end_lng = coords.lng
+          if (address) updateData.break_end_address = address
+        }
+      } else if (type === 'out') {
+        updateData.check_out = now
+        if (coords?.lat !== undefined) {
+          updateData.check_out_lat = coords.lat
+          updateData.check_out_lng = coords.lng
+          if (address) updateData.check_out_address = address
+        }
+      }
+
+      let { error: updateErr } = await supabase.from('attendance').update(updateData).eq('id', existingAtt.id)
+      if (updateErr && (updateErr.code === '42703' || updateErr.message?.includes('column'))) {
+        // Strip extra gps address fields
+        delete updateData.break_start_lat
+        delete updateData.break_start_lng
+        delete updateData.break_start_address
+        delete updateData.break_end_lat
+        delete updateData.break_end_lng
+        delete updateData.break_end_address
+        delete updateData.check_out_lat
+        delete updateData.check_out_lng
+        delete updateData.check_out_address
+        await supabase.from('attendance').update(updateData).eq('id', existingAtt.id)
+      }
+    }
+
+    // 3. AUTOMATIC ENGINE SYNC WITH tareo_records (unless manually overridden by HR)
+    try {
+      const { data: existingTareo } = await supabase
+        .from('tareo_records')
+        .select('id, is_manual, status')
+        .eq('worker_id', workerId)
+        .eq('date', today)
+        .maybeSingle()
+
+      if (!existingTareo || !existingTareo.is_manual) {
+        // Fetch company settings directly from DB or via helper
+        const { data: comp } = await supabase.from('companies').select('*').eq('id', companyId).single()
+        const hrSettings = getCompanyHrSettings(comp)
+        const settings = hrSettings.attendance_settings
+        
+        const { data: dayPunches } = await supabase
+          .from('attendance_logs')
+          .select('type, timestamp, latitude, longitude, accuracy, address')
+          .eq('worker_id', workerId)
+          .eq('date_local', today)
+          .order('timestamp', { ascending: true })
+
+        const evaluation = evaluateDailyAttendance(today, null, dayPunches || [], settings)
+        await supabase.from('tareo_records').upsert({
+          company_id: companyId,
+          worker_id: workerId,
+          date: today,
+          status: evaluation.status,
+          hours_worked: evaluation.effectiveHours,
+          overtime_hours: evaluation.overtimeHours,
+          tardiness_minutes: evaluation.tardinessMinutes,
+          is_manual: false,
+          updated_at: new Date().toISOString()
+        }, { onConflict: 'worker_id,date' })
+      }
+    } catch (tareoErr) {
+      console.warn('[WORKER_PORTAL] Warning syncing tareo_record:', tareoErr)
+    }
+
+    // 4. FETCH NEW ATTENDANCE STATE TO RETURN
+    const { data: updatedAtt } = await supabase
+      .from('attendance')
+      .select('id, date, check_in, break_start, break_end, check_out, check_in_lat, check_in_lng, check_out_lat, check_out_lng, break_start_lat, break_start_lng, break_end_lat, break_end_lng, check_in_address, check_out_address, break_start_address, break_end_address, created_at')
+      .eq('worker_id', workerId)
+      .eq('date', today)
+      .maybeSingle()
+
+    let statusText = 'SIN REGISTRO'
+    if (updatedAtt) {
+      if (updatedAtt.check_in && !updatedAtt.break_start && !updatedAtt.check_out) {
+        statusText = 'PRESENTE'
+      } else if (updatedAtt.check_in && updatedAtt.break_start && !updatedAtt.break_end && !updatedAtt.check_out) {
+        statusText = 'EN REFRIGERIO'
+      } else if (updatedAtt.check_in && updatedAtt.break_start && updatedAtt.break_end && !updatedAtt.check_out) {
+        statusText = 'TURNO ACTIVO'
+      } else if (updatedAtt.check_in && updatedAtt.check_out) {
+        statusText = 'JORNADA COMPLETADA'
+      } else if (updatedAtt.check_in) {
+        statusText = 'PRESENTE'
+      }
+    }
+
+    // 5. SURGICAL REVALIDATION OF ALL IMPACTED PATHS
+    revalidatePath('/tareo')
+    revalidatePath('/attendance')
+    revalidatePath('/dashboard')
+    revalidatePath('/reports')
+    revalidatePath(`/w/${companySlug}`, 'page')
+
+    return { 
+      success: true, 
+      timestamp: now, 
+      address,
+      todayAttendance: statusText,
+      todayAttendanceDetail: updatedAtt || null
+    }
+  } catch (error: any) {
+    console.error('[WORKER_PORTAL] Error registering punch:', error)
+    return { success: false, error: 'No se pudo procesar la marcación. Intente nuevamente.' }
+  }
 }
 
 /**
- * Marks check-out attendance for the logged-in worker
+ * Backward-compatible checkInWorker wrapper
  */
-export async function checkOutWorker() {
- try {
- const session = await getWorkerSession()
- if (!session) return { success: false, error: 'Sesión no válida o expirada.' }
+export async function checkInWorker(coords?: { lat?: number; lng?: number; accuracy?: number; locationId?: string }) {
+  return registerWorkerPunch('in', coords)
+}
 
- const { workerId, companyId, companySlug } = session
- const supabase = await createAdminClient()
- const ianaTimezone = await getCompanyTimezone(companyId)
- const { time: now } = getCompanyLocalTime(ianaTimezone)
- // Buscar el último registro de entrada (check-in) que no tenga salida (check-out)
- const { data: activePunch, error: fetchErr } = await supabase
- .from('attendance')
- .select('id')
- .eq('worker_id', workerId)
- .is('check_out', null)
- .order('date', { ascending: false })
- .order('check_in', { ascending: false })
- .limit(1)
- .maybeSingle()
+/**
+ * Backward-compatible checkOutWorker wrapper
+ */
+export async function checkOutWorker(coords?: { lat?: number; lng?: number; accuracy?: number; locationId?: string }) {
+  return registerWorkerPunch('out', coords)
+}
 
- if (fetchErr || !activePunch) {
- return { success: false, error: 'No se encontró una marcación de entrada activa.' }
- }
+/**
+ * Backward-compatible startBreakWorker wrapper
+ */
+export async function startBreakWorker(coords?: { lat?: number; lng?: number; accuracy?: number; locationId?: string }) {
+  return registerWorkerPunch('break_start', coords)
+}
 
- const { error } = await supabase
- .from('attendance')
- .update({ check_out: now })
- .eq('id', activePunch.id)
-
- if (error) {
- console.error('[WORKER_PORTAL] Error checking out:', error)
- return { success: false, error: 'Error al actualizar salida en el sistema.' }
- }
-
- revalidatePath('/dashboard')
- revalidatePath('/attendance')
- revalidatePath('/reports')
- return { success: true }
- } catch (error: any) {
- console.error('[WORKER_PORTAL] Unexpected check-out error:', error)
- return { success: false, error: 'Ocurrió un error inesperado al registrar la salida.' }
- }
+/**
+ * Backward-compatible endBreakWorker wrapper
+ */
+export async function endBreakWorker(coords?: { lat?: number; lng?: number; accuracy?: number; locationId?: string }) {
+  return registerWorkerPunch('break_end', coords)
 }
 
 /**

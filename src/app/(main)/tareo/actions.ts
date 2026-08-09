@@ -96,7 +96,7 @@ export async function getTareoRecords(startDate: string, endDate: string) {
  const companyId = await getStrictCompanyId()
  const supabase = await createAdminClient()
  const { data, error } = await applyIsolation(
- supabase.from('tareo_records').select('worker_id, date, status'),
+ supabase.from('tareo_records').select('worker_id, date, status, is_manual'),
  companyId,
  extendedUser.role_id
  )
@@ -142,6 +142,7 @@ export async function upsertTareoRecord(payload: {
  company_id: companyId || (payload as any).company_id,
  date: payload.date,
  status: payload.status,
+ is_manual: true,
  updated_at: new Date().toISOString()
  }, {
  onConflict: 'worker_id,date,company_id'
@@ -335,7 +336,7 @@ export async function getTareoDashboardData(month: string, startDate: string, en
  const supabase = await createAdminClient()
 
  const [records, notes, config, punches] = await Promise.all([
- applyIsolation(supabase.from('tareo_records').select('worker_id, date, status'), companyId, extendedUser.role_id)
+ applyIsolation(supabase.from('tareo_records').select('worker_id, date, status, is_manual'), companyId, extendedUser.role_id)
  .gte('date', startDate)
  .lte('date', endDate),
  applyIsolation(supabase.from('tareo_monthly_notes').select('worker_id, note'), companyId, extendedUser.role_id)

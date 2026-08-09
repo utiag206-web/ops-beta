@@ -10,23 +10,29 @@ import {
  ChevronRight, Download, RefreshCw, PenTool, 
  X, AlertTriangle, Info, Calendar, DollarSign,
  TrendingUp, Award, AwardIcon, ShieldCheck,
- LayoutDashboard, Loader2, ArrowLeft
+ LayoutDashboard, Loader2, ArrowLeft, MapPin,
+ Utensils, Coffee
 } from 'lucide-react'
 import { toast } from 'sonner'
-import { loginWorker, logoutWorker } from '@/app/actions/worker-auth'
+import { loginWorker, logoutWorker, updateWorkerPin } from '@/app/actions/worker-auth'
+import { getCompanyAuthSettings } from '@/lib/company-auth-settings'
 import { 
- getWorkerPortalStats, 
- checkInWorker, 
- checkOutWorker, 
- getWorkerPortalDocuments, 
- getWorkerPortalPPEDeliveries, 
- signWorkerPortalPPEDelivery, 
- getWorkerPortalFinances,
- getWorkerPortalSomaTalks,
- getWorkerPortalSomaTrainings
+  getWorkerPortalStats, 
+  checkInWorker, 
+  checkOutWorker, 
+  registerWorkerPunch,
+  getWorkerAttendanceOnly,
+  ShiftPunchType,
+  getWorkerPortalDocuments, 
+  getWorkerPortalPPEDeliveries, 
+  signWorkerPortalPPEDelivery, 
+  getWorkerPortalFinances,
+  getWorkerPortalSomaTalks,
+  getWorkerPortalSomaTrainings
 } from '@/app/actions/worker-portal'
 import { confirmSomaTalk, confirmSomaTraining } from '@/app/(main)/soma/actions'
 import { hasPermission } from '@/lib/permissions'
+import { AttendanceLocationModal, LocationPunch } from '@/components/attendance/AttendanceLocationModal'
 
 interface WorkerPortalClientProps {
  company: {
@@ -34,6 +40,7 @@ interface WorkerPortalClientProps {
  name: string
  logo_url: string | null
  slug: string
+ gps_enabled?: boolean
  }
  session: {
  workerId: string
@@ -50,6 +57,7 @@ interface WorkerPortalClientProps {
  area?: string | null
  isMismatched?: boolean
  photoUrl?: string | null
+ requirePinChange?: boolean
  } | null
 }
 
@@ -90,12 +98,19 @@ export default function WorkerPortalClient({ company, session }: WorkerPortalCli
  }
  }, [searchParams])
  
- // Login State
+ // Authentication & PIN State
  const [identifier, setIdentifier] = useState('')
  const [pin, setPin] = useState('')
+ const [showPassword, setShowPassword] = useState(false)
  const [loginLoading, setLoginLoading] = useState(false)
  const [loginError, setLoginError] = useState<string | null>(null)
- const [showPassword, setShowPassword] = useState(false)
+
+ // First Login Password Change State
+ const [newPin, setNewPin] = useState('')
+ const [confirmPin, setConfirmPin] = useState('')
+ const [pinChangeError, setPinChangeError] = useState<string | null>(null)
+ const [pinChangeLoading, setPinChangeLoading] = useState(false)
+ const [mustChangePin, setMustChangePin] = useState(false)
 
  // Portal Data States
  const [stats, setStats] = useState<any>(null)
@@ -108,6 +123,8 @@ export default function WorkerPortalClient({ company, session }: WorkerPortalCli
  const [selectedTraining, setSelectedTraining] = useState<any | null>(null)
  const [loadingData, setLoadingData] = useState(false)
  const [markingAttendance, setMarkingAttendance] = useState(false)
+ const [isLocationModalOpen, setIsLocationModalOpen] = useState(false)
+ const [locationModalPunches, setLocationModalPunches] = useState<LocationPunch[]>([])
 
  // Signature Modal State
  const [activePPETosign, setActivePPETosign] = useState<any>(null)
@@ -150,6 +167,21 @@ export default function WorkerPortalClient({ company, session }: WorkerPortalCli
  setLoadingData(false)
  }
  }
+
+  const reloadAttendanceStats = async () => {
+    try {
+      const attData = await getWorkerAttendanceOnly()
+      if (attData) {
+        setStats((prev: any) => prev ? {
+          ...prev,
+          todayAttendance: attData.todayAttendance,
+          todayAttendanceDetail: attData.todayAttendanceDetail
+        } : null)
+      }
+    } catch (e) {
+      console.error(e)
+    }
+  }
 
  const handleConfirmAttendance = async (talkId: string) => {
  try {
@@ -211,7 +243,9 @@ export default function WorkerPortalClient({ company, session }: WorkerPortalCli
  const res = await loginWorker(company.slug, identifier.trim(), pin.trim())
  if (res.success) {
  toast.success('¡Acceso exitoso!')
- if (res.redirectToDashboard) {
+ if (res.requirePinChange) {
+ setMustChangePin(true)
+ } else if (res.redirectToDashboard) {
  window.location.href = '/dashboard'
  } else {
  router.refresh()
@@ -226,57 +260,228 @@ export default function WorkerPortalClient({ company, session }: WorkerPortalCli
  }
  }
 
+ // Handle First Login Password Change
+ const handleFirstLoginPinChange = async (e: React.FormEvent) => {
+ e.preventDefault()
+ if (!newPin.trim() || !confirmPin.trim()) {
+ setPinChangeError('Ingresa y confirma tu nueva contraseña.')
+ return
+ }
+ if (newPin.trim() !== confirmPin.trim()) {
+ setPinChangeError('Las contraseñas ingresadas no coinciden.')
+ return
+ }
+ if (newPin.trim().length < 4) {
+ setPinChangeError('La contraseña debe tener al menos 4 caracteres.')
+ return
+ }
+
+ setPinChangeLoading(true)
+ setPinChangeError(null)
+
+ try {
+ const workerId = session?.workerId
+ const res = await updateWorkerPin(workerId || '', newPin.trim())
+ if (res.success) {
+ toast.success('¡Nueva contraseña configurada exitosamente!')
+ setMustChangePin(false)
+ if (session) {
+ session.requirePinChange = false
+ }
+ router.refresh()
+ } else {
+ setPinChangeError(res.error || 'Error al actualizar contraseña.')
+ }
+ } catch (err: any) {
+ setPinChangeError('Ocurrió un error al guardar la nueva contraseña.')
+ } finally {
+ setPinChangeLoading(false)
+ }
+ }
+
+  // Geolocation Helper
+  const getPosition = (): Promise<{ lat?: number; lng?: number; accuracy?: number }> => {
+    return new Promise((resolve, reject) => {
+      // 1. Secure context check (HTTP block prevention)
+      if (typeof window !== 'undefined' && window.isSecureContext === false) {
+        if (company.gps_enabled) {
+          reject(new Error('GPS requiere conexión segura.'))
+        } else {
+          resolve({})
+        }
+        return
+      }
+
+      if (!navigator.geolocation) {
+        if (company.gps_enabled) reject(new Error('Navegador no soporta GPS.'))
+        else resolve({})
+        return
+      }
+
+      navigator.geolocation.getCurrentPosition(
+        (pos) => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude, accuracy: pos.coords.accuracy }),
+        (err) => {
+          if (company.gps_enabled) {
+            if (err.code === err.PERMISSION_DENIED) {
+              reject(new Error('Permite tu ubicación para marcar.'))
+            } else if (err.code === err.POSITION_UNAVAILABLE || err.code === err.TIMEOUT) {
+              reject(new Error('Activa tu ubicación para marcar.'))
+            } else {
+              reject(new Error('Error al obtener ubicación.'))
+            }
+          } else {
+            resolve({})
+          }
+        },
+        { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+      )
+    })
+  }
+
  // Handle Logout
  const handleLogout = async () => {
- try {
- await logoutWorker()
- toast.success('Sesión cerrada correctamente.')
- setIdentifier('')
- setPin('')
- setLoginError(null)
- setShowPassword(false)
- setActiveTab('inicio')
- router.refresh()
- } catch (error) {
- toast.error('Error al cerrar sesión.')
- }
- }
+    try {
+      await logoutWorker()
+      toast.success('Sesión cerrada correctamente.')
+      setIdentifier('')
+      setPin('')
+      setLoginError(null)
+      setShowPassword(false)
+      setActiveTab('inicio')
+      // Force a hard reload to avoid Next.js caching issues causing "Empresa no encontrada"
+      window.location.href = window.location.pathname
+    } catch (error) {
+      console.error('Error logging out:', error)
+    }
+  }
 
- // Handle Check In
- const handleCheckIn = async () => {
- setMarkingAttendance(true)
- try {
- const res = await checkInWorker()
- if (res.success) {
- toast.success('Ingreso registrado correctamente.')
- await loadPortalData()
- } else {
- toast.error(res.error || 'Error al registrar ingreso.')
- }
- } catch (error) {
- toast.error('Error de red al registrar ingreso.')
- } finally {
- setMarkingAttendance(false)
- }
- }
+  // Handle Check In
+  const handleCheckIn = async (selectedLocationId?: string) => {
+    setMarkingAttendance(true)
+    try {
+      const coords = await getPosition()
+      const res = await checkInWorker({ ...coords, locationId: selectedLocationId })
+      if (res.success) {
+        toast.success(coords.lat ? 'Ingreso registrado con GPS.' : 'Ingreso registrado correctamente.')
+        setIsLocationModalOpen(false)
+        if (res.todayAttendance && res.todayAttendanceDetail) {
+          setStats((prev: any) => prev ? {
+            ...prev,
+            todayAttendance: res.todayAttendance,
+            todayAttendanceDetail: res.todayAttendanceDetail
+          } : null)
+        } else {
+          await reloadAttendanceStats()
+        }
+      } else if ((res as any).requiresLocationSelection && (res as any).locations) {
+        setLocationModalPunches((res as any).locations)
+        setIsLocationModalOpen(true)
+        if (res.error) toast.error(res.error)
+      } else {
+        toast.error(res.error || 'Error al registrar ingreso.')
+      }
+    } catch (error: any) {
+      toast.error(error.message || 'Error de red al registrar ingreso.')
+    } finally {
+      setMarkingAttendance(false)
+    }
+  }
 
- // Handle Check Out
- const handleCheckOut = async () => {
- setMarkingAttendance(true)
- try {
- const res = await checkOutWorker()
- if (res.success) {
- toast.success('Salida registrada correctamente. ¡Buen descanso!')
- await loadPortalData()
- } else {
- toast.error(res.error || 'Error al registrar salida.')
- }
- } catch (error) {
- toast.error('Error de red al registrar salida.')
- } finally {
- setMarkingAttendance(false)
- }
- }
+  // Handle Break Start
+  const handleBreakStart = async (selectedLocationId?: string) => {
+    setMarkingAttendance(true)
+    try {
+      const coords = await getPosition()
+      const res = await registerWorkerPunch('break_start', { ...coords, locationId: selectedLocationId })
+      if (res.success) {
+        toast.success(coords.lat ? 'Inicio de refrigerio registrado con GPS.' : 'Inicio de refrigerio registrado.')
+        setIsLocationModalOpen(false)
+        if (res.todayAttendance && res.todayAttendanceDetail) {
+          setStats((prev: any) => prev ? {
+            ...prev,
+            todayAttendance: res.todayAttendance,
+            todayAttendanceDetail: res.todayAttendanceDetail
+          } : null)
+        } else {
+          await reloadAttendanceStats()
+        }
+      } else if ((res as any).requiresLocationSelection && (res as any).locations) {
+        setLocationModalPunches((res as any).locations)
+        setIsLocationModalOpen(true)
+        if (res.error) toast.error(res.error)
+      } else {
+        toast.error(res.error || 'Error al registrar inicio de refrigerio.')
+      }
+    } catch (error: any) {
+      toast.error(error.message || 'Error de red al registrar inicio de refrigerio.')
+    } finally {
+      setMarkingAttendance(false)
+    }
+  }
+
+  // Handle Break End
+  const handleBreakEnd = async (selectedLocationId?: string) => {
+    setMarkingAttendance(true)
+    try {
+      const coords = await getPosition()
+      const res = await registerWorkerPunch('break_end', { ...coords, locationId: selectedLocationId })
+      if (res.success) {
+        toast.success(coords.lat ? 'Fin de refrigerio registrado con GPS.' : 'Fin de refrigerio registrado.')
+        setIsLocationModalOpen(false)
+        if (res.todayAttendance && res.todayAttendanceDetail) {
+          setStats((prev: any) => prev ? {
+            ...prev,
+            todayAttendance: res.todayAttendance,
+            todayAttendanceDetail: res.todayAttendanceDetail
+          } : null)
+        } else {
+          await reloadAttendanceStats()
+        }
+      } else if ((res as any).requiresLocationSelection && (res as any).locations) {
+        setLocationModalPunches((res as any).locations)
+        setIsLocationModalOpen(true)
+        if (res.error) toast.error(res.error)
+      } else {
+        toast.error(res.error || 'Error al registrar fin de refrigerio.')
+      }
+    } catch (error: any) {
+      toast.error(error.message || 'Error de red al registrar fin de refrigerio.')
+    } finally {
+      setMarkingAttendance(false)
+    }
+  }
+
+  // Handle Check Out
+  const handleCheckOut = async (selectedLocationId?: string) => {
+    setMarkingAttendance(true)
+    try {
+      const coords = await getPosition()
+      const res = await checkOutWorker({ ...coords, locationId: selectedLocationId })
+      if (res.success) {
+        toast.success(coords.lat ? 'Salida registrada con GPS.' : 'Salida registrada correctamente.')
+        setIsLocationModalOpen(false)
+        if (res.todayAttendance && res.todayAttendanceDetail) {
+          setStats((prev: any) => prev ? {
+            ...prev,
+            todayAttendance: res.todayAttendance,
+            todayAttendanceDetail: res.todayAttendanceDetail
+          } : null)
+        } else {
+          await reloadAttendanceStats()
+        }
+      } else if ((res as any).requiresLocationSelection && (res as any).locations) {
+        setLocationModalPunches((res as any).locations)
+        setIsLocationModalOpen(true)
+        if (res.error) toast.error(res.error)
+      } else {
+        toast.error(res.error || 'Error al registrar salida.')
+      }
+    } catch (error: any) {
+      toast.error(error.message || 'Error de red al registrar salida.')
+    } finally {
+      setMarkingAttendance(false)
+    }
+  }
 
  // Canvas drawing functions for signature
  const getCoordinates = (e: React.MouseEvent | React.TouchEvent) => {
@@ -399,15 +604,14 @@ export default function WorkerPortalClient({ company, session }: WorkerPortalCli
  <div className="min-h-screen bg-slate-950 flex flex-col justify-center items-center p-6 text-center relative overflow-hidden font-sans">
  <div className="absolute top-[-30%] left-[-10%] w-[80%] h-[60%] rounded-full bg-blue-900/20 blur-[130px]" />
  <div className="w-full max-w-md bg-slate-900/80 backdrop-blur-md border border-slate-800 rounded-[2.5rem] p-8 shadow-2xl space-y-6 relative z-10">
- <div className="w-16 h-16 bg-blue-950/40 text-blue-500 rounded-3xl border border-blue-900/50 flex items-center justify-center mx-auto">
- <RefreshCw size={32} className="animate-spin text-blue-400" />
- </div>
- <div className="space-y-2">
- <h1 className="text-xl font-black text-white tracking-tight">Sincronizando Sesión</h1>
+ <div className="text-center space-y-4 relative z-10 w-full px-6">
+ <RefreshCw className="animate-spin text-white/80 mx-auto" size={48} />
+ <h1 className="text-xl font-black text-white tracking-tight">Actualizando tu panel</h1>
+ <div className="h-1 w-24 bg-white/20 rounded-full mx-auto overflow-hidden"></div>
  <p className="text-xs font-bold text-blue-400 tracking-tight">Multiempresa Corporativa</p>
  </div>
- <p className="text-slate-400 text-sm leading-relaxed">
- Hemos detectado un cambio de empresa activa a través de su código QR o enlace. Sincronizando credenciales de forma segura...
+ <p className="text-white/70 text-sm max-w-[280px] mx-auto leading-relaxed">
+ Hemos detectado un cambio de empresa activa a través de su código QR o enlace. Actualizando tus credenciales de forma segura...
  </p>
  <div className="border-t border-slate-800 pt-5">
  <p className="text-xs text-slate-500 font-medium">
@@ -423,6 +627,32 @@ export default function WorkerPortalClient({ company, session }: WorkerPortalCli
  // RENDERING: UNAUTHENTICATED LOGIN VIEW
  // -------------------------------------------------------------
  if (!session) {
+ const authSettings = getCompanyAuthSettings(company)
+
+ const identifierLabel = authSettings.login_mode === 'DNI_ONLY'
+ ? 'DNI (8 dígitos)'
+ : authSettings.login_mode === 'COD_ONLY'
+ ? 'Código de Trabajador'
+ : authSettings.login_mode === 'EMAIL'
+ ? 'Correo Electrónico Corporativo'
+ : 'DNI o Código de Trabajador'
+
+ const identifierPlaceholder = authSettings.login_mode === 'DNI_ONLY'
+ ? 'Ej: 72345678'
+ : authSettings.login_mode === 'COD_ONLY'
+ ? 'Ej: W-0012'
+ : authSettings.login_mode === 'EMAIL'
+ ? 'correo@empresa.com'
+ : 'Ej: 72345678 o W-0012'
+
+ const passwordHint = authSettings.secret_mode === 'BIRTHDATE'
+ ? 'Fecha de Nacimiento (DDMMAAAA)'
+ : authSettings.secret_mode === 'CUSTOM_PIN'
+ ? 'PIN asignado'
+ : authSettings.secret_mode === 'PASSWORD'
+ ? 'Contraseña'
+ : 'DNI por defecto'
+
  return (
  <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-600/40 to-blue-900/40 p-4 font-sans antialiased text-slate-800 relative overflow-hidden">
  {/* Glow ambient background */}
@@ -451,10 +681,10 @@ export default function WorkerPortalClient({ company, session }: WorkerPortalCli
  </div>
  )}
 
- {/* Identifier (DNI / CODE) */}
+ {/* Identifier */}
  <div>
  <label htmlFor="identifier" className="block text-sm font-semibold text-slate-600 mb-1">
- DNI o Código de Trabajador
+ {identifierLabel}
  </label>
  <div className="relative">
  <User className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
@@ -464,7 +694,7 @@ export default function WorkerPortalClient({ company, session }: WorkerPortalCli
  required
  value={identifier}
  onChange={(e) => setIdentifier(e.target.value)}
- placeholder="Ej: 72345678"
+ placeholder={identifierPlaceholder}
  data-keep-case="true"
  className="w-full bg-slate-50 border-2 border-slate-200 focus:border-blue-600 focus:bg-white rounded-xl py-3.5 pr-4 pl-12 text-slate-900 font-bold transition-all outline-none shadow-sm placeholder:text-slate-400"
  />
@@ -477,7 +707,7 @@ export default function WorkerPortalClient({ company, session }: WorkerPortalCli
  <label htmlFor="pin" className="block text-sm font-semibold text-slate-600">
  Contraseña / PIN
  </label>
- <span className="text-xs text-slate-400 font-medium">DNI por defecto</span>
+ <span className="text-xs text-slate-400 font-medium">{passwordHint}</span>
  </div>
  <div className="relative">
  <Key className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
@@ -612,8 +842,8 @@ export default function WorkerPortalClient({ company, session }: WorkerPortalCli
  {/* Loading overlay */}
  {loadingData && (
  <div className="fixed top-4 right-4 z-[150] bg-slate-900/95 backdrop-blur text-white px-4 py-2.5 rounded-2xl shadow-xl flex items-center gap-2.5 text-[10px] font-black tracking-tight border border-slate-800 animate-in fade-in slide-in-from-top-4 duration-300">
- <Loader2 className="animate-spin text-blue-400" size={14} />
- <span>Sincronizando...</span>
+ <RefreshCw className="animate-spin text-blue-600" size={16} />
+ <span>Actualizando...</span>
  </div>
  )}
 
@@ -656,61 +886,136 @@ export default function WorkerPortalClient({ company, session }: WorkerPortalCli
  </div>
 
  {/* Shift Hours visualization */}
- <div className="grid grid-cols-2 gap-4">
- <div className="p-4 bg-slate-50 border border-slate-200/60 rounded-2xl relative overflow-hidden">
- <p className="text-[10px] font-bold text-slate-400 tracking-tight mb-1">Entrada</p>
- <p className="text-xl font-black text-slate-700 tabular-nums">
- {stats?.todayAttendanceDetail?.check_in || '--:--'}
- </p>
- {stats?.todayAttendanceDetail?.check_in && (
- <div className="absolute right-3 bottom-3 text-emerald-500">
- <CheckCircle2 size={16} />
- </div>
- )}
- </div>
- <div className="p-4 bg-slate-50 border border-slate-200/60 rounded-2xl relative overflow-hidden">
- <p className="text-[10px] font-bold text-slate-400 tracking-tight mb-1">Salida</p>
- <p className="text-xl font-black text-slate-700 tabular-nums">
- {stats?.todayAttendanceDetail?.check_out || '--:--'}
- </p>
- {stats?.todayAttendanceDetail?.check_out && (
- <div className="absolute right-3 bottom-3 text-emerald-500">
- <CheckCircle2 size={16} />
- </div>
- )}
- </div>
- </div>
+ <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+  <div className="p-4 bg-slate-50 border border-slate-200/60 rounded-2xl relative overflow-hidden">
+  <p className="text-[10px] font-bold text-slate-400 tracking-tight mb-1">Entrada</p>
+  <p className="text-xl font-black text-slate-700 tabular-nums">
+  {stats?.todayAttendanceDetail?.check_in || '--:--'}
+  </p>
+  {stats?.todayAttendanceDetail?.check_in && (
+  <div className="absolute right-3 bottom-3 flex flex-col items-end">
+  <div className="text-blue-500 mb-1">
+  <CheckCircle2 size={16} />
+  </div>
+  {stats?.todayAttendanceDetail?.check_in_lat && (
+    <span className="text-[8px] bg-blue-100 text-blue-600 px-1.5 py-0.5 rounded-md font-bold flex items-center gap-1">
+      <MapPin size={8} /> Ubicación registrada
+    </span>
+  )}
+  </div>
+  )}
+  </div>
+  <div className="p-4 bg-slate-50 border border-slate-200/60 rounded-2xl relative overflow-hidden">
+  <p className="text-[10px] font-bold text-slate-400 tracking-tight mb-1">Inicio Refrigerio</p>
+  <p className="text-xl font-black text-slate-700 tabular-nums">
+  {stats?.todayAttendanceDetail?.break_start || '--:--'}
+  </p>
+  {stats?.todayAttendanceDetail?.break_start && (
+  <div className="absolute right-3 bottom-3 flex flex-col items-end">
+  <div className="text-orange-500 mb-1">
+  <CheckCircle2 size={16} />
+  </div>
+  {stats?.todayAttendanceDetail?.break_start_lat && (
+    <span className="text-[8px] bg-orange-100 text-orange-600 px-1.5 py-0.5 rounded-md font-bold flex items-center gap-1">
+      <MapPin size={8} /> Ubicación registrada
+    </span>
+  )}
+  </div>
+  )}
+  </div>
+  <div className="p-4 bg-slate-50 border border-slate-200/60 rounded-2xl relative overflow-hidden">
+  <p className="text-[10px] font-bold text-slate-400 tracking-tight mb-1">Fin Refrigerio</p>
+  <p className="text-xl font-black text-slate-700 tabular-nums">
+  {stats?.todayAttendanceDetail?.break_end || '--:--'}
+  </p>
+  {stats?.todayAttendanceDetail?.break_end && (
+  <div className="absolute right-3 bottom-3 flex flex-col items-end">
+  <div className="text-teal-500 mb-1">
+  <CheckCircle2 size={16} />
+  </div>
+  {stats?.todayAttendanceDetail?.break_end_lat && (
+    <span className="text-[8px] bg-teal-100 text-teal-600 px-1.5 py-0.5 rounded-md font-bold flex items-center gap-1">
+      <MapPin size={8} /> Ubicación registrada
+    </span>
+  )}
+  </div>
+  )}
+  </div>
+  <div className="p-4 bg-slate-50 border border-slate-200/60 rounded-2xl relative overflow-hidden">
+  <p className="text-[10px] font-bold text-slate-400 tracking-tight mb-1">Salida</p>
+  <p className="text-xl font-black text-slate-700 tabular-nums">
+  {stats?.todayAttendanceDetail?.check_out || '--:--'}
+  </p>
+  {stats?.todayAttendanceDetail?.check_out && (
+  <div className="absolute right-3 bottom-3 flex flex-col items-end">
+  <div className="text-emerald-500 mb-1">
+  <CheckCircle2 size={16} />
+  </div>
+  {stats?.todayAttendanceDetail?.check_out_lat && (
+    <span className="text-[8px] bg-emerald-100 text-emerald-600 px-1.5 py-0.5 rounded-md font-bold flex items-center gap-1">
+      <MapPin size={8} /> Ubicación registrada
+    </span>
+  )}
+  </div>
+  )}
+  </div>
+  </div>
 
- {/* Control Action Buttons */}
- <div className="pt-2">
- {markingAttendance ? (
- <button disabled className="w-full h-14 bg-slate-200 text-slate-400 rounded-2xl font-bold flex items-center justify-center gap-3">
- <RefreshCw className="animate-spin" size={20} />
- <span>PROCESANDO REGISTRO...</span>
- </button>
- ) : !stats?.todayAttendanceDetail?.check_in ? (
- <button 
- onClick={handleCheckIn}
- className="w-full h-14 bg-gradient-to-r from-blue-700 to-blue-600 hover:from-blue-800 hover:to-blue-700 text-white rounded-2xl font-black flex items-center justify-center gap-3 shadow-lg shadow-blue-500/20 active:scale-98 transition-all cursor-pointer"
- >
- <LogIn size={20} />
- <span>MARCAR ENTRADA</span>
- </button>
- ) : !stats?.todayAttendanceDetail?.check_out ? (
- <button 
- onClick={handleCheckOut}
- className="w-full h-14 bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-700 hover:to-amber-600 text-white rounded-2xl font-black flex items-center justify-center gap-3 shadow-lg shadow-amber-500/20 active:scale-98 transition-all cursor-pointer"
- >
- <LogOut size={20} />
- <span>MARCAR SALIDA</span>
- </button>
- ) : (
- <div className="w-full h-14 bg-emerald-50 text-emerald-700 border border-emerald-100 rounded-2xl font-black flex items-center justify-center gap-3">
- <CheckCircle2 className="text-emerald-600" size={20} />
- <span>JORNADA REGISTRADA Y COMPLETADA</span>
- </div>
- )}
- </div>
+  {/* Control Action Buttons */}
+  <div className="pt-2">
+  {markingAttendance ? (
+  <button disabled className="w-full h-14 bg-slate-200 text-slate-400 rounded-2xl font-bold flex items-center justify-center gap-3">
+  <RefreshCw className="animate-spin" size={20} />
+  <span>REGISTRANDO MARCACIÓN...</span>
+  </button>
+  ) : !stats?.todayAttendanceDetail?.check_in ? (
+  <button 
+  onClick={() => handleCheckIn()}
+  className="w-full h-14 bg-gradient-to-r from-blue-700 to-blue-600 hover:from-blue-800 hover:to-blue-700 text-white rounded-2xl font-black flex items-center justify-center gap-3 shadow-lg shadow-blue-500/20 active:scale-98 transition-all cursor-pointer"
+  >
+  <LogIn size={20} />
+  <span>MARCAR ENTRADA</span>
+  </button>
+  ) : !stats?.todayAttendanceDetail?.break_start ? (
+  <div className="grid grid-cols-2 gap-3">
+    <button 
+    onClick={() => handleBreakStart()}
+    className="w-full h-14 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white rounded-2xl font-black flex items-center justify-center gap-2 shadow-lg shadow-orange-500/20 active:scale-98 transition-all cursor-pointer text-sm"
+    >
+    <Utensils size={18} />
+    <span>INICIAR REFRIGERIO</span>
+    </button>
+    <button 
+    onClick={() => handleCheckOut()}
+    className="w-full h-14 bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-700 hover:to-amber-600 text-white rounded-2xl font-black flex items-center justify-center gap-2 shadow-lg shadow-amber-500/20 active:scale-98 transition-all cursor-pointer text-sm"
+    >
+    <LogOut size={18} />
+    <span>FINALIZAR JORNADA</span>
+    </button>
+  </div>
+  ) : !stats?.todayAttendanceDetail?.break_end ? (
+  <button 
+  onClick={() => handleBreakEnd()}
+  className="w-full h-14 bg-gradient-to-r from-teal-500 to-emerald-500 hover:from-teal-600 hover:to-emerald-600 text-white rounded-2xl font-black flex items-center justify-center gap-3 shadow-lg shadow-teal-500/20 active:scale-98 transition-all cursor-pointer"
+  >
+  <CheckCircle2 size={20} />
+  <span>MARCAR FIN DE REFRIGERIO</span>
+  </button>
+  ) : !stats?.todayAttendanceDetail?.check_out ? (
+  <button 
+  onClick={() => handleCheckOut()}
+  className="w-full h-14 bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-700 hover:to-amber-600 text-white rounded-2xl font-black flex items-center justify-center gap-3 shadow-lg shadow-amber-500/20 active:scale-98 transition-all cursor-pointer"
+  >
+  <LogOut size={20} />
+  <span>MARCAR SALIDA</span>
+  </button>
+  ) : (
+  <div className="w-full h-14 bg-emerald-50 text-emerald-700 border border-emerald-100 rounded-2xl font-black flex items-center justify-center gap-3">
+  <CheckCircle2 className="text-emerald-600" size={20} />
+  <span>JORNADA REGISTRADA Y COMPLETADA</span>
+  </div>
+  )}
+  </div>
  </div>
  {/* Quick Stats Grid */}
  <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
