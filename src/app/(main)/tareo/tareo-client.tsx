@@ -34,11 +34,8 @@ interface TareoPageProps {
 }
 
 const statusColors: any = {
-  'AD': 'bg-slate-200 text-slate-800 font-bold',
-  'AN': 'bg-teal-100 text-teal-800 font-bold',
+  'AC': 'bg-green-200 text-green-900 font-bold',
   'DL': 'bg-cyan-100 text-cyan-800 font-bold',
-  'C': 'bg-blue-100 text-blue-800 font-bold',
-  'DF': 'bg-indigo-100 text-indigo-800 font-bold',
   'F': 'bg-rose-100 text-rose-800 font-bold',
   'S': 'bg-amber-100 text-amber-800 font-bold',
   'L': 'bg-slate-50 text-slate-500 font-bold',
@@ -46,9 +43,7 @@ const statusColors: any = {
   'INC': 'bg-orange-100 text-orange-800 font-bold',
   'P': 'bg-emerald-100 text-emerald-800 font-bold',
   'PR': 'bg-emerald-50 text-emerald-700 font-bold',
-  'AC': 'bg-green-200 text-green-900 font-bold',
   'V': 'bg-purple-100 text-purple-800 font-bold',
-  'X': 'bg-slate-400 text-white font-bold',
 }
 
 const autoColors: any = {
@@ -411,15 +406,16 @@ export default function TareoClient({ initialCycles, workers, userRole, companyI
       <div className="flex flex-wrap gap-2 px-4 py-3 bg-white rounded-2xl border border-slate-100 shadow-sm">
         <span className="text-[10px] font-black text-slate-400 tracking-tight mr-2 flex items-center">Leyenda Oficial:</span>
         {[
-          { c: 'P', l: 'Presente', bg: 'bg-yellow-200 text-yellow-900' },
-          { c: 'F', l: 'Falta', bg: 'bg-rose-100 text-rose-700' },
-          { c: 'AD', l: 'Asist. Completa', bg: 'bg-slate-200 text-slate-800' },
-          { c: 'V', l: 'Vacaciones', bg: 'bg-purple-100 text-purple-700' },
-          { c: 'DM', l: 'Desc. Médico', bg: 'bg-sky-100 text-sky-700' },
-          { c: 'DL', l: 'Desc. Laborado', bg: 'bg-cyan-100 text-cyan-700' },
-          { c: 'INC', l: 'Incompleto', bg: 'bg-orange-100 text-orange-700' },
-          { c: 'S', l: 'Suspensión', bg: 'bg-amber-100 text-amber-700' },
-          { c: 'L', l: 'Libre', bg: 'bg-slate-100 text-slate-600' },
+          { c: 'P', l: 'Presente', bg: 'bg-emerald-100 text-emerald-800' },
+          { c: 'PR', l: 'Pres. con Refrig.', bg: 'bg-emerald-50 text-emerald-700' },
+          { c: 'AC', l: 'Asist. Completa', bg: 'bg-green-200 text-green-900' },
+          { c: 'F', l: 'Falta', bg: 'bg-rose-100 text-rose-800' },
+          { c: 'INC', l: 'Incompleto', bg: 'bg-orange-100 text-orange-800' },
+          { c: 'V', l: 'Vacaciones', bg: 'bg-purple-100 text-purple-800' },
+          { c: 'DM', l: 'Desc. Médico', bg: 'bg-sky-100 text-sky-800' },
+          { c: 'DL', l: 'Desc. Laborado', bg: 'bg-cyan-100 text-cyan-800' },
+          { c: 'S', l: 'Suspensión', bg: 'bg-amber-100 text-amber-800' },
+          { c: 'L', l: 'Libre', bg: 'bg-slate-50 text-slate-500' },
         ].map(item => (
           <div key={item.c} className="flex items-center gap-1.5 border border-slate-100 px-2 py-1 rounded-lg">
             <span className={`w-7 text-center text-[10px] font-black py-0.5 rounded ${item.bg}`}>{item.c}</span>
