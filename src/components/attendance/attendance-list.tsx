@@ -48,7 +48,7 @@ export function AttendanceList({ records, isWorker = false }: AttendanceListProp
  <tr className="bg-slate-50/50 border-b border-slate-100">
  <th className="py-5 px-6 text-[11px] font-bold text-slate-400 tracking-tight">Colaborador</th>
  <th className="py-5 px-6 text-[11px] font-bold text-slate-400 tracking-tight">Día / Fecha</th>
- <th className="py-5 px-6 text-[11px] font-bold text-slate-400 tracking-tight">Marcación (Ingreso - Salida)</th>
+ <th className="py-5 px-6 text-[11px] font-bold text-slate-400 tracking-tight">Marcaciones</th>
  <th className="py-5 px-6 text-[11px] font-bold text-slate-400 tracking-tight text-center">GPS</th>
  <th className="py-5 px-6 text-[11px] font-bold text-slate-400 tracking-tight text-center">Estado</th>
  </tr>
@@ -85,13 +85,23 @@ export function AttendanceList({ records, isWorker = false }: AttendanceListProp
  </div>
  </td>
  <td className="py-5 px-6">
- <div className="flex items-center gap-4 font-mono text-sm">
- <div className="flex items-center gap-2 text-slate-600">
+ <div className="flex items-center gap-3 font-mono text-xs">
+ <div className="flex items-center gap-1.5 text-slate-600" title="Entrada">
  <div className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)]"></div>
  <span className="font-bold">{record.check_in || '--:--'}</span>
  </div>
- <ArrowRight size={14} className="text-slate-300" />
- <div className="flex items-center gap-2 text-slate-600">
+ <ArrowRight size={12} className="text-slate-300" />
+ <div className="flex items-center gap-1.5 text-slate-600" title="Inicio Refrigerio">
+ <div className="w-2 h-2 rounded-full bg-orange-500 shadow-[0_0_8px_rgba(249,115,22,0.4)]"></div>
+ <span className="font-bold">{record.break_start || '--:--'}</span>
+ </div>
+ <ArrowRight size={12} className="text-slate-300" />
+ <div className="flex items-center gap-1.5 text-slate-600" title="Fin Refrigerio">
+ <div className="w-2 h-2 rounded-full bg-teal-500 shadow-[0_0_8px_rgba(20,184,166,0.4)]"></div>
+ <span className="font-bold">{record.break_end || '--:--'}</span>
+ </div>
+ <ArrowRight size={12} className="text-slate-300" />
+ <div className="flex items-center gap-1.5 text-slate-600" title="Salida">
  <div className="w-2 h-2 rounded-full bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.4)]"></div>
  <span className="font-bold">{record.check_out || '--:--'}</span>
  </div>
