@@ -435,9 +435,9 @@ export default function TareoClient({ initialCycles, workers, userRole, companyI
           <table className="w-max text-left border-collapse whitespace-nowrap table-fixed">
             <thead>
               <tr className="bg-slate-800 text-white">
-                <th rowSpan={2} className="sticky left-0 z-20 bg-slate-800 border border-slate-700 px-2 py-1 text-[11px] font-bold text-center w-[40px] align-middle">ITEM</th>
-                <th rowSpan={2} className="sticky left-[40px] z-20 bg-slate-800 border border-slate-700 px-3 py-1 text-[11px] font-bold text-center w-[220px] align-middle">Apellidos y Nombres</th>
-                <th rowSpan={2} className="sticky left-[260px] z-20 bg-slate-800 border border-slate-700 px-3 py-1 text-[11px] font-bold text-center w-[130px] align-middle">Cargo</th>
+                <th rowSpan={2} className="md:sticky md:left-0 z-20 bg-slate-800 border border-slate-700 px-2 py-1 text-[11px] font-bold text-center w-[40px] align-middle">ITEM</th>
+                <th rowSpan={2} className="md:sticky md:left-[40px] z-20 bg-slate-800 border border-slate-700 px-3 py-1 text-[11px] font-bold text-center w-[220px] align-middle">Apellidos y Nombres</th>
+                <th rowSpan={2} className="md:sticky md:left-[260px] z-20 bg-slate-800 border border-slate-700 px-3 py-1 text-[11px] font-bold text-center w-[130px] align-middle">Cargo</th>
                 {daysInMonth.map((d) => (
                   <th key={`wd-${d.day}`} className={`px-1 py-1 text-center border border-slate-700 min-w-[32px] ${d.isWeekend ? 'text-rose-400' : 'text-slate-100'}`}>
                     <div className="text-[11px] font-black uppercase">{d.weekday}</div>
@@ -595,9 +595,9 @@ const WorkerRow = React.memo(function WorkerRow({
 }: any) {
   return (
     <tr className="hover:bg-slate-50 relative group bg-white h-10">
-      <td className="sticky left-0 z-20 bg-white group-hover:bg-slate-50 border border-slate-300 px-0.5 py-1 text-center text-[11px] font-bold text-slate-800 w-[40px]">{idx + 1}</td>
-      <td className="sticky left-[40px] z-20 bg-white group-hover:bg-slate-50 border border-slate-300 px-2 py-1 text-[11px] font-black text-slate-900 truncate max-w-[220px] w-[220px]">{worker.name} {worker.last_name}</td>
-      <td className="sticky left-[260px] z-20 bg-white group-hover:bg-slate-50 border border-slate-300 px-2 py-1 text-[10px] font-bold text-slate-500 truncate max-w-[130px] w-[130px]">{worker.position || '-'}</td>
+      <td className="md:sticky md:left-0 z-20 bg-white group-hover:bg-slate-50 border border-slate-300 px-0.5 py-1 text-center text-[11px] font-bold text-slate-800 w-[40px]">{idx + 1}</td>
+      <td className="md:sticky md:left-[40px] z-20 bg-white group-hover:bg-slate-50 border border-slate-300 px-2 py-1 text-[11px] font-black text-slate-900 truncate max-w-[220px] w-[220px]">{worker.name} {worker.last_name}</td>
+      <td className="md:sticky md:left-[260px] z-20 bg-white group-hover:bg-slate-50 border border-slate-300 px-2 py-1 text-[10px] font-bold text-slate-500 truncate max-w-[130px] w-[130px]">{worker.position || '-'}</td>
       {daysInMonth.map((d: any) => {
         const key = `${worker.id}-${d.dateString}`
         const eff = workerStatuses[d.dateString] || { status: '', isManual: false }

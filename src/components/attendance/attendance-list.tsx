@@ -187,34 +187,34 @@ export function AttendanceList({ records, isWorker = false }: AttendanceListProp
  )}
  </div>
 
-        <div className="bg-slate-50 rounded-2xl p-4 grid grid-cols-4 gap-2 border border-slate-100/50">
+        <div className="bg-slate-50 rounded-2xl p-4 grid grid-cols-2 gap-y-4 gap-x-2 border border-slate-100/50">
           <div className="space-y-1">
-            <p className="text-[9px] font-bold text-slate-400 tracking-tight flex items-center gap-1.5">
+            <p className="text-[10px] font-bold text-slate-400 tracking-tight flex items-center gap-1.5">
               <div className="w-1.5 h-1.5 rounded-full bg-emerald-500"></div>
               Entrada
             </p>
-            <p className="text-lg font-bold text-slate-700 tabular-nums">{record.check_in || '--:--'}</p>
+            <p className="text-sm font-bold text-slate-700 tabular-nums">{record.check_in || '--:--'}</p>
           </div>
-          <div className="space-y-1 border-l border-slate-200 pl-2">
-            <p className="text-[9px] font-bold text-slate-400 tracking-tight flex items-center gap-1.5">
+          <div className="space-y-1 border-l border-slate-200 pl-3">
+            <p className="text-[10px] font-bold text-slate-400 tracking-tight flex items-center gap-1.5">
               <div className="w-1.5 h-1.5 rounded-full bg-orange-500"></div>
               I. Refrig.
             </p>
-            <p className="text-lg font-bold text-slate-700 tabular-nums">{record.break_start || '--:--'}</p>
+            <p className="text-sm font-bold text-slate-700 tabular-nums">{record.break_start || '--:--'}</p>
           </div>
-          <div className="space-y-1 border-l border-slate-200 pl-2">
-            <p className="text-[9px] font-bold text-slate-400 tracking-tight flex items-center gap-1.5">
+          <div className="space-y-1 pt-1 border-t border-slate-200/60">
+            <p className="text-[10px] font-bold text-slate-400 tracking-tight flex items-center gap-1.5">
               <div className="w-1.5 h-1.5 rounded-full bg-teal-500"></div>
               F. Refrig.
             </p>
-            <p className="text-lg font-bold text-slate-700 tabular-nums">{record.break_end || '--:--'}</p>
+            <p className="text-sm font-bold text-slate-700 tabular-nums">{record.break_end || '--:--'}</p>
           </div>
-          <div className="space-y-1 border-l border-slate-200 pl-2">
-            <p className="text-[9px] font-bold text-slate-400 tracking-tight flex items-center gap-1.5">
+          <div className="space-y-1 pt-1 border-t border-slate-200/60 border-l border-slate-200 pl-3">
+            <p className="text-[10px] font-bold text-slate-400 tracking-tight flex items-center gap-1.5">
               <div className="w-1.5 h-1.5 rounded-full bg-amber-500"></div>
               Salida
             </p>
-            <p className="text-lg font-bold text-slate-700 tabular-nums">{record.check_out || '--:--'}</p>
+            <p className="text-sm font-bold text-slate-700 tabular-nums">{record.check_out || '--:--'}</p>
           </div>
         </div>
 
