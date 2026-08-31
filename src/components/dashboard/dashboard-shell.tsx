@@ -12,8 +12,9 @@ import {
  Bus, Coins, Calendar, Shield, GraduationCap, MessageSquare, Eye,
  ArrowDownLeft, ArrowUpRight, AlertTriangle, Building2, ShoppingCart, Truck, Plus, AlertCircle,
  LayoutDashboard, LayoutGrid, Box, TrendingUp, TrendingDown, ArrowUpDown, ClipboardList, ShieldCheck,
- UserCircle
+ UserCircle, Wrench, Fuel, Cpu, Hammer, TreePine
 } from 'lucide-react'
+import { normalizeAreaName } from '@/lib/permissions'
 import { StatWidget, AlertWidget, ListWidget, WelcomeHero } from './widgets'
 import { AttendanceMarker } from '@/components/attendance/attendance-marker'
 import { PPEList } from '@/components/ppe/ppe-list'
@@ -29,20 +30,22 @@ interface DashboardShellProps {
 }
 
 // Lógica de prioridad estricta (Espejo de Sidebar y Actions)
-// Lógica de prioridad estricta (Espejo de Sidebar y Actions)
 function getViewMode(role_id: string, area: string | null) {
  const role = role_id?.toLowerCase()
- const cleanArea = area?.toLowerCase() || ''
+ const cleanArea = area ? normalizeAreaName(area) : ''
  if (role === 'gerente') return 'GERENTE'
  if (['admin', 'super_admin', 'superadmin'].includes(role)) return 'ADMIN'
  if (role === 'administracion') return 'FINANCE'
  if (role === 'soma' || (role === 'jefe_area' && cleanArea === 'seguridad soma')) return 'SOMA'
  if (role === 'jefe_area' && cleanArea === 'cocina') return 'COCINA'
- if (role === 'operaciones' || (role === 'jefe_area' && cleanArea === 'operaciones')) return 'OPERACIONES'
- if (role === 'almacen' || role === 'logistica' || (role === 'jefe_area' && ['almacén y mantenimiento', 'mecánica'].includes(cleanArea))) return 'ALMACEN'
+ if (role === 'mecanica' || (role === 'jefe_area' && cleanArea === 'mecanica')) return 'MECANICA'
+ if (role === 'supervisor') return 'SUPERVISOR'
+ if (role === 'operaciones' || (role === 'jefe_area' && ['operaciones', 'mina'].includes(cleanArea))) return 'OPERACIONES'
+ if (role === 'almacen' || role === 'logistica' || (role === 'jefe_area' && ['almacen y mantenimiento', 'almacen', 'logistica'].includes(cleanArea))) return 'ALMACEN'
  if (role === 'trabajador') return 'WORKER'
  return 'DEFAULT'
 }
+
 export function DashboardShell({ user, stats, localIp }: DashboardShellProps) {
  const roleName = ROLE_NAMES[user.role_id] || "Usuario"
  const companyName = user.company_name || "Empresa"
@@ -519,6 +522,244 @@ export function DashboardShell({ user, stats, localIp }: DashboardShellProps) {
  />
  </div>
  )
+
+    case 'MECANICA':
+      return (
+        <div className="space-y-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <StatWidget 
+              title="Mantenimiento Vehículos" 
+              value={`${stats.mecanica?.totalVehicles || 2} Unidades`} 
+              icon={Truck} 
+              color="text-blue-600" 
+              bg="bg-blue-50" 
+              href="/mecanica/mantenimiento-vehiculos"
+            />
+            <StatWidget 
+              title="Generador Eléctrico" 
+              value="En Operación" 
+              icon={Activity} 
+              color="text-amber-600" 
+              bg="bg-amber-50" 
+              href="/mecanica/generador-mantenimiento"
+              badge={{ text: 'Control Diésel', color: 'bg-amber-100 text-amber-800' }}
+            />
+            <StatWidget 
+              title="Compresora Mina" 
+              value="120 PSI" 
+              icon={Cpu} 
+              color="text-indigo-600" 
+              bg="bg-indigo-50" 
+              href="/mecanica/compresora-mantenimiento"
+              badge={{ text: 'Mantenimiento', color: 'bg-indigo-100 text-indigo-800' }}
+            />
+            <StatWidget 
+              title="Equipos de Mina" 
+              value={`${stats.mecanica?.activeMineEquipment || 3} Equipos`} 
+              icon={Wrench} 
+              color="text-emerald-600" 
+              bg="bg-emerald-50" 
+              href="/mecanica/equipos-mina"
+            />
+            <StatWidget 
+              title="Checklists Pre-Uso" 
+              value="10 Pts Inspección" 
+              icon={ClipboardCheck} 
+              color="text-teal-600" 
+              bg="bg-teal-50" 
+              href="/mecanica/checklists"
+            />
+            <StatWidget 
+              title="Control Herramientas" 
+              value="Taller Mecánico" 
+              icon={Hammer} 
+              color="text-purple-600" 
+              bg="bg-purple-50" 
+              href="/mecanica/herramientas"
+            />
+            <StatWidget 
+              title="Requerimientos" 
+              value={stats.mecanica?.pendingRequirements?.toString() || '0'} 
+              icon={FileText} 
+              color="text-rose-600" 
+              bg="bg-rose-50" 
+              href="/requerimientos"
+            />
+            <StatWidget 
+              title="Caja Chica Taller" 
+              value={`S/ ${stats.mecanica?.cajaChicaBalance?.toLocaleString(undefined, { minimumFractionDigits: 2 }) || '0.00'}`} 
+              icon={Coins} 
+              color="text-emerald-600" 
+              bg="bg-emerald-50" 
+              href="/caja-chica"
+            />
+          </div>
+
+          <div className="bg-white p-8 rounded-[2rem] border border-slate-100 shadow-sm">
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h3 className="text-xl font-bold text-slate-800 tracking-tight">Centro Operativo de Mecánica y Mantenimiento</h3>
+                <p className="text-xs text-slate-500 font-medium mt-1">Acceso directo a todos los registros de equipos, combustibles, preventivos y herramientas.</p>
+              </div>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              <Link href="/mecanica/mantenimiento-vehiculos" className="p-4 rounded-2xl bg-slate-50 hover:bg-blue-50 border border-slate-100 hover:border-blue-200 transition-all flex items-center justify-between group">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center font-bold">
+                    <Truck size={20} />
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-bold text-slate-800 group-hover:text-blue-600">Mantenimiento Vehículos</h4>
+                    <p className="text-[11px] text-slate-400 font-medium">Preventivo y correctivo de flota</p>
+                  </div>
+                </div>
+                <ArrowRight size={16} className="text-slate-400 group-hover:text-blue-600 group-hover:translate-x-1 transition-all" />
+              </Link>
+              <Link href="/mecanica/generador-combustible" className="p-4 rounded-2xl bg-slate-50 hover:bg-amber-50 border border-slate-100 hover:border-amber-200 transition-all flex items-center justify-between group">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center font-bold">
+                    <Fuel size={20} />
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-bold text-slate-800 group-hover:text-amber-600">Generador (Combustible)</h4>
+                    <p className="text-[11px] text-slate-400 font-medium">Consumo diésel y gal/hr</p>
+                  </div>
+                </div>
+                <ArrowRight size={16} className="text-slate-400 group-hover:text-amber-600 group-hover:translate-x-1 transition-all" />
+              </Link>
+              <Link href="/mecanica/compresora-combustible" className="p-4 rounded-2xl bg-slate-50 hover:bg-indigo-50 border border-slate-100 hover:border-indigo-200 transition-all flex items-center justify-between group">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-indigo-100 text-indigo-600 flex items-center justify-center font-bold">
+                    <Cpu size={20} />
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-bold text-slate-800 group-hover:text-indigo-600">Compresora (Combustible)</h4>
+                    <p className="text-[11px] text-slate-400 font-medium">Abastecimiento y rendimiento</p>
+                  </div>
+                </div>
+                <ArrowRight size={16} className="text-slate-400 group-hover:text-indigo-600 group-hover:translate-x-1 transition-all" />
+              </Link>
+              <Link href="/mecanica/checklists" className="p-4 rounded-2xl bg-slate-50 hover:bg-teal-50 border border-slate-100 hover:border-teal-200 transition-all flex items-center justify-between group">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-teal-100 text-teal-600 flex items-center justify-center font-bold">
+                    <ClipboardCheck size={20} />
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-bold text-slate-800 group-hover:text-teal-600">Checklists Pre-Uso</h4>
+                    <p className="text-[11px] text-slate-400 font-medium">Inspecciones de turno</p>
+                  </div>
+                </div>
+                <ArrowRight size={16} className="text-slate-400 group-hover:text-teal-600 group-hover:translate-x-1 transition-all" />
+              </Link>
+              <Link href="/mecanica/herramientas" className="p-4 rounded-2xl bg-slate-50 hover:bg-purple-50 border border-slate-100 hover:border-purple-200 transition-all flex items-center justify-between group">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-purple-100 text-purple-600 flex items-center justify-center font-bold">
+                    <Hammer size={20} />
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-bold text-slate-800 group-hover:text-purple-600">Control de Herramientas</h4>
+                    <p className="text-[11px] text-slate-400 font-medium">Inventario y operatividad</p>
+                  </div>
+                </div>
+                <ArrowRight size={16} className="text-slate-400 group-hover:text-purple-600 group-hover:translate-x-1 transition-all" />
+              </Link>
+              <Link href="/requerimientos" className="p-4 rounded-2xl bg-slate-50 hover:bg-rose-50 border border-slate-100 hover:border-rose-200 transition-all flex items-center justify-between group">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-rose-100 text-rose-600 flex items-center justify-center font-bold">
+                    <FileText size={20} />
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-bold text-slate-800 group-hover:text-rose-600">Requerimientos de Taller</h4>
+                    <p className="text-[11px] text-slate-400 font-medium">Solicitud de repuestos e insumos</p>
+                  </div>
+                </div>
+                <ArrowRight size={16} className="text-slate-400 group-hover:text-rose-600 group-hover:translate-x-1 transition-all" />
+              </Link>
+            </div>
+          </div>
+        </div>
+      )
+
+    case 'SUPERVISOR':
+      return (
+        <div className="space-y-8">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <StatWidget 
+              title="Control de Producción" 
+              value={`${stats.supervisor?.productionToday || 0} Registros`} 
+              icon={Activity} 
+              color="text-blue-600" 
+              bg="bg-blue-50" 
+              href="/operaciones/produccion"
+              badge={{ text: 'Turno Mina', color: 'bg-blue-100 text-blue-800' }}
+            />
+            <StatWidget 
+              title="Control de Maderas" 
+              value={`${stats.supervisor?.woodToday || 0} Reportes`} 
+              icon={TreePine} 
+              color="text-amber-600" 
+              bg="bg-amber-50" 
+              href="/operaciones/maderas"
+              badge={{ text: 'Consumo / Stock', color: 'bg-amber-100 text-amber-800' }}
+            />
+            <StatWidget 
+              title="Requerimientos de Cuadrilla" 
+              value={stats.supervisor?.pendingRequirements?.toString() || '0'} 
+              icon={FileText} 
+              color="text-rose-600" 
+              bg="bg-rose-50" 
+              href="/requerimientos"
+            />
+          </div>
+
+          <div className="bg-white p-8 rounded-[2rem] border border-slate-100 shadow-sm">
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h3 className="text-xl font-bold text-slate-800 tracking-tight">Operaciones de Líder de Cuadrilla</h3>
+                <p className="text-xs text-slate-500 font-medium mt-1">Gestión directa de labores de mina, avance de producción, insumos de madera y pedidos.</p>
+              </div>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <Link href="/operaciones/produccion" className="p-4 rounded-2xl bg-slate-50 hover:bg-blue-50 border border-slate-100 hover:border-blue-200 transition-all flex items-center justify-between group">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center font-bold">
+                    <Activity size={20} />
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-bold text-slate-800 group-hover:text-blue-600">Control de Producción</h4>
+                    <p className="text-[11px] text-slate-400 font-medium">Registro de labores y carros</p>
+                  </div>
+                </div>
+                <ArrowRight size={16} className="text-slate-400 group-hover:text-blue-600 group-hover:translate-x-1 transition-all" />
+              </Link>
+              <Link href="/operaciones/maderas" className="p-4 rounded-2xl bg-slate-50 hover:bg-amber-50 border border-slate-100 hover:border-amber-200 transition-all flex items-center justify-between group">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center font-bold">
+                    <TreePine size={20} />
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-bold text-slate-800 group-hover:text-amber-600">Control de Maderas</h4>
+                    <p className="text-[11px] text-slate-400 font-medium">Ingreso y consumo de cuadros</p>
+                  </div>
+                </div>
+                <ArrowRight size={16} className="text-slate-400 group-hover:text-amber-600 group-hover:translate-x-1 transition-all" />
+              </Link>
+              <Link href="/requerimientos" className="p-4 rounded-2xl bg-slate-50 hover:bg-rose-50 border border-slate-100 hover:border-rose-200 transition-all flex items-center justify-between group">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-rose-100 text-rose-600 flex items-center justify-center font-bold">
+                    <FileText size={20} />
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-bold text-slate-800 group-hover:text-rose-600">Requerimientos</h4>
+                    <p className="text-[11px] text-slate-400 font-medium">Solicitud de materiales y repuestos</p>
+                  </div>
+                </div>
+                <ArrowRight size={16} className="text-slate-400 group-hover:text-rose-600 group-hover:translate-x-1 transition-all" />
+              </Link>
+            </div>
+          </div>
+        </div>
+      )
 
  case 'WORKER':
  return (

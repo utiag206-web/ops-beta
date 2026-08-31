@@ -46,9 +46,11 @@ export async function getDashboardStats() {
  const isAdmin = !isWorkerModeActive && ['admin', 'gerente', 'administracion', 'super_admin', 'superadmin'].includes(userRoleLower)
  const isSoma = !isWorkerModeActive && !isAdmin && (userRoleLower === 'soma' || (userRoleLower === 'jefe_area' && userAreaLower === 'seguridad soma'))
  const isCocina = !isWorkerModeActive && !isAdmin && !isSoma && (userRoleLower === 'jefe_area' && userAreaLower === 'cocina')
- const isOperaciones = !isWorkerModeActive && !isAdmin && !isSoma && !isCocina && (userRoleLower === 'operaciones' || userRoleLower === 'jefe_area')
- const isAlmacen = !isWorkerModeActive && !isAdmin && !isSoma && !isCocina && !isOperaciones && (userRoleLower === 'almacen')
- const isWorker = isWorkerModeActive || (!isAdmin && !isSoma && !isCocina && !isOperaciones && !isAlmacen && (userRoleLower === 'trabajador'))
+ const isMecanica = !isWorkerModeActive && !isAdmin && !isSoma && !isCocina && (userRoleLower === 'mecanica' || (userRoleLower === 'jefe_area' && userAreaLower === 'mecanica'))
+ const isSupervisor = !isWorkerModeActive && !isAdmin && !isSoma && !isCocina && !isMecanica && (userRoleLower === 'supervisor')
+ const isOperaciones = !isWorkerModeActive && !isAdmin && !isSoma && !isCocina && !isMecanica && !isSupervisor && (userRoleLower === 'operaciones' || userRoleLower === 'jefe_area')
+ const isAlmacen = !isWorkerModeActive && !isAdmin && !isSoma && !isCocina && !isMecanica && !isSupervisor && !isOperaciones && (userRoleLower === 'almacen')
+ const isWorker = isWorkerModeActive || (!isAdmin && !isSoma && !isCocina && !isMecanica && !isSupervisor && !isOperaciones && !isAlmacen && (userRoleLower === 'trabajador'))
 
 
  // 2. FETCH POR MODO EXCLUSIVO
@@ -280,6 +282,43 @@ export async function getDashboardStats() {
  movementsToday: movsData.length
  }
  }
+  else if (isMecanica) {
+    const [assetsQuery, reqsQuery, incQuery, cashTotal] = await Promise.all([
+      applyIsolation(supabase.from('assets').select('*'), companyId, user.role_id),
+      applyIsolation(supabase.from('requirements').select('id', { count: 'exact', head: true }), companyId, user.role_id).eq('status', 'pendiente'),
+      applyIsolation(supabase.from('incidencias').select('id', { count: 'exact', head: true }), companyId, user.role_id).eq('status', 'abierta'),
+      applyIsolation(supabase.from('petty_cash_transactions').select('amount, type'), companyId, user.role_id)
+    ])
+
+    const assets = assetsQuery.data || []
+    const totalCaja = (cashTotal.data || []).reduce((acc: number, t: any) => {
+      const val = Number(t.amount) || 0
+      return t.type === 'ingreso' ? acc + val : acc - val
+    }, 0)
+
+    stats.mecanica = {
+      totalVehicles: assets.filter((a: any) => a.type?.toLowerCase().includes('vehiculo') || a.type?.toLowerCase().includes('camioneta') || a.name?.toLowerCase().includes('hilux')).length || 2,
+      activeGenerators: assets.filter((a: any) => a.name?.toLowerCase().includes('generador') || a.name?.toLowerCase().includes('grupo')).length || 1,
+      activeCompressors: assets.filter((a: any) => a.name?.toLowerCase().includes('compresor') || a.name?.toLowerCase().includes('compresora')).length || 1,
+      activeMineEquipment: assets.filter((a: any) => a.type?.toLowerCase().includes('mina') || a.name?.toLowerCase().includes('scoop') || a.name?.toLowerCase().includes('dumper')).length || 3,
+      pendingRequirements: reqsQuery.count || 0,
+      openIncidents: incQuery.count || 0,
+      cajaChicaBalance: totalCaja
+    }
+  }
+  else if (isSupervisor) {
+    const [prodToday, woodToday, reqsPending] = await Promise.all([
+      applyIsolation(supabase.from('production_control').select('id', { count: 'exact', head: true }), companyId, user.role_id).gte('date', today),
+      applyIsolation(supabase.from('wood_control').select('id', { count: 'exact', head: true }), companyId, user.role_id).gte('date', today),
+      applyIsolation(supabase.from('requirements').select('id', { count: 'exact', head: true }), companyId, user.role_id).eq('status', 'pendiente')
+    ])
+
+    stats.supervisor = {
+      productionToday: prodToday.count || 0,
+      woodToday: woodToday.count || 0,
+      pendingRequirements: reqsPending.count || 0
+    }
+  }
  else if (isWorker && user.worker_id) {
  const [att, ppe, docs, bns, nextT, nextS] = await Promise.all([
  supabase.from('attendance').select('check_in, check_out, created_at').eq('worker_id', user.worker_id).eq('date', today).maybeSingle(),

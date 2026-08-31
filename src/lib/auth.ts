@@ -37,64 +37,33 @@ export const getUserSession = cache(async function getUserSession() {
  
  const isUuid = (val: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(val)
 
- // Dynamic Role Resolution: Query user_roles based on final active company context
- let rbacRole: string = 'trabajador'
- if (finalCompanyId && isUuid(finalCompanyId)) {
- const { data: activeRoleData } = await adminSupabase
- .from('user_roles')
- .select('role_id')
- .eq('user_id', user.id)
- .eq('company_id', finalCompanyId)
- .maybeSingle()
+  // Dynamic Parallel Context Resolution (Role, Worker, Company)
+  const rolePromise = (finalCompanyId && isUuid(finalCompanyId))
+    ? adminSupabase.from('user_roles').select('role_id').eq('user_id', user.id).eq('company_id', finalCompanyId).maybeSingle()
+    : Promise.resolve({ data: null })
 
- if (activeRoleData?.role_id) {
- rbacRole = activeRoleData.role_id.toLowerCase()
- } else {
- rbacRole = isSuperAdminUser ? 'super_admin' : (rawRoleId || 'trabajador')
- }
- } else {
- rbacRole = isSuperAdminUser ? 'super_admin' : (rawRoleId || 'trabajador')
- }
+  const workerPromise = (userData.worker_id && isUuid(userData.worker_id))
+    ? (finalCompanyId && isUuid(finalCompanyId)
+        ? adminSupabase.from('workers').select('id, status').eq('company_id', finalCompanyId).eq('id', userData.worker_id).maybeSingle()
+        : adminSupabase.from('workers').select('id, status').eq('id', userData.worker_id).maybeSingle())
+    : Promise.resolve({ data: null })
 
- // Dynamic Worker Context Resolution based on active company
- let activeWorkerId: string | null = null
- let activeWorkerStatus: string | null = null
+  const companyPromise = (impersonating && finalCompanyId && isUuid(finalCompanyId) && finalCompanyId !== userData.company_id)
+    ? adminSupabase.from('companies').select('id, name, logo_url').eq('id', finalCompanyId).maybeSingle()
+    : Promise.resolve({ data: userData.companies })
 
- if (finalCompanyId && isUuid(finalCompanyId)) {
- const { data: companyWorker } = await adminSupabase
- .from('workers')
- .select('id, status')
- .eq('company_id', finalCompanyId)
- .eq('id', userData.worker_id || '00000000-0000-0000-0000-000000000000')
- .maybeSingle()
+  const [activeRoleData, workerData, companyRes] = await Promise.all([rolePromise, workerPromise, companyPromise])
 
- if (companyWorker) {
- activeWorkerId = companyWorker.id
- activeWorkerStatus = companyWorker.status
- }
- } else {
- const { data: nativeWorker } = await adminSupabase
- .from('workers')
- .select('id, status')
- .eq('id', userData.worker_id || '00000000-0000-0000-0000-000000000000')
- .maybeSingle()
- 
- if (nativeWorker) {
- activeWorkerId = nativeWorker.id
- activeWorkerStatus = nativeWorker.status
- }
- }
+  let rbacRole: string = 'trabajador'
+  if (activeRoleData?.data?.role_id) {
+    rbacRole = activeRoleData.data.role_id.toLowerCase()
+  } else {
+    rbacRole = isSuperAdminUser ? 'super_admin' : (rawRoleId || 'trabajador')
+  }
 
- // Company Data Fetching (Only if impersonating, otherwise use joined data)
- let companyData = userData.companies
- if (impersonating && finalCompanyId && isUuid(finalCompanyId) && finalCompanyId !== userData.company_id) {
- const { data: comp } = await adminSupabase
- .from('companies')
- .select('id, name, logo_url')
- .eq('id', finalCompanyId)
- .single()
- companyData = comp
- }
+  let activeWorkerId: string | null = workerData?.data?.id || null
+  let activeWorkerStatus: string | null = workerData?.data?.status || null
+  let companyData = companyRes?.data || userData.companies
 
  // Helper function to slugify company name in JS as fallback
  const slugify = (text: string) => {

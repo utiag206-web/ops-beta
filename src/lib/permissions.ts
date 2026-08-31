@@ -34,10 +34,13 @@ export const ROLE_PERMISSIONS: Record<string, string[]> = {
  'soma',
  'documents',
  'company',
- 'operaciones'
+ 'operaciones',
+ 'mecanica',
+ 'mina',
+ 'planta'
  ],
 
- // 2. OPERACIONES: Foco en gestión de campo y personal operativo
+ // 2. MINA / OPERACIONES: Foco en gestión de campo y personal operativo
  operaciones: [
  'dashboard', 
  'workers', 
@@ -55,7 +58,10 @@ export const ROLE_PERMISSIONS: Record<string, string[]> = {
  'soma-capacitaciones', // Puede ver/registrar charlas/cursos en campo
  'soma-charlas',
  'soma',
- 'operaciones'
+ 'operaciones',
+ 'mecanica',
+ 'planta',
+ 'reports'
  ],
 
  // 3. ALMACÉN / LOGÍSTICA: Control de stock y abastecimiento
@@ -64,6 +70,7 @@ export const ROLE_PERMISSIONS: Record<string, string[]> = {
  'inventory', // Productos, Stock, Almacenes
  'movements', // Kardex, Entradas/Salidas
  'requerimientos', // Atender requerimientos
+ 'reports',
  'profile'
  ],
 
@@ -132,27 +139,24 @@ export const ROLE_PERMISSIONS: Record<string, string[]> = {
  'soma',
  'documents',
  'company',
- 'operaciones'
+ 'operaciones',
+ 'mecanica',
+ 'mina'
  ],
  logistica: [
  'dashboard', 
  'inventory', 
  'movements', 
- 'requerimientos',
+ 'requerimientos', 
  'profile'
  ],
  supervisor: [
- 'dashboard',
- 'workers',
- 'attendance',
- 'tareo',
- 'requerimientos',
- 'camp',
- 'soma-capacitaciones',
- 'soma-charlas',
- 'incidencias',
- 'profile'
- ],
+    'dashboard',
+    'produccion',
+    'maderas',
+    'requerimientos',
+    'profile'
+  ],
 }
 
 export function normalizeAreaName(name: string): string {
@@ -180,9 +184,11 @@ export function getPermissionsByRole(role_id: string, area?: string | null): str
  permissions = ROLE_PERMISSIONS['soma']
  } else if (normArea === 'cocina') {
  permissions = [...ROLE_PERMISSIONS['almacen'], 'caja-chica']
- } else if (normArea === 'operaciones') {
+ } else if (['operaciones', 'mina'].includes(normArea)) {
  permissions = ROLE_PERMISSIONS['operaciones']
- } else if (['almacen y mantenimiento', 'mecanica'].includes(normArea)) {
+ } else if (normArea === 'mecanica') {
+ permissions = ['dashboard', 'mecanica', 'requerimientos', 'assets', 'caja-chica', 'profile']
+ } else if (['almacen y mantenimiento', 'almacen', 'logistica'].includes(normArea)) {
  permissions = ROLE_PERMISSIONS['almacen']
  } else {
  permissions = ['dashboard', 'profile']

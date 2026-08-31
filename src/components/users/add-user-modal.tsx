@@ -127,9 +127,9 @@ export function AddUserModal({ isOpen, onClose, availableWorkers }: AddUserModal
  <option value="gerente">Gerente</option>
  <option value="jefe_area">Jefe de Área</option>
  <option value="almacen">Almacén</option>
- <option value="operaciones">Operaciones</option>
+ <option value="operaciones">Mina</option>
  <option value="soma">SOMA / Seguridad</option>
- <option value="supervisor">Supervisor</option>
+ <option value="supervisor">Líder de Cuadrilla</option>
  <option value="trabajador">Trabajador</option>
  </select>
  </div>
@@ -145,7 +145,7 @@ export function AddUserModal({ isOpen, onClose, availableWorkers }: AddUserModal
  <option value="">-- Seleccionar Área --</option>
  <option value="Gerencia General">Gerencia General</option>
  <option value="Administración">Administración</option>
- <option value="Operaciones">Operaciones</option>
+ <option value="Mina">Mina</option>
  <option value="Mecánica">Mecánica</option>
  <option value="Seguridad SOMA">Seguridad SOMA</option>
  <option value="Cocina">Cocina</option>

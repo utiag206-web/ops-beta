@@ -7,13 +7,15 @@ import {
  Bus, Calendar, BarChart3, Building2, Map, Ship, FileText, Bed,
  ChevronDown, ChevronRight, Package, LayoutGrid, Box, History,
  AlertCircle, GraduationCap, MessageSquare, Eye, ShieldAlert, Clock,
- ArrowLeft, Hammer, Trees
+ ArrowLeft, Hammer, Trees, Wrench, Truck, Cpu, Fuel, Activity, ClipboardCheck,
+ FileSpreadsheet, Factory, Layers
 } from 'lucide-react'
 import { logout } from '@/app/(auth)/login/actions'
 import { stopImpersonation } from '@/app/(main)/super-admin/actions'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useUserRole } from '@/components/providers/rbac-provider'
 import { useSidebar } from '@/components/providers/sidebar-provider'
+import { useGlobalSettings } from '@/components/providers/global-settings-provider'
 import { X } from 'lucide-react'
 
 // MASTER LIST: Grupos de navegación por defecto
@@ -23,9 +25,6 @@ const navGroups = [
  label: 'Centro Corporativo',
  items: [
  { name: 'Panel Corporativo', href: '/super-admin', icon: ShieldAlert, module: 'super-admin' },
- // Inactive modules temporarily hidden to keep a clean global console experience
- // { name: 'Gestión de Organizaciones', href: '/super-admin/companies', icon: Building2, module: 'super-admin' },
- // { name: 'Control de Seguridad', href: '/super-admin/users', icon: Users, module: 'super-admin' },
  ]
  },
  {
@@ -37,17 +36,32 @@ const navGroups = [
  },
  {
  id: 'operaciones',
- label: 'Gestión Operativa',
+ label: 'Gestión de Mina',
  items: [
- { name: 'Personal', href: '/workers', icon: Users, module: 'workers' },
+ { name: 'Personal de Mina', href: '/workers', icon: Users, module: 'workers' },
  { name: 'Control de Asistencia', href: '/attendance', icon: Calendar, module: 'attendance' },
  { name: 'Tareo Operativo', href: '/tareo', icon: Calendar, module: 'tareo' },
  { name: 'Control de Producción', href: '/operaciones/produccion', icon: Hammer, module: 'produccion' },
+ { name: 'Control de Planta y Mineral', href: '/operaciones/planta', icon: Factory, module: 'planta' },
  { name: 'Control de Maderas', href: '/operaciones/maderas', icon: Trees, module: 'maderas' },
  { name: 'Logística de Personal', href: '/movements', icon: Ship, module: 'movements' },
  { name: 'Control de Activos', href: '/assets', icon: Package, module: 'assets' },
  { name: 'Requerimientos', href: '/requerimientos', icon: FileText, module: 'requerimientos' },
  { name: 'Control Financiero', href: '/caja-chica', icon: Coins, module: 'caja-chica' },
+ ]
+ },
+ {
+ id: 'mecanica',
+ label: 'Área de Mecánica',
+ items: [
+ { name: 'Mantenimiento Vehículos', href: '/mecanica/mantenimiento-vehiculos', icon: Truck, module: 'mecanica' },
+ { name: 'Generador (Mantenimiento)', href: '/mecanica/generador-mantenimiento', icon: Activity, module: 'mecanica' },
+ { name: 'Generador (Combustible)', href: '/mecanica/generador-combustible', icon: Fuel, module: 'mecanica' },
+ { name: 'Compresora (Mantenimiento)', href: '/mecanica/compresora-mantenimiento', icon: Cpu, module: 'mecanica' },
+ { name: 'Compresora (Combustible)', href: '/mecanica/compresora-combustible', icon: Fuel, module: 'mecanica' },
+ { name: 'Equipos de Mina', href: '/mecanica/equipos-mina', icon: Wrench, module: 'mecanica' },
+ { name: 'Checklists Pre-Operacionales', href: '/mecanica/checklists', icon: ClipboardCheck, module: 'mecanica' },
+ { name: 'Control de Herramientas', href: '/mecanica/herramientas', icon: Hammer, module: 'mecanica' },
  ]
  },
  {
@@ -84,6 +98,7 @@ const navGroups = [
  id: 'analytics',
  label: 'Reportes y Analítica',
  items: [
+ { name: 'Centro de Exportaciones', href: '/reports/export-center', icon: FileSpreadsheet, module: 'reports' },
  { name: 'Inteligencia Operacional', href: '/reports', icon: BarChart3, module: 'reports' },
  ]
  },
@@ -112,9 +127,10 @@ function getSidebarContext(role_id: string | undefined, area: string | null | un
  if (['admin', 'administracion'].includes(role)) return 'ADMIN'
  if (role === 'soma' || (role === 'jefe_area' && cleanArea === 'seguridad soma')) return 'SOMA'
  if (role === 'jefe_area' && cleanArea === 'cocina') return 'COCINA'
- if (role === 'operaciones' || (role === 'jefe_area' && cleanArea === 'operaciones')) return 'OPERACIONES'
+ if (role === 'jefe_area' && cleanArea === 'mecanica') return 'MECANICA'
+ if (role === 'operaciones' || (role === 'jefe_area' && ['operaciones', 'mina'].includes(cleanArea))) return 'OPERACIONES'
  if (role === 'supervisor') return 'SUPERVISOR'
- if (role === 'almacen' || role === 'logistica' || (role === 'jefe_area' && ['almacen y mantenimiento', 'mecanica'].includes(cleanArea))) return 'ALMACEN'
+ if (role === 'almacen' || role === 'logistica' || (role === 'jefe_area' && ['almacen y mantenimiento', 'almacen', 'logistica'].includes(cleanArea))) return 'ALMACEN'
  if (role === 'trabajador') return 'WORKER'
  return 'DEFAULT'
 }
@@ -128,10 +144,11 @@ function getCookie(name: string): string | undefined {
 }
 
 export function Sidebar() {
- const router = useRouter()
  const pathname = usePathname()
+ const router = useRouter()
  const { role_id, user, hasAccess, isImpersonating } = useUserRole()
  const { isOpen, setIsOpen } = useSidebar()
+ const settings = useGlobalSettings()
  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({})
  const [isExiting, setIsExiting] = useState(false)
  
@@ -196,187 +213,214 @@ export function Sidebar() {
  }
  }
 
- const getFilteredGroups = () => {
- let groups = navGroups;
- const effectiveContext = isImpersonating ? 'ADMIN' : context
+ const filteredGroups = useMemo(() => {
+    let groups = navGroups;
+    const effectiveContext = isImpersonating ? 'ADMIN' : context
 
- if (effectiveContext === 'SUPER_ADMIN') {
- groups = groups.filter(g => g.id === 'super-admin');
- } else {
- groups = groups.filter(g => g.id !== 'super-admin');
- }
+    if (effectiveContext === 'SUPER_ADMIN') {
+      groups = groups.filter(g => g.id === 'super-admin');
+    } else {
+      groups = groups.filter(g => g.id !== 'super-admin');
+    }
 
- switch (effectiveContext) {
- case 'SUPER_ADMIN':
- return groups;
+    let resolved: any[] = []
 
- case 'ADMIN':
- return groups.map(g => {
- if (g.id === 'soma') return { ...g, items: g.items.filter(i => i.name !== 'Dashboard de Seguridad') }
- return g
- })
+    switch (effectiveContext) {
+      case 'SUPER_ADMIN':
+        resolved = groups;
+        break;
 
- case 'GERENTE':
- return groups.map(g => {
- if (g.id === 'configuracion') {
- return { ...g, items: g.items.filter(i => ['profile', 'company'].includes(i.module)) }
- }
- if (g.id === 'soma') {
- return { ...g, items: g.items.filter(i => i.name !== 'Dashboard de Seguridad') }
- }
- return g
- })
+      case 'ADMIN':
+        resolved = groups.map(g => {
+          if (g.id === 'soma') return { ...g, items: g.items.filter(i => i.name !== 'Dashboard de Seguridad') }
+          return g
+        })
+        break;
 
- case 'SOMA':
- return groups.filter(g => g.id === 'dashboard' || g.id === 'soma' || g.id === 'configuracion' || g.id === 'gestion')
- .map(g => {
- if (g.id === 'configuracion') return { ...g, items: g.items.filter(i => i.module === 'profile') }
- if (g.id === 'gestion') return { ...g, items: g.items.filter(i => i.module === 'ppe') }
- return g
- })
+      case 'GERENTE':
+        resolved = groups.map(g => {
+          if (g.id === 'configuracion') {
+            return { ...g, items: g.items.filter(i => ['profile', 'company'].includes(i.module)) }
+          }
+          if (g.id === 'soma') {
+            return { ...g, items: g.items.filter(i => i.name !== 'Dashboard de Seguridad') }
+          }
+          return g
+        })
+        break;
 
- case 'COCINA':
- return groups.map(g => {
- if (g.id === 'dashboard') return g
- if (g.id === 'operaciones') return { 
- ...g, 
- items: g.items.filter(i => ['requerimientos', 'caja-chica'].includes(i.module)) 
- }
- if (g.id === 'inventario') return {
- ...g,
- items: g.items.filter(i => ['/inventory/stock', '/inventory/history'].includes(i.href)).map(i => ({
- ...i,
- name: i.href === '/inventory/stock' ? 'Inventario' : 'Movimientos'
- }))
- }
- if (g.id === 'soma') return {
- ...g,
- items: g.items.filter(i => ['soma-capacitaciones', 'soma-charlas'].includes(i.module))
- }
- if (g.id === 'gestion') return {
- ...g,
- items: g.items.filter(i => ['camp'].includes(i.module))
- }
- if (g.id === 'configuracion') return { ...g, items: g.items.filter(i => i.module === 'profile') }
- return { ...g, items: [] }
- })
+      case 'SOMA':
+        resolved = groups.filter(g => g.id === 'dashboard' || g.id === 'soma' || g.id === 'configuracion' || g.id === 'gestion')
+          .map(g => {
+            if (g.id === 'configuracion') return { ...g, items: g.items.filter(i => i.module === 'profile') }
+            if (g.id === 'gestion') return { ...g, items: g.items.filter(i => i.module === 'ppe') }
+            return g
+          })
+        break;
 
- case 'OPERACIONES':
- return groups.map(g => {
- if (g.id === 'dashboard' || g.id === 'inventario') return g
- if (g.id === 'operaciones') return {
- ...g,
- items: g.items.filter(i => ['workers', 'attendance', 'tareo', 'movements', 'assets', 'requerimientos', 'caja-chica', 'produccion', 'maderas'].includes(i.module))
- }
- if (g.id === 'gestion') return {
- ...g,
- items: g.items.filter(i => ['camp', 'bonuses'].includes(i.module))
- }
- if (g.id === 'soma') return {
- ...g,
- items: g.items.filter(i => ['soma-capacitaciones', 'soma-charlas', 'incidencias'].includes(i.module))
- }
- if (g.id === 'configuracion') return { ...g, items: g.items.filter(i => i.module === 'profile') }
- return { ...g, items: [] }
- })
+      case 'COCINA':
+        resolved = groups.map(g => {
+          if (g.id === 'dashboard') return g
+          if (g.id === 'operaciones') return { 
+            ...g, 
+            items: g.items.filter(i => ['requerimientos', 'caja-chica'].includes(i.module)) 
+          }
+          if (g.id === 'inventario') return {
+            ...g,
+            items: g.items.filter(i => ['/inventory/stock', '/inventory/history'].includes(i.href)).map(i => ({
+              ...i,
+              name: i.href === '/inventory/stock' ? 'Inventario' : 'Movimientos'
+            }))
+          }
+          if (g.id === 'soma') return {
+            ...g,
+            items: g.items.filter(i => ['soma-capacitaciones', 'soma-charlas'].includes(i.module))
+          }
+          if (g.id === 'gestion') return {
+            ...g,
+            items: g.items.filter(i => ['camp'].includes(i.module))
+          }
+          if (g.id === 'configuracion') return { ...g, items: g.items.filter(i => i.module === 'profile') }
+          return { ...g, items: [] }
+        })
+        break;
 
- case 'SUPERVISOR':
- return groups.map(g => {
- if (g.id === 'dashboard') return g
- if (g.id === 'operaciones') return {
- ...g,
- items: g.items.filter(i => ['workers', 'attendance', 'tareo', 'requerimientos'].includes(i.module))
- }
- if (g.id === 'gestion') return {
- ...g,
- items: g.items.filter(i => ['camp'].includes(i.module))
- }
- if (g.id === 'soma') return {
- ...g,
- items: g.items.filter(i => ['soma-capacitaciones', 'soma-charlas', 'incidencias'].includes(i.module))
- }
- if (g.id === 'configuracion') return { ...g, items: g.items.filter(i => i.module === 'profile') }
- return { ...g, items: [] }
- })
+      case 'MECANICA':
+        resolved = groups.map(g => {
+          if (g.id === 'dashboard') {
+            return {
+              ...g,
+              label: 'Centro de Control',
+              items: g.items.map(i => ({ ...i, name: 'Panel de Mecánica' }))
+            }
+          }
+          if (g.id === 'mecanica') return g
+          if (g.id === 'operaciones') return { 
+            ...g, 
+            label: 'Gestión Auxiliar',
+            items: g.items.filter(i => ['requerimientos', 'caja-chica', 'assets'].includes(i.module)) 
+          }
+          if (g.id === 'soma') return {
+            ...g,
+            items: g.items.filter(i => ['soma-capacitaciones', 'soma-charlas'].includes(i.module))
+          }
+          if (g.id === 'configuracion') return { ...g, items: g.items.filter(i => i.module === 'profile') }
+          return { ...g, items: [] }
+        })
+        break;
 
- case 'ALMACEN':
- return groups.map(g => {
- if (g.id === 'dashboard' || g.id === 'inventario') return g
- if (g.id === 'operaciones') return { 
- ...g, 
- items: g.items.filter(i => ['requerimientos', 'assets'].includes(i.module)).map(i => {
- if (i.module === 'requerimientos') return { ...i, name: 'Requerimientos Aprobados' }
- return i
- })
- }
- if (g.id === 'configuracion') return { ...g, items: g.items.filter(i => i.module === 'profile') }
- return { ...g, items: [] }
- })
+      case 'OPERACIONES':
+        resolved = groups.map(g => {
+          if (g.id === 'mecanica') return { ...g, items: g.items.filter(i => i.module === 'mecanica') }
+          if (g.id === 'inventario') return { ...g, items: g.items.filter(i => ['/inventory/stock', '/inventory/history'].includes(i.href)) }
+          if (g.id === 'configuracion') return { ...g, items: g.items.filter(i => i.module === 'profile') }
+          if (g.id === 'analytics') return { ...g, items: g.items.filter(i => i.href === '/reports') }
+          return g
+        })
+        break;
 
- case 'WORKER':
- return groups.map(g => {
- if (g.id === 'dashboard') return g
- if (g.id === 'gestion') return {
- ...g,
- items: g.items.filter(i => ['documents', 'bonuses', 'ppe'].includes(i.module)).map(i => {
- if (i.module === 'bonuses') return { ...i, name: 'Mi Historial Financiero' }
- return i
- })
- }
- if (g.id === 'operaciones') return {
- ...g,
- items: g.items.filter(i => ['attendance', 'requerimientos'].includes(i.module)).map(i => {
- if (i.module === 'attendance') return { ...i, name: 'Mi Asistencia' }
- if (i.module === 'requerimientos') return { ...i, name: 'Solicitar Productos' }
- return i
- })
- }
- if (g.id === 'soma') return {
- ...g,
- items: g.items.filter(i => i.module === 'incidencias').map(i => ({ ...i, name: 'Reportar Incidencia' }))
- }
- if (g.id === 'configuracion') return { ...g, items: g.items.filter(i => i.module === 'profile') }
- return { ...g, items: [] }
- })
+      case 'SUPERVISOR':
+        resolved = groups.map(g => {
+          if (g.id === 'dashboard') return g
+          if (g.id === 'operaciones') return {
+            ...g,
+            items: g.items.filter(i => ['workers', 'attendance', 'tareo', 'produccion', 'maderas', 'requerimientos'].includes(i.module))
+          }
+          if (g.id === 'soma') return {
+            ...g,
+            items: g.items.filter(i => ['soma-capacitaciones', 'soma-charlas', 'soma-hsec', 'incidencias'].includes(i.module))
+          }
+          if (g.id === 'gestion') return {
+            ...g,
+            items: g.items.filter(i => ['ppe'].includes(i.module))
+          }
+          if (g.id === 'mecanica') return {
+            ...g,
+            items: g.items.filter(i => ['checklists'].some(sub => i.href.includes(sub)))
+          }
+          if (g.id === 'configuracion') return { ...g, items: g.items.filter(i => i.module === 'profile') }
+          return { ...g, items: [] }
+        })
+        break;
 
- default:
- return groups.filter(g => g.id === 'dashboard' || g.id === 'configuracion')
- }
- }
+      case 'ALMACEN':
+        resolved = groups.map(g => {
+          if (g.id === 'dashboard') return g
+          if (g.id === 'inventario') return g
+          if (g.id === 'operaciones') return { ...g, items: g.items.filter(i => ['requerimientos', 'caja-chica'].includes(i.module)) }
+          if (g.id === 'gestion') return { ...g, items: g.items.filter(i => ['ppe', 'documents'].includes(i.module)) }
+          if (g.id === 'soma') return { ...g, items: g.items.filter(i => ['soma-capacitaciones', 'soma-charlas'].includes(i.module)) }
+          if (g.id === 'analytics') return { ...g, items: g.items.filter(i => i.href === '/reports') }
+          if (g.id === 'configuracion') return { ...g, items: g.items.filter(i => i.module === 'profile') }
+          return { ...g, items: [] }
+        })
+        break;
 
- let filteredGroups = getFilteredGroups().filter(group => group.items.length > 0)
+      case 'WORKER':
+        resolved = groups.map(g => {
+          if (g.id === 'dashboard') return g
+          if (g.id === 'gestion') return {
+            ...g,
+            items: g.items.filter(i => ['documents', 'bonuses', 'ppe'].includes(i.module)).map(i => {
+              if (i.module === 'bonuses') return { ...i, name: 'Mi Historial Financiero' }
+              return i
+            })
+          }
+          if (g.id === 'operaciones') return {
+            ...g,
+            items: g.items.filter(i => ['attendance', 'requerimientos'].includes(i.module)).map(i => {
+              if (i.module === 'attendance') return { ...i, name: 'Mi Asistencia' }
+              if (i.module === 'requerimientos') return { ...i, name: 'Solicitar Productos' }
+              return i
+            })
+          }
+          if (g.id === 'soma') return {
+            ...g,
+            items: g.items.filter(i => i.module === 'incidencias').map(i => ({ ...i, name: 'Reportar Incidencia' }))
+          }
+          if (g.id === 'configuracion') return { ...g, items: g.items.filter(i => i.module === 'profile') }
+          return { ...g, items: [] }
+        })
+        break;
 
- const showWorkerOnly = viewMode === 'WORKER' || isWorkerPure
+      default:
+        resolved = groups.filter(g => g.id === 'dashboard' || g.id === 'configuracion')
+        break;
+    }
 
- if (showWorkerOnly) {
- const personalGroup = {
- id: 'mi-portal-personal',
- label: 'Mi Portal Personal',
- items: [
- { name: 'Mi Portal (Inicio)', href: `/w/${user?.company_slug || 'empresa'}`, icon: UserCircle, module: 'dashboard' },
- { name: 'Mi Asistencia', href: '/attendance', icon: Clock, module: 'attendance' },
- { name: 'Mis Documentos', href: '/documents', icon: FileText, module: 'documents' },
- { name: 'Mis EPPs', href: '/ppe', icon: Shield, module: 'ppe' },
- { name: 'Mi Historial Financiero', href: '/bonuses', icon: Coins, module: 'bonuses' }
- ]
- }
- filteredGroups = [personalGroup]
- } else {
- if (isEligible && !isWorkerPure) {
- const personalGroup = {
- id: 'mi-portal-personal',
- label: 'Mi Portal Personal',
- items: [
- { name: 'Mi Portal (Inicio)', href: `/w/${user?.company_slug || 'empresa'}`, icon: UserCircle, module: 'dashboard' },
- { name: 'Mi Asistencia', href: '/attendance', icon: Clock, module: 'attendance' },
- { name: 'Mis Documentos', href: '/documents', icon: FileText, module: 'documents' },
- { name: 'Mis EPPs', href: '/ppe', icon: Shield, module: 'ppe' },
- { name: 'Mi Historial Financiero', href: '/bonuses', icon: Coins, module: 'bonuses' }
- ]
- }
- filteredGroups = [...filteredGroups, personalGroup]
- }
- }
+    let finalGroups = resolved.filter(group => group.items.length > 0)
+    const showWorkerOnly = viewMode === 'WORKER' || isWorkerPure
+
+    if (showWorkerOnly) {
+      const personalGroup = {
+        id: 'mi-portal-personal',
+        label: 'Mi Portal Personal',
+        items: [
+          { name: 'Mi Portal (Inicio)', href: `/w/${user?.company_slug || 'empresa'}`, icon: UserCircle, module: 'dashboard' },
+          { name: 'Mi Asistencia', href: '/attendance', icon: Clock, module: 'attendance' },
+          { name: 'Mis Documentos', href: '/documents', icon: FileText, module: 'documents' },
+          { name: 'Mis EPPs', href: '/ppe', icon: Shield, module: 'ppe' },
+          { name: 'Mi Historial Financiero', href: '/bonuses', icon: Coins, module: 'bonuses' }
+        ]
+      }
+      finalGroups = [personalGroup]
+    } else if (isEligible && !isWorkerPure) {
+      const personalGroup = {
+        id: 'mi-portal-personal',
+        label: 'Mi Portal Personal',
+        items: [
+          { name: 'Mi Portal (Inicio)', href: `/w/${user?.company_slug || 'empresa'}`, icon: UserCircle, module: 'dashboard' },
+          { name: 'Mi Asistencia', href: '/attendance', icon: Clock, module: 'attendance' },
+          { name: 'Mis Documentos', href: '/documents', icon: FileText, module: 'documents' },
+          { name: 'Mis EPPs', href: '/ppe', icon: Shield, module: 'ppe' },
+          { name: 'Mi Historial Financiero', href: '/bonuses', icon: Coins, module: 'bonuses' }
+        ]
+      }
+      finalGroups = [...finalGroups, personalGroup]
+    }
+
+    return finalGroups
+  }, [isImpersonating, context, viewMode, isWorkerPure, isEligible, user?.company_slug])
 
  return (
  <>
@@ -424,13 +468,18 @@ export function Sidebar() {
  <div className="flex items-center gap-4 text-white">
  <div className="w-12 h-12 flex items-center justify-center rounded-xl nth-logo-box">
  <img 
- src="/logo-ops.png" 
- alt="Inthaly OPS Logo" 
- className="w-8 h-8 object-contain mix-blend-screen brightness-125"
+ src={settings?.ecosystem_logo || "/logo-ops.png"}
+ alt={settings?.ecosystem_name || "Inthaly OPS Logo"}
+ className="w-10 h-10 object-contain"
  />
  </div>
  <div className="flex flex-col">
- <span className="text-2xl font-bold tracking-tight leading-none whitespace-nowrap text-white">Inthaly OPS</span>
+ <span 
+  className="text-2xl font-bold tracking-tight leading-none whitespace-nowrap text-white" 
+  style={settings?.brand_color ? { color: settings.brand_color } : {}}
+ >
+   {settings?.ecosystem_name || "Inthaly OPS"}
+ </span>
  <div className="flex items-center gap-2 mt-1.5">
  <span className="text-xs font-semibold text-white/90 tracking-normal">Sistema de Gestión Empresarial</span>
  </div>
@@ -452,8 +501,9 @@ export function Sidebar() {
  <div className="flex-1 space-y-2">
  {filteredGroups.map((group) => {
  const isCollapsed = collapsed[group.id]
- const hasActiveChild = group.items.some(item => pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href)))
- const effectivelyCollapsed = isCollapsed === undefined ? !hasActiveChild : isCollapsed
+ const hasActiveChild = group.items.some((item: any) => pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href)))
+ const isOpenByDefault = (group.id === 'mecanica' && context === 'MECANICA') || (group.id === 'operaciones' && context === 'SUPERVISOR')
+ const effectivelyCollapsed = isCollapsed === undefined ? (isOpenByDefault ? false : !hasActiveChild) : isCollapsed
 
  const toggleGroup = () => {
  setCollapsed(prev => ({ ...prev, [group.id]: !effectivelyCollapsed }))
@@ -475,7 +525,7 @@ export function Sidebar() {
  
  {!effectivelyCollapsed && (
  <div className="mt-3 space-y-1 animate-in fade-in slide-in-from-top-1 duration-200">
- {group.items.map((item) => {
+ {group.items.map((item: any) => {
  const isDashboardItem = item.href === '/dashboard'
  let isActive = false
  if (isDashboardItem) {
@@ -490,6 +540,8 @@ export function Sidebar() {
  
  const Icon = item.icon
  
+ const isSuperAdminRoute = pathname?.startsWith('/super-admin')
+ 
  return (
  <Link
  key={`${group.id}-${item.href}-${item.name}`}
@@ -499,8 +551,14 @@ export function Sidebar() {
  isActive ? 'nth-nav-item-active' : ''
  }`}
  >
- <Icon size={18} strokeWidth={2.5} className={`transition-colors ${isActive ? 'text-blue-600' : 'opacity-60'}`} />
- <span className="tracking-tight">{item.name}</span>
+ <Icon 
+  size={18} 
+  strokeWidth={2.5} 
+  className={`transition-colors ${isActive ? 'text-blue-600' : 'opacity-60'}`} 
+ />
+ <span className="tracking-tight">
+  {item.name}
+ </span>
  </Link>
  )
  })}
