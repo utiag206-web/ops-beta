@@ -42,242 +42,357 @@ interface CreateRequirementModalProps {
 }
 
 export function CreateRequirementModal({ isOpen, onClose, onSuccess }: CreateRequirementModalProps) {
- const [loading, setLoading] = useState(false)
- const [products, setProducts] = useState<any[]>([])
- const [fetchingProducts, setFetchingProducts] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const [products, setProducts] = useState<any[]>([])
+  const [fetchingProducts, setFetchingProducts] = useState(false)
+  const [isNewProduct, setIsNewProduct] = useState(false)
+  const [customProductName, setCustomProductName] = useState('')
+  const [customProductUnit, setCustomProductUnit] = useState('UND')
 
- const [form, setForm] = useState({
- title: '',
- description: '',
- type: 'insumo',
- priority: 'media',
- product_id: '',
- quantity: 0,
- tool_type: '',
- specialty: '',
- people_count: 1
- })
+  const [form, setForm] = useState({
+    title: '',
+    description: '',
+    type: 'insumo',
+    priority: 'media',
+    product_id: '',
+    quantity: 0,
+    tool_type: '',
+    specialty: '',
+    people_count: 1
+  })
 
- const [searchQuery, setSearchQuery] = useState('')
- const [showDropdown, setShowDropdown] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [showDropdown, setShowDropdown] = useState(false)
 
- useEffect(() => {
- if (isOpen) {
- setForm(prev => ({
- ...prev,
- title: '',
- description: '',
- type: 'insumo',
- priority: 'media',
- product_id: '',
- quantity: 0,
- tool_type: '',
- specialty: '',
- people_count: 1
- }))
- setSearchQuery('')
- setShowDropdown(false)
+  useEffect(() => {
+    if (isOpen) {
+      setForm(prev => ({
+        ...prev,
+        title: '',
+        description: '',
+        type: 'insumo',
+        priority: 'media',
+        product_id: '',
+        quantity: 0,
+        tool_type: '',
+        specialty: '',
+        people_count: 1
+      }))
+      setSearchQuery('')
+      setShowDropdown(false)
+      setIsNewProduct(false)
+      setCustomProductName('')
+      setCustomProductUnit('UND')
 
- const loadProducts = async () => {
- setFetchingProducts(true)
- const { getProductsMinimal } = await import('@/app/(main)/inventory/actions')
- const res = await getProductsMinimal()
- if (res.data) setProducts(res.data)
- setFetchingProducts(false)
- }
- loadProducts()
- }
- }, [isOpen])
+      const loadProducts = async () => {
+        setFetchingProducts(true)
+        const { getProductsMinimal } = await import('@/app/(main)/inventory/actions')
+        const res = await getProductsMinimal()
+        if (res.data) setProducts(res.data)
+        setFetchingProducts(false)
+      }
+      loadProducts()
+    }
+  }, [isOpen])
 
- const filteredProducts = products.filter(p => 
- p.name.toLowerCase().includes(searchQuery.toLowerCase())
- ).slice(0, 10) // Limit suggestions for UX
+  const filteredProducts = products.filter(p => 
+    p.name.toLowerCase().includes(searchQuery.toLowerCase())
+  ).slice(0, 10) // Limit suggestions for UX
 
- if (!isOpen) return null
+  if (!isOpen) return null
 
- const handleSubmit = async (e: React.FormEvent) => {
- e.preventDefault()
- 
- // Only validate product if type is insumo
- if (form.type === 'insumo' && (!form.product_id || form.quantity <= 0)) {
- toast.error('Selecciona un producto y una cantidad mayor a 0')
- return
- }
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    
+    // Only validate product if type is insumo
+    if (form.type === 'insumo') {
+      if (isNewProduct) {
+        if (!customProductName.trim()) {
+          toast.error('Ingresa el nombre del producto nuevo')
+          return
+        }
+        if (form.quantity <= 0) {
+          toast.error('Especifica una cantidad mayor a 0')
+          return
+        }
+      } else {
+        if (!form.product_id || form.quantity <= 0) {
+          toast.error('Selecciona un producto y una cantidad mayor a 0')
+          return
+        }
+      }
+    }
 
- if (form.type === 'fondos' && form.quantity <= 0) {
- toast.error('Especifica un monto mayor a 0')
- return
- }
+    if (form.type === 'fondos' && form.quantity <= 0) {
+      toast.error('Especifica un monto mayor a 0')
+      return
+    }
 
- setLoading(true)
- 
- try {
- const payload: any = { ...form }
- 
- // Enriquecer descripción si no es insumo para no perder datos si no hay columnas en DB
- if (form.type === 'herramienta') {
- payload.description = `[HERRAMIENTA: ${form.tool_type} | CANT: ${form.quantity}] ${form.description}`
- } else if (form.type === 'personal') {
- payload.description = `[PERSONAL: ${form.specialty} | CANT: ${form.people_count}] ${form.description}`
- } else if (form.type === 'fondos') {
- payload.description = `[SOLICITUD DE FONDOS: S/ ${form.quantity.toFixed(2)}] ${form.description}`
- }
+    setLoading(true)
+    
+    try {
+      const payload: any = { ...form }
+      
+      // Enriquecer descripción si no es insumo para no perder datos si no hay columnas en DB
+      if (form.type === 'insumo' && isNewProduct) {
+        delete payload.product_id
+        payload.description = `[PRODUCTO NUEVO: ${customProductName.trim().toUpperCase()} | UNIDAD: ${customProductUnit.trim().toUpperCase()}] ${form.description}`
+        if (!payload.title || payload.title.trim() === '') {
+          payload.title = customProductName.trim().toUpperCase()
+        }
+      } else if (form.type === 'herramienta') {
+        payload.description = `[HERRAMIENTA: ${form.tool_type} | CANT: ${form.quantity}] ${form.description}`
+      } else if (form.type === 'personal') {
+        payload.description = `[PERSONAL: ${form.specialty} | CANT: ${form.people_count}] ${form.description}`
+      } else if (form.type === 'fondos') {
+        payload.description = `[SOLICITUD DE FONDOS: S/ ${form.quantity.toFixed(2)}] ${form.description}`
+      }
 
- if (form.type !== 'insumo') {
- delete payload.product_id
- // Si no es insumo, quantity se usa para herramientas, pero para personal usamos people_count
- if (form.type === 'personal') {
- payload.quantity = form.people_count
- }
- }
+      if (form.type !== 'insumo') {
+        delete payload.product_id
+        // Si no es insumo, quantity se usa para herramientas, pero para personal usamos people_count
+        if (form.type === 'personal') {
+          payload.quantity = form.people_count
+        }
+      }
 
- // LIMPIEZA DE PAYLOAD: Eliminar campos que NO existen en la tabla de la BD
- delete payload.people_count
- delete payload.specialty
- delete payload.tool_type
+      // LIMPIEZA DE PAYLOAD: Eliminar campos que NO existen en la tabla de la BD
+      delete payload.people_count
+      delete payload.specialty
+      delete payload.tool_type
 
- const res = await createRequirement(payload)
- if (res.error) {
- toast.error(res.error)
- } else {
- toast.success('Requerimiento creado exitosamente')
- onSuccess?.()
- onClose()
- }
- } catch (err: any) {
- toast.error(`Error crítico: ${err.message || 'Error desconocido'}`)
- } finally {
- setLoading(false)
- }
- }
+      const res = await createRequirement(payload)
+      if (res.error) {
+        toast.error(res.error)
+      } else {
+        toast.success('Requerimiento creado exitosamente')
+        onSuccess?.()
+        onClose()
+      }
+    } catch (err: any) {
+      toast.error(`Error crítico: ${err.message || 'Error desconocido'}`)
+    } finally {
+      setLoading(false)
+    }
+  }
 
- return (
- <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
- <div className="bg-white w-full max-w-md rounded-[2.2rem] shadow-2xl overflow-hidden border border-slate-100 animate-in zoom-in-95 duration-200 max-h-[90vh] flex flex-col">
- <div className="px-6 py-5 border-b border-slate-50 flex justify-between items-center bg-slate-50/50">
- <div>
- <h2 className="text-xl font-black text-slate-800 tracking-tight">Nuevo Requerimiento</h2>
- <p className="text-slate-400 text-[10px] font-bold tracking-tight">Completa los detalles de tu solicitud.</p>
- </div>
- <button onClick={onClose} className="p-2 hover:bg-white rounded-full transition-colors text-slate-400 hover:text-slate-600 shadow-sm border border-slate-100">
- <X size={20} />
- </button>
- </div>
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+      <div className="bg-white w-full max-w-md rounded-[2.2rem] shadow-2xl overflow-hidden border border-slate-100 animate-in zoom-in-95 duration-200 max-h-[90vh] flex flex-col">
+        <div className="px-6 py-5 border-b border-slate-50 flex justify-between items-center bg-slate-50/50">
+          <div>
+            <h2 className="text-xl font-black text-slate-800 tracking-tight">Nuevo Requerimiento</h2>
+            <p className="text-slate-400 text-[10px] font-bold tracking-tight">Completa los detalles de tu solicitud.</p>
+          </div>
+          <button onClick={onClose} className="p-2 hover:bg-white rounded-full transition-colors text-slate-400 hover:text-slate-600 shadow-sm border border-slate-100">
+            <X size={20} />
+          </button>
+        </div>
 
- <form onSubmit={handleSubmit} className="px-6 py-4 space-y-4 overflow-y-auto flex-1 custom-scrollbar pb-6">
- <div className="grid grid-cols-2 gap-4 pt-2">
- <div className="space-y-2">
- <label className="text-[10px] font-black tracking-tight text-slate-400 px-1">Tipo de Pedido</label>
- <select 
- required
- className="w-full bg-slate-50 border-2 border-transparent focus:border-indigo-500 focus:bg-white rounded-2xl p-3.5 text-xs font-bold transition-all outline-none"
- value={form.type}
- onChange={e => setForm(prev => ({...prev, type: e.target.value}))}
- >
- <option value="insumo">Insumo / Producto</option>
- <option value="herramienta">Herramienta</option>
- <option value="personal">Personal</option>
- <option value="fondos">Solicitud de Caja Chica (Fondos)</option>
- </select>
- </div>
- <div className="space-y-2">
- <label className="text-[10px] font-black tracking-tight text-slate-400 px-1">Prioridad</label>
- <select 
- required
- className="w-full bg-slate-50 border-2 border-transparent focus:border-indigo-500 focus:bg-white rounded-2xl p-3.5 text-xs font-bold transition-all outline-none"
- value={form.priority}
- onChange={e => setForm(prev => ({...prev, priority: e.target.value}))}
- >
- <option value="alta">Alta</option>
- <option value="media">Media</option>
- <option value="baja">Baja</option>
- </select>
- </div>
- </div>
+        <form onSubmit={handleSubmit} className="px-6 py-4 space-y-4 overflow-y-auto flex-1 custom-scrollbar pb-6">
+          <div className="grid grid-cols-2 gap-4 pt-2">
+            <div className="space-y-2">
+              <label className="text-[10px] font-black tracking-tight text-slate-400 px-1">Tipo de Pedido</label>
+              <select 
+                required
+                className="w-full bg-slate-50 border-2 border-transparent focus:border-indigo-500 focus:bg-white rounded-2xl p-3.5 text-xs font-bold transition-all outline-none"
+                value={form.type}
+                onChange={e => setForm(prev => ({...prev, type: e.target.value}))}
+              >
+                <option value="insumo">Insumo / Producto</option>
+                <option value="herramienta">Herramienta</option>
+                <option value="personal">Personal</option>
+                <option value="fondos">Solicitud de Caja Chica (Fondos)</option>
+              </select>
+            </div>
+            <div className="space-y-2">
+              <label className="text-[10px] font-black tracking-tight text-slate-400 px-1">Prioridad</label>
+              <select 
+                required
+                className="w-full bg-slate-50 border-2 border-transparent focus:border-indigo-500 focus:bg-white rounded-2xl p-3.5 text-xs font-bold transition-all outline-none"
+                value={form.priority}
+                onChange={e => setForm(prev => ({...prev, priority: e.target.value}))}
+              >
+                <option value="alta">Alta</option>
+                <option value="media">Media</option>
+                <option value="baja">Baja</option>
+              </select>
+            </div>
+          </div>
 
- {form.type === 'insumo' && (
- <div className="bg-indigo-50/50 p-4 rounded-3xl border border-indigo-100/50 space-y-4 relative">
- <div className="space-y-2">
- <label className="text-[10px] font-black flex items-center gap-1 tracking-tight text-indigo-700 px-1">
- <Package size={12} />
- Producto Solicitado
- </label>
- 
- {/* AUTOCOMPLETE SEARCH */}
- <div className="relative">
- <input 
- type="text"
- placeholder={fetchingProducts ? 'Consultando catálogo...' : 'Buscar producto...'}
- className="w-full bg-white border-2 border-transparent focus:border-indigo-500 rounded-2xl p-3 text-sm font-bold transition-all outline-none"
- value={searchQuery}
- onFocus={() => setShowDropdown(true)}
- onChange={e => {
- setSearchQuery(e.target.value)
- setShowDropdown(true)
- if (!e.target.value) setForm(prev => ({...prev, product_id: ''}))
- }}
- />
- {fetchingProducts && (
- <div className="absolute right-3 top-3.5">
- <Loader2 size={16} className="animate-spin text-indigo-400" />
- </div>
- )}
+          {form.type === 'insumo' && (
+            <div className="bg-indigo-50/50 p-4 rounded-3xl border border-indigo-100/50 space-y-4 relative">
+              {/* Product Source Selector (Tabs) */}
+              <div className="flex bg-white/80 p-1 rounded-2xl border border-indigo-100/80 shadow-xs">
+                <button
+                  type="button"
+                  onClick={() => setIsNewProduct(false)}
+                  className={`flex-1 py-2 text-[11px] font-bold rounded-xl transition-all ${
+                    !isNewProduct 
+                      ? 'bg-indigo-600 text-white shadow-sm' 
+                      : 'text-slate-500 hover:text-indigo-600'
+                  }`}
+                >
+                  📦 Almacén General
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsNewProduct(true)}
+                  className={`flex-1 py-2 text-[11px] font-bold rounded-xl transition-all ${
+                    isNewProduct 
+                      ? 'bg-amber-500 text-white shadow-sm' 
+                      : 'text-slate-500 hover:text-amber-600'
+                  }`}
+                >
+                  ✨ Producto Nuevo
+                </button>
+              </div>
 
- {showDropdown && searchQuery && (
- <div className="absolute left-0 right-0 top-14 bg-white border border-slate-100 rounded-2xl shadow-xl z-[110] overflow-hidden animate-in fade-in slide-in-from-top-2 duration-150">
- {filteredProducts.length > 0 ? (
- <div className="p-1">
- {filteredProducts.map(p => (
- <button
- key={p.id}
- type="button"
- onClick={() => {
- setForm(prev => ({ ...prev, product_id: p.id }))
- setSearchQuery(p.name)
- setShowDropdown(false)
- }}
- className="w-full text-left p-3 hover:bg-indigo-50 rounded-xl transition-colors flex items-center gap-3 group"
- >
- <div className="w-8 h-8 rounded-lg bg-indigo-50 group-hover:bg-white flex items-center justify-center text-indigo-600 transition-colors">
- <Package size={16} />
- </div>
- <div>
- <p className="text-sm font-black text-slate-800 tracking-tight">{p.name}</p>
- <p className="text-[9px] font-bold text-slate-400 tracking-tight">Unidad: {p.unit}</p>
- </div>
- </button>
- ))}
- </div>
- ) : (
- <div className="p-8 text-center bg-slate-50/50">
- <p className="text-xs font-bold text-slate-400 tracking-tight italic">No se encontraron productos</p>
- </div>
- )}
- </div>
- )}
- </div>
- </div>
+              {!isNewProduct ? (
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black flex items-center gap-1 tracking-tight text-indigo-700 px-1">
+                    <Package size={12} />
+                    Seleccionar Producto del Catálogo
+                  </label>
+                  
+                  {/* AUTOCOMPLETE SEARCH */}
+                  <div className="relative">
+                    <input 
+                      type="text"
+                      placeholder={fetchingProducts ? 'Consultando catálogo...' : 'Buscar producto en almacén...'}
+                      className="w-full bg-white border-2 border-transparent focus:border-indigo-500 rounded-2xl p-3 text-sm font-bold transition-all outline-none"
+                      value={searchQuery}
+                      onFocus={() => setShowDropdown(true)}
+                      onChange={e => {
+                        setSearchQuery(e.target.value)
+                        setShowDropdown(true)
+                        if (!e.target.value) setForm(prev => ({...prev, product_id: ''}))
+                      }}
+                    />
+                    {fetchingProducts && (
+                      <div className="absolute right-3 top-3.5">
+                        <Loader2 size={16} className="animate-spin text-indigo-400" />
+                      </div>
+                    )}
 
- <div className="space-y-1">
- <div className="flex justify-between items-center px-1">
- <label className="text-[10px] font-black tracking-tight text-indigo-700">Cantidad Necesaria</label>
- {form.product_id && (
- <span className="text-[9px] font-bold text-slate-400 tracking-tight bg-white px-2 py-0.5 rounded-full border border-slate-100">
- Unidad: {products.find(p => p.id === form.product_id)?.unit || '—'}
- </span>
- )}
- </div>
- <input 
- type="number"
- step="0.01"
- min="0.01"
- className="w-full bg-white border-2 border-transparent focus:border-indigo-500 rounded-2xl p-3 text-sm font-bold transition-all outline-none"
- value={form.quantity}
- onChange={e => setForm(prev => ({...prev, quantity: Number(e.target.value)}))}
- />
- </div>
- </div>
- )}
+                    {showDropdown && searchQuery && (
+                      <div className="absolute left-0 right-0 top-14 bg-white border border-slate-100 rounded-2xl shadow-xl z-[110] overflow-hidden animate-in fade-in slide-in-from-top-2 duration-150">
+                        {filteredProducts.length > 0 ? (
+                          <div className="p-1">
+                            {filteredProducts.map(p => (
+                              <button
+                                key={p.id}
+                                type="button"
+                                onClick={() => {
+                                  setForm(prev => ({ ...prev, product_id: p.id }))
+                                  setSearchQuery(p.name)
+                                  setShowDropdown(false)
+                                }}
+                                className="w-full text-left p-3 hover:bg-indigo-50 rounded-xl transition-colors flex items-center gap-3 group"
+                              >
+                                <div className="w-8 h-8 rounded-lg bg-indigo-50 group-hover:bg-white flex items-center justify-center text-indigo-600 transition-colors">
+                                  <Package size={16} />
+                                </div>
+                                <div>
+                                  <p className="text-sm font-black text-slate-800 tracking-tight">{p.name}</p>
+                                  <p className="text-[9px] font-bold text-slate-400 tracking-tight">Unidad: {p.unit}</p>
+                                </div>
+                              </button>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="p-6 text-center bg-slate-50/50">
+                            <p className="text-xs font-bold text-slate-400 tracking-tight mb-2">No encontrado en inventario</p>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setIsNewProduct(true)
+                                setCustomProductName(searchQuery)
+                                setShowDropdown(false)
+                              }}
+                              className="text-[11px] font-bold text-amber-600 hover:text-amber-700 bg-amber-50 px-3 py-1.5 rounded-lg border border-amber-200"
+                            >
+                              ✨ Registrar como Producto Nuevo
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-3 bg-amber-50/70 p-3.5 rounded-2xl border border-amber-200/60">
+                  <div className="flex items-center gap-1.5 text-amber-800">
+                    <span className="text-[10px] font-black uppercase tracking-wider bg-amber-200/80 px-2 py-0.5 rounded-md">
+                      Pendiente de Registro
+                    </span>
+                    <span className="text-[10px] text-amber-700 font-medium">No requiere existencia previa</span>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-black tracking-tight text-amber-900 px-1">
+                      Nombre del Producto / Insumo
+                    </label>
+                    <input 
+                      type="text"
+                      required={isNewProduct}
+                      placeholder="Ej: Tubo PVC 2 pulg, Repuesto bomba..."
+                      className="w-full bg-white border-2 border-transparent focus:border-amber-500 rounded-2xl p-3 text-sm font-bold transition-all outline-none"
+                      value={customProductName}
+                      onChange={e => setCustomProductName(e.target.value.toUpperCase())}
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-black tracking-tight text-amber-900 px-1">
+                      Unidad de Medida
+                    </label>
+                    <select 
+                      className="w-full bg-white border-2 border-transparent focus:border-amber-500 rounded-2xl p-2.5 text-xs font-bold transition-all outline-none"
+                      value={customProductUnit}
+                      onChange={e => setCustomProductUnit(e.target.value)}
+                    >
+                      <option value="UND">Unidad (UND)</option>
+                      <option value="METROS">Metros (MTR)</option>
+                      <option value="KG">Kilogramos (KG)</option>
+                      <option value="GALONES">Galones (GAL)</option>
+                      <option value="LITROS">Litros (LT)</option>
+                      <option value="PAQUETE">Paquete (PQT)</option>
+                      <option value="ROLLO">Rollo (RLL)</option>
+                      <option value="CAJA">Caja (CJ)</option>
+                      <option value="OTRO">Otro</option>
+                    </select>
+                  </div>
+                </div>
+              )}
+
+              <div className="space-y-1">
+                <div className="flex justify-between items-center px-1">
+                  <label className="text-[10px] font-black tracking-tight text-indigo-700">Cantidad Necesaria</label>
+                  {!isNewProduct && form.product_id && (
+                    <span className="text-[9px] font-bold text-slate-400 tracking-tight bg-white px-2 py-0.5 rounded-full border border-slate-100">
+                      Unidad: {products.find(p => p.id === form.product_id)?.unit || '—'}
+                    </span>
+                  )}
+                  {isNewProduct && (
+                    <span className="text-[9px] font-bold text-amber-700 tracking-tight bg-white px-2 py-0.5 rounded-full border border-amber-200">
+                      Unidad: {customProductUnit}
+                    </span>
+                  )}
+                </div>
+                <input 
+                  type="number"
+                  step="0.01"
+                  min="0.01"
+                  required
+                  placeholder="0.00"
+                  className="w-full bg-white border-2 border-transparent focus:border-indigo-500 rounded-2xl p-3 text-sm font-bold transition-all outline-none"
+                  value={form.quantity || ''}
+                  onChange={e => setForm(prev => ({...prev, quantity: Number(e.target.value)}))}
+                />
+              </div>
+            </div>
+          )}
 
  {form.type === 'herramienta' && (
  <div className="bg-amber-50/50 p-4 rounded-3xl border border-amber-100/50 space-y-4">

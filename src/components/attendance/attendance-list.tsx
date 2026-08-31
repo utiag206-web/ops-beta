@@ -48,7 +48,7 @@ export function AttendanceList({ records, isWorker = false }: AttendanceListProp
  <tr className="bg-slate-50/50 border-b border-slate-100">
  <th className="py-5 px-6 text-[11px] font-bold text-slate-400 tracking-tight">Colaborador</th>
  <th className="py-5 px-6 text-[11px] font-bold text-slate-400 tracking-tight">Día / Fecha</th>
- <th className="py-5 px-6 text-[11px] font-bold text-slate-400 tracking-tight">Marcación (Ingreso - Salida)</th>
+ <th className="py-5 px-6 text-[11px] font-bold text-slate-400 tracking-tight">Marcaciones</th>
  <th className="py-5 px-6 text-[11px] font-bold text-slate-400 tracking-tight text-center">GPS</th>
  <th className="py-5 px-6 text-[11px] font-bold text-slate-400 tracking-tight text-center">Estado</th>
  </tr>
@@ -77,21 +77,31 @@ export function AttendanceList({ records, isWorker = false }: AttendanceListProp
  <td className="py-5 px-6">
  <div className="flex flex-col">
  <span className="text-sm font-bold text-slate-600 capitalize">
- {new Date(record.date).toLocaleDateString('es-ES', { weekday: 'long' })}
+ {new Date(record.date + 'T12:00:00').toLocaleDateString('es-ES', { weekday: 'long' })}
  </span>
  <span className="text-[10px] font-bold text-slate-400 mt-0.5">
- {new Date(record.date).toLocaleDateString()}
+ {new Date(record.date + 'T12:00:00').toLocaleDateString()}
  </span>
  </div>
  </td>
  <td className="py-5 px-6">
- <div className="flex items-center gap-4 font-mono text-sm">
- <div className="flex items-center gap-2 text-slate-600">
+ <div className="flex items-center gap-3 font-mono text-xs">
+ <div className="flex items-center gap-1.5 text-slate-600" title="Entrada">
  <div className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)]"></div>
  <span className="font-bold">{record.check_in || '--:--'}</span>
  </div>
- <ArrowRight size={14} className="text-slate-300" />
- <div className="flex items-center gap-2 text-slate-600">
+ <ArrowRight size={12} className="text-slate-300" />
+ <div className="flex items-center gap-1.5 text-slate-600" title="Inicio Refrigerio">
+ <div className="w-2 h-2 rounded-full bg-orange-500 shadow-[0_0_8px_rgba(249,115,22,0.4)]"></div>
+ <span className="font-bold">{record.break_start || '--:--'}</span>
+ </div>
+ <ArrowRight size={12} className="text-slate-300" />
+ <div className="flex items-center gap-1.5 text-slate-600" title="Fin Refrigerio">
+ <div className="w-2 h-2 rounded-full bg-teal-500 shadow-[0_0_8px_rgba(20,184,166,0.4)]"></div>
+ <span className="font-bold">{record.break_end || '--:--'}</span>
+ </div>
+ <ArrowRight size={12} className="text-slate-300" />
+ <div className="flex items-center gap-1.5 text-slate-600" title="Salida">
  <div className="w-2 h-2 rounded-full bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.4)]"></div>
  <span className="font-bold">{record.check_out || '--:--'}</span>
  </div>
@@ -151,9 +161,9 @@ export function AttendanceList({ records, isWorker = false }: AttendanceListProp
  </div>
  <div>
  <p className="text-sm font-bold text-slate-800 tracking-tight">
- {new Date(record.date).toLocaleDateString('es-ES', { weekday: 'long' })}
+ {new Date(record.date + 'T12:00:00').toLocaleDateString('es-ES', { weekday: 'long' })}
  </p>
- <p className="text-[10px] font-bold text-slate-400">{new Date(record.date).toLocaleDateString()}</p>
+ <p className="text-[10px] font-bold text-slate-400">{new Date(record.date + 'T12:00:00').toLocaleDateString()}</p>
  </div>
  </div>
  {isWorker && record.check_in ? (
@@ -177,22 +187,36 @@ export function AttendanceList({ records, isWorker = false }: AttendanceListProp
  )}
  </div>
 
- <div className="bg-slate-50 rounded-2xl p-4 grid grid-cols-2 gap-4 border border-slate-100/50">
- <div className="space-y-1">
- <p className="text-[9px] font-bold text-slate-400 tracking-tight flex items-center gap-1.5">
- <div className="w-1.5 h-1.5 rounded-full bg-emerald-500"></div>
- Ingreso
- </p>
- <p className="text-lg font-bold text-slate-700 tabular-nums">{record.check_in || '--:--'}</p>
- </div>
- <div className="space-y-1 text-right border-l border-slate-200 pl-4">
- <p className="text-[9px] font-bold text-slate-400 tracking-tight flex items-center justify-end gap-1.5">
- Salida
- <div className="w-1.5 h-1.5 rounded-full bg-amber-500"></div>
- </p>
- <p className="text-lg font-bold text-slate-700 tabular-nums">{record.check_out || '--:--'}</p>
- </div>
- </div>
+        <div className="bg-slate-50 rounded-2xl p-4 grid grid-cols-2 gap-y-4 gap-x-2 border border-slate-100/50">
+          <div className="space-y-1">
+            <p className="text-[10px] font-bold text-slate-400 tracking-tight flex items-center gap-1.5">
+              <div className="w-1.5 h-1.5 rounded-full bg-emerald-500"></div>
+              Entrada
+            </p>
+            <p className="text-sm font-bold text-slate-700 tabular-nums">{record.check_in || '--:--'}</p>
+          </div>
+          <div className="space-y-1 border-l border-slate-200 pl-3">
+            <p className="text-[10px] font-bold text-slate-400 tracking-tight flex items-center gap-1.5">
+              <div className="w-1.5 h-1.5 rounded-full bg-orange-500"></div>
+              I. Refrig.
+            </p>
+            <p className="text-sm font-bold text-slate-700 tabular-nums">{record.break_start || '--:--'}</p>
+          </div>
+          <div className="space-y-1 pt-1 border-t border-slate-200/60">
+            <p className="text-[10px] font-bold text-slate-400 tracking-tight flex items-center gap-1.5">
+              <div className="w-1.5 h-1.5 rounded-full bg-teal-500"></div>
+              F. Refrig.
+            </p>
+            <p className="text-sm font-bold text-slate-700 tabular-nums">{record.break_end || '--:--'}</p>
+          </div>
+          <div className="space-y-1 pt-1 border-t border-slate-200/60 border-l border-slate-200 pl-3">
+            <p className="text-[10px] font-bold text-slate-400 tracking-tight flex items-center gap-1.5">
+              <div className="w-1.5 h-1.5 rounded-full bg-amber-500"></div>
+              Salida
+            </p>
+            <p className="text-sm font-bold text-slate-700 tabular-nums">{record.check_out || '--:--'}</p>
+          </div>
+        </div>
 
  <div className="flex items-center gap-2 pt-1 opacity-60">
  <div className="w-5 h-5 rounded-full bg-slate-200 flex items-center justify-center text-slate-500">

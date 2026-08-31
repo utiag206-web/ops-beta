@@ -2,6 +2,7 @@ import { Bell, Building2 } from 'lucide-react'
 import { getUserSession } from '@/lib/auth'
 import { UserDropdown } from './user-dropdown'
 import { SidebarToggle } from './sidebar-toggle'
+import { ROLE_NAMES } from '@/lib/constants'
 
 export async function Header() {
  const { extendedUser } = await getUserSession()
@@ -9,22 +10,8 @@ export async function Header() {
  let userName = extendedUser?.display_name || 'Usuario'
  const roleId = extendedUser?.role_id as string
  
- // Mapeo descriptivo para la UI (Corporate Executive Terms)
- const roleNames: Record<string, string> = {
- super_admin: 'Super Administrador',
- superadmin: 'Super Administrador',
- admin: 'Gerente General',
- administracion: 'Administración',
- gerente: 'Gerencia General',
- jefe_area: 'Jefe de Área',
- almacen: 'Logística',
- operaciones: 'Operaciones',
- trabajador: 'Colaborador',
- soma: 'Seguridad SOMA',
- cocina: 'Cocina'
- }
- 
- let userRole = roleNames[roleId?.toLowerCase()] || 'Sin Rol'
+ const userRoleBase = roleId ? (ROLE_NAMES[roleId.toLowerCase()] || roleId) : 'Sin Rol'
+ let userRole = userRoleBase
  if (extendedUser?.is_impersonating) {
  userRole = 'Auditoría de Sistemas'
  } else if (extendedUser?.area) {
@@ -40,22 +27,6 @@ export async function Header() {
  
  let companyName = extendedUser?.company_name || 'Empresa'
  let companyLogo = extendedUser?.company_logo || null
-
- // FALLBACK CRÍTICO: Si el nombre está pero el logo no, intentamos un fetch directo para romper caché
- if (extendedUser?.company_id && !companyLogo) {
- const { createAdminClient } = await import('@/lib/supabase/server')
- const supabase = await createAdminClient()
- const { data: directComp } = await supabase
- .from('companies')
- .select('name, logo_url')
- .eq('id', extendedUser.company_id)
- .single()
- 
- if (directComp) {
- companyName = directComp.name || companyName
- companyLogo = directComp.logo_url || null
- }
- }
 
  return (
  <header className="h-20 bg-white border-b border-slate-200 px-4 md:px-6 flex items-center justify-between sticky top-0 z-30">

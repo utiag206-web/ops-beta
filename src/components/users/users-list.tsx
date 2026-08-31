@@ -202,16 +202,16 @@ export function UsersList({ initialUsers, availableWorkers, currentUserRole }: {
  >
  <option value="admin">Administrador</option>
  <option value="gerente">Gerente</option>
- <option value="operaciones">Operaciones</option>
+ <option value="operaciones">Mina</option>
  <option value="almacen">Almacén</option>
  <option value="soma">SOMA / Seguridad</option>
- <option value="supervisor">Supervisor</option>
+ <option value="supervisor">Líder de Cuadrilla</option>
  <option value="jefe_area">Jefe de Área</option>
  <option value="trabajador">Trabajador</option>
  </select>
  ) : (
  <span className="text-xs font-bold text-blue-600 tracking-tighter bg-blue-50 px-2 py-0.5 rounded-md">
- {item.role_id || 'trabajador'}
+ {item.role_id === 'supervisor' ? 'Líder de Cuadrilla' : item.role_id === 'operaciones' ? 'Mina' : item.role_id || 'trabajador'}
  </span>
  )
  ) : (
@@ -229,7 +229,7 @@ export function UsersList({ initialUsers, availableWorkers, currentUserRole }: {
  <option value="">Sin Asignar</option>
  <option value="Gerencia General">Gerencia General</option>
  <option value="Administración">Administración</option>
- <option value="Operaciones">Operaciones</option>
+ <option value="Mina">Mina</option>
  <option value="Mecánica">Mecánica</option>
  <option value="Seguridad SOMA">Seguridad SOMA</option>
  <option value="Cocina">Cocina</option>

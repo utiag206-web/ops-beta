@@ -63,48 +63,66 @@ export async function getRequirements(filters?: { status?: string, priority?: st
  const products = resProducts.data || []
 
  const enrichedData = data.map((req: any) => {
- let type = req.type
- let virtualProducts = products.find((p: any) => p.id === req.product_id)
- 
- // Try to parse description brackets to enrich products virtual column
- if (req.description?.startsWith('[SOLICITUD DE FONDOS:')) {
- type = 'fondos'
- virtualProducts = {
- name: 'CAJA CHICA (FONDOS)',
- code: 'CAJA',
- unit: 'S/'
- }
- } else if (req.description?.startsWith('[HERRAMIENTA:')) {
- type = 'herramienta'
- const match = req.description.match(/^\[HERRAMIENTA:\s*([^|]*?)\s*\|\s*CANT:\s*([^\]]*?)\]/)
- if (match) {
- virtualProducts = {
- name: match[1].toUpperCase(),
- code: 'HERR',
- unit: 'UND'
- }
- }
- } else if (req.description?.startsWith('[PERSONAL:')) {
- type = 'personal'
- const match = req.description.match(/^\[PERSONAL:\s*([^|]*?)\s*\|\s*CANT:\s*([^\]]*?)\]/)
- if (match) {
- virtualProducts = {
- name: `PERSONAL: ${match[1].toUpperCase()}`,
- code: 'PERS',
- unit: 'PERS'
- }
- }
- }
+    let type = req.type
+    let virtualProducts = products.find((p: any) => p.id === req.product_id)
+    
+    // Try to parse description brackets to enrich products virtual column
+    if (req.description?.startsWith('[SOLICITUD DE FONDOS:')) {
+      type = 'fondos'
+      virtualProducts = {
+        name: 'CAJA CHICA (FONDOS)',
+        code: 'CAJA',
+        unit: 'S/'
+      }
+    } else if (req.description?.startsWith('[PRODUCTO NUEVO:')) {
+      type = 'insumo'
+      const match = req.description.match(/^\[PRODUCTO NUEVO:\s*([^|]*?)\s*\|\s*UNIDAD:\s*([^\]]*?)\]/)
+      if (match) {
+        virtualProducts = {
+          name: match[1].trim().toUpperCase(),
+          code: 'PENDIENTE',
+          unit: match[2]?.trim().toUpperCase() || 'UND',
+          is_new: true
+        }
+      }
+    } else if (req.description?.startsWith('[HERRAMIENTA:')) {
+      type = 'herramienta'
+      const match = req.description.match(/^\[HERRAMIENTA:\s*([^|]*?)\s*\|\s*CANT:\s*([^\]]*?)\]/)
+      if (match) {
+        virtualProducts = {
+          name: match[1].toUpperCase(),
+          code: 'HERR',
+          unit: 'UND'
+        }
+      }
+    } else if (req.description?.startsWith('[PERSONAL:')) {
+      type = 'personal'
+      const match = req.description.match(/^\[PERSONAL:\s*([^|]*?)\s*\|\s*CANT:\s*([^\]]*?)\]/)
+      if (match) {
+        virtualProducts = {
+          name: `PERSONAL: ${match[1].toUpperCase()}`,
+          code: 'PERS',
+          unit: 'PERS'
+        }
+      }
+    } else if (!req.product_id && (req.type === 'insumo' || !req.type)) {
+      virtualProducts = {
+        name: req.title || 'PRODUCTO PENDIENTE DE REGISTRO',
+        code: 'PENDIENTE',
+        unit: 'UND',
+        is_new: true
+      }
+    }
 
- return {
- ...req,
- type,
- user: users.find((u: any) => u.id === req.created_by),
- products: virtualProducts
- }
- })
+    return {
+      ...req,
+      type,
+      user: users.find((u: any) => u.id === req.created_by),
+      products: virtualProducts
+    }
+  })
 
- return { data: enrichedData }
+  return { data: enrichedData }
 }
 
 export async function createRequirement(payload: {

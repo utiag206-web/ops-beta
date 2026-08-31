@@ -4,9 +4,11 @@ import { getUserSession, getActiveViewMode } from '@/lib/auth'
 import { OnboardingCheck } from '@/components/auth/onboarding-check'
 import { RbacProvider } from '@/components/providers/rbac-provider'
 import { SidebarProvider } from '@/components/providers/sidebar-provider'
+import { GlobalSettingsProvider } from '@/components/providers/global-settings-provider'
 import { headers } from 'next/headers'
 import { hasPermission } from '@/lib/permissions'
 import { redirect } from 'next/navigation'
+import { getGlobalSettings } from '@/app/(main)/super-admin/settings/general/actions'
 
 export default async function DashboardLayout({
  children,
@@ -16,6 +18,7 @@ export default async function DashboardLayout({
  const session = await getUserSession()
  const extendedUser = session?.extendedUser
  const viewMode = await getActiveViewMode()
+ const globalSettings = await getGlobalSettings()
  
  const headersList = await headers()
  const pathname = (headersList.get('x-pathname') || '').split('?')[0]
@@ -31,11 +34,8 @@ export default async function DashboardLayout({
  const moduleName = pathname.split('/')[1]
  const userRole = extendedUser?.role_id?.toLowerCase()
  
- console.log(`[LAYOUT] 🏁 Path: ${pathname} | User: ${extendedUser?.email || 'ANONYMOUS'} | Role: ${userRole} | ViewMode: ${viewMode}`)
- 
  // 1. Mandatory Session Guard
  if (!extendedUser) {
- console.log(`[LAYOUT] 🛑 No extendedUser found. Redirecting to /login. (Auth user might exist but DB profile is missing)`)
  redirect('/login')
  }
 
@@ -79,6 +79,7 @@ export default async function DashboardLayout({
  }
 
  return (
+ <GlobalSettingsProvider settings={globalSettings}>
  <RbacProvider 
  role_id={extendedUser?.role_id} 
  permissions={(extendedUser as any)?.permissions}
@@ -98,5 +99,6 @@ export default async function DashboardLayout({
  </div>
  </SidebarProvider>
  </RbacProvider>
+ </GlobalSettingsProvider>
  )
 }

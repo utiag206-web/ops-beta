@@ -14,8 +14,11 @@ export function UserDropdown({
  userRole: string,
  initial: string 
 }) {
- const [isOpen, setIsOpen] = useState(false)
- const dropdownRef = useRef<HTMLDivElement>(null)
+  const [isOpen, setIsOpen] = useState(false)
+  const dropdownRef = useRef<HTMLDivElement>(null)
+  
+  const roleStr = userRole.toLowerCase()
+  const isSuperAdmin = roleStr.includes('super_admin') || roleStr.includes('superadmin') || roleStr.includes('super admin')
 
  useEffect(() => {
  function handleClickOutside(event: MouseEvent) {
@@ -61,13 +64,23 @@ export function UserDropdown({
  </Link>
  
  <Link 
- href="/settings" 
- onClick={() => setIsOpen(false)}
- className="flex items-center gap-3 px-4 py-2.5 text-sm text-slate-600 hover:bg-blue-50 hover:text-blue-700 transition-colors font-medium opacity-50 cursor-not-allowed"
- >
- <Settings size={18} />
- Configuración
- </Link>
+          href={isSuperAdmin ? "/super-admin/settings" : "/settings"} 
+          onClick={(e) => {
+            if (!isSuperAdmin) {
+              e.preventDefault()
+            } else {
+              setIsOpen(false)
+            }
+          }}
+          className={`flex items-center gap-3 px-4 py-2.5 text-sm font-medium transition-colors ${
+            isSuperAdmin 
+              ? 'text-slate-600 hover:bg-blue-50 hover:text-blue-700' 
+              : 'text-slate-600 opacity-50 cursor-not-allowed'
+          }`}
+        >
+          <Settings size={18} />
+          Configuración
+        </Link>
  
  <div className="h-px bg-slate-50 my-1 mx-2"></div>
  

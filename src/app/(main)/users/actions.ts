@@ -331,11 +331,30 @@ export async function updateUserRole(userId: string, role_id: string) {
  return { success: false, error: 'No autorizado para modificar este usuario.' }
  }
 
- // 1. Actualizar tabla 'users'
- const { error: userError } = await supabaseAdmin
- .from('users')
- .update({ role_id })
- .eq('id', userId)
+  // 0. Asegurar que los roles estándar existan en public.roles para evitar violación de Foreign Key
+  try {
+    await supabaseAdmin.from('roles').upsert([
+      { id: 'admin', name: 'Administrador' },
+      { id: 'gerente', name: 'Gerente' },
+      { id: 'jefe_area', name: 'Jefe de Área' },
+      { id: 'almacen', name: 'Logística' },
+      { id: 'operaciones', name: 'Mina' },
+      { id: 'supervisor', name: 'Líder de Cuadrilla' },
+      { id: 'mecanica', name: 'Mecánica' },
+      { id: 'soma', name: 'Seguridad SOMA' },
+      { id: 'administracion', name: 'Administración' },
+      { id: 'trabajador', name: 'Trabajador' },
+      { id: 'super_admin', name: 'Super Administrador' }
+    ], { onConflict: 'id' })
+  } catch (rErr) {
+    console.warn('[ROLES_SYNC_WARN]:', rErr)
+  }
+
+  // 1. Actualizar tabla 'users'
+  const { error: userError } = await supabaseAdmin
+  .from('users')
+  .update({ role_id })
+  .eq('id', userId)
 
  if (userError) {
  console.error('User Role Update Error:', userError)

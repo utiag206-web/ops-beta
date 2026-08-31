@@ -344,7 +344,7 @@ export async function getTareoDashboardData(month: string, startDate: string, en
  applyIsolation(supabase.from('tareo_config').select('daily_hours'), companyId, extendedUser.role_id)
  .eq('month', month)
  .maybeSingle(),
- applyIsolation(supabase.from('attendance_logs').select('id, worker_id, date_local, type, timestamp'), companyId, extendedUser.role_id)
+ applyIsolation(supabase.from('attendance_logs').select('id, worker_id, date_local, type, timestamp, latitude, longitude, accuracy, address'), companyId, extendedUser.role_id)
  .gte('date_local', startDate)
  .lte('date_local', endDate)
  .order('timestamp', { ascending: true })

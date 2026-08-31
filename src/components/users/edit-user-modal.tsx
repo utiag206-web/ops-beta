@@ -131,7 +131,7 @@ export function EditUserModal({ isOpen, onClose, onSuccess, user }: EditUserModa
  <option value="">Sin Asignar</option>
  <option value="Gerencia General">Gerencia General</option>
  <option value="Administración">Administración</option>
- <option value="Operaciones">Operaciones</option>
+ <option value="Mina">Mina</option>
  <option value="Mecánica">Mecánica</option>
  <option value="Seguridad SOMA">Seguridad SOMA</option>
  <option value="Cocina">Cocina</option>

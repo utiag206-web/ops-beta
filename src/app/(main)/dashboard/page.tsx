@@ -6,6 +6,7 @@ import { getDashboardStats } from './actions'
 import { getUserSession, getActiveViewMode } from '@/lib/auth'
 import { DashboardShell } from '@/components/dashboard/dashboard-shell'
 import { AdminDashboardSkeleton } from '@/components/dashboard/dashboard-skeletons'
+import { normalizeAreaName } from '@/lib/permissions'
 import os from 'os'
 
 export const dynamic = 'force-dynamic'
@@ -19,6 +20,8 @@ export default async function DashboardPage() {
  }
  
  const role = extendedUser?.role_id?.toLowerCase()
+ const cleanArea = extendedUser?.area ? normalizeAreaName(extendedUser.area) : ''
+
  if ((role === 'super_admin' || role === 'superadmin') && !extendedUser?.is_impersonating) {
  redirect('/super-admin')
  }

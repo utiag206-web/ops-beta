@@ -34,11 +34,8 @@ interface TareoPageProps {
 }
 
 const statusColors: any = {
-  'AD': 'bg-slate-200 text-slate-800 font-bold',
-  'AN': 'bg-teal-100 text-teal-800 font-bold',
+  'AC': 'bg-green-200 text-green-900 font-bold',
   'DL': 'bg-cyan-100 text-cyan-800 font-bold',
-  'C': 'bg-blue-100 text-blue-800 font-bold',
-  'DF': 'bg-indigo-100 text-indigo-800 font-bold',
   'F': 'bg-rose-100 text-rose-800 font-bold',
   'S': 'bg-amber-100 text-amber-800 font-bold',
   'L': 'bg-slate-50 text-slate-500 font-bold',
@@ -46,9 +43,7 @@ const statusColors: any = {
   'INC': 'bg-orange-100 text-orange-800 font-bold',
   'P': 'bg-emerald-100 text-emerald-800 font-bold',
   'PR': 'bg-emerald-50 text-emerald-700 font-bold',
-  'AC': 'bg-green-200 text-green-900 font-bold',
   'V': 'bg-purple-100 text-purple-800 font-bold',
-  'X': 'bg-slate-400 text-white font-bold',
 }
 
 const autoColors: any = {
@@ -131,7 +126,7 @@ export default function TareoClient({ initialCycles, workers, userRole, companyI
     const channel1 = supabase.channel('tareo_attendance_changes')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'attendance' }, (payload) => {
         console.log('[REALTIME] Attendance event received:', payload)
-        loadData()
+        loadData(true)
       })
       .subscribe((status) => {
         console.log('[REALTIME] Attendance channel status:', status)
@@ -140,7 +135,7 @@ export default function TareoClient({ initialCycles, workers, userRole, companyI
     const channel2 = supabase.channel('tareo_attendance_logs_changes')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'attendance_logs' }, (payload) => {
         console.log('[REALTIME] Attendance logs event received:', payload)
-        loadData()
+        loadData(true)
       })
       .subscribe((status) => {
         console.log('[REALTIME] Attendance logs channel status:', status)
@@ -295,9 +290,6 @@ export default function TareoClient({ initialCycles, workers, userRole, companyI
         <div>
           <div className="flex items-center gap-2">
             <h1 className="text-2xl font-black text-slate-800 tracking-tight">Centro de Control de Tareo y Productividad</h1>
-            <span className="bg-blue-100 text-blue-800 text-[10px] font-black px-2.5 py-0.5 rounded-full uppercase tracking-wider">
-              Single Source of Truth
-            </span>
           </div>
           <p className="text-slate-500 font-medium text-xs sm:text-sm mt-0.5">
             Cálculo automatizado en tiempo real sincronizado con la Configuración de Empresa.
@@ -414,15 +406,16 @@ export default function TareoClient({ initialCycles, workers, userRole, companyI
       <div className="flex flex-wrap gap-2 px-4 py-3 bg-white rounded-2xl border border-slate-100 shadow-sm">
         <span className="text-[10px] font-black text-slate-400 tracking-tight mr-2 flex items-center">Leyenda Oficial:</span>
         {[
-          { c: 'P', l: 'Presente', bg: 'bg-yellow-200 text-yellow-900' },
-          { c: 'F', l: 'Falta', bg: 'bg-rose-100 text-rose-700' },
-          { c: 'AD', l: 'Asist. Completa', bg: 'bg-slate-200 text-slate-800' },
-          { c: 'V', l: 'Vacaciones', bg: 'bg-purple-100 text-purple-700' },
-          { c: 'DM', l: 'Desc. Médico', bg: 'bg-sky-100 text-sky-700' },
-          { c: 'DL', l: 'Desc. Laborado', bg: 'bg-cyan-100 text-cyan-700' },
-          { c: 'INC', l: 'Incompleto', bg: 'bg-orange-100 text-orange-700' },
-          { c: 'S', l: 'Suspensión', bg: 'bg-amber-100 text-amber-700' },
-          { c: 'L', l: 'Libre', bg: 'bg-slate-100 text-slate-600' },
+          { c: 'P', l: 'Presente', bg: 'bg-emerald-100 text-emerald-800' },
+          { c: 'PR', l: 'Pres. con Refrig.', bg: 'bg-emerald-50 text-emerald-700' },
+          { c: 'AC', l: 'Asist. Completa', bg: 'bg-green-200 text-green-900' },
+          { c: 'F', l: 'Falta', bg: 'bg-rose-100 text-rose-800' },
+          { c: 'INC', l: 'Incompleto', bg: 'bg-orange-100 text-orange-800' },
+          { c: 'V', l: 'Vacaciones', bg: 'bg-purple-100 text-purple-800' },
+          { c: 'DM', l: 'Desc. Médico', bg: 'bg-sky-100 text-sky-800' },
+          { c: 'DL', l: 'Desc. Laborado', bg: 'bg-cyan-100 text-cyan-800' },
+          { c: 'S', l: 'Suspensión', bg: 'bg-amber-100 text-amber-800' },
+          { c: 'L', l: 'Libre', bg: 'bg-slate-50 text-slate-500' },
         ].map(item => (
           <div key={item.c} className="flex items-center gap-1.5 border border-slate-100 px-2 py-1 rounded-lg">
             <span className={`w-7 text-center text-[10px] font-black py-0.5 rounded ${item.bg}`}>{item.c}</span>
@@ -442,9 +435,9 @@ export default function TareoClient({ initialCycles, workers, userRole, companyI
           <table className="w-max text-left border-collapse whitespace-nowrap table-fixed">
             <thead>
               <tr className="bg-slate-800 text-white">
-                <th rowSpan={2} className="sticky left-0 z-20 bg-slate-800 border border-slate-700 px-2 py-1 text-[11px] font-bold text-center w-[40px] align-middle">ITEM</th>
-                <th rowSpan={2} className="sticky left-[40px] z-20 bg-slate-800 border border-slate-700 px-3 py-1 text-[11px] font-bold text-center w-[220px] align-middle">Apellidos y Nombres</th>
-                <th rowSpan={2} className="sticky left-[260px] z-20 bg-slate-800 border border-slate-700 px-3 py-1 text-[11px] font-bold text-center w-[130px] align-middle">Cargo</th>
+                <th rowSpan={2} className="md:sticky md:left-0 z-20 bg-slate-800 border border-slate-700 px-2 py-1 text-[11px] font-bold text-center w-[40px] align-middle">ITEM</th>
+                <th rowSpan={2} className="md:sticky md:left-[40px] z-20 bg-slate-800 border border-slate-700 px-3 py-1 text-[11px] font-bold text-center w-[220px] align-middle">Apellidos y Nombres</th>
+                <th rowSpan={2} className="md:sticky md:left-[260px] z-20 bg-slate-800 border border-slate-700 px-3 py-1 text-[11px] font-bold text-center w-[130px] align-middle">Cargo</th>
                 {daysInMonth.map((d) => (
                   <th key={`wd-${d.day}`} className={`px-1 py-1 text-center border border-slate-700 min-w-[32px] ${d.isWeekend ? 'text-rose-400' : 'text-slate-100'}`}>
                     <div className="text-[11px] font-black uppercase">{d.weekday}</div>
@@ -602,9 +595,9 @@ const WorkerRow = React.memo(function WorkerRow({
 }: any) {
   return (
     <tr className="hover:bg-slate-50 relative group bg-white h-10">
-      <td className="sticky left-0 z-20 bg-white group-hover:bg-slate-50 border border-slate-300 px-0.5 py-1 text-center text-[11px] font-bold text-slate-800 w-[40px]">{idx + 1}</td>
-      <td className="sticky left-[40px] z-20 bg-white group-hover:bg-slate-50 border border-slate-300 px-2 py-1 text-[11px] font-black text-slate-900 truncate max-w-[220px] w-[220px]">{worker.name} {worker.last_name}</td>
-      <td className="sticky left-[260px] z-20 bg-white group-hover:bg-slate-50 border border-slate-300 px-2 py-1 text-[10px] font-bold text-slate-500 truncate max-w-[130px] w-[130px]">{worker.position || '-'}</td>
+      <td className="md:sticky md:left-0 z-20 bg-white group-hover:bg-slate-50 border border-slate-300 px-0.5 py-1 text-center text-[11px] font-bold text-slate-800 w-[40px]">{idx + 1}</td>
+      <td className="md:sticky md:left-[40px] z-20 bg-white group-hover:bg-slate-50 border border-slate-300 px-2 py-1 text-[11px] font-black text-slate-900 truncate max-w-[220px] w-[220px]">{worker.name} {worker.last_name}</td>
+      <td className="md:sticky md:left-[260px] z-20 bg-white group-hover:bg-slate-50 border border-slate-300 px-2 py-1 text-[10px] font-bold text-slate-500 truncate max-w-[130px] w-[130px]">{worker.position || '-'}</td>
       {daysInMonth.map((d: any) => {
         const key = `${worker.id}-${d.dateString}`
         const eff = workerStatuses[d.dateString] || { status: '', isManual: false }
@@ -631,15 +624,15 @@ const WorkerRow = React.memo(function WorkerRow({
             {logged && (
               <div 
                 onClick={() => onOpenLogs(worker.id, d.dateString)}
-                className={`absolute bottom-0 right-0 p-0.5 cursor-pointer flex items-center justify-center transition-all hover:scale-125 z-10`}
-                title={hasGps ? "Ver registro (Incluye GPS)" : "Ver registro"}
+                className={`absolute bottom-0 right-0 p-0.5 cursor-pointer flex items-center justify-center transition-all hover:scale-110 z-10`}
+                title={hasGps ? "Ver registro (Incluye GPS)" : "Ver registro de marcaciones"}
               >
                 {hasGps ? (
-                  <div className="bg-white rounded-full shadow-md p-0.5 border border-slate-200">
-                    <MapPin size={12} className="text-rose-500 fill-rose-100" />
+                  <div className="bg-white rounded-full shadow-sm p-0.5 border border-blue-200">
+                    <MapPin size={10} className="text-blue-600 fill-blue-100" />
                   </div>
                 ) : (
-                  <div className="w-2 h-2 rounded-full bg-slate-300 shadow-sm border border-white" />
+                  <div className="w-2 h-2 rounded-full bg-blue-400 shadow-sm border border-white" />
                 )}
               </div>
             )}

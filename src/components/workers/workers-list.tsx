@@ -293,15 +293,7 @@ export function WorkersList({ workers, canManage = false }: { workers: Worker[],
   </span>
   </div>
 
-  {((worker as any).pin_changed || (worker as any).last_login_at) ? (
-  <span className="text-[9px] font-bold text-emerald-600 bg-emerald-50/80 border border-emerald-200/60 px-2 py-0.5 rounded-full flex items-center gap-1 shadow-xs">
-  <CheckCircle2 size={10} /> Cuenta Activa
-  </span>
-  ) : (
-  <span className="text-[9px] font-bold text-amber-700 bg-amber-50 border border-amber-200/70 px-2 py-0.5 rounded-full flex items-center gap-1 shadow-xs">
-  <Clock size={10} /> 1er Ingreso Pendiente
-  </span>
-  )}
+
   </div>
   </td>
  <td className="py-5 px-6 text-right">
