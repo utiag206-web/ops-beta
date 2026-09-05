@@ -20,13 +20,33 @@ export default function UppercaseEnforcer() {
         target.tagName === 'TEXTAREA'
 
       if (isTextInput) {
-        // Skip email, password, and elements marked with data-keep-case
-        if (
+        // Skip email, password, identifiers, and elements marked with data-keep-case
+        const isEmailOrKeepCase =
           target.type === 'email' || 
           target.type === 'password' || 
-          target.dataset.keepCase === 'true' ||
-          target.classList.contains('keep-case')
-        ) {
+          target.name === 'email' ||
+          target.id === 'email' ||
+          target.id === 'identifier' ||
+          target.name === 'identifier' ||
+          target.getAttribute('data-keep-case') === 'true' ||
+          target.dataset?.keepCase === 'true' ||
+          target.classList.contains('keep-case') ||
+          target.value.includes('@')
+
+        if (isEmailOrKeepCase) {
+          // Si es un correo electrónico o contiene @, normalizar a minúsculas limpias
+          if (
+            (target.type === 'email' || target.name === 'email' || target.id === 'email' || target.value.includes('@')) &&
+            /[A-Z]/.test(target.value)
+          ) {
+            const lower = target.value.toLowerCase()
+            const start = target.selectionStart
+            const end = target.selectionEnd
+            target.value = lower
+            if (start !== null && end !== null) {
+              try { target.setSelectionRange(start, end) } catch (_) {}
+            }
+          }
           return
         }
 

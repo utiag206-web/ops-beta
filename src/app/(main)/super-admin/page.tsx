@@ -107,31 +107,37 @@ export default async function SuperAdminPage() {
  <div className="p-8 border-b border-slate-50 flex items-center justify-between">
  <div>
  <h2 className="text-xl font-black text-slate-900">Accesos Globales</h2>
- <p className="text-slate-400 text-sm font-medium">Últimos usuarios registrados</p>
+ <p className="text-slate-400 text-sm font-medium">{users.length} usuarios registrados en el ecosistema</p>
  </div>
  <Database size={20} className="text-slate-400" />
  </div>
  <div className="flex-1 overflow-y-auto custom-scrollbar max-h-[600px]">
  <div className="divide-y divide-slate-50">
- {users.slice(0, 10).map((user: any) => (
- <div key={user.id} className="p-6 hover:bg-slate-50 transition-colors">
- <div className="flex items-center justify-between gap-4">
- <div className="flex flex-col">
- <span className="font-bold text-slate-700 leading-tight">{user.name}</span>
- <span className="text-xs text-slate-400">{user.email}</span>
- </div>
- <span className={`px-2 py-0.5 rounded-lg text-[9px] font-black tracking-wider ${
- user.role_id === 'super_admin' ? 'bg-red-50 text-red-600' : 'bg-slate-100 text-slate-600'
- }`}>
- {user.role_id}
- </span>
- </div>
- <div className="mt-2 flex items-center gap-1 text-[10px] text-slate-500 font-bold">
- <Building size={12} className="text-slate-300" />
- <span>{user.companies?.name || 'SISTEMA'}</span>
- </div>
- </div>
- ))}
+ {users.map((user: any) => {
+    const isSuper = user.role_id?.toLowerCase() === 'super_admin' || user.role_id?.toLowerCase() === 'superadmin'
+    return (
+      <div key={user.id} className={`p-6 hover:bg-slate-50 transition-colors ${isSuper ? 'bg-blue-50/30' : ''}`}>
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex flex-col">
+            <span className="font-bold text-slate-800 leading-tight flex items-center gap-1.5">
+              {isSuper && <Shield size={14} className="text-blue-600 shrink-0" />}
+              {user.name}
+            </span>
+            <span className="text-xs text-slate-400">{user.email}</span>
+          </div>
+          <span className={`px-2.5 py-1 rounded-lg text-[9px] font-black tracking-wider uppercase ${
+            isSuper ? 'bg-blue-600 text-white shadow-sm' : 'bg-slate-100 text-slate-600'
+          }`}>
+            {user.role_id}
+          </span>
+        </div>
+        <div className="mt-2 flex items-center gap-1 text-[10px] text-slate-500 font-bold">
+          <Building size={12} className="text-slate-300" />
+          <span>{user.companies?.name || 'ECOSISTEMA GLOBAL'}</span>
+        </div>
+      </div>
+    )
+  })}
  </div>
  </div>
  </div>

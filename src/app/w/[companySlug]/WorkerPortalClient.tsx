@@ -690,13 +690,24 @@ export default function WorkerPortalClient({ company, session }: WorkerPortalCli
  <User className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
  <input
  id="identifier"
+ name="identifier"
  type="text"
  required
  value={identifier}
- onChange={(e) => setIdentifier(e.target.value)}
+ onChange={(e) => {
+   const val = e.target.value
+   if (val.includes('@')) {
+     setIdentifier(val.toLowerCase())
+   } else {
+     setIdentifier(val)
+   }
+ }}
  placeholder={identifierPlaceholder}
  data-keep-case="true"
- className="w-full bg-slate-50 border-2 border-slate-200 focus:border-blue-600 focus:bg-white rounded-xl py-3.5 pr-4 pl-12 text-slate-900 font-bold transition-all outline-none shadow-sm placeholder:text-slate-400"
+ autoCapitalize="none"
+ autoCorrect="off"
+ spellCheck="false"
+ className={`w-full bg-slate-50 border-2 border-slate-200 focus:border-blue-600 focus:bg-white rounded-xl py-3.5 pr-4 pl-12 text-slate-900 font-bold transition-all outline-none shadow-sm placeholder:text-slate-400 keep-case ${identifier.includes('@') ? 'lowercase-email' : ''}`}
  />
  </div>
  </div>

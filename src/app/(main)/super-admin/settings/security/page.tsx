@@ -1,6 +1,7 @@
 import { getUserSession } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { SecuritySettingsClient } from './security-client'
+import { getSecurityUsers } from './actions'
 
 export const dynamic = 'force-dynamic'
 
@@ -12,5 +13,7 @@ export default async function SecuritySettingsPage() {
     redirect('/dashboard')
   }
 
-  return <SecuritySettingsClient />
+  const initialUsers = await getSecurityUsers()
+
+  return <SecuritySettingsClient initialUsers={initialUsers} />
 }

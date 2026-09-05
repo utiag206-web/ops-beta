@@ -1,17 +1,39 @@
 'use client'
 
 import { Lock, Mail, AlertCircle, Loader2 } from 'lucide-react'
-import { useActionState } from 'react'
+import { useActionState, useState, useEffect, Suspense } from 'react'
 import { login } from './actions'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
-
-import { Suspense } from 'react'
 
 function LoginForm() {
  const [state, formAction, isPending] = useActionState(login, { error: '' })
  const searchParams = useSearchParams()
  const message = searchParams.get('message')
+
+ const [email, setEmail] = useState('')
+ const [rememberEmail, setRememberEmail] = useState(false)
+
+ // Cargar correo recordado al montar el componente bajo consentimiento explícito
+ useEffect(() => {
+   try {
+     const savedEmail = localStorage.getItem('remembered_email')
+     if (savedEmail) {
+       setEmail(savedEmail)
+       setRememberEmail(true)
+     }
+   } catch (_) {}
+ }, [])
+
+ const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+   try {
+     if (rememberEmail && email.trim()) {
+       localStorage.setItem('remembered_email', email.trim())
+     } else {
+       localStorage.removeItem('remembered_email')
+     }
+   } catch (_) {}
+ }
 
  return (
  <div className="min-h-screen flex items-center justify-center bg-slate-50 p-4">
@@ -25,7 +47,7 @@ function LoginForm() {
  </div>
  
  <div className="p-8">
- <form action={formAction} className="space-y-5">
+ <form action={formAction} onSubmit={handleSubmit} className="space-y-5">
  {message && (
  <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg flex items-center gap-2 text-sm text-blue-700">
  <AlertCircle size={18} />
@@ -51,8 +73,13 @@ function LoginForm() {
  name="email"
  type="email"
  required
+ value={email}
+ onChange={(e) => setEmail(e.target.value.toLowerCase())}
  data-keep-case="true"
- className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent outline-none transition-all text-slate-900 bg-white keep-case"
+ autoCapitalize="none"
+ autoCorrect="off"
+ spellCheck="false"
+ className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent outline-none transition-all text-slate-900 bg-white keep-case lowercase-email"
  placeholder="tu@empresa.com"
  />
  </div>
@@ -74,10 +101,23 @@ function LoginForm() {
  </div>
  </div>
  
+ {/* Checkbox Recordar mi correo bajo consentimiento explícito */}
+ <div className="flex items-center justify-between text-xs pt-0.5">
+ <label className="flex items-center gap-2 cursor-pointer select-none text-slate-600 font-medium hover:text-slate-900 transition-colors">
+ <input
+ type="checkbox"
+ checked={rememberEmail}
+ onChange={(e) => setRememberEmail(e.target.checked)}
+ className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer w-4 h-4"
+ />
+ <span>Recordar mi correo en este equipo</span>
+ </label>
+ </div>
+ 
  <button
  type="submit"
  disabled={isPending}
- className="w-full flex items-center justify-center bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-medium py-2.5 rounded-lg transition-colors shadow-sm"
+ className="w-full flex items-center justify-center bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-medium py-2.5 rounded-lg transition-colors shadow-sm cursor-pointer"
  >
  {isPending ? (
  <>
