@@ -3,6 +3,7 @@
 import { createAdminClient } from '@/lib/supabase/server'
 import { getUserSession } from '@/lib/auth'
 import { revalidatePath } from 'next/cache'
+import { getMultiCompanySettings } from './settings/multiempresa/actions'
 
 /**
  * Acciones exclusivas para el SUPER_ADMIN
@@ -42,17 +43,27 @@ export async function getAllUsers() {
  .select('*, companies(name)')
  .order('created_at', { ascending: false })
  
- if (error) {
- console.warn('[SUPER_ADMIN] Join query failed, falling back to simple select:', error.message)
- const { data: simpleData, error: simpleError } = await supabase
- .from('users')
- .select('*')
- .order('created_at', { ascending: false })
- 
- if (simpleError) throw simpleError
- return simpleData || []
- }
- return data || []
+  const sortSuperAdminFirst = (list: any[]) => {
+    return (list || []).sort((a: any, b: any) => {
+      const aIsSuper = a.role_id?.toLowerCase() === 'super_admin' || a.role_id?.toLowerCase() === 'superadmin'
+      const bIsSuper = b.role_id?.toLowerCase() === 'super_admin' || b.role_id?.toLowerCase() === 'superadmin'
+      if (aIsSuper && !bIsSuper) return -1
+      if (bIsSuper && !aIsSuper) return 1
+      return 0
+    })
+  }
+
+  if (error) {
+    console.warn('[SUPER_ADMIN] Join query failed, falling back to simple select:', error.message)
+    const { data: simpleData, error: simpleError } = await supabase
+      .from('users')
+      .select('*')
+      .order('created_at', { ascending: false })
+    
+    if (simpleError) throw simpleError
+    return sortSuperAdminFirst(simpleData || [])
+  }
+  return sortSuperAdminFirst(data || [])
  } catch (error: any) {
  if (error.digest?.startsWith('NEXT_REDIRECT')) throw error
  console.error('[SUPER_ADMIN] Unexpected Error in getAllUsers:', error)
@@ -116,51 +127,73 @@ export async function getSystemStats() {
 }
 
 export async function toggleCompanyStatus(companyId: string, currentStatus: string) {
- const { extendedUser } = await getUserSession()
- const role = extendedUser?.role_id?.toLowerCase()
- if (role !== 'super_admin' && role !== 'superadmin') throw new Error('Acceso Denegado')
+  const { extendedUser } = await getUserSession()
+  const role = extendedUser?.role_id?.toLowerCase()
+  if (role !== 'super_admin' && role !== 'superadmin') throw new Error('Acceso Denegado')
 
- const newStatus = currentStatus === 'active' ? 'inactive' : 'active'
- const supabase = await createAdminClient()
- 
- const { error } = await supabase
- .from('companies')
- .update({ status: newStatus })
- .eq('id', companyId)
+  const { settings } = await getMultiCompanySettings()
+  const newStatus = currentStatus === 'active' ? 'inactive' : 'active'
 
- if (error) return { error: error.message }
- 
- revalidatePath('/super-admin')
- return { success: true }
+  // Validar reglas del ciclo de vida configuradas por el Super Admin
+  if (newStatus === 'inactive' && !settings.allowSuspension) {
+    return { error: 'La suspensión administrativa de empresas está deshabilitada en la Configuración Global.' }
+  }
+  if (newStatus === 'active' && !settings.allowReactivation) {
+    return { error: 'La reactivación de empresas está deshabilitada en la Configuración Global.' }
+  }
+
+  const supabase = await createAdminClient()
+  
+  const { error } = await supabase
+    .from('companies')
+    .update({ status: newStatus })
+    .eq('id', companyId)
+
+  if (error) return { error: error.message }
+  
+  revalidatePath('/super-admin')
+  revalidatePath('/super-admin/settings/multiempresa')
+  return { success: true }
 }
 
 export async function createCompany(payload: {
- name: string
- adminEmail: string
- adminName: string
- adminPassword?: string
- is_test?: boolean
+  name: string
+  adminEmail: string
+  adminName: string
+  adminPassword?: string
+  is_test?: boolean
 }) {
- const { extendedUser } = await getUserSession()
- const role = extendedUser?.role_id?.toLowerCase()
- if (role !== 'super_admin' && role !== 'superadmin') throw new Error('Acceso Denegado')
+  const { extendedUser } = await getUserSession()
+  const role = extendedUser?.role_id?.toLowerCase()
+  if (role !== 'super_admin' && role !== 'superadmin') throw new Error('Acceso Denegado')
 
- const supabase = await createAdminClient()
- 
- try {
- // 1. Crear la Empresa
- const { data: company, error: companyError } = await supabase
- .from('companies')
- .insert([{ 
- name: payload.name, 
- status: 'active',
- is_test: payload.is_test || false
- }])
- .select()
- .single()
+  const { settings } = await getMultiCompanySettings()
 
- if (companyError) throw new Error(`Error al crear empresa: ${companyError.message}`)
- const companyId = company.id
+  // 0. Validar si está permitida la creación de nuevas empresas
+  if (!settings.allowNewCompanies) {
+    throw new Error('La creación de nuevas empresas está temporalmente deshabilitada en la Configuración Global.')
+  }
+
+  const initialStatus = settings.defaultCompanyStatus === 'ACTIVA' ? 'active' : 'inactive'
+  const initialTimezone = settings.defaultTimezone || 'America/Lima'
+
+  const supabase = await createAdminClient()
+  
+  try {
+    // 1. Crear la Empresa con los valores predeterminados globales
+    const { data: company, error: companyError } = await supabase
+      .from('companies')
+      .insert([{ 
+        name: payload.name, 
+        status: initialStatus,
+        timezone: initialTimezone,
+        is_test: payload.is_test || false
+      }])
+      .select()
+      .single()
+
+    if (companyError) throw new Error(`Error al crear empresa: ${companyError.message}`)
+    const companyId = company.id
 
  // 2. Crear Usuario Administrador
  // Si no viene password, generamos uno temporal

@@ -161,18 +161,32 @@ input::placeholder {
 
 /* --- VISUAL UPPERCASE SYSTEM-WIDE NORMALIZATION --- */
 /* Mantener mayúsculas solo para los datos de entrada según requerimiento del usuario */
-input[type="text"],
-input[type="search"],
-textarea,
+input[type="text"]:not(.keep-case):not([data-keep-case="true"]):not(#identifier):not([name="email"]):not([type="email"]),
+input[type="search"]:not(.keep-case):not([data-keep-case="true"]):not([name="email"]),
+textarea:not(.keep-case):not([data-keep-case="true"]),
 select,
 option {
   text-transform: uppercase;
 }
 
-/* Exclude emails, passwords */
+/* Excluir correos, contraseñas, identificadores y campos con preservación de mayúsculas/minúsculas */
 input[type="email"],
-input[type="password"] {
+input[type="password"],
+input[name="email"],
+input#email,
+input#identifier,
+input.keep-case,
+[data-keep-case="true"],
+.keep-case {
   text-transform: none !important;
+}
+
+/* Forzar que los correos electrónicos se muestren siempre en elegantes minúsculas */
+input[type="email"],
+input[name="email"],
+input#email,
+input.lowercase-email {
+  text-transform: lowercase !important;
 }
 
 /* --- GLOBAL Z-INDEX FORCE FOR CENTERING MODALS --- */
