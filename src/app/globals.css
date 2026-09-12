@@ -426,5 +426,16 @@ td {
   }
 }
 
-
-
+/* ==========================================================================
+   Hero 3D Isometric Mockup Effect (SaaS Enterprise Perspective)
+   ========================================================================== */
+@media (min-width: 1024px) {
+  .hero-mockup-isometric {
+    transform: perspective(1300px) rotateY(-18deg) rotateX(9deg) rotateZ(1deg);
+    transition: transform 0.7s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+    transform-style: preserve-3d;
+  }
+  .hero-mockup-isometric:hover {
+    transform: perspective(1300px) rotateY(-10deg) rotateX(5deg) rotateZ(0deg);
+  }
+}
