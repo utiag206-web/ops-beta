@@ -77,19 +77,19 @@ const STRATEGIC_PILLARS = [
 
 export function WhatIsSection() {
   return (
-    <section id="que-es" className="relative py-20 md:py-28 bg-white border-y border-slate-100">
+    <section id="que-es" className="relative py-10 sm:py-14 lg:py-16 bg-white border-y border-slate-100">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         {/* FUNCTIONAL ARCHITECTURE PILLARS STRIP */}
-        <div className="mb-20 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 p-6 sm:p-8 rounded-3xl border border-slate-200/80 bg-slate-50/70 backdrop-blur-xs">
+        <div className="mb-12 sm:mb-16 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 p-5 sm:p-7 rounded-3xl border border-slate-200/80 bg-slate-50/70 backdrop-blur-xs">
           {ARCHITECTURE_PILLARS.map((m, idx) => (
             <div key={idx} className="flex flex-col text-left">
-              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-blue-50 text-blue-600 mb-3.5 border border-blue-100/70 shadow-2xs">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 text-blue-600 mb-3 border border-blue-100/70 shadow-2xs">
                 <m.icon className="h-5 w-5" />
               </div>
-              <span className="text-base font-bold text-slate-900">
+              <span className="text-sm sm:text-base font-bold text-slate-900">
                 {m.label}
               </span>
-              <span className="text-xs sm:text-sm text-slate-600 mt-1 leading-relaxed">
+              <span className="text-xs text-slate-600 mt-1 leading-relaxed">
                 {m.desc}
               </span>
             </div>
@@ -97,42 +97,42 @@ export function WhatIsSection() {
         </div>
 
         {/* SECTION HEADER */}
-        <div className="mx-auto max-w-3xl text-center mb-16">
-          <div className="inline-flex items-center gap-2 rounded-full border border-blue-200 bg-blue-50 px-3.5 py-1 text-xs font-bold uppercase tracking-wider text-blue-700 mb-3">
+        <div className="mx-auto max-w-3xl text-center mb-12">
+          <div className="inline-flex items-center gap-2 rounded-full border border-blue-200 bg-blue-50 px-3.5 py-1 text-xs font-bold uppercase tracking-wider text-blue-700 mb-2.5">
             <Sparkles className="h-3.5 w-3.5" />
             <span>Arquitectura Empresarial</span>
           </div>
-          <h2 className="text-3xl font-extrabold tracking-tight text-slate-900 sm:text-4xl md:text-5xl">
+          <h2 className="text-2xl sm:text-3xl lg:text-[32px] font-black tracking-tight text-slate-900">
             ¿Qué es INTHALY OPS?
           </h2>
-          <p className="mt-4 text-base sm:text-lg text-slate-600 leading-relaxed">
+          <p className="mt-2.5 text-xs sm:text-sm text-slate-600 leading-relaxed">
             Una plataforma integral diseñada para resolver la desconexión operativa entre el campo, el almacén y la gerencia mediante tres pilares fundamentales.
           </p>
         </div>
 
         {/* THREE STRATEGIC PILLARS */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-5 sm:gap-6">
           {STRATEGIC_PILLARS.map((pillar, idx) => (
             <div
               key={idx}
-              className="group relative flex flex-col justify-between rounded-3xl border border-slate-200/90 bg-white p-8 sm:p-9 shadow-xs transition-all duration-300 hover:border-blue-300 hover:shadow-2xl hover:shadow-blue-600/10 hover:-translate-y-1.5"
+              className="group relative flex flex-col justify-between rounded-2xl border border-slate-200/90 bg-white p-5 sm:p-7 shadow-xs transition-all duration-300 hover:border-blue-300 hover:shadow-2xl hover:shadow-blue-600/10 hover:-translate-y-1.5"
             >
               <div>
                 {/* Top Badge & Icon */}
-                <div className="flex items-center justify-between mb-6">
-                  <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-600 text-white shadow-lg shadow-blue-600/25 transition-transform duration-300 group-hover:scale-105">
-                    <pillar.icon className="h-7 w-7" />
+                <div className="flex items-center justify-between mb-5">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-600 text-white shadow-md shadow-blue-600/25 transition-transform duration-300 group-hover:scale-105">
+                    <pillar.icon className="h-6 w-6" />
                   </div>
-                  <span className="text-[11px] font-bold text-blue-700 uppercase tracking-wider px-3 py-1 rounded-full bg-blue-50 border border-blue-100">
+                  <span className="text-[10px] font-bold text-blue-700 uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-blue-50 border border-blue-100">
                     {pillar.tag}
                   </span>
                 </div>
 
-                <h3 className="text-xl font-bold text-slate-900 mb-3 tracking-tight group-hover:text-blue-600 transition-colors">
+                <h3 className="text-lg font-bold text-slate-900 mb-2.5 tracking-tight group-hover:text-blue-600 transition-colors">
                   {pillar.title}
                 </h3>
 
-                <p className="text-slate-600 leading-relaxed text-sm mb-6">
+                <p className="text-slate-600 leading-relaxed text-xs sm:text-sm mb-5">
                   {pillar.description}
                 </p>
 

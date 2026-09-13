@@ -32,38 +32,81 @@ export async function login(prevState: any, formData: FormData) {
  if (!authUser) return { error: 'No se pudo recuperar la información del usuario.' }
 
  console.log(`[AUTH_SUCCESS] Login exitoso para: ${email}`)
- 
- // Direct DB Query to avoid getUserSession cookie race condition
- const { createAdminClient } = await import('@/lib/supabase/server')
- const adminSupabase = await createAdminClient()
- const { data: userData } = await adminSupabase
- .from('users')
- .select('role_id')
- .eq('id', authUser.id)
- .maybeSingle()
+  // Direct DB Query to avoid getUserSession cookie race condition
+  const { createAdminClient } = await import('@/lib/supabase/server')
+  const adminSupabase = await createAdminClient()
+  const { data: userData } = await adminSupabase
+    .from('users')
+    .select('role_id, company_id, status, name, companies(id, name, status)')
+    .eq('id', authUser.id)
+    .maybeSingle()
 
- const role = userData?.role_id?.toLowerCase()
- console.log(`[AUTH] Rol detectado para redirect: ${role}`)
+  const role = userData?.role_id?.toLowerCase()
+  console.log(`[AUTH] Rol detectado para redirect: ${role}`)
 
- if (role === 'trabajador') {
- await supabase.auth.signOut()
- const { cookies } = await import('next/headers')
- const cookieStore = await cookies()
- cookieStore.delete('active_company_id')
- cookieStore.delete('worker_session')
- 
- return { 
- error: 'Acceso Denegado: Los colaboradores deben ingresar a través del Portal de Trabajadores de su empresa (código QR o enlace de acceso corporativo).' 
- }
- }
+  if (role === 'trabajador') {
+    await supabase.auth.signOut()
+    const { cookies } = await import('next/headers')
+    const cookieStore = await cookies()
+    cookieStore.delete('active_company_id')
+    cookieStore.delete('worker_session')
+    
+    return { 
+      error: 'Acceso Denegado: Los colaboradores deben ingresar a través del Portal de Trabajadores de su empresa (código QR o enlace de acceso corporativo).' 
+    }
+  }
 
- revalidatePath('/', 'layout')
+  // Si no es Super Admin, verificar el estado de la empresa y del usuario
+  const isSuperAdmin = role === 'super_admin' || role === 'superadmin'
+  if (!isSuperAdmin) {
+    const userCompany = Array.isArray(userData?.companies) ? userData?.companies[0] : userData?.companies
+    const companyStatus = (userCompany?.status || '').toLowerCase()
+    const userStatus = (userData?.status || '').toLowerCase()
 
- if (role === 'super_admin' || role === 'superadmin') {
- redirect('/super-admin')
- }
+    if (companyStatus === 'pending' || userStatus === 'pending') {
+      await supabase.auth.signOut()
+      const { cookies } = await import('next/headers')
+      const cookieStore = await cookies()
+      cookieStore.delete('active_company_id')
+      cookieStore.delete('worker_session')
 
- redirect('/dashboard')
+      return {
+        error: 'Acceso en espera: La cuenta de su empresa se encuentra en proceso de revisión o aprobación por el Super Administrador. Nos comunicaremos con usted a la brevedad.'
+      }
+    }
+
+    if (companyStatus === 'rejected' || userStatus === 'rejected') {
+      await supabase.auth.signOut()
+      const { cookies } = await import('next/headers')
+      const cookieStore = await cookies()
+      cookieStore.delete('active_company_id')
+      cookieStore.delete('worker_session')
+
+      return {
+        error: 'Acceso Denegado: Su solicitud de acceso ha sido denegada. Por favor contacte al soporte de INTHALY OPS.'
+      }
+    }
+
+    if (companyStatus === 'inactive' || userStatus === 'inactive') {
+      await supabase.auth.signOut()
+      const { cookies } = await import('next/headers')
+      const cookieStore = await cookies()
+      cookieStore.delete('active_company_id')
+      cookieStore.delete('worker_session')
+
+      return {
+        error: 'Acceso Denegado: La empresa asociada a esta cuenta se encuentra suspendida o inactiva. Contacte al administrador.'
+      }
+    }
+  }
+
+  revalidatePath('/', 'layout')
+
+  if (role === 'super_admin' || role === 'superadmin') {
+    redirect('/super-admin')
+  }
+
+  redirect('/dashboard')
 }
 
 export async function logout() {

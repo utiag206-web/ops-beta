@@ -172,31 +172,31 @@ export function ModulesSection() {
       : MODULES.filter((m) => m.category === activeCategory)
 
   return (
-    <section id="modulos" className="relative py-20 md:py-28 bg-slate-50/60 border-t border-slate-200/60">
+    <section id="modulos" className="relative py-10 sm:py-14 lg:py-16 bg-slate-50/60 border-t border-slate-200/60">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         {/* SECTION HEADER */}
-        <div className="mx-auto max-w-3xl text-center mb-12">
-          <div className="inline-flex items-center gap-2 rounded-full border border-blue-200 bg-blue-50 px-3.5 py-1 text-xs font-bold uppercase tracking-wider text-blue-700 mb-3">
+        <div className="mx-auto max-w-3xl text-center mb-10">
+          <div className="inline-flex items-center gap-2 rounded-full border border-blue-200 bg-blue-50 px-3.5 py-1 text-xs font-bold uppercase tracking-wider text-blue-700 mb-2.5">
             <Sparkles className="h-3.5 w-3.5" />
             <span>Suite Operativa Completa</span>
           </div>
-          <h2 className="text-3xl font-black tracking-tight text-slate-900 sm:text-4xl md:text-5xl">
+          <h2 className="text-2xl sm:text-3xl lg:text-[32px] font-black tracking-tight text-slate-900">
             Módulos del Sistema
           </h2>
-          <p className="mt-4 text-base sm:text-lg text-slate-600 leading-relaxed">
+          <p className="mt-2.5 text-xs sm:text-sm text-slate-600 leading-relaxed">
             Cada área de tu organización interconectada mediante herramientas de alto rendimiento diseñadas para el rigor del sector empresarial.
           </p>
         </div>
 
         {/* CATEGORY FILTER TABS */}
-        <div className="mb-12 flex flex-wrap items-center justify-center gap-2">
+        <div className="mb-6 sm:mb-8 flex flex-wrap items-center justify-center gap-2">
           {CATEGORIES.map((cat) => {
             const isActive = activeCategory === cat.id
             return (
               <button
                 key={cat.id}
                 onClick={() => setActiveCategory(cat.id)}
-                className={`px-5 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
+                className={`px-3.5 py-1.5 sm:px-4 sm:py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                   isActive
                     ? 'bg-blue-600 text-white shadow-md shadow-blue-600/25 scale-102'
                     : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-100 hover:text-slate-900'
@@ -209,48 +209,50 @@ export function ModulesSection() {
         </div>
 
         {/* MODULES GRID WITH MODERN SAAS CARDS */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-4.5">
           {filteredModules.map((item) => (
             <div
               key={item.id}
-              className="group relative flex flex-col justify-between rounded-2xl border border-slate-200/90 bg-white p-6 shadow-xs transition-all duration-300 hover:border-blue-300 hover:shadow-xl hover:shadow-blue-600/10 hover:-translate-y-1"
+              className="group relative flex flex-col justify-between rounded-xl border border-slate-200/90 bg-white p-4 shadow-xs transition-all duration-300 hover:border-blue-300 hover:shadow-lg hover:shadow-blue-600/10 hover:-translate-y-0.5"
             >
               <div>
                 {/* Card Top: Icon & Tag */}
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-50 text-blue-600 transition-all duration-300 group-hover:bg-blue-600 group-hover:text-white group-hover:shadow-md group-hover:shadow-blue-600/30">
-                    <item.icon className="h-6 w-6" />
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-blue-50 text-blue-600 transition-all duration-300 group-hover:bg-blue-600 group-hover:text-white group-hover:shadow-md group-hover:shadow-blue-600/25">
+                    <item.icon className="h-4.5 w-4.5" />
                   </div>
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-2.5 py-1 rounded-md bg-slate-100">
+                  <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wider px-2 py-0.5 rounded-md bg-slate-100 border border-slate-200/60">
                     {item.tag}
                   </span>
                 </div>
 
                 {/* Title */}
-                <h3 className="text-lg font-bold text-slate-900 mb-2 tracking-tight group-hover:text-blue-600 transition-colors">
+                <h3 className="text-sm sm:text-[15px] font-bold text-slate-900 mb-1.5 tracking-tight group-hover:text-blue-600 transition-colors leading-snug">
                   {item.name}
                 </h3>
 
-                {/* Description */}
-                <p className="text-xs sm:text-sm text-slate-600 leading-relaxed mb-4">
+                {/* Description (Uniform 2 lines) */}
+                <p className="text-xs text-slate-500 leading-relaxed mb-3 line-clamp-2">
                   {item.description}
                 </p>
 
-                {/* Capabilities list */}
-                <div className="space-y-1.5 pt-3 border-t border-slate-100">
+                {/* Capabilities as Compact Micro-Pills */}
+                <div className="flex flex-wrap gap-1.5 pt-2.5 border-t border-slate-100">
                   {item.capabilities.map((cap, cIdx) => (
-                    <div key={cIdx} className="flex items-center gap-2 text-xs font-semibold text-slate-600">
-                      <div className="h-1.5 w-1.5 rounded-full bg-blue-600" />
-                      <span>{cap}</span>
-                    </div>
+                    <span
+                      key={cIdx}
+                      className="text-[10px] font-medium text-slate-600 bg-slate-50 px-2 py-0.5 rounded-md border border-slate-200/60"
+                    >
+                      {cap}
+                    </span>
                   ))}
                 </div>
               </div>
 
               {/* Card Footer: Status Pill */}
-              <div className="mt-5 pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
+              <div className="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between text-[11px]">
                 <span className="inline-flex items-center gap-1.5 font-bold text-emerald-600">
-                  <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
                   {item.status}
                 </span>
                 <span className="text-slate-400 group-hover:text-blue-600 font-bold transition-colors">

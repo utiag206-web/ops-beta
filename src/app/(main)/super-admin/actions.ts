@@ -72,58 +72,73 @@ export async function getAllUsers() {
 }
 
 export async function getSystemStats() {
- try {
- const { extendedUser } = await getUserSession()
- const role = extendedUser?.role_id?.toLowerCase()
- if (role !== 'super_admin' && role !== 'superadmin') throw new Error('Acceso Denegado')
+  try {
+    const { extendedUser } = await getUserSession()
+    const role = extendedUser?.role_id?.toLowerCase()
+    if (role !== 'super_admin' && role !== 'superadmin') throw new Error('Acceso Denegado')
 
- const supabase = await createAdminClient()
- 
- const fetchCount = async (query: any) => {
- try {
- const { count, error } = await query
- if (error) throw error
- return count || 0
- } catch (e) {
- console.warn("[STATS_WARN] Failed query:", e)
- return 0
- }
- }
+    const supabase = await createAdminClient()
+    
+    const { data: allCompanies, error: compErr } = await supabase
+      .from('companies')
+      .select('id, status, is_test, working_hours')
 
- const [
- totalCompanies,
- realCompanies,
- testCompanies,
- activeCompanies,
- suspendedCompanies,
- totalUsers
- ] = await Promise.all([
- fetchCount(supabase.from('companies').select('*', { count: 'exact', head: true })),
- fetchCount(supabase.from('companies').select('*', { count: 'exact', head: true }).eq('is_test', false)),
- fetchCount(supabase.from('companies').select('*', { count: 'exact', head: true }).eq('is_test', true)),
- fetchCount(supabase.from('companies').select('*', { count: 'exact', head: true }).eq('status', 'active')),
- fetchCount(supabase.from('companies').select('*', { count: 'exact', head: true }).eq('status', 'inactive')),
- fetchCount(supabase.from('users').select('*', { count: 'exact', head: true }))
- ])
+    if (compErr) throw compErr
 
- return {
- totalCompanies,
- realCompanies,
- testCompanies,
- activeCompanies,
- suspendedCompanies,
- totalUsers
- }
- } catch (error: any) {
- if (error.digest?.startsWith('NEXT_REDIRECT')) throw error
- console.error('[SUPER_ADMIN] Error in getSystemStats:', error)
- return {
- totalCompanies: 0,
- activeCompanies: 0,
- suspendedCompanies: 0,
- totalUsers: 0
- }
- }
+    let totalCompanies = (allCompanies || []).length
+    let realCompanies = 0
+    let testCompanies = 0
+    let activeCompanies = 0
+    let suspendedCompanies = 0
+    let pendingCompanies = 0
+
+    for (const c of (allCompanies || [])) {
+      if (c.is_test) testCompanies++
+      else realCompanies++
+
+      if (c.status === 'active') {
+        activeCompanies++
+      } else {
+        let parsed = {}
+        try {
+          parsed = JSON.parse(c.working_hours || '{}')
+        } catch (_) {}
+
+        const isPending = ((parsed as any)?.demo_request || (parsed as any)?.registration_request) && (parsed as any)?.approval_status !== 'rejected'
+        if (isPending) {
+          pendingCompanies++
+        } else {
+          suspendedCompanies++
+        }
+      }
+    }
+
+    const { count: totalUsers } = await supabase
+      .from('users')
+      .select('*', { count: 'exact', head: true })
+
+    return {
+      totalCompanies,
+      realCompanies,
+      testCompanies,
+      activeCompanies,
+      suspendedCompanies,
+      pendingCompanies,
+      totalUsers: totalUsers || 0
+    }
+  } catch (error: any) {
+    if (error.digest?.startsWith('NEXT_REDIRECT')) throw error
+    console.error('[SUPER_ADMIN] Error in getSystemStats:', error)
+    return {
+      totalCompanies: 0,
+      realCompanies: 0,
+      testCompanies: 0,
+      activeCompanies: 0,
+      suspendedCompanies: 0,
+      pendingCompanies: 0,
+      totalUsers: 0
+    }
+  }
 }
 
 export async function toggleCompanyStatus(companyId: string, currentStatus: string) {
@@ -628,23 +643,307 @@ export async function getCompanyDetails(companyId: string) {
  getCountSafe('purchase_orders')
  ])
 
- return {
- success: true,
- data: {
- company,
- users: mappedUsers,
- mainAdmin: mainAdmin || null,
- stats: {
- workers: workersCount,
- documents: documentsCount,
- products: productsCount,
- purchaseOrders: purchaseOrdersCount
- }
- }
- }
- } catch (error: any) {
- console.error('[SUPER_ADMIN] Error in getCompanyDetails:', error.message)
- return { success: false, error: error.message }
- }
+    return {
+      success: true,
+      data: {
+        company,
+        users: mappedUsers,
+        mainAdmin: mainAdmin || null,
+        stats: {
+          workers: workersCount,
+          documents: documentsCount,
+          products: productsCount,
+          purchaseOrders: purchaseOrdersCount
+        }
+      }
+    }
+  } catch (error: any) {
+    console.error('[SUPER_ADMIN] Error in getCompanyDetails:', error.message)
+    return { success: false, error: error.message }
+  }
 }
 
+/**
+ * Obtener solicitudes pendientes de demostración o registro empresarial
+ */
+export async function getPendingCompanyRequests() {
+  try {
+    const { extendedUser } = await getUserSession()
+    const role = extendedUser?.role_id?.toLowerCase()
+    if (role !== 'super_admin' && role !== 'superadmin') throw new Error('Acceso Denegado')
+
+    const supabase = await createAdminClient()
+    const { data, error } = await supabase
+      .from('companies')
+      .select('*')
+      .eq('status', 'inactive')
+      .order('created_at', { ascending: false })
+
+    if (error) {
+      console.error('[SUPER_ADMIN] Error fetching pending companies:', error)
+      return []
+    }
+
+    const pendingList: any[] = []
+    for (const c of (data || [])) {
+      let parsed = {}
+      try {
+        parsed = JSON.parse(c.working_hours || '{}')
+      } catch (_) {}
+
+      const demo = (parsed as any)?.demo_request
+      const reg = (parsed as any)?.registration_request
+      const approvalStatus = (parsed as any)?.approval_status
+
+      if ((demo || reg) && approvalStatus !== 'rejected') {
+        pendingList.push({
+          ...c,
+          contact_name: demo?.contact_name || reg?.registered_by_name || 'No especificado',
+          contact_position: demo?.contact_position || 'Directivo',
+          estimated_workers: demo?.estimated_workers || '1-15',
+          notes: demo?.notes || '',
+          submitted_at: demo?.submitted_at || reg?.submitted_at || c.created_at,
+          request_type: demo ? 'demo' : 'register',
+        })
+      }
+    }
+
+    return pendingList
+  } catch (error: any) {
+    console.error('[SUPER_ADMIN] Error in getPendingCompanyRequests:', error)
+    return []
+  }
+}
+
+/**
+ * Aprobar solicitud de empresa (Demo o Registro)
+ * Pasa de PENDING a ACTIVE, inicializa bootstrap, genera enlace seguro de acceso y audita inmutablemente
+ */
+export async function approveCompanyRequest(companyId: string) {
+  try {
+    const { extendedUser } = await getUserSession()
+    const role = extendedUser?.role_id?.toLowerCase()
+    if (role !== 'super_admin' && role !== 'superadmin') throw new Error('Acceso Denegado')
+
+    const supabase = await createAdminClient()
+
+    const { data: company, error: compErr } = await supabase
+      .from('companies')
+      .select('*')
+      .eq('id', companyId)
+      .single()
+
+    if (compErr || !company) {
+      return { success: false, error: 'No se encontró la empresa solicitada.' }
+    }
+
+    // 1. Cambiar estado a active y actualizar metadata de aprobación
+    let currentMetadata: any = {}
+    try {
+      currentMetadata = JSON.parse(company.working_hours || '{}')
+    } catch (_) {}
+
+    currentMetadata.approval_status = 'approved'
+    currentMetadata.approved_at = new Date().toISOString()
+    currentMetadata.approved_by = extendedUser.email
+
+    const { error: updateErr } = await supabase
+      .from('companies')
+      .update({ 
+        status: 'active',
+        working_hours: JSON.stringify(currentMetadata)
+      })
+      .eq('id', companyId)
+
+    if (updateErr) {
+      return { success: false, error: updateErr.message }
+    }
+
+    // 2. Activar usuarios vinculados
+    await supabase
+      .from('users')
+      .update({ status: 'active' })
+      .eq('company_id', companyId)
+      .eq('status', 'inactive')
+
+    // 3. Obtener o aprovisionar usuario administrador y generar enlace seguro
+    let actionLink: string | null = null
+    const { data: existingAdmin } = await supabase
+      .from('users')
+      .select('id, email, name')
+      .eq('company_id', companyId)
+      .maybeSingle()
+
+    if (existingAdmin?.email) {
+      try {
+        const { data: linkData } = await supabase.auth.admin.generateLink({
+          type: 'recovery',
+          email: existingAdmin.email
+        })
+        actionLink = linkData?.properties?.action_link || null
+      } catch (linkErr: any) {
+        console.warn('[SUPER_ADMIN] generateLink warning:', linkErr?.message)
+      }
+    } else if (company.contact_email) {
+      // Solicitud de demo directa que aún no tiene usuario auth
+      try {
+        let contactName = 'Administrador'
+        try {
+          const wh = JSON.parse(company.working_hours || '{}')
+          contactName = wh.demo_request?.contact_name || contactName
+        } catch (_) {}
+
+        const tempPassword = Math.random().toString(36).slice(-8) + 'Aa1!' + Math.random().toString(36).slice(-4)
+        const { data: authData } = await supabase.auth.admin.createUser({
+          email: company.contact_email,
+          password: tempPassword,
+          email_confirm: true,
+          user_metadata: { name: contactName }
+        })
+
+        if (authData?.user) {
+          await supabase.from('users').insert({
+            id: authData.user.id,
+            name: contactName,
+            email: company.contact_email,
+            company_id: companyId,
+            role_id: 'admin',
+            role: 'admin',
+            status: 'active',
+            area: 'Dirección'
+          })
+
+          await supabase.from('user_roles').upsert({
+            user_id: authData.user.id,
+            company_id: companyId,
+            role_id: 'admin'
+          }, { onConflict: 'user_id, company_id' })
+
+          const { data: linkData } = await supabase.auth.admin.generateLink({
+            type: 'recovery',
+            email: company.contact_email
+          })
+          actionLink = linkData?.properties?.action_link || null
+        }
+      } catch (uErr: any) {
+        console.warn('[SUPER_ADMIN] Error creating admin user for demo request:', uErr?.message)
+      }
+    }
+
+    // 4. Bootstrap de datos base para la empresa
+    try {
+      const { bootstrapCompany } = await import('@/lib/bootstrap')
+      await bootstrapCompany(companyId)
+    } catch (bErr: any) {
+      console.warn('[SUPER_ADMIN] Bootstrap warning:', bErr?.message)
+    }
+
+    // 5. Auditoría inmutable con snapshot de actor
+    try {
+      const { logAuditEvent } = await import('@/lib/audit')
+      await logAuditEvent({
+        companyId,
+        userId: extendedUser.id,
+        userName: extendedUser.name,
+        action: 'COMPANY_REQUEST_APPROVED',
+        title: `Empresa Aprobada: ${company.name}`,
+        category: 'SUPER_ADMIN_APPROVAL',
+        details: {
+          company_id: companyId,
+          company_name: company.name,
+          contact_email: company.contact_email,
+          tax_id: company.tax_id,
+          approved_by_id: extendedUser.id,
+          approved_by_email: extendedUser.email,
+          has_action_link: !!actionLink,
+        }
+      })
+    } catch (audErr: any) {
+      console.warn('[SUPER_ADMIN] Audit log warning:', audErr?.message)
+    }
+
+    revalidatePath('/super-admin')
+    return {
+      success: true,
+      companyName: company.name,
+      actionLink,
+    }
+  } catch (error: any) {
+    console.error('[SUPER_ADMIN] Error approving company request:', error)
+    return { success: false, error: error.message }
+  }
+}
+
+/**
+ * Rechazar solicitud de empresa
+ */
+export async function rejectCompanyRequest(companyId: string, reason?: string) {
+  try {
+    const { extendedUser } = await getUserSession()
+    const role = extendedUser?.role_id?.toLowerCase()
+    if (role !== 'super_admin' && role !== 'superadmin') throw new Error('Acceso Denegado')
+
+    const supabase = await createAdminClient()
+
+    const { data: company } = await supabase
+      .from('companies')
+      .select('id, name, contact_email, working_hours')
+      .eq('id', companyId)
+      .single()
+
+    let currentMetadata: any = {}
+    try {
+      currentMetadata = JSON.parse(company?.working_hours || '{}')
+    } catch (_) {}
+
+    currentMetadata.approval_status = 'rejected'
+    currentMetadata.rejected_at = new Date().toISOString()
+    currentMetadata.rejection_reason = reason || 'Rechazada administrativamente'
+    currentMetadata.rejected_by = extendedUser.email
+
+    const { error: updateErr } = await supabase
+      .from('companies')
+      .update({ 
+        status: 'inactive', // COMPATIBLE CON DB CHECK CONSTRAINT
+        working_hours: JSON.stringify(currentMetadata)
+      })
+      .eq('id', companyId)
+
+    if (updateErr) {
+      return { success: false, error: updateErr.message }
+    }
+
+    await supabase
+      .from('users')
+      .update({ status: 'inactive' })
+      .eq('company_id', companyId)
+
+    // Auditoría inmutable
+    try {
+      const { logAuditEvent } = await import('@/lib/audit')
+      await logAuditEvent({
+        companyId,
+        userId: extendedUser.id,
+        userName: extendedUser.name,
+        action: 'COMPANY_REQUEST_REJECTED',
+        title: `Empresa Rechazada: ${company?.name || companyId}`,
+        category: 'SUPER_ADMIN_REJECTION',
+        details: {
+          company_id: companyId,
+          company_name: company?.name,
+          reason: reason || 'Rechazada administrativamente',
+          rejected_by_id: extendedUser.id,
+          rejected_by_email: extendedUser.email,
+        }
+      })
+    } catch (audErr: any) {
+      console.warn('[SUPER_ADMIN] Audit log rejection warning:', audErr?.message)
+    }
+
+    revalidatePath('/super-admin')
+    return { success: true }
+  } catch (error: any) {
+    console.error('[SUPER_ADMIN] Error rejecting company request:', error)
+    return { success: false, error: error.message }
+  }
+}

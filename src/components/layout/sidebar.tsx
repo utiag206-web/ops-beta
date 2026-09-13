@@ -433,154 +433,151 @@ export function Sidebar() {
  )}
 
  <aside className={`
- fixed inset-y-0 left-0 z-[70]
- w-72 shadow-2xl
- transform transition-transform duration-500 ease-out
- lg:relative lg:translate-x-0
- flex flex-col h-screen h-[100dvh] overflow-hidden nth-sidebar
- ${isOpen ? 'translate-x-0' : '-translate-x-full'}
- `}>
- {/* Impersonation Banner (Corporate Style) */}
- {isImpersonating && (
- <div className="bg-slate-900 border-b border-white/10 p-4 sm:p-5 animate-in slide-in-from-top duration-700">
- <div className="flex items-center gap-3 mb-3">
- <div className="w-8 h-8 rounded-lg bg-amber-500/20 flex items-center justify-center">
- <Shield className="w-4 h-4 text-amber-500 animate-pulse" />
- </div>
- <span className="text-[10px] font-bold tracking-tight text-slate-400">Auditoría de Empresa</span>
- </div>
- <button 
- onClick={handleStopImpersonation}
- disabled={isExiting}
- className="w-full py-2.5 bg-white/5 hover:bg-white/10 border border-white/10 text-white rounded-xl text-[11px] font-bold tracking-normal transition-all flex items-center justify-center gap-2 disabled:opacity-50 active:scale-95 shadow-xl"
- >
- {isExiting ? 'Saliendo...' : (
- <>
- <ArrowLeft size={14} />
- Finalizar Auditoría
- </>
- )}
- </button>
- </div>
- )}
+    fixed inset-y-0 left-0 z-[70]
+    w-64 lg:w-60 xl:w-64 shadow-2xl
+    transform transition-transform duration-500 ease-out
+    lg:relative lg:translate-x-0
+    flex flex-col h-screen h-[100dvh] overflow-hidden nth-sidebar
+    ${isOpen ? 'translate-x-0' : '-translate-x-full'}
+  `}>
+    {/* Impersonation Banner (Corporate Style) */}
+    {isImpersonating && (
+      <div className="bg-slate-900 border-b border-white/10 p-3 sm:p-4 animate-in slide-in-from-top duration-700">
+        <div className="flex items-center gap-2.5 mb-2.5">
+          <div className="w-7 h-7 rounded-lg bg-amber-500/20 flex items-center justify-center">
+            <Shield className="w-3.5 h-3.5 text-amber-500 animate-pulse" />
+          </div>
+          <span className="text-[10px] font-bold tracking-tight text-slate-400">Auditoría de Empresa</span>
+        </div>
+        <button 
+          onClick={handleStopImpersonation}
+          disabled={isExiting}
+          className="w-full py-2 bg-white/5 hover:bg-white/10 border border-white/10 text-white rounded-lg text-[11px] font-bold tracking-normal transition-all flex items-center justify-center gap-2 disabled:opacity-50 active:scale-95 shadow-md"
+        >
+          {isExiting ? 'Saliendo...' : (
+            <>
+              <ArrowLeft size={13} />
+              Finalizar Auditoría
+            </>
+          )}
+        </button>
+      </div>
+    )}
 
- <div className="p-6 sm:p-8 flex items-center justify-between nth-divider border-b">
- <div className="flex items-center gap-4 text-white">
- <div className="w-12 h-12 flex items-center justify-center rounded-xl nth-logo-box">
- <img 
- src={settings?.ecosystem_logo || "/logo-ops.png"}
- alt={settings?.ecosystem_name || "Inthaly OPS Logo"}
- className="w-10 h-10 object-contain"
- />
- </div>
- <div className="flex flex-col">
- <span 
-  className="text-2xl font-bold tracking-tight leading-none whitespace-nowrap text-white" 
-  style={settings?.brand_color ? { color: settings.brand_color } : {}}
- >
-   {settings?.ecosystem_name || "Inthaly OPS"}
- </span>
- <div className="flex items-center gap-2 mt-1.5">
- <span className="text-xs font-semibold text-white/90 tracking-normal">Sistema de Gestión Empresarial</span>
- </div>
- </div>
- </div>
- 
- <button 
- onClick={() => setIsOpen(false)}
- className="lg:hidden p-2 text-white/60 hover:text-white hover:bg-white/10 rounded-xl transition-all"
- >
- <X size={20} />
- </button>
- </div>
+    <div className="px-4 py-3.5 sm:px-5 sm:py-4 flex items-center justify-between nth-divider border-b">
+      <div className="flex items-center gap-3 text-white">
+        <div className="w-9 h-9 flex items-center justify-center rounded-lg nth-logo-box">
+          <img 
+            src={settings?.ecosystem_logo || "/logo-ops.png"}
+            alt={settings?.ecosystem_name || "Inthaly OPS Logo"}
+            className="w-7 h-7 sm:w-8 sm:h-8 object-contain"
+          />
+        </div>
+        <div className="flex flex-col">
+          <span 
+            className="text-lg sm:text-xl font-bold tracking-tight leading-none whitespace-nowrap text-white" 
+            style={settings?.brand_color ? { color: settings.brand_color } : {}}
+          >
+            {settings?.ecosystem_name || "Inthaly OPS"}
+          </span>
+          <div className="flex items-center gap-1.5 mt-1">
+            <span className="text-[11px] font-medium text-white/80 tracking-normal">Sistema de Gestión</span>
+          </div>
+        </div>
+      </div>
+      
+      <button 
+        onClick={() => setIsOpen(false)}
+        className="lg:hidden p-1.5 text-white/60 hover:text-white hover:bg-white/10 rounded-lg transition-all"
+      >
+        <X size={18} />
+      </button>
+    </div>
 
- {/* Switcher removed to keep a fully unified and clean hybrid experience */}
- 
+    {/* Switcher removed to keep a fully unified and clean hybrid experience */}
+    
+    <nav className="flex-1 min-h-0 px-3 sm:px-4 py-2 space-y-1.5 overflow-y-auto custom-scrollbar flex flex-col pb-24 md:pb-6">
+      <div className="flex-1 space-y-1.5">
+        {filteredGroups.map((group) => {
+          const isCollapsed = collapsed[group.id]
+          const hasActiveChild = group.items.some((item: any) => pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href)))
+          const isOpenByDefault = (group.id === 'mecanica' && context === 'MECANICA') || (group.id === 'operaciones' && context === 'SUPERVISOR')
+          const effectivelyCollapsed = isCollapsed === undefined ? (isOpenByDefault ? false : !hasActiveChild) : isCollapsed
 
- <nav className="flex-1 min-h-0 px-4 sm:px-6 py-2 space-y-2 overflow-y-auto custom-scrollbar flex flex-col pb-24 md:pb-6">
- <div className="flex-1 space-y-2">
- {filteredGroups.map((group) => {
- const isCollapsed = collapsed[group.id]
- const hasActiveChild = group.items.some((item: any) => pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href)))
- const isOpenByDefault = (group.id === 'mecanica' && context === 'MECANICA') || (group.id === 'operaciones' && context === 'SUPERVISOR')
- const effectivelyCollapsed = isCollapsed === undefined ? (isOpenByDefault ? false : !hasActiveChild) : isCollapsed
+          const toggleGroup = () => {
+            setCollapsed(prev => ({ ...prev, [group.id]: !effectivelyCollapsed }))
+          }
 
- const toggleGroup = () => {
- setCollapsed(prev => ({ ...prev, [group.id]: !effectivelyCollapsed }))
- }
+          return (
+            <div key={group.id} className="pt-2.5 first:pt-0">
+              <button
+                onClick={toggleGroup}
+                className="w-full flex items-center justify-between px-2.5 py-1.5 text-xs font-bold tracking-tight transition-colors group nth-nav-group-label"
+              >
+                <span>{group.label}</span>
+                {effectivelyCollapsed ? (
+                  <ChevronRight size={14} className="group-hover:translate-x-0.5 transition-transform opacity-50" />
+                ) : (
+                  <ChevronDown size={14} className="opacity-80" />
+                )}
+              </button>
+              
+              {!effectivelyCollapsed && (
+                <div className="mt-1 space-y-0.5 animate-in fade-in slide-in-from-top-1 duration-150">
+                  {group.items.map((item: any) => {
+                    const isDashboardItem = item.href === '/dashboard'
+                    let isActive = false
+                    if (isDashboardItem) {
+                      if (group.id === 'mi-portal-personal') {
+                        isActive = pathname === '/dashboard' && viewMode === 'WORKER'
+                      } else {
+                        isActive = pathname === '/dashboard' && viewMode === 'OPERATIONAL'
+                      }
+                    } else {
+                      isActive = pathname === item.href || (item.href !== '/super-admin' && item.href !== '/dashboard' && pathname.startsWith(item.href))
+                    }
+                    
+                    const Icon = item.icon
 
- return (
- <div key={group.id} className="pt-4 first:pt-0">
- <button
- onClick={toggleGroup}
- className="w-full flex items-center justify-between px-3 py-2 text-sm font-bold tracking-tight transition-colors group nth-nav-group-label"
- >
- <span>{group.label}</span>
- {effectivelyCollapsed ? (
- <ChevronRight size={16} className="group-hover:translate-x-0.5 transition-transform opacity-50" />
- ) : (
- <ChevronDown size={16} className="opacity-80" />
- )}
- </button>
- 
- {!effectivelyCollapsed && (
- <div className="mt-3 space-y-1 animate-in fade-in slide-in-from-top-1 duration-200">
- {group.items.map((item: any) => {
- const isDashboardItem = item.href === '/dashboard'
- let isActive = false
- if (isDashboardItem) {
- if (group.id === 'mi-portal-personal') {
- isActive = pathname === '/dashboard' && viewMode === 'WORKER'
- } else {
- isActive = pathname === '/dashboard' && viewMode === 'OPERATIONAL'
- }
- } else {
- isActive = pathname === item.href || (item.href !== '/super-admin' && item.href !== '/dashboard' && pathname.startsWith(item.href))
- }
- 
- const Icon = item.icon
- 
- const isSuperAdminRoute = pathname?.startsWith('/super-admin')
- 
- return (
- <Link
- key={`${group.id}-${item.href}-${item.name}`}
- href={item.href}
- onClick={(e) => handleItemClick(group.id, item.href, item.name, e)}
- className={`flex items-center gap-3.5 px-4 py-2 sm:py-2.5 rounded-2xl font-medium text-xs group/item nth-nav-item ${
- isActive ? 'nth-nav-item-active' : ''
- }`}
- >
- <Icon 
-  size={18} 
-  strokeWidth={2.5} 
-  className={`transition-colors ${isActive ? 'text-blue-600' : 'opacity-60'}`} 
- />
- <span className="tracking-tight">
-  {item.name}
- </span>
- </Link>
- )
- })}
- </div>
- )}
- </div>
- )
- })}
- </div>
+                    return (
+                      <Link
+                        key={`${group.id}-${item.href}-${item.name}`}
+                        href={item.href}
+                        onClick={(e) => handleItemClick(group.id, item.href, item.name, e)}
+                        className={`flex items-center gap-3 px-3 py-1.5 sm:py-2 rounded-xl font-medium text-xs group/item nth-nav-item ${
+                          isActive ? 'nth-nav-item-active' : ''
+                        }`}
+                      >
+                        <Icon 
+                          size={16} 
+                          strokeWidth={2.2} 
+                          className={`transition-colors shrink-0 ${isActive ? 'text-blue-600' : 'opacity-70'}`} 
+                        />
+                        <span className="tracking-tight truncate">
+                          {item.name}
+                        </span>
+                      </Link>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+          )
+        })}
+      </div>
 
- <div className="pt-6 pb-4 mt-auto border-t border-white/10 shrink-0">
- <form action={logout}>
- <button type="submit" className="flex w-full items-center gap-4 px-4 py-3 sm:py-4 transition-all rounded-[1.5rem] font-medium text-[13px] group nth-nav-item">
- <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center group-hover:bg-white/15 transition-colors">
- <LogOut size={20} className="opacity-60 group-hover:opacity-100" />
- </div>
- <span>Cerrar sesión</span>
- </button>
- </form>
- </div>
- </nav>
- </aside>
+      <div className="pt-4 pb-3 mt-auto border-t border-white/10 shrink-0">
+        <form action={logout}>
+          <button type="submit" className="flex w-full items-center gap-3 px-3 py-2 sm:py-2.5 transition-all rounded-xl font-medium text-xs group nth-nav-item">
+            <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center group-hover:bg-white/15 transition-colors shrink-0">
+              <LogOut size={16} className="opacity-60 group-hover:opacity-100" />
+            </div>
+            <span>Cerrar sesión</span>
+          </button>
+        </form>
+      </div>
+    </nav>
+  </aside>
 
  </>
  )
