@@ -90,8 +90,8 @@ export default async function DashboardLayout({
  <Sidebar />
  <div className="flex-1 flex flex-col h-screen overflow-hidden relative">
  <Header />
- <main className="flex-1 overflow-y-auto p-3 sm:p-4 lg:p-5 bg-slate-50/50">
- <div className="max-w-[1536px] w-full mx-auto space-y-3.5 sm:space-y-4">
+ <main className="flex-1 overflow-y-auto p-2 sm:p-2.5 lg:p-3 bg-slate-50/50">
+ <div className="max-w-[1536px] w-full mx-auto space-y-2.5 sm:space-y-3">
  {children}
  </div>
  </main>

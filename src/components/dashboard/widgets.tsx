@@ -13,20 +13,20 @@ import {
 
 export function StatWidget({ title, value, icon: Icon, color, bg, href, trend, badge }: any) {
   const content = (
-    <div className="bg-white p-2.5 sm:p-3 rounded-xl shadow-2xs border border-slate-100 flex flex-col justify-between gap-2 hover:shadow-xs hover:-translate-y-0.5 transition-all duration-200 group h-full relative overflow-hidden">
+    <div className="bg-white p-2 sm:p-2.5 rounded-lg shadow-2xs border border-slate-100 flex flex-col justify-between gap-1.5 hover:shadow-xs hover:-translate-y-0.5 transition-all duration-200 group h-full relative overflow-hidden">
       <div className="absolute -right-4 -top-4 w-20 h-20 bg-slate-50 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-xl" />
       
       <div className="flex items-start justify-between relative z-10">
         <div className={`${bg} p-1.5 rounded-md group-hover:scale-105 transition-transform duration-200 shrink-0 shadow-2xs border border-slate-100/50`}>
-          <Icon className={color} size={15} strokeWidth={2.2} />
+          <Icon className={color} size={14} strokeWidth={2.2} />
         </div>
         {badge && (
-          <div className={`flex items-center gap-1 px-1.5 py-0.5 rounded text-[8px] font-bold tracking-wider ${badge.color || 'bg-rose-50 border border-rose-100 text-rose-600'}`}>
+          <div className={`flex items-center gap-1 px-1.5 py-0.2 rounded text-[7.5px] font-bold tracking-wider ${badge.color || 'bg-rose-50 border border-rose-100 text-rose-600'}`}>
             {badge.text}
           </div>
         )}
         {trend && (
-          <div className={`flex items-center gap-1 px-1.5 py-0.5 rounded text-[8px] font-bold tracking-wider ${
+          <div className={`flex items-center gap-1 px-1.5 py-0.2 rounded text-[7.5px] font-bold tracking-wider ${
             trend.type === 'up' ? 'bg-emerald-50 border border-emerald-100 text-emerald-600' : 'bg-rose-50 border border-rose-100 text-rose-600'
           }`}>
             {trend.type === 'up' ? '↑' : '↓'} {trend.value}%
@@ -35,13 +35,13 @@ export function StatWidget({ title, value, icon: Icon, color, bg, href, trend, b
       </div>
 
       <div className="relative z-10 mt-0.5">
-        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-0.5 leading-none">{title}</p>
+        <p className="text-[8.5px] font-bold text-slate-400 uppercase tracking-wider mb-0.5 leading-none">{title}</p>
         <p className={`font-black text-slate-900 group-hover:text-blue-600 transition-colors leading-tight ${
           String(value || '').length > 12 
-            ? 'text-sm sm:text-base tracking-tight' 
+            ? 'text-xs sm:text-sm tracking-tight' 
             : String(value || '').length > 8 
-            ? 'text-base sm:text-lg tracking-tight' 
-            : 'text-lg sm:text-xl tracking-tight'
+            ? 'text-sm sm:text-base tracking-tight' 
+            : 'text-base sm:text-lg tracking-tight'
         }`}>{value}</p>
       </div>
     </div>
@@ -334,39 +334,39 @@ export function WelcomeHero({ userName, roleName, area, companyName, viewMode, c
  }
 
   return (
-    <div className="bg-gradient-to-r from-blue-700 via-indigo-700 to-blue-900 rounded-xl p-3 sm:p-3.5 lg:p-4 text-white shadow-md relative overflow-hidden group border border-blue-600/30">
+    <div className="bg-gradient-to-r from-blue-700 via-indigo-700 to-blue-900 rounded-xl px-3.5 py-2.5 sm:px-4 sm:py-3 text-white shadow-md relative overflow-hidden group border border-blue-600/30">
       {/* Background effects */}
-      <div className="absolute top-0 right-0 w-[300px] h-[300px] bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2 blur-[80px] group-hover:bg-white/15 transition-all duration-1000" />
-      <div className="absolute -bottom-16 -left-16 w-48 h-48 bg-blue-400/20 rounded-full blur-[60px] group-hover:bg-indigo-400/20 transition-all duration-1000" />
+      <div className="absolute top-0 right-0 w-[240px] h-[240px] bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2 blur-[60px] group-hover:bg-white/15 transition-all duration-1000" />
+      <div className="absolute -bottom-12 -left-12 w-36 h-36 bg-blue-400/20 rounded-full blur-[50px] group-hover:bg-indigo-400/20 transition-all duration-1000" />
       
-      <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-3 sm:gap-4">
+      <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-2.5 sm:gap-3">
         <div className="max-w-2xl">
-          <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 mb-1.5">
+          <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 mb-1">
             <span 
               style={{ color: '#ffffff' }}
-              className="bg-white/10 backdrop-blur-md text-[8.5px] font-semibold px-2 py-0.5 rounded-md keep-case tracking-normal border border-white/10"
+              className="bg-white/10 backdrop-blur-md text-[8px] font-semibold px-2 py-0.2 rounded keep-case tracking-normal border border-white/10"
             >
               {roleName} {area ? `| ${area === 'Almacén y Mantenimiento' ? 'Mecánica' : area}` : ''}
             </span>
             <div className="w-1 h-1 bg-white/20 rounded-full" />
             <span 
               style={{ color: '#dbeafe' }}
-              className="text-[11px] font-bold tracking-normal flex items-center gap-1"
+              className="text-[10.5px] font-bold tracking-normal flex items-center gap-1"
             >
-              <Building2 size={12} />
+              <Building2 size={11} />
               {companyName}
             </span>
           </div>
           
           <h1 
             style={{ color: '#ffffff' }}
-            className="text-base sm:text-lg font-bold mb-0.5 tracking-tight leading-snug"
+            className="text-sm sm:text-base font-bold mb-0.5 tracking-tight leading-tight"
           >
             {content.title} 👋
           </h1>
           <p 
             style={{ color: 'rgba(239, 246, 255, 0.85)' }}
-            className="text-[11px] font-normal leading-relaxed max-w-xl keep-case"
+            className="text-[10.5px] font-normal leading-normal max-w-xl keep-case"
           >
             {content.text}
           </p>
@@ -376,14 +376,14 @@ export function WelcomeHero({ userName, roleName, area, companyName, viewMode, c
           <div className="flex items-center gap-2 shrink-0">
             <button 
               onClick={() => setIsModalOpen(true)}
-              className="flex items-center gap-2.5 p-2 sm:p-2.5 bg-white/10 hover:bg-white/20 backdrop-blur-md rounded-lg border border-white/20 hover:scale-102 transition-all text-left group/btn cursor-pointer shadow-sm"
+              className="flex items-center gap-2 px-2.5 py-1.5 bg-white/10 hover:bg-white/20 backdrop-blur-md rounded-lg border border-white/20 hover:scale-102 transition-all text-left group/btn cursor-pointer shadow-2xs"
             >
-              <div className="p-1.5 bg-white/20 rounded-md group-hover/btn:bg-white text-white group-hover/btn:text-blue-700 transition-colors">
-                <QrCode size={15} />
+              <div className="p-1 bg-white/20 rounded-md group-hover/btn:bg-white text-white group-hover/btn:text-blue-700 transition-colors">
+                <QrCode size={13} />
               </div>
               <div>
-                <p className="text-[8px] font-bold text-blue-100 uppercase tracking-wider mb-0.5">Acceso Rápido</p>
-                <h4 className="text-[11px] font-bold text-white tracking-normal leading-none">Acceso Trabajadores</h4>
+                <p className="text-[7.5px] font-bold text-blue-100 uppercase tracking-wider leading-none mb-0.5">Acceso Rápido</p>
+                <h4 className="text-[10px] font-bold text-white tracking-normal leading-none">Acceso Trabajadores</h4>
               </div>
             </button>
           </div>
