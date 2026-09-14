@@ -800,7 +800,7 @@ export function DashboardShell({ user, stats, localIp }: DashboardShellProps) {
  }
 
   return (
-    <div className="space-y-4 sm:space-y-6 pb-12 max-w-[1700px] mx-auto animate-in fade-in slide-in-from-bottom-2 duration-500">
+    <div className="space-y-3 sm:space-y-3.5 pb-6 max-w-[1700px] mx-auto animate-in fade-in slide-in-from-bottom-2 duration-500">
       
       {/* Hero Section */}
       <WelcomeHero 
@@ -825,21 +825,21 @@ export function DashboardShell({ user, stats, localIp }: DashboardShellProps) {
 
       {/* Comunicados de Seguridad Transversales (Nueva Sección) */}
       {stats.transversalSoma && (
-        <div className="bg-white border border-slate-200/80 p-4 sm:p-5 rounded-xl shadow-xs overflow-hidden relative group">
+        <div className="bg-white border border-slate-200/80 p-3 sm:p-3.5 rounded-xl shadow-xs overflow-hidden relative group">
           <div className="absolute top-0 right-0 p-8 opacity-[0.03] scale-150 group-hover:scale-125 transition-transform duration-1000">
             <Shield size={160} />
           </div>
-          <div className="relative z-10 flex flex-col md:flex-row gap-4 sm:gap-6 items-center justify-between">
+          <div className="relative z-10 flex flex-col md:flex-row gap-3 sm:gap-4 items-center justify-between">
             <div>
-              <h3 className="text-base sm:text-lg font-bold text-slate-800 flex items-center gap-2.5">
-                <div className="w-8 h-8 bg-emerald-100 text-emerald-600 rounded-lg flex items-center justify-center">
-                  <ShieldCheck size={18} />
+              <h3 className="text-sm sm:text-base font-bold text-slate-800 flex items-center gap-2">
+                <div className="w-7 h-7 bg-emerald-100 text-emerald-600 rounded-md flex items-center justify-center">
+                  <ShieldCheck size={16} />
                 </div>
                 Seguridad Industrial Inthaly
               </h3>
-              <p className="text-slate-500 text-xs mt-1 max-w-md">Comunicados y alertas activas para todo el personal operativo en cumplimiento con estándares HSEC.</p>
+              <p className="text-slate-500 text-[11px] mt-0.5 max-w-md">Comunicados y alertas activas para todo el personal operativo en cumplimiento con estándares HSEC.</p>
             </div>
-            <div className="flex flex-wrap gap-3">
+            <div className="flex flex-wrap gap-2.5">
               {stats.transversalSoma.lastTalk && (
                 <div 
                   onClick={() => setSelectedTalk(stats.transversalSoma.lastTalk)}
@@ -870,7 +870,7 @@ export function DashboardShell({ user, stats, localIp }: DashboardShellProps) {
       )}
 
       {/* Listas Secundarias Dinámicas */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-5">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-3.5">
         {stats.recentIncidents && (['ADMIN', 'SOMA', 'OPERACIONES', 'GERENTE'].includes(viewMode)) && (
           <ListWidget 
             title="Siguimiento de Incidencias"
@@ -904,22 +904,22 @@ export function DashboardShell({ user, stats, localIp }: DashboardShellProps) {
 
       {/* Panel Personal de Trabajador (si aplica) */}
       {user.worker_id && viewMode !== 'WORKER' && stats.personalStats && (
-        <div className="pt-8 border-t border-slate-200/80 space-y-4 sm:space-y-5 animate-in fade-in slide-in-from-bottom-4 duration-500">
-          <div className="flex items-center gap-4">
-            <div className="w-11 h-11 bg-slate-900 text-white rounded-xl flex items-center justify-center shadow-md relative">
-              <ShieldAlert size={22} />
-              <div className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-rose-500 rounded-full border-2 border-white" />
+        <div className="pt-5 border-t border-slate-200/80 space-y-3 sm:space-y-3.5 animate-in fade-in slide-in-from-bottom-4 duration-500">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 bg-slate-900 text-white rounded-lg flex items-center justify-center shadow-md relative">
+              <ShieldAlert size={18} />
+              <div className="absolute -top-1 -right-1 w-3 h-3 bg-rose-500 rounded-full border-2 border-white" />
             </div>
             <div>
-              <h3 className="text-lg sm:text-xl font-bold text-slate-800 tracking-tight">Mi Panel Personal</h3>
-              <p className="text-slate-500 text-xs font-normal mt-0.5">Resumen de tus beneficios y equipos vinculados</p>
+              <h3 className="text-base sm:text-lg font-bold text-slate-800 tracking-tight">Mi Panel Personal</h3>
+              <p className="text-slate-500 text-[11px] font-normal mt-0.5">Resumen de tus beneficios y equipos vinculados</p>
             </div>
           </div>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-5">
-            <div className="bg-white p-4 sm:p-5 rounded-xl shadow-xs border border-slate-100"><PPEList deliveries={stats.personalStats.ppe} isWorker={true} /></div>
-            <div className="space-y-4">
-              <div className="bg-white p-4 sm:p-5 rounded-xl shadow-xs border border-slate-100"><BonusList bonuses={stats.personalStats.bonuses} isWorker={true} /></div>
-              <div className="bg-white p-4 sm:p-5 rounded-xl shadow-xs border border-slate-100"><TransportList payments={stats.personalStats.transport} isWorker={true} /></div>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-3.5">
+            <div className="bg-white p-3 sm:p-3.5 rounded-xl shadow-xs border border-slate-100"><PPEList deliveries={stats.personalStats.ppe} isWorker={true} /></div>
+            <div className="space-y-3">
+              <div className="bg-white p-3 sm:p-3.5 rounded-xl shadow-xs border border-slate-100"><BonusList bonuses={stats.personalStats.bonuses} isWorker={true} /></div>
+              <div className="bg-white p-3 sm:p-3.5 rounded-xl shadow-xs border border-slate-100"><TransportList payments={stats.personalStats.transport} isWorker={true} /></div>
             </div>
           </div>
         </div>

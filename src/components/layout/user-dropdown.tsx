@@ -32,21 +32,21 @@ export function UserDropdown({
 
  return (
  <div className="relative" ref={dropdownRef}>
- <button 
- onClick={() => setIsOpen(!isOpen)}
- className="flex items-center gap-3 hover:bg-slate-50 p-1.5 pr-3 rounded-full transition-colors border border-transparent hover:border-slate-200"
- >
- <div className="w-9 h-9 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-bold shadow-sm">
- {initial}
- </div>
- <div className="hidden sm:flex flex-col items-start">
- <div className="flex items-center gap-1">
- <span className="text-sm font-bold text-slate-700 leading-none">{userName}</span>
- <ChevronDown size={14} className={`text-slate-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
- </div>
- <span className="text-[10px] font-bold text-slate-400 keep-case tracking-tighter">{userRole}</span>
- </div>
- </button>
+      <button 
+        onClick={() => setIsOpen(!isOpen)}
+        className="flex items-center gap-2 hover:bg-slate-50 p-1 pr-2 rounded-full transition-colors border border-transparent hover:border-slate-200"
+      >
+        <div className="w-7 h-7 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-bold text-xs shadow-2xs">
+          {initial}
+        </div>
+        <div className="hidden sm:flex flex-col items-start">
+          <div className="flex items-center gap-1">
+            <span className="text-xs font-bold text-slate-700 leading-none">{userName}</span>
+            <ChevronDown size={12} className={`text-slate-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+          </div>
+          <span className="text-[9px] font-semibold text-slate-400 keep-case tracking-tight">{userRole}</span>
+        </div>
+      </button>
 
  {isOpen && (
  <div className="absolute right-0 mt-2 w-56 bg-white rounded-2xl shadow-xl border border-slate-100 py-2 animate-in fade-in zoom-in-95 duration-100 z-50">

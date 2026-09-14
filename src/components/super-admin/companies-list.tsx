@@ -191,74 +191,74 @@ export function CompaniesList({ companies }: { companies: any[] }) {
   }
 
   return (
-    <div className="bg-white rounded-xl border border-slate-100 shadow-xs overflow-hidden flex flex-col h-full">
-      <div className="p-4 sm:p-5 border-b border-slate-50 flex flex-col xl:flex-row xl:items-center justify-between gap-3 sm:gap-4">
+    <div className="bg-white rounded-xl border border-slate-100 shadow-2xs overflow-hidden flex flex-col h-full">
+      <div className="p-3 sm:p-3.5 border-b border-slate-50 flex flex-col xl:flex-row xl:items-center justify-between gap-2.5 sm:gap-3">
         <div>
-          <h2 className="text-base sm:text-lg font-bold text-slate-900">Empresas del Ecosistema</h2>
-          <p className="text-slate-400 text-xs font-medium">Gestión de infraestructura multi-empresa y solicitudes de demostración</p>
+          <h2 className="text-xs sm:text-sm font-bold text-slate-900">Empresas del Ecosistema</h2>
+          <p className="text-slate-400 text-[10px] font-medium">Gestión de infraestructura multi-empresa y solicitudes de demostración</p>
         </div>
         
-        <div className="flex flex-col md:flex-row items-stretch md:items-center gap-3">
+        <div className="flex flex-col md:flex-row items-stretch md:items-center gap-2 sm:gap-2.5">
           {/* Tabs Filtro */}
-          <div className="flex bg-slate-100 p-0.5 rounded-lg overflow-x-auto text-xs font-bold">
+          <div className="flex bg-slate-100 p-0.5 rounded-lg overflow-x-auto text-[11px] font-bold">
             <button 
               onClick={() => setFilter('all')}
-              className={`px-3 py-1 rounded-md transition-all whitespace-nowrap ${
-                filter === 'all' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-500 hover:text-slate-700'
+              className={`px-2.5 py-1 rounded-md transition-all whitespace-nowrap ${
+                filter === 'all' ? 'bg-white text-slate-900 shadow-2xs' : 'text-slate-500 hover:text-slate-700'
               }`}
             >
               Todas ({companies.length})
             </button>
             <button 
               onClick={() => setFilter('active')}
-              className={`px-3 py-1 rounded-md transition-all whitespace-nowrap flex items-center gap-1 ${
-                filter === 'active' ? 'bg-white text-emerald-600 shadow-xs' : 'text-slate-500 hover:text-slate-700'
+              className={`px-2.5 py-1 rounded-md transition-all whitespace-nowrap flex items-center gap-1 ${
+                filter === 'active' ? 'bg-white text-emerald-600 shadow-2xs' : 'text-slate-500 hover:text-slate-700'
               }`}
             >
-              <Globe2 size={12} />
+              <Globe2 size={11} />
               Activas
             </button>
             <button 
               onClick={() => setFilter('pending')}
-              className={`px-3 py-1 rounded-md transition-all whitespace-nowrap flex items-center gap-1 ${
-                filter === 'pending' ? 'bg-white text-amber-700 shadow-xs' : 'text-slate-500 hover:text-slate-700'
+              className={`px-2.5 py-1 rounded-md transition-all whitespace-nowrap flex items-center gap-1 ${
+                filter === 'pending' ? 'bg-white text-amber-700 shadow-2xs' : 'text-slate-500 hover:text-slate-700'
               }`}
             >
-              <Clock size={12} />
+              <Clock size={11} />
               Solicitudes
               {pendingCount > 0 && (
-                <span className="px-1.5 py-0.2 rounded-full bg-amber-500 text-white text-[9px] font-black">
+                <span className="px-1.5 py-0.2 rounded-full bg-amber-500 text-white text-[8px] font-black">
                   {pendingCount}
                 </span>
               )}
             </button>
             <button 
               onClick={() => setFilter('suspended')}
-              className={`px-3 py-1 rounded-md transition-all whitespace-nowrap ${
-                filter === 'suspended' ? 'bg-white text-rose-600 shadow-xs' : 'text-slate-500 hover:text-slate-700'
+              className={`px-2.5 py-1 rounded-md transition-all whitespace-nowrap ${
+                filter === 'suspended' ? 'bg-white text-rose-600 shadow-2xs' : 'text-slate-500 hover:text-slate-700'
               }`}
             >
               Suspendidas
             </button>
             <button 
               onClick={() => setFilter('test')}
-              className={`px-3 py-1 rounded-md transition-all whitespace-nowrap flex items-center gap-1 ${
-                filter === 'test' ? 'bg-white text-purple-600 shadow-xs' : 'text-slate-500 hover:text-slate-700'
+              className={`px-2.5 py-1 rounded-md transition-all whitespace-nowrap flex items-center gap-1 ${
+                filter === 'test' ? 'bg-white text-purple-600 shadow-2xs' : 'text-slate-500 hover:text-slate-700'
               }`}
             >
-              <FlaskConical size={12} />
+              <FlaskConical size={11} />
               Prueba
             </button>
           </div>
 
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={15} />
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" size={13} />
             <input 
               type="text" 
               placeholder="Buscar empresa, RUC, correo..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-9 pr-3 py-1.5 bg-slate-50 border-none rounded-lg text-xs font-semibold focus:ring-2 focus:ring-slate-200 outline-none w-full md:w-56"
+              className="pl-7 pr-2.5 py-1 bg-slate-50 border-none rounded-md text-xs font-semibold focus:ring-2 focus:ring-slate-200 outline-none w-full md:w-48"
             />
           </div>
         </div>
@@ -268,16 +268,16 @@ export function CompaniesList({ companies }: { companies: any[] }) {
         <table className="w-full text-left">
           <thead>
             <tr className="bg-slate-50/50">
-              <th className="px-4 sm:px-5 py-2.5 sm:py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Empresa / RUC</th>
-              <th className="px-4 sm:px-5 py-2.5 sm:py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Contacto / Rubro</th>
-              <th className="px-4 sm:px-5 py-2.5 sm:py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider text-center">Estado</th>
-              <th className="px-4 sm:px-5 py-2.5 sm:py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider text-right">Acciones</th>
+              <th className="px-3 py-2 text-[9px] font-bold text-slate-400 uppercase tracking-wider">Empresa / RUC</th>
+              <th className="px-3 py-2 text-[9px] font-bold text-slate-400 uppercase tracking-wider">Contacto / Rubro</th>
+              <th className="px-3 py-2 text-[9px] font-bold text-slate-400 uppercase tracking-wider text-center">Estado</th>
+              <th className="px-3 py-2 text-[9px] font-bold text-slate-400 uppercase tracking-wider text-right">Acciones</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-50">
             {filteredCompanies.length === 0 ? (
               <tr>
-                <td colSpan={4} className="px-4 py-8 text-center text-slate-400 font-medium text-xs">
+                <td colSpan={4} className="px-3 py-6 text-center text-slate-400 font-medium text-xs">
                   No se encontraron empresas con los filtros seleccionados.
                 </td>
               </tr>
@@ -296,9 +296,9 @@ export function CompaniesList({ companies }: { companies: any[] }) {
 
                 return (
                   <tr key={company.id} className="group hover:bg-slate-50/50 transition-colors">
-                    <td className="px-4 sm:px-5 py-2.5 sm:py-3">
-                      <div className="flex items-center gap-3">
-                        <div className={`w-9 h-9 rounded-lg flex items-center justify-center text-sm font-black shadow-xs shrink-0 ${
+                    <td className="px-3 py-1.5 sm:py-2">
+                      <div className="flex items-center gap-2.5">
+                        <div className={`w-7 h-7 rounded-md flex items-center justify-center text-xs font-black shadow-2xs shrink-0 ${
                           pending
                             ? 'bg-amber-500 text-white shadow-amber-500/20'
                             : active
@@ -307,63 +307,58 @@ export function CompaniesList({ companies }: { companies: any[] }) {
                         }`}>
                           {company.name.substring(0, 1).toUpperCase()}
                         </div>
-                        <div className="flex flex-col">
-                          <div className="flex items-center gap-2">
-                            <span className="font-bold text-xs text-slate-900">{company.name}</span>
+                        <div className="flex flex-col min-w-0">
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-bold text-xs text-slate-900 truncate">{company.name}</span>
                             {company.is_test && (
-                              <span className="bg-purple-100 text-purple-700 text-[9px] px-1.5 py-0.2 rounded font-bold tracking-normal flex items-center gap-1">
-                                <FlaskConical size={9} />
+                              <span className="bg-purple-100 text-purple-700 text-[8px] px-1 py-0.2 rounded font-bold tracking-normal flex items-center gap-0.5 shrink-0">
+                                <FlaskConical size={8} />
                                 Prueba
                               </span>
                             )}
                             {pending && (
-                              <span className="bg-amber-100 text-amber-800 text-[9px] px-1.5 py-0.2 rounded font-bold tracking-normal flex items-center gap-1">
-                                <Clock size={9} />
+                              <span className="bg-amber-100 text-amber-800 text-[8px] px-1 py-0.2 rounded font-bold tracking-normal flex items-center gap-0.5 shrink-0">
+                                <Clock size={8} />
                                 Solicitud
                               </span>
                             )}
                           </div>
-                          <div className="flex items-center gap-2 mt-0.5">
+                          <div className="flex items-center gap-1.5 mt-0.5">
                             {company.tax_id && (
-                              <span className="text-[10px] font-semibold text-slate-600 bg-slate-100 px-1 py-0.2 rounded">
+                              <span className="text-[9px] font-semibold text-slate-600 bg-slate-100 px-1 py-0.2 rounded shrink-0">
                                 RUC: {company.tax_id}
                               </span>
                             )}
-                            <span className="text-[9px] font-mono text-slate-400 tracking-tighter">{company.id}</span>
+                            <span className="text-[8px] font-mono text-slate-400 tracking-tighter truncate">{company.id}</span>
                           </div>
                         </div>
                       </div>
                     </td>
 
-                    <td className="px-4 sm:px-5 py-2.5 sm:py-3">
+                    <td className="px-3 py-1.5 sm:py-2">
                       <div className="flex flex-col gap-0.5">
-                        <div className="flex items-center gap-1.5 text-slate-700 text-xs font-semibold">
-                          <span>{contactName}</span>
+                        <div className="flex items-center gap-1 text-slate-700 text-xs font-semibold">
+                          <span className="truncate">{contactName}</span>
                           {company.contact_email && (
-                            <span className="text-slate-400 font-normal text-[11px]">({company.contact_email})</span>
+                            <span className="text-slate-400 font-normal text-[10px] truncate">({company.contact_email})</span>
                           )}
                         </div>
-                        <div className="flex items-center gap-2 text-slate-500 text-[11px] font-normal">
-                          <span className="flex items-center gap-1">
-                            <Briefcase size={11} className="text-slate-400" />
+                        <div className="flex items-center gap-1.5 text-slate-500 text-[10px] font-normal">
+                          <span className="flex items-center gap-1 truncate">
+                            <Briefcase size={10} className="text-slate-400 shrink-0" />
                             {company.industry || company.business_type || 'Servicios'}
                           </span>
                           {leadDetails?.estimated_workers && (
-                            <span className="bg-slate-100 text-slate-600 px-1 py-0.2 rounded text-[9px] font-bold">
+                            <span className="bg-slate-100 text-slate-600 px-1 py-0.2 rounded text-[8px] font-bold shrink-0">
                               {leadDetails.estimated_workers} trab.
                             </span>
                           )}
                         </div>
-                        {leadDetails?.notes && (
-                          <p className="text-[10px] text-slate-500 italic max-w-xs truncate">
-                            "{leadDetails.notes}"
-                          </p>
-                        )}
                       </div>
                     </td>
 
-                    <td className="px-4 sm:px-5 py-2.5 sm:py-3 text-center">
-                      <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold tracking-wide ${
+                    <td className="px-3 py-1.5 sm:py-2 text-center">
+                      <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-bold tracking-wide ${
                         active 
                           ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' 
                           : pending
@@ -372,34 +367,34 @@ export function CompaniesList({ companies }: { companies: any[] }) {
                           ? 'bg-slate-100 text-slate-600 border border-slate-200'
                           : 'bg-rose-50 text-rose-600 border border-rose-100'
                       }`}>
-                        {active && <Globe2 size={9} />}
-                        {pending && <Clock size={9} />}
+                        {active && <Globe2 size={8} />}
+                        {pending && <Clock size={8} />}
                         {active ? 'Activa' : pending ? 'Pendiente' : rejected ? 'Rechazada' : 'Suspendida'}
                       </span>
                     </td>
 
-                    <td className="px-4 sm:px-5 py-2.5 sm:py-3 text-right">
-                      <div className="flex items-center justify-end gap-1.5">
+                    <td className="px-3 py-1.5 sm:py-2 text-right">
+                      <div className="flex items-center justify-end gap-1">
                         {/* Acciones para empresas PENDIENTES */}
                         {pending && (
                           <>
                             <button 
                               onClick={() => handleApprove(company.id, company.name)}
                               disabled={loadingId === company.id}
-                              className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold text-xs flex items-center gap-1 shadow-xs transition-all active:scale-95 disabled:opacity-50"
+                              className="px-2 py-0.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-md font-bold text-[11px] flex items-center gap-1 shadow-2xs transition-all active:scale-95 disabled:opacity-50"
                               title="Aprobar Solicitud y Activar Empresa"
                             >
-                              <Check size={13} />
+                              <Check size={11} />
                               <span>{loadingId === company.id ? '...' : 'Aprobar'}</span>
                             </button>
 
                             <button 
                               onClick={() => handleReject(company.id, company.name)}
                               disabled={loadingId === company.id}
-                              className="p-1.5 border border-rose-200 text-rose-600 hover:bg-rose-50 rounded-lg transition-all shadow-xs disabled:opacity-50"
+                              className="p-1 border border-rose-200 text-rose-600 hover:bg-rose-50 rounded-md transition-all shadow-2xs disabled:opacity-50"
                               title="Rechazar Solicitud"
                             >
-                              <X size={14} />
+                              <X size={12} />
                             </button>
                           </>
                         )}
@@ -410,10 +405,10 @@ export function CompaniesList({ companies }: { companies: any[] }) {
                             href={`https://wa.me/${waPhone}?text=${waText}`}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="p-1.5 border border-emerald-200 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all shadow-xs flex items-center gap-1"
+                            className="p-1 border border-emerald-200 text-emerald-600 hover:bg-emerald-50 rounded-md transition-all shadow-2xs flex items-center gap-1"
                             title={`Contactar por WhatsApp (+${waPhone})`}
                           >
-                            <MessageSquare size={14} />
+                            <MessageSquare size={12} />
                           </a>
                         )}
 
@@ -422,24 +417,24 @@ export function CompaniesList({ companies }: { companies: any[] }) {
                           <button 
                             onClick={() => handleToggleStatus(company.id, company.status)}
                             disabled={loadingId === company.id}
-                            className={`p-1.5 rounded-lg border transition-all ${
+                            className={`p-1 rounded-md border transition-all ${
                               active
-                                ? 'border-rose-100 text-rose-600 bg-white hover:bg-rose-600 hover:text-white shadow-xs'
-                                : 'border-emerald-100 text-emerald-600 bg-white hover:bg-emerald-600 hover:text-white shadow-xs'
+                                ? 'border-rose-100 text-rose-600 bg-white hover:bg-rose-600 hover:text-white shadow-2xs'
+                                : 'border-emerald-100 text-emerald-600 bg-white hover:bg-emerald-600 hover:text-white shadow-2xs'
                             }`}
                             title={active ? 'Suspender Empresa' : 'Activar Empresa'}
                           >
-                            {active ? <ShieldOff size={14} /> : <Shield size={14} />}
+                            {active ? <ShieldOff size={12} /> : <Shield size={12} />}
                           </button>
                         )}
 
                         {/* Ver Detalles */}
                         <button 
                           onClick={() => setSelectedDetailsId(company.id)}
-                          className="p-1.5 border border-slate-100 text-slate-400 bg-white hover:text-slate-900 hover:bg-slate-50 rounded-lg transition-all shadow-xs"
+                          className="p-1 border border-slate-100 text-slate-400 bg-white hover:text-slate-900 hover:bg-slate-50 rounded-md transition-all shadow-2xs"
                           title="Ver Ficha y Estadísticas"
                         >
-                          <ExternalLink size={14} />
+                          <ExternalLink size={12} />
                         </button>
 
                         {/* Entrar como empresa (Solo para activas) */}
@@ -447,13 +442,11 @@ export function CompaniesList({ companies }: { companies: any[] }) {
                           <button 
                             onClick={() => handleImpersonate(company.id)}
                             disabled={loadingId === company.id}
-                            className="p-1.5 bg-slate-900 text-white hover:bg-slate-800 rounded-lg transition-all shadow-xs flex items-center gap-1.5 disabled:opacity-50"
-                            title="Entrar como empresa (Impersonar)"
+                            className="px-2 py-0.5 bg-slate-900 text-white hover:bg-slate-800 rounded-md transition-all shadow-2xs flex items-center gap-1 disabled:opacity-50 text-[10px] font-bold"
+                            title="Entrar como empresa (Auditoría)"
                           >
-                            <Building2 size={14} />
-                            <span className="text-[10px] font-bold hidden xl:inline">
-                              {loadingId === company.id ? '...' : 'Entrar'}
-                            </span>
+                            <span className="hidden sm:inline">Entrar</span>
+                            <ExternalLink size={11} />
                           </button>
                         )}
 
@@ -461,24 +454,24 @@ export function CompaniesList({ companies }: { companies: any[] }) {
                         <button 
                           onClick={() => handleToggleTest(company.id, company.is_test)}
                           disabled={loadingId === company.id}
-                          className={`p-2 rounded-xl border transition-all ${
+                          className={`p-1 rounded-md border transition-all ${
                             company.is_test
-                              ? 'border-purple-100 text-purple-600 bg-white hover:bg-purple-600 hover:text-white shadow-sm'
-                              : 'border-slate-100 text-slate-400 bg-white hover:text-slate-900 hover:bg-slate-50 shadow-sm'
+                              ? 'border-purple-100 text-purple-600 bg-white hover:bg-purple-600 hover:text-white shadow-2xs'
+                              : 'border-slate-100 text-slate-400 bg-white hover:text-slate-900 hover:bg-slate-50 shadow-2xs'
                           }`}
                           title={company.is_test ? 'Quitar marca de Prueba' : 'Marcar como Empresa de Prueba'}
                         >
-                          <FlaskConical size={16} />
+                          <FlaskConical size={12} />
                         </button>
 
                         {company.is_test && (
                           <button 
                             onClick={() => handleDelete(company.id, company.name)}
                             disabled={loadingId === company.id}
-                            className="p-2 border border-rose-100 text-rose-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-all shadow-sm disabled:opacity-50"
+                            className="p-1 border border-rose-100 text-rose-400 hover:text-rose-600 hover:bg-rose-50 rounded-md transition-all shadow-2xs disabled:opacity-50"
                             title="Eliminar Empresa de Prueba"
                           >
-                            <Trash2 size={16} />
+                            <Trash2 size={12} />
                           </button>
                         )}
                       </div>
