@@ -72,8 +72,8 @@ export function DashboardShell({ user, stats, localIp }: DashboardShellProps) {
  switch (viewMode) {
  case 'GERENTE':
  return (
- <div className="space-y-12">
- <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
+ <div className="space-y-4 sm:space-y-5">
+ <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3 sm:gap-4">
  <StatWidget 
  title="Personal Total" value={stats.admin?.totalWorkers?.toString() || '0'} 
  icon={UserCheck} color="text-indigo-600" bg="bg-indigo-50" href="/workers"
@@ -96,12 +96,12 @@ export function DashboardShell({ user, stats, localIp }: DashboardShellProps) {
  />
  </div>
 
- <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
- <div className="xl:col-span-2 bg-white rounded-2xl md:rounded-[2rem] p-6 md:p-10 shadow-xl shadow-slate-200/50 border border-slate-100">
- <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8 md:mb-10">
+ <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 sm:gap-5">
+ <div className="xl:col-span-2 bg-white rounded-xl sm:rounded-2xl p-4 sm:p-5 shadow-xs border border-slate-100">
+ <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 sm:mb-6">
  <div>
- <h3 className="text-2xl font-bold text-slate-800 tracking-tight">Supervisión Semanal</h3>
- <p className="text-slate-400 font-bold text-sm mt-1 tracking-tight">Actividad General Operativa</p>
+ <h3 className="text-base sm:text-lg font-bold text-slate-800 tracking-tight">Supervisión Semanal</h3>
+ <p className="text-slate-400 text-xs mt-0.5">Actividad General Operativa</p>
  </div>
  <div className="bg-indigo-50 px-5 py-2 rounded-2xl text-indigo-600 font-bold text-xs border border-indigo-100">Monitoreo</div>
  </div>
@@ -182,8 +182,8 @@ export function DashboardShell({ user, stats, localIp }: DashboardShellProps) {
 
  case 'ADMIN':
  return (
- <div className="space-y-12">
- <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
+ <div className="space-y-4 sm:space-y-5">
+ <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3.5 sm:gap-4">
  <StatWidget 
  title="Usuarios" value={stats.admin?.activeUsers?.toString() || '0'} 
  icon={Users} color="text-indigo-600" bg="bg-indigo-50" href="/users"
@@ -226,32 +226,31 @@ export function DashboardShell({ user, stats, localIp }: DashboardShellProps) {
  />
  </div>
 
- <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
- {/* ... existing activity chart col-span-2 ... */}
- <div className="xl:col-span-2 bg-white rounded-2xl md:rounded-[2rem] p-6 md:p-10 shadow-xl shadow-slate-200/50 border border-slate-100">
- <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8 md:mb-10">
+ <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 sm:gap-6">
+ <div className="xl:col-span-2 bg-white rounded-xl sm:rounded-2xl p-4 sm:p-5 shadow-xs border border-slate-100">
+ <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 sm:mb-6">
  <div>
- <h3 className="text-2xl font-bold text-slate-800 tracking-tight">Actividad Semanal</h3>
- <p className="text-slate-400 font-bold text-sm mt-1 tracking-tight">Movimientos de Inventario</p>
+ <h3 className="text-base sm:text-lg font-bold text-slate-800 tracking-tight">Actividad Semanal</h3>
+ <p className="text-slate-400 text-xs mt-0.5">Movimientos de Inventario</p>
  </div>
- <div className="bg-blue-50 px-5 py-2 rounded-2xl text-blue-600 font-bold text-xs border border-blue-100">Tiempo Real</div>
+ <div className="bg-blue-50 px-3.5 py-1 rounded-xl text-blue-600 font-bold text-xs border border-blue-100">Tiempo Real</div>
  </div>
- <div className="h-[200px] md:h-[300px] w-full flex items-end justify-between gap-2 md:gap-4 px-2 md:px-4">
+ <div className="h-[180px] md:h-[240px] w-full flex items-end justify-between gap-2 md:gap-4 px-2 md:px-4">
  {(stats.admin?.weeklyActivity || []).map((day: any) => {
  const maxWeekly = Math.max(...(stats.admin?.weeklyActivity || []).map((d:any) => d.count || 0), 1)
  const height = Math.min((day.count / maxWeekly) * 100, 100)
  return (
- <div key={day.day} className="flex-1 flex flex-col items-center gap-4 group">
+ <div key={day.day} className="flex-1 flex flex-col items-center gap-2.5 group">
  <div className="relative w-full flex flex-col items-center">
- <div className="absolute -top-10 opacity-0 group-hover:opacity-100 transition-all bg-slate-900 text-white text-[10px] font-bold px-3 py-1.5 rounded-lg shadow-xl translate-y-2 group-hover:translate-y-0">
+ <div className="absolute -top-8 opacity-0 group-hover:opacity-100 transition-all bg-slate-900 text-white text-[10px] font-bold px-2 py-1 rounded shadow-md translate-y-1 group-hover:translate-y-0">
  {day.count} mov.
  </div>
  <div 
- className="w-full max-w-[40px] bg-gradient-to-t from-blue-600 to-indigo-400 rounded-2xl transition-all duration-1000 ease-out shadow-lg shadow-blue-200 group-hover:shadow-blue-300"
- style={{ height: `${height}%`, minHeight: '8px' }}
+ className="w-full max-w-[36px] bg-gradient-to-t from-blue-600 to-indigo-400 rounded-xl transition-all duration-700 ease-out shadow-sm shadow-blue-200 group-hover:shadow-blue-300"
+ style={{ height: `${height}%`, minHeight: '6px' }}
  />
  </div>
- <span className="text-[10px] font-bold text-slate-400 tracking-tighter">
+ <span className="text-[10px] font-semibold text-slate-400 tracking-tighter">
  {(() => {
  const [y, m, d] = day.day.split('-').map(Number)
  return new Date(y, m - 1, d).toLocaleDateString(undefined, { weekday: 'short' })
@@ -263,59 +262,59 @@ export function DashboardShell({ user, stats, localIp }: DashboardShellProps) {
  </div>
  </div>
 
- <div className="xl:col-span-1 space-y-8">
- <div className="bg-[#1D4ED8] rounded-2xl md:rounded-[2rem] p-8 md:p-10 shadow-2xl shadow-blue-900/20 relative overflow-hidden group">
- <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl group-hover:bg-white/20 transition-all" />
+ <div className="xl:col-span-1 space-y-4 sm:space-y-5">
+ <div className="bg-[#1D4ED8] rounded-xl sm:rounded-2xl p-4 sm:p-5 shadow-lg shadow-blue-900/15 relative overflow-hidden group">
+ <div className="absolute top-0 right-0 w-48 h-48 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2 blur-2xl group-hover:bg-white/20 transition-all" />
  <div className="relative z-10">
- <div className="flex items-center gap-3 mb-8">
- <div className="p-3 bg-white/10 backdrop-blur-xl rounded-2xl border border-white/20">
- <LayoutDashboard className="text-white" size={24} />
+ <div className="flex items-center gap-2.5 mb-4 sm:mb-5">
+ <div className="p-2 bg-white/10 backdrop-blur-xl rounded-xl border border-white/20">
+ <LayoutDashboard className="text-white" size={18} />
  </div>
- <h3 className="text-2xl font-bold text-white tracking-tight">Acciones Rápidas</h3>
+ <h3 className="text-base sm:text-lg font-bold text-white tracking-tight">Acciones Rápidas</h3>
  </div>
- <div className="space-y-3">
- <Link href="/workers" className="flex items-center justify-between p-4 bg-white/10 hover:bg-white/20 border border-white/10 rounded-2xl transition-all group">
- <div className="flex items-center gap-3">
- <Users className="text-blue-300" size={18} />
- <span className="text-[10px] font-bold text-white tracking-tight">Registrar Trabajador</span>
+ <div className="space-y-2">
+ <Link href="/workers" className="flex items-center justify-between p-2.5 bg-white/10 hover:bg-white/20 border border-white/10 rounded-xl transition-all group">
+ <div className="flex items-center gap-2.5">
+ <Users className="text-blue-300" size={16} />
+ <span className="text-[11px] font-semibold text-white tracking-tight">Registrar Trabajador</span>
  </div>
- <Plus className="text-white/40 group-hover:rotate-90 transition-transform" size={16} />
+ <Plus className="text-white/50 group-hover:rotate-90 transition-transform" size={14} />
  </Link>
- <Link href="/incidencias?category=soma" className="flex items-center justify-between p-4 bg-white/10 hover:bg-white/20 border border-white/10 rounded-2xl transition-all group">
- <div className="flex items-center gap-3">
- <ShieldAlert className="text-rose-300" size={18} />
- <span className="text-[10px] font-bold text-white tracking-tight">Registrar Incidencia</span>
+ <Link href="/incidencias?category=soma" className="flex items-center justify-between p-2.5 bg-white/10 hover:bg-white/20 border border-white/10 rounded-xl transition-all group">
+ <div className="flex items-center gap-2.5">
+ <ShieldAlert className="text-rose-300" size={16} />
+ <span className="text-[11px] font-semibold text-white tracking-tight">Registrar Incidencia</span>
  </div>
- <Plus className="text-white/40 group-hover:rotate-90 transition-transform" size={16} />
+ <Plus className="text-white/50 group-hover:rotate-90 transition-transform" size={14} />
  </Link>
- <Link href="/requerimientos" className="flex items-center justify-between p-4 bg-white/10 hover:bg-white/20 border border-white/10 rounded-2xl transition-all group">
- <div className="flex items-center gap-3">
- <FileText className="text-amber-300" size={18} />
- <span className="text-[10px] font-bold text-white tracking-tight">Crear Requerimiento</span>
+ <Link href="/requerimientos" className="flex items-center justify-between p-2.5 bg-white/10 hover:bg-white/20 border border-white/10 rounded-xl transition-all group">
+ <div className="flex items-center gap-2.5">
+ <FileText className="text-amber-300" size={16} />
+ <span className="text-[11px] font-semibold text-white tracking-tight">Crear Requerimiento</span>
  </div>
- <Plus className="text-white/40 group-hover:rotate-90 transition-transform" size={16} />
+ <Plus className="text-white/50 group-hover:rotate-90 transition-transform" size={14} />
  </Link>
- <Link href="/inventory/stock" className="flex items-center justify-between p-4 bg-white/10 hover:bg-white/20 border border-white/10 rounded-2xl transition-all group">
- <div className="flex items-center gap-3">
- <Package className="text-emerald-300" size={18} />
- <span className="text-[10px] font-bold text-white tracking-tight">Ingreso Inventario</span>
+ <Link href="/inventory/stock" className="flex items-center justify-between p-2.5 bg-white/10 hover:bg-white/20 border border-white/10 rounded-xl transition-all group">
+ <div className="flex items-center gap-2.5">
+ <Package className="text-emerald-300" size={16} />
+ <span className="text-[11px] font-semibold text-white tracking-tight">Ingreso Inventario</span>
  </div>
- <Plus className="text-white/40 group-hover:rotate-90 transition-transform" size={16} />
+ <Plus className="text-white/50 group-hover:rotate-90 transition-transform" size={14} />
  </Link>
  </div>
  </div>
  </div>
 
- <div className="bg-white rounded-[2rem] p-8 border border-slate-100 shadow-sm">
- <h4 className="text-[10px] font-bold text-slate-400 tracking-tight mb-6 flex items-center gap-2">
- <AlertTriangle size={14} className="text-rose-500" /> Alerta de Inventario
+ <div className="bg-white rounded-xl sm:rounded-2xl p-4 sm:p-5 border border-slate-100 shadow-xs">
+ <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-3 flex items-center gap-1.5">
+ <AlertTriangle size={13} className="text-rose-500" /> Alerta de Inventario
  </h4>
- <div className="space-y-4">
- <div className="flex items-center justify-between p-4 bg-rose-50 rounded-2xl border border-rose-100">
+ <div className="space-y-3">
+ <div className="flex items-center justify-between p-3 bg-rose-50 rounded-xl border border-rose-100">
  <span className="text-xs font-bold text-slate-800 tracking-tight">Productos con Bajo Stock</span>
- <span className="text-lg font-bold text-rose-600">{stats.admin?.criticalProductsCount}</span>
+ <span className="text-base font-black text-rose-600">{stats.admin?.criticalProductsCount}</span>
  </div>
- <Link href="/inventory/stock" className="block text-center text-[10px] font-bold text-blue-600 tracking-tight hover:underline">Ver Inventario Total</Link>
+ <Link href="/inventory/stock" className="block text-center text-[11px] font-bold text-blue-600 tracking-tight hover:underline">Ver Inventario Total</Link>
  </div>
  </div>
  </div>
@@ -800,134 +799,133 @@ export function DashboardShell({ user, stats, localIp }: DashboardShellProps) {
  }
  }
 
- return (
- <div className="space-y-12 pb-20 max-w-[1700px] mx-auto animate-in fade-in slide-in-from-bottom-4 duration-1000">
- 
- {/* Hero Section */}
- <WelcomeHero 
- userName={user.display_name} 
- roleName={roleName} 
- area={user.area}
- companyName={companyName} 
- viewMode={viewMode}
- companySlug={user.company_slug}
- localIp={localIp}
- />
+  return (
+    <div className="space-y-4 sm:space-y-6 pb-12 max-w-[1700px] mx-auto animate-in fade-in slide-in-from-bottom-2 duration-500">
+      
+      {/* Hero Section */}
+      <WelcomeHero 
+        userName={user.display_name} 
+        roleName={roleName} 
+        area={user.area}
+        companyName={companyName} 
+        viewMode={viewMode}
+        companySlug={user.company_slug}
+        localIp={localIp}
+      />
 
- {/* Switcher de Vista removed for unified experience */}
+      {/* Switcher de Vista removed for unified experience */}
 
- {/* Attendance for Workers */}
- {viewMode === 'WORKER' && (
- <AttendanceMarker initialStatus={stats.todayAttendance} />
- )}
+      {/* Attendance for Workers */}
+      {viewMode === 'WORKER' && (
+        <AttendanceMarker initialStatus={stats.todayAttendance} />
+      )}
 
- {/* Main Stats Segment */}
- {renderDashboardWidgets()}
+      {/* Main Stats Segment */}
+      {renderDashboardWidgets()}
 
- {/* Comunicados de Seguridad Transversales (Nueva Sección) */}
- {stats.transversalSoma && (
- <div className="bg-slate-50 border border-slate-200 p-10 rounded-[2rem] shadow-sm overflow-hidden relative group">
- <div className="absolute top-0 right-0 p-12 opacity-[0.03] scale-150 group-hover:scale-125 transition-transform duration-1000">
- <Shield size={200} />
- </div>
- <div className="relative z-10 flex flex-col md:flex-row gap-10 items-center justify-between">
- <div>
- <h3 className="text-2xl font-bold text-slate-800 flex items-center gap-4">
- <div className="w-10 h-10 bg-emerald-100 text-emerald-600 rounded-xl flex items-center justify-center">
- <ShieldCheck size={24} />
- </div>
- Seguridad Industrial Inthaly
- </h3>
- <p className="text-slate-500 font-bold mt-2 max-w-md">Comunicados y alertas activas para todo el personal operativo en cumplimiento con estándares HSEC.</p>
- </div>
- <div className="flex flex-wrap gap-6">
- {stats.transversalSoma.lastTalk && (
- <div 
- onClick={() => setSelectedTalk(stats.transversalSoma.lastTalk)}
- className="bg-white border border-slate-100 p-5 rounded-2xl flex items-center gap-5 hover:border-blue-200 hover:shadow-lg transition-all cursor-pointer"
- >
- <div className="w-12 h-12 rounded-xl bg-blue-50 text-blue-500 flex items-center justify-center"><MessageSquare size={24}/></div>
- <div>
- <span className="block text-[10px] font-bold text-blue-600 tracking-tight mb-1">Última Charla</span>
- <span className="block text-slate-800 font-bold keep-case">{stats.transversalSoma.lastTalk.topic}</span>
- </div>
- </div>
- )}
- {stats.transversalSoma.lastTraining && (
- <div 
- onClick={() => setSelectedTraining(stats.transversalSoma.lastTraining)}
- className="bg-white border border-slate-100 p-5 rounded-2xl flex items-center gap-5 hover:border-emerald-200 hover:shadow-lg transition-all cursor-pointer"
- >
- <div className="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-500 flex items-center justify-center"><GraduationCap size={24}/></div>
- <div>
- <span className="block text-[10px] font-bold text-emerald-600 tracking-tight mb-1">Capacitación</span>
- <span className="block text-slate-800 font-bold keep-case">{stats.transversalSoma.lastTraining.title}</span>
- </div>
- </div>
- )}
- </div>
- </div>
- </div>
- )}
+      {/* Comunicados de Seguridad Transversales (Nueva Sección) */}
+      {stats.transversalSoma && (
+        <div className="bg-white border border-slate-200/80 p-4 sm:p-5 rounded-xl shadow-xs overflow-hidden relative group">
+          <div className="absolute top-0 right-0 p-8 opacity-[0.03] scale-150 group-hover:scale-125 transition-transform duration-1000">
+            <Shield size={160} />
+          </div>
+          <div className="relative z-10 flex flex-col md:flex-row gap-4 sm:gap-6 items-center justify-between">
+            <div>
+              <h3 className="text-base sm:text-lg font-bold text-slate-800 flex items-center gap-2.5">
+                <div className="w-8 h-8 bg-emerald-100 text-emerald-600 rounded-lg flex items-center justify-center">
+                  <ShieldCheck size={18} />
+                </div>
+                Seguridad Industrial Inthaly
+              </h3>
+              <p className="text-slate-500 text-xs mt-1 max-w-md">Comunicados y alertas activas para todo el personal operativo en cumplimiento con estándares HSEC.</p>
+            </div>
+            <div className="flex flex-wrap gap-3">
+              {stats.transversalSoma.lastTalk && (
+                <div 
+                  onClick={() => setSelectedTalk(stats.transversalSoma.lastTalk)}
+                  className="bg-slate-50 border border-slate-200/60 p-3 rounded-xl flex items-center gap-3 hover:border-blue-200 hover:shadow-xs transition-all cursor-pointer"
+                >
+                  <div className="w-9 h-9 rounded-lg bg-blue-50 text-blue-500 flex items-center justify-center"><MessageSquare size={18}/></div>
+                  <div>
+                    <span className="block text-[10px] font-bold text-blue-600 uppercase tracking-wider mb-0.5">Última Charla</span>
+                    <span className="block text-xs text-slate-800 font-bold keep-case">{stats.transversalSoma.lastTalk.topic}</span>
+                  </div>
+                </div>
+              )}
+              {stats.transversalSoma.lastTraining && (
+                <div 
+                  onClick={() => setSelectedTraining(stats.transversalSoma.lastTraining)}
+                  className="bg-slate-50 border border-slate-200/60 p-3 rounded-xl flex items-center gap-3 hover:border-emerald-200 hover:shadow-xs transition-all cursor-pointer"
+                >
+                  <div className="w-9 h-9 rounded-lg bg-emerald-50 text-emerald-500 flex items-center justify-center"><GraduationCap size={18}/></div>
+                  <div>
+                    <span className="block text-[10px] font-bold text-emerald-600 uppercase tracking-wider mb-0.5">Capacitación</span>
+                    <span className="block text-xs text-slate-800 font-bold keep-case">{stats.transversalSoma.lastTraining.title}</span>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
- {/* Listas Secundarias Dinámicas */}
- <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
- {stats.recentIncidents && (['ADMIN', 'SOMA', 'OPERACIONES', 'GERENTE'].includes(viewMode)) && (
- <ListWidget 
- title="Siguimiento de Incidencias"
- icon={Activity}
- color="text-orange-600"
- href="/incidencias?category=soma"
- items={stats.recentIncidents.map((i: any) => ({
- title: i.equipment_name || 'Incidente Reportado',
- subtitle: i.description,
- badge: i.severity,
- badgeColor: i.severity === 'critica' || i.severity === 'fatal' ? 'bg-rose-100 text-rose-700 border-rose-200' : 'bg-orange-100 text-orange-700 border-orange-200'
- }))}
- />
- )}
+      {/* Listas Secundarias Dinámicas */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-5">
+        {stats.recentIncidents && (['ADMIN', 'SOMA', 'OPERACIONES', 'GERENTE'].includes(viewMode)) && (
+          <ListWidget 
+            title="Siguimiento de Incidencias"
+            icon={Activity}
+            color="text-orange-600"
+            href="/incidencias?category=soma"
+            items={stats.recentIncidents.map((i: any) => ({
+              title: i.equipment_name || 'Incidente Reportado',
+              subtitle: i.description,
+              badge: i.severity,
+              badgeColor: i.severity === 'critica' || i.severity === 'fatal' ? 'bg-rose-100 text-rose-700 border-rose-200' : 'bg-orange-100 text-orange-700 border-orange-200'
+            }))}
+          />
+        )}
 
- {stats.pendingRequirements && (['ADMIN', 'OPERACIONES', 'ALMACEN', 'COCINA', 'GERENTE'].includes(viewMode)) && (
- <ListWidget 
- title="Logística y Requerimientos"
- icon={ShoppingCart}
- color="text-indigo-600"
- href="/requerimientos"
- items={stats.pendingRequirements.map((r: any) => ({
- title: r.title || r.description,
- subtitle: `Prioridad: ${r.priority}`,
- badge: r.status,
- badgeColor: 'bg-blue-100 text-blue-700 border-blue-200'
- }))}
- />
- )}
- </div>
+        {stats.pendingRequirements && (['ADMIN', 'OPERACIONES', 'ALMACEN', 'COCINA', 'GERENTE'].includes(viewMode)) && (
+          <ListWidget 
+            title="Logística y Requerimientos"
+            icon={ShoppingCart}
+            color="text-indigo-600"
+            href="/requerimientos"
+            items={stats.pendingRequirements.map((r: any) => ({
+              title: r.title || r.description,
+              subtitle: `Prioridad: ${r.priority}`,
+              badge: r.status,
+              badgeColor: 'bg-blue-100 text-blue-700 border-blue-200'
+            }))}
+          />
+        )}
+      </div>
 
- {/* Panel Personal de Trabajador (si aplica) */}
- {user.worker_id && viewMode !== 'WORKER' && stats.personalStats && (
- <div className="pt-16 border-t border-slate-100 space-y-12 animate-in fade-in slide-in-from-bottom-8 duration-1000 delay-300">
- <div className="flex items-center gap-8">
- <div className="w-20 h-20 bg-slate-900 text-white rounded-[2rem] flex items-center justify-center shadow-2xl relative">
- <ShieldAlert size={36} />
- <div className="absolute -top-2 -right-2 w-6 h-6 bg-rose-500 rounded-full border-4 border-white" />
- </div>
- <div>
- <h3 className="text-4xl font-bold text-slate-800 tracking-tighter">Mi Panel Personal</h3>
- <p className="text-slate-500 font-bold text-xl mt-1">Resumen de tus beneficios y equipos vinculados</p>
- </div>
- </div>
- <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
- <div className="bg-white p-10 rounded-[2rem] shadow-xl border border-slate-100"><PPEList deliveries={stats.personalStats.ppe} isWorker={true} /></div>
- <div className="space-y-10">
- <div className="bg-white p-10 rounded-[2rem] shadow-xl border border-slate-100"><BonusList bonuses={stats.personalStats.bonuses} isWorker={true} /></div>
- <div className="bg-white p-10 rounded-[2rem] shadow-xl border border-slate-100"><TransportList payments={stats.personalStats.transport} isWorker={true} /></div>
- </div>
- </div>
- </div>
- )}
- 
- {/* Modal Detalle Charla */}
- {selectedTalk && (
+      {/* Panel Personal de Trabajador (si aplica) */}
+      {user.worker_id && viewMode !== 'WORKER' && stats.personalStats && (
+        <div className="pt-8 border-t border-slate-200/80 space-y-4 sm:space-y-5 animate-in fade-in slide-in-from-bottom-4 duration-500">
+          <div className="flex items-center gap-4">
+            <div className="w-11 h-11 bg-slate-900 text-white rounded-xl flex items-center justify-center shadow-md relative">
+              <ShieldAlert size={22} />
+              <div className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-rose-500 rounded-full border-2 border-white" />
+            </div>
+            <div>
+              <h3 className="text-lg sm:text-xl font-bold text-slate-800 tracking-tight">Mi Panel Personal</h3>
+              <p className="text-slate-500 text-xs font-normal mt-0.5">Resumen de tus beneficios y equipos vinculados</p>
+            </div>
+          </div>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-5">
+            <div className="bg-white p-4 sm:p-5 rounded-xl shadow-xs border border-slate-100"><PPEList deliveries={stats.personalStats.ppe} isWorker={true} /></div>
+            <div className="space-y-4">
+              <div className="bg-white p-4 sm:p-5 rounded-xl shadow-xs border border-slate-100"><BonusList bonuses={stats.personalStats.bonuses} isWorker={true} /></div>
+              <div className="bg-white p-4 sm:p-5 rounded-xl shadow-xs border border-slate-100"><TransportList payments={stats.personalStats.transport} isWorker={true} /></div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {selectedTalk && (
  <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
  <div className="bg-white rounded-3xl p-8 max-w-lg w-full shadow-2xl border border-slate-100 animate-in zoom-in-95 duration-200 relative">
  <button 

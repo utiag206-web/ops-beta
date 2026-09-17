@@ -16,43 +16,43 @@ export const getUserSession = cache(async function getUserSession() {
  redirect('/login')
  }
 
- const adminSupabase = await createAdminClient()
- const { data: userData, error: userError } = await adminSupabase
- .from('users')
- .select('*, companies(id, name, logo_url)')
- .eq('id', user.id)
- .maybeSingle()
+  const adminSupabase = await createAdminClient()
+  const { data: userData, error: userError } = await adminSupabase
+  .from('users')
+  .select('*, companies(id, name, logo_url, status)')
+  .eq('id', user.id)
+  .maybeSingle()
 
- if (userError || !userData) {
- return { user, extendedUser: null as any }
- }
+  if (userError || !userData) {
+  return { user, extendedUser: null as any }
+  }
 
- // Natively registered role and helper flags
- const rawRoleId = String(userData?.role_id || userData?.role || '').toLowerCase()
- const isSuperAdminUser = rawRoleId === 'super_admin' || rawRoleId === 'superadmin'
- 
- // Determine active company context
- const finalCompanyId = isSuperAdminUser ? (activeCompanyId || null) : userData.company_id
- const impersonating = !!(isSuperAdminUser && activeCompanyId)
- 
- const isUuid = (val: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(val)
+  // Natively registered role and helper flags
+  const rawRoleId = String(userData?.role_id || userData?.role || '').toLowerCase()
+  const isSuperAdminUser = rawRoleId === 'super_admin' || rawRoleId === 'superadmin'
+  
+  // Determine active company context
+  const finalCompanyId = isSuperAdminUser ? (activeCompanyId || null) : userData.company_id
+  const impersonating = !!(isSuperAdminUser && activeCompanyId)
+  
+  const isUuid = (val: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(val)
 
-  // Dynamic Parallel Context Resolution (Role, Worker, Company)
-  const rolePromise = (finalCompanyId && isUuid(finalCompanyId))
-    ? adminSupabase.from('user_roles').select('role_id').eq('user_id', user.id).eq('company_id', finalCompanyId).maybeSingle()
-    : Promise.resolve({ data: null })
+   // Dynamic Parallel Context Resolution (Role, Worker, Company)
+   const rolePromise = (finalCompanyId && isUuid(finalCompanyId))
+     ? adminSupabase.from('user_roles').select('role_id').eq('user_id', user.id).eq('company_id', finalCompanyId).maybeSingle()
+     : Promise.resolve({ data: null })
 
-  const workerPromise = (userData.worker_id && isUuid(userData.worker_id))
-    ? (finalCompanyId && isUuid(finalCompanyId)
-        ? adminSupabase.from('workers').select('id, status').eq('company_id', finalCompanyId).eq('id', userData.worker_id).maybeSingle()
-        : adminSupabase.from('workers').select('id, status').eq('id', userData.worker_id).maybeSingle())
-    : Promise.resolve({ data: null })
+   const workerPromise = (userData.worker_id && isUuid(userData.worker_id))
+     ? (finalCompanyId && isUuid(finalCompanyId)
+         ? adminSupabase.from('workers').select('id, status').eq('company_id', finalCompanyId).eq('id', userData.worker_id).maybeSingle()
+         : adminSupabase.from('workers').select('id, status').eq('id', userData.worker_id).maybeSingle())
+     : Promise.resolve({ data: null })
 
-  const companyPromise = (impersonating && finalCompanyId && isUuid(finalCompanyId) && finalCompanyId !== userData.company_id)
-    ? adminSupabase.from('companies').select('id, name, logo_url').eq('id', finalCompanyId).maybeSingle()
-    : Promise.resolve({ data: userData.companies })
+   const companyPromise = (impersonating && finalCompanyId && isUuid(finalCompanyId) && finalCompanyId !== userData.company_id)
+     ? adminSupabase.from('companies').select('id, name, logo_url, status').eq('id', finalCompanyId).maybeSingle()
+     : Promise.resolve({ data: userData.companies })
 
-  const [activeRoleData, workerData, companyRes] = await Promise.all([rolePromise, workerPromise, companyPromise])
+   const [activeRoleData, workerData, companyRes] = await Promise.all([rolePromise, workerPromise, companyPromise])
 
   let rbacRole: string = 'trabajador'
   if (activeRoleData?.data?.role_id) {
@@ -80,6 +80,24 @@ export const getUserSession = cache(async function getUserSession() {
 
  const companyObj = Array.isArray(companyData) ? companyData[0] : companyData
  const companySlug = companyObj?.slug || (companyObj?.name ? slugify(companyObj.name) : 'empresa')
+
+  // Proteger acceso a rutas autenticadas: Empresas o usuarios pendientes/inactivos no pueden operar
+  if (!isSuperAdminUser) {
+    const activeCompanyStatus = (companyObj?.status || '').toLowerCase()
+    const activeUserStatus = (userData?.status || '').toLowerCase()
+
+    if (activeCompanyStatus === 'pending' || activeUserStatus === 'pending') {
+      redirect('/login?error=pending')
+    }
+    if (
+      activeCompanyStatus === 'inactive' ||
+      activeCompanyStatus === 'rejected' ||
+      activeUserStatus === 'inactive' ||
+      activeUserStatus === 'rejected'
+    ) {
+      redirect('/login?error=inactive')
+    }
+  }
 
  const extendedUser = {
  id: user.id,

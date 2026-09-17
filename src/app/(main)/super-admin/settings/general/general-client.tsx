@@ -100,51 +100,51 @@ export function GeneralSettingsClient({ initialData }: GeneralSettingsClientProp
     }
   }
 
-  const inputClasses = "h-11 w-full rounded-xl border border-slate-200 px-4 text-sm font-medium text-slate-700 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all outline-none bg-slate-50/50 focus:bg-white"
-  const labelClasses = "text-xs font-bold text-slate-500 mb-1.5 block tracking-tight uppercase"
+  const inputClasses = "h-9 sm:h-9.5 w-full rounded-lg border border-slate-200 px-3 text-xs font-medium text-slate-700 focus:border-blue-500 focus:ring-3 focus:ring-blue-500/10 transition-all outline-none bg-white focus:bg-white"
+  const labelClasses = "text-[11px] font-bold text-slate-500 mb-1 block tracking-tight uppercase"
 
   return (
-    <div className="max-w-4xl space-y-6 pb-20">
+    <div className="max-w-4xl space-y-4 sm:space-y-5 pb-12">
       
       {/* Navigation */}
       <div>
         <Link 
           href="/super-admin/settings"
-          className="inline-flex items-center gap-2 text-sm font-bold text-slate-400 hover:text-blue-600 transition-colors mb-4"
+          className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-400 hover:text-blue-600 transition-colors mb-3"
         >
-          <ArrowLeft size={16} />
+          <ArrowLeft size={14} />
           Configuración
         </Link>
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
           <div>
-            <h1 className="text-2xl sm:text-3xl font-black text-slate-800 tracking-tight">Configuración General</h1>
-            <p className="text-slate-500 font-medium text-sm mt-1">Identidad institucional y preferencias regionales del ecosistema.</p>
+            <h1 className="text-xl sm:text-2xl font-bold text-slate-800 tracking-tight">Configuración General</h1>
+            <p className="text-xs sm:text-sm text-slate-500 mt-0.5">Identidad institucional y preferencias regionales del ecosistema.</p>
           </div>
           
           <button 
             onClick={handleSave}
             disabled={isSaving}
-            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl font-bold text-sm transition-all shadow-md shadow-blue-200 disabled:opacity-50 disabled:cursor-not-allowed shrink-0 w-full sm:w-auto justify-center"
+            className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl font-bold text-xs transition-all shadow-sm shadow-blue-200 disabled:opacity-50 disabled:cursor-not-allowed shrink-0 w-full sm:w-auto justify-center"
           >
-            <Save size={18} />
+            <Save size={15} />
             {isSaving ? 'Guardando...' : 'Guardar Cambios'}
           </button>
         </div>
       </div>
 
       {/* Identidad del Ecosistema */}
-      <div className="bg-white rounded-[2rem] border border-slate-100 shadow-sm overflow-hidden">
-        <div className="p-6 md:p-8 border-b border-slate-50 flex items-center gap-4">
-          <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center shrink-0">
-            <Building2 size={24} />
+      <div className="bg-white rounded-xl sm:rounded-2xl border border-slate-100 shadow-xs overflow-hidden">
+        <div className="p-4 sm:p-5 border-b border-slate-50 flex items-center gap-3">
+          <div className="w-9 h-9 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center shrink-0">
+            <Building2 size={18} />
           </div>
           <div>
-            <h2 className="text-lg font-black text-slate-800">Identidad del Ecosistema</h2>
-            <p className="text-xs font-medium text-slate-500 mt-0.5">Nombre, logo y colores base de la plataforma SaaS.</p>
+            <h2 className="text-sm sm:text-base font-bold text-slate-800">Identidad del Ecosistema</h2>
+            <p className="text-[11px] sm:text-xs text-slate-500 mt-0.5">Nombre, logo y colores base de la plataforma SaaS.</p>
           </div>
         </div>
         
-        <div className="p-6 md:p-8 grid grid-cols-1 md:grid-cols-2 gap-6 bg-slate-50/30">
+        <div className="p-4 sm:p-5 grid grid-cols-1 sm:grid-cols-2 gap-3.5 sm:gap-4 bg-slate-50/30">
           <div className="md:col-span-2">
             <label className={labelClasses}>Nombre del Ecosistema</label>
             <input 
@@ -254,18 +254,18 @@ export function GeneralSettingsClient({ initialData }: GeneralSettingsClientProp
       </div>
 
       {/* Preferencias Regionales */}
-      <div className="bg-white rounded-[2rem] border border-slate-100 shadow-sm overflow-hidden">
-        <div className="p-6 md:p-8 border-b border-slate-50 flex items-center gap-4">
-          <div className="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center shrink-0">
-            <Globe2 size={24} />
+      <div className="bg-white rounded-xl sm:rounded-2xl border border-slate-100 shadow-xs overflow-hidden">
+        <div className="p-4 sm:p-5 border-b border-slate-50 flex items-center gap-3">
+          <div className="w-9 h-9 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center shrink-0">
+            <Globe2 size={18} />
           </div>
           <div>
-            <h2 className="text-lg font-black text-slate-800">Preferencias Regionales</h2>
-            <p className="text-xs font-medium text-slate-500 mt-0.5">Formatos por defecto para nuevas empresas e usuarios.</p>
+            <h2 className="text-sm sm:text-base font-bold text-slate-800">Preferencias Regionales</h2>
+            <p className="text-[11px] sm:text-xs text-slate-500 mt-0.5">Formatos por defecto para nuevas empresas e usuarios.</p>
           </div>
         </div>
         
-        <div className="p-6 md:p-8 grid grid-cols-1 md:grid-cols-2 gap-6 bg-slate-50/30">
+        <div className="p-4 sm:p-5 grid grid-cols-1 sm:grid-cols-2 gap-3.5 sm:gap-4 bg-slate-50/30">
           <div>
             <label className={labelClasses}>Idioma Predeterminado</label>
             <select 

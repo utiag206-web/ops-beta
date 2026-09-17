@@ -12,9 +12,9 @@ export function SuperAdminActions() {
  <div className="flex items-center gap-2">
  <button 
  onClick={() => setIsModalOpen(true)}
- className="flex items-center gap-2 bg-slate-900 text-white px-6 py-3 rounded-2xl font-black hover:bg-slate-800 transition-all shadow-xl shadow-slate-900/10"
+ className="flex items-center gap-2 bg-slate-900 text-white px-4 py-2 sm:py-2.5 rounded-xl text-xs font-bold hover:bg-slate-800 transition-all shadow-md shadow-slate-900/10 cursor-pointer"
  >
- <Plus size={20} strokeWidth={3} />
+ <Plus size={16} strokeWidth={2.5} />
  Nueva Empresa
  </button>
  </div>

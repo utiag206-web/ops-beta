@@ -2,146 +2,141 @@ import { getUserSession } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { getAllCompanies, getAllUsers, getSystemStats } from './actions'
 import { 
- Building2, Users, Shield, ShieldOff,
- Activity, ArrowUpRight, BadgeCheck,
- Globe, Server, Database, Building,
- ExternalLink, Plus, Search, FlaskConical, Globe2 
+  Building2, Users, Shield, ShieldOff,
+  Activity, ArrowUpRight, BadgeCheck,
+  Globe, Server, Database, Building,
+  ExternalLink, Plus, Search, FlaskConical, Globe2, Clock 
 } from 'lucide-react'
 import Link from 'next/link'
 import { CompaniesList } from '@/components/super-admin/companies-list'
 import { SuperAdminActions } from '@/components/super-admin/super-admin-actions'
 
 export default async function SuperAdminPage() {
- const { extendedUser } = await getUserSession()
+  const { extendedUser } = await getUserSession()
 
- const role = extendedUser?.role_id?.toLowerCase()
- if (role !== 'super_admin' && role !== 'superadmin') {
- redirect('/dashboard')
- }
+  const role = extendedUser?.role_id?.toLowerCase()
+  if (role !== 'super_admin' && role !== 'superadmin') {
+    redirect('/dashboard')
+  }
 
- let companies: any[] = []
- let users: any[] = []
- let stats: any = { totalCompanies: 0, realCompanies: 0, testCompanies: 0, suspendedCompanies: 0, totalUsers: 0 }
+  let companies: any[] = []
+  let users: any[] = []
+  let stats: any = { 
+    totalCompanies: 0, 
+    realCompanies: 0, 
+    testCompanies: 0, 
+    suspendedCompanies: 0, 
+    pendingCompanies: 0, 
+    totalUsers: 0 
+  }
 
- try {
- const [companiesRes, usersRes, statsRes] = await Promise.all([
- getAllCompanies(),
- getAllUsers(),
- getSystemStats()
- ])
- companies = companiesRes
- users = usersRes
- stats = statsRes
- } catch (error: any) {
- console.error("[SUPER_ADMIN_PAGE_CRITICAL] Failed to load global data:", error.message)
- }
+  try {
+    const [companiesRes, usersRes, statsRes] = await Promise.all([
+      getAllCompanies(),
+      getAllUsers(),
+      getSystemStats()
+    ])
+    companies = companiesRes
+    users = usersRes
+    stats = statsRes
+  } catch (error: any) {
+    console.error("[SUPER_ADMIN_PAGE_CRITICAL] Failed to load global data:", error.message)
+  }
 
- return (
- <div className="space-y-8 animate-in fade-in duration-700 min-h-screen pb-20">
- {/* Header */}
- <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
- <div>
- <h1 className="text-4xl font-black tracking-tight text-slate-900 flex items-center gap-3">
- <div className="p-2 bg-slate-900 rounded-xl text-white shadow-2xl shadow-slate-900/20">
- <Shield size={32} />
- </div>
- Consola de Administración Global
- </h1>
- <p className="text-slate-500 font-medium mt-1">Gestión integral de empresas, usuarios y recursos del Ecosistema Inthaly.</p>
- </div>
-
- <SuperAdminActions />
- </div>
-
- {/* Global Metrics */}
- <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
- <div className="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-sm group">
- <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center mb-4 transition-transform group-hover:scale-110">
- <Building2 size={24} />
- </div>
- <p className="text-slate-400 font-black text-[10px] tracking-tight">Empresas Totales</p>
- <h3 className="text-4xl font-black text-slate-900 mt-1">{stats.totalCompanies}</h3>
- </div>
-
- <div className="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-sm group">
- <div className="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center mb-4 transition-transform group-hover:scale-110">
- <Globe2 size={24} />
- </div>
- <p className="text-slate-400 font-black text-[10px] tracking-tight">Empresas Reales</p>
- <h3 className="text-4xl font-black text-slate-900 mt-1">{stats.realCompanies}</h3>
- </div>
-
- <div className="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-sm group">
- <div className="w-12 h-12 bg-purple-50 text-purple-600 rounded-2xl flex items-center justify-center mb-4 transition-transform group-hover:scale-110">
- <FlaskConical size={24} />
- </div>
- <p className="text-slate-400 font-black text-[10px] tracking-tight">De Prueba</p>
- <h3 className="text-4xl font-black text-slate-900 mt-1">{stats.testCompanies}</h3>
- </div>
-
- <div className="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-sm group">
- <div className="w-12 h-12 bg-rose-50 text-rose-600 rounded-2xl flex items-center justify-center mb-4 transition-transform group-hover:scale-110">
- <ShieldOff size={24} />
- </div>
- <p className="text-slate-400 font-black text-[10px] tracking-tight">Suspendidas</p>
- <h3 className="text-4xl font-black text-slate-900 mt-1">{stats.suspendedCompanies}</h3>
- </div>
-
- <div className="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-sm group">
- <div className="w-12 h-12 bg-purple-50 text-purple-600 rounded-2xl flex items-center justify-center mb-4 transition-transform group-hover:scale-110">
- <Users size={24} />
- </div>
- <p className="text-slate-400 font-black text-[10px] tracking-tight">Usuarios Globales</p>
- <h3 className="text-4xl font-black text-slate-900 mt-1">{stats.totalUsers}</h3>
- </div>
- </div>
-
- <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
- {/* Companies List (Main Section) */}
- <div className="xl:col-span-2">
- <CompaniesList companies={companies} />
- </div>
-
- {/* Global Users List (Sidebar Section) */}
- <div className="bg-white rounded-[2.5rem] border border-slate-100 shadow-sm overflow-hidden flex flex-col h-full">
- <div className="p-8 border-b border-slate-50 flex items-center justify-between">
- <div>
- <h2 className="text-xl font-black text-slate-900">Accesos Globales</h2>
- <p className="text-slate-400 text-sm font-medium">{users.length} usuarios registrados en el ecosistema</p>
- </div>
- <Database size={20} className="text-slate-400" />
- </div>
- <div className="flex-1 overflow-y-auto custom-scrollbar max-h-[600px]">
- <div className="divide-y divide-slate-50">
- {users.map((user: any) => {
-    const isSuper = user.role_id?.toLowerCase() === 'super_admin' || user.role_id?.toLowerCase() === 'superadmin'
-    return (
-      <div key={user.id} className={`p-6 hover:bg-slate-50 transition-colors ${isSuper ? 'bg-blue-50/30' : ''}`}>
-        <div className="flex items-center justify-between gap-4">
-          <div className="flex flex-col">
-            <span className="font-bold text-slate-800 leading-tight flex items-center gap-1.5">
-              {isSuper && <Shield size={14} className="text-blue-600 shrink-0" />}
-              {user.name}
-            </span>
-            <span className="text-xs text-slate-400">{user.email}</span>
-          </div>
-          <span className={`px-2.5 py-1 rounded-lg text-[9px] font-black tracking-wider uppercase ${
-            isSuper ? 'bg-blue-600 text-white shadow-sm' : 'bg-slate-100 text-slate-600'
-          }`}>
-            {user.role_id}
-          </span>
+  return (
+    <div className="space-y-2.5 sm:space-y-3 animate-in fade-in duration-500 min-h-screen pb-8">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+        <div>
+          <h1 className="text-sm sm:text-base font-bold tracking-tight text-slate-900 flex items-center gap-2">
+            <div className="p-1 bg-slate-900 rounded-md text-white shadow-2xs shrink-0">
+              <Shield size={14} />
+            </div>
+            Consola de Administración Global
+          </h1>
+          <p className="text-slate-500 text-[10px] sm:text-[11px] font-normal mt-0.5">Gestión integral de empresas, solicitudes de demo, usuarios y recursos del Ecosistema Inthaly.</p>
         </div>
-        <div className="mt-2 flex items-center gap-1 text-[10px] text-slate-500 font-bold">
-          <Building size={12} className="text-slate-300" />
-          <span>{user.companies?.name || 'ECOSISTEMA GLOBAL'}</span>
+
+        <SuperAdminActions />
+      </div>
+
+      {/* Global Metrics - Ultra Compact Horizontal SaaS Cards */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
+        <div className="bg-white px-2.5 py-1.5 sm:py-2 rounded-lg border border-slate-100 shadow-2xs group flex items-center gap-2.5">
+          <div className="w-7 h-7 bg-blue-50 text-blue-600 rounded-md flex items-center justify-center shrink-0 transition-transform group-hover:scale-105">
+            <Building2 size={14} />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-slate-400 font-bold text-[8.5px] uppercase tracking-wider truncate leading-tight">Empresas Totales</p>
+            <h3 className="text-base sm:text-lg font-black text-slate-900 leading-none mt-0.5">{stats.totalCompanies}</h3>
+          </div>
+        </div>
+
+        <div className={`px-2.5 py-1.5 sm:py-2 rounded-lg border shadow-2xs group flex items-center gap-2.5 transition-all ${
+          (stats.pendingCompanies || 0) > 0 
+            ? 'bg-amber-50/60 border-amber-200 ring-1 ring-amber-400/30' 
+            : 'bg-white border-slate-100'
+        }`}>
+          <div className={`w-7 h-7 rounded-md flex items-center justify-center shrink-0 transition-transform group-hover:scale-105 ${
+            (stats.pendingCompanies || 0) > 0 ? 'bg-amber-500 text-white shadow-2xs shadow-amber-500/20' : 'bg-amber-50 text-amber-700'
+          }`}>
+            <Clock size={14} />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-slate-400 font-bold text-[8.5px] uppercase tracking-wider truncate leading-tight">Solicitudes Pend.</p>
+            <h3 className={`text-base sm:text-lg font-black leading-none mt-0.5 ${
+              (stats.pendingCompanies || 0) > 0 ? 'text-amber-700' : 'text-slate-900'
+            }`}>
+              {stats.pendingCompanies || 0}
+            </h3>
+          </div>
+        </div>
+
+        <div className="bg-white px-2.5 py-1.5 sm:py-2 rounded-lg border border-slate-100 shadow-2xs group flex items-center gap-2.5">
+          <div className="w-7 h-7 bg-emerald-50 text-emerald-600 rounded-md flex items-center justify-center shrink-0 transition-transform group-hover:scale-105">
+            <Globe2 size={14} />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-slate-400 font-bold text-[8.5px] uppercase tracking-wider truncate leading-tight">Empresas Reales</p>
+            <h3 className="text-base sm:text-lg font-black text-slate-900 leading-none mt-0.5">{stats.realCompanies}</h3>
+          </div>
+        </div>
+
+        <div className="bg-white px-2.5 py-1.5 sm:py-2 rounded-lg border border-slate-100 shadow-2xs group flex items-center gap-2.5">
+          <div className="w-7 h-7 bg-purple-50 text-purple-600 rounded-md flex items-center justify-center shrink-0 transition-transform group-hover:scale-105">
+            <FlaskConical size={14} />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-slate-400 font-bold text-[8.5px] uppercase tracking-wider truncate leading-tight">De Prueba</p>
+            <h3 className="text-base sm:text-lg font-black text-slate-900 leading-none mt-0.5">{stats.testCompanies}</h3>
+          </div>
+        </div>
+
+        <div className="bg-white px-2.5 py-1.5 sm:py-2 rounded-lg border border-slate-100 shadow-2xs group flex items-center gap-2.5">
+          <div className="w-7 h-7 bg-rose-50 text-rose-600 rounded-md flex items-center justify-center shrink-0 transition-transform group-hover:scale-105">
+            <ShieldOff size={14} />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-slate-400 font-bold text-[8.5px] uppercase tracking-wider truncate leading-tight">Suspendidas</p>
+            <h3 className="text-base sm:text-lg font-black text-slate-900 leading-none mt-0.5">{stats.suspendedCompanies}</h3>
+          </div>
+        </div>
+
+        <div className="bg-white px-2.5 py-1.5 sm:py-2 rounded-lg border border-slate-100 shadow-2xs group flex items-center gap-2.5">
+          <div className="w-7 h-7 bg-indigo-50 text-indigo-600 rounded-md flex items-center justify-center shrink-0 transition-transform group-hover:scale-105">
+            <Users size={14} />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-slate-400 font-bold text-[8.5px] uppercase tracking-wider truncate leading-tight">Usuarios Globales</p>
+            <h3 className="text-base sm:text-lg font-black text-slate-900 leading-none mt-0.5">{stats.totalUsers}</h3>
+          </div>
         </div>
       </div>
-    )
-  })}
- </div>
- </div>
- </div>
- </div>
- </div>
- )
+
+      {/* Main Directory Area - Full Width */}
+      <div className="w-full">
+        <CompaniesList companies={companies} users={users} />
+      </div>
+    </div>
+  )
 }

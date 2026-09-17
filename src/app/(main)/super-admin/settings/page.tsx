@@ -76,31 +76,31 @@ export default async function SettingsHubPage() {
   ]
 
   return (
-    <div className="space-y-8 pb-10">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+    <div className="space-y-4 sm:space-y-5 pb-8">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-slate-800">Centro de Configuración Global</h1>
-          <p className="text-slate-500">Administración central del ecosistema, módulos y políticas transversales.</p>
+          <h1 className="text-xl sm:text-2xl font-bold text-slate-800 tracking-tight">Centro de Configuración Global</h1>
+          <p className="text-xs sm:text-sm text-slate-500 mt-0.5">Administración central del ecosistema, módulos y políticas transversales.</p>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3.5 sm:gap-4">
         {categories.map((cat, idx) => {
           const Icon = cat.icon
           return (
             <Link 
               key={idx} 
               href={cat.href}
-              className="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-sm hover:border-blue-200 hover:shadow-md transition-all group cursor-pointer relative"
+              className="bg-white p-4 sm:p-5 rounded-xl sm:rounded-2xl border border-slate-100 shadow-xs hover:border-blue-200 hover:shadow-md transition-all group cursor-pointer relative"
             >
-              <div className={`w-12 h-12 rounded-2xl flex items-center justify-center mb-4 transition-transform group-hover:scale-110 ${cat.colorClass}`}>
-                <Icon size={24} />
+              <div className={`w-10 h-10 rounded-xl flex items-center justify-center mb-3 transition-transform group-hover:scale-105 ${cat.colorClass}`}>
+                <Icon size={20} />
               </div>
-              <h3 className="text-lg font-black text-slate-800 mt-2 pr-6 leading-tight">{cat.title}</h3>
-              <p className="text-xs font-medium text-slate-500 mt-1 leading-relaxed">{cat.description}</p>
+              <h3 className="text-sm sm:text-base font-bold text-slate-800 mt-1 pr-6 leading-snug tracking-tight">{cat.title}</h3>
+              <p className="text-[11px] sm:text-xs text-slate-500 mt-1 leading-relaxed">{cat.description}</p>
               
-              <div className="absolute top-6 right-6 opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all text-blue-500">
-                <ChevronRight size={20} />
+              <div className="absolute top-4 sm:top-5 right-4 sm:right-5 opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all text-blue-500">
+                <ChevronRight size={18} />
               </div>
             </Link>
           )

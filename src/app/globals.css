@@ -56,7 +56,7 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
-  @apply antialiased text-sm md:text-base;
+  @apply antialiased text-sm text-slate-800;
 }
 
 
@@ -196,224 +196,169 @@ div.fixed.inset-0.flex.items-center.justify-center {
 
 /* --- TYPOGRAPHIC HIERARCHY & PREMIUM ENTERPRISE REFINEMENT --- */
 h1 {
-  font-size: 2.25rem; /* text-3xl/4xl */
-  font-weight: 900; /* font-black */
-  letter-spacing: -0.03em; /* tracking-tight */
+  font-size: clamp(1.125rem, 1.35vw, 1.375rem); /* 18px - 22px */
+  font-weight: 800;
+  letter-spacing: -0.025em;
+  line-height: 1.25;
 }
 
 h2 {
-  font-size: 1.5rem; /* text-2xl */
-  font-weight: 800; /* font-extrabold */
-  letter-spacing: -0.025em;
+  font-size: clamp(0.95rem, 1.1vw, 1.125rem); /* 15px - 18px */
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.3;
 }
 
 h3 {
-  font-size: 1.125rem; /* text-lg */
+  font-size: clamp(0.85rem, 0.95vw, 1rem); /* 13.5px - 16px */
   font-weight: 700;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.015em;
+  line-height: 1.35;
 }
 
 label, 
 .form-label, 
 .text-\[10px\].font-bold.text-slate-400 {
-  font-size: 0.75rem !important;
-  font-weight: 600 !important; /* rebajado de 800 */
+  font-size: 0.6875rem !important; /* 11px */
+  font-weight: 600 !important;
   color: #64748b !important; 
+  letter-spacing: 0.04em;
 }
 
 th {
-  font-size: 0.75rem !important; 
-  font-weight: 600 !important;
+  font-size: 0.6875rem !important; /* 11px */
+  font-weight: 700 !important;
   color: #475569 !important; 
   background-color: #f8fafc !important;
-  padding-top: 0.75rem !important;
-  padding-bottom: 0.75rem !important; 
+  padding-top: 0.5rem !important;
+  padding-bottom: 0.5rem !important;
+  padding-left: 0.75rem !important;
+  padding-right: 0.75rem !important;
+  letter-spacing: 0.05em;
 }
 
 td {
-  font-size: 0.8125rem !important;
+  font-size: 0.75rem !important; /* 12px */
   color: #334155;
-  padding-top: 0.75rem !important;
-  padding-bottom: 0.75rem !important;
+  padding-top: 0.5rem !important;
+  padding-bottom: 0.5rem !important;
+  padding-left: 0.75rem !important;
+  padding-right: 0.75rem !important;
 }
 
-/* --- HIGH DENSITY UI (ERP STYLE) --- */
-.space-y-6 > :not([hidden]) ~ :not([hidden]) {
-  margin-top: 1rem !important; /* from 1.5rem to 1rem */
+/* --- ENTERPRISE HIGH-DENSITY UI TOKENS (GLOBAL ACROSS ALL BREAKPOINTS) --- */
+
+/* Card Radii: Eliminate bulbous consumer bubbles and standardize on sleek 12px SaaS radius */
+.rounded-\[2rem\],
+.rounded-\[2\.2rem\],
+.rounded-\[2\.5rem\],
+.rounded-\[3rem\],
+.rounded-3xl,
+.rounded-2xl {
+  border-radius: 0.75rem !important;
 }
 
-.space-y-8 > :not([hidden]) ~ :not([hidden]) {
-  margin-top: 1.25rem !important; /* from 2rem to 1.25rem */
-}
-
-.p-8 {
-  padding: 1.25rem !important; /* from 2rem to 1.25rem */
+/* Standardize Card Paddings */
+.p-8, .p-10, .p-12 {
+  padding: 1.125rem !important;
 }
 
 .p-6 {
-  padding: 1rem !important; /* from 1.5rem to 1rem */
+  padding: 0.875rem !important;
 }
 
-.rounded-\[2rem\] {
-  border-radius: 1rem !important;
+.p-5 {
+  padding: 0.75rem !important;
 }
 
-.rounded-\[2\.5rem\] {
-  border-radius: 1.25rem !important;
+/* Tighten Vertical Separation between layout sections */
+.space-y-6 > :not([hidden]) ~ :not([hidden]) {
+  margin-top: 0.875rem !important; /* 14px */
 }
 
-/* Metric / KPI highlighting */
+.space-y-8 > :not([hidden]) ~ :not([hidden]) {
+  margin-top: 1.125rem !important; /* 18px */
+}
+
+/* KPI / Metric Styling */
 .metric-value {
   font-weight: 900 !important;
-  letter-spacing: -0.04em !important;
-  color: #0f172a; /* solid branding black */
+  letter-spacing: -0.035em !important;
+  color: #0f172a;
 }
 
 /* Subtitles, hints and secondary text refinement */
 .text-slate-400, 
 .text-gray-400 {
-  color: #64748b; /* slate-500 for better readability contrast */
-  font-weight: 600;
+  color: #64748b;
+  font-weight: 500;
 }
 
 .text-slate-500, 
 .text-gray-500 {
-  color: #475569; /* slate-600 */
-  font-weight: 600;
+  color: #475569;
+  font-weight: 500;
 }
 
-/* --- PREMIUM MOBILE-FIRST RESPONSIVE OPTIMIZATIONS --- */
+/* Form inputs: ergonomic enterprise sizing */
+input:not([type="checkbox"]):not([type="radio"]):not(.keep-size), 
+select:not(.keep-size) {
+  font-size: 0.75rem !important; /* 12px */
+  border-radius: 0.5rem !important;
+}
+
+input:not([class*="pl-"]):not([type="checkbox"]):not([type="radio"]):not(.keep-size) {
+  padding-top: 0.375rem !important;
+  padding-bottom: 0.375rem !important;
+  padding-left: 0.625rem !important;
+  padding-right: 0.625rem !important;
+}
+
+input[class*="pl-"]:not(.keep-size) {
+  padding-top: 0.375rem !important;
+  padding-bottom: 0.375rem !important;
+  padding-right: 0.625rem !important;
+}
+
+/* Modals global alignment & backdrop */
+div.fixed.inset-0.flex.items-center.justify-center > div {
+  border-radius: 0.875rem !important;
+}
+
+/* --- MOBILE SPECIFIC ENHANCEMENTS (<768px) --- */
 @media (max-width: 768px) {
-
-  /* 1. Maximize usable horizontal width on main container */
   main.flex-1.overflow-y-auto {
-    padding: 0.5rem !important; /* Reduces p-4 to a tighter p-2 to gain 16px of horizontal space on each side! */
+    padding: 0.5rem !important;
   }
 
-  /* 2. Tighten card, modal, and container paddings so content has room to shine */
-  .rounded-\[2rem\],
-  .rounded-\[2\.2rem\],
-  .rounded-\[2\.5rem\],
-  .rounded-\[3rem\],
-  .p-8,
-  .p-10,
-  .p-12 {
-    border-radius: 1.25rem !important;
-    padding: 1rem !important; /* Tighter padding (p-4) on small screens */
-  }
-
-  /* Keep header icons and search bars aligned nicely on mobile */
   .flex-col.md\:flex-row.p-8 {
-    padding: 1rem !important;
-    gap: 0.75rem !important;
+    padding: 0.75rem !important;
+    gap: 0.5rem !important;
   }
 
-  /* 3. Form fields and select inputs sizing and margins */
-  input:not([class*="pl-"]), select, textarea, :not(input).p-3\.5, :not(input).py-3\.5 {
-    padding: 0.75rem !important; /* Tighter vertical height on inputs and forms */
-    border-radius: 1rem !important;
-    font-size: 0.8rem !important;
-  }
-
-  input[class*="pl-"] {
-    padding-top: 0.75rem !important;
-    padding-bottom: 0.75rem !important;
-    padding-right: 0.75rem !important;
-    border-radius: 1rem !important;
-    font-size: 0.8rem !important;
-  }
-
-  /* Adjust gap on mobile grids */
   .gap-8, .gap-6, .gap-4 {
-    gap: 0.75rem !important;
+    gap: 0.625rem !important;
   }
 
-  /* 4. Table cell padding and font tuning to avoid excessive horizontal stretch */
   th, td, .px-6, .py-6, .px-8, .py-8 {
-    padding-left: 0.5rem !important;
-    padding-right: 0.5rem !important;
-    padding-top: 0.75rem !important;
-    padding-bottom: 0.75rem !important;
-    font-size: 0.75rem !important;
+    padding-left: 0.4rem !important;
+    padding-right: 0.4rem !important;
+    font-size: 0.7rem !important;
   }
 
-  /* Ensure tables scroll smoothly without stretching container layout */
   .overflow-x-auto {
-    border-radius: 1rem !important;
+    border-radius: 0.625rem !important;
     -webkit-overflow-scrolling: touch;
   }
 
-  /* 5. Typography tuning to prevent titles from wrapping in 4 ugly lines */
-  h1 {
-    font-size: 1.5rem !important; /* max text-2xl on phone */
-    font-weight: 900 !important;
-    letter-spacing: -0.025em !important;
-    line-height: 1.25 !important;
-  }
-
-  h2 {
-    font-size: 1.25rem !important; /* max text-xl on phone */
-    font-weight: 800 !important;
-    line-height: 1.25 !important;
-  }
-
-  h3 {
-    font-size: 1.1rem !important; /* text-lg */
-    font-weight: 700 !important;
-  }
-
-  label, 
-  .form-label, 
-  .text-\[10px\].font-bold.text-slate-400 {
-    font-size: 0.65rem !important; /* slightly smaller for small screens */
-    letter-spacing: 0.12em !important;
-  }
-
-  /* 6. ListWidget, Cards, Containers and compound padding compact overrides to maximize screen width on mobile */
-  .p-6, .p-5, .p-8, .p-10, .p-12, 
-  .px-6, .px-8, .px-10, .px-12, 
-  .py-6, .py-8, .py-10, .py-12 {
-    padding-left: 0.85rem !important;
-    padding-right: 0.85rem !important;
-  }
-
-  .p-6, .p-5, .p-8, .p-10, .p-12 {
-    padding-top: 1rem !important;
-    padding-bottom: 1rem !important;
-    border-radius: 1.25rem !important;
-  }
-
-  /* Compounded padding reduction for page components and main wrappers */
   main.flex-1.p-4.md\:p-8, 
   div.container.mx-auto.px-4 {
     padding-left: 0.4rem !important;
     padding-right: 0.4rem !important;
-    padding-top: 0.5rem !important;
-    padding-bottom: 0.5rem !important;
+    padding-top: 0.4rem !important;
+    padding-bottom: 0.4rem !important;
   }
 
-  /* Overwrite overly rounded corners that steal screen space on small viewports */
-  .rounded-\[2rem\], 
-  .rounded-\[2\.5rem\], 
-  .rounded-\[3rem\] {
-    border-radius: 1.25rem !important;
-  }
-
-  .gap-10 {
-    gap: 0.75rem !important;
-  }
-
-  /* Ensure button links are comfortable but fit properly */
-  button, .px-8.py-4 {
-    padding-left: 1rem !important;
-    padding-right: 1rem !important;
-    padding-top: 0.65rem !important;
-    padding-bottom: 0.65rem !important;
-    border-radius: 0.85rem !important;
-    font-size: 0.75rem !important;
-  }
-
-  /* 7. Modals: maximize width to 96% of screen on mobile to avoid shrinking inside a central box */
   div.fixed.inset-0.flex.items-center.justify-center {
     padding: 0.5rem !important;
   }
@@ -422,7 +367,7 @@ td {
     max-width: 98% !important;
     width: 98% !important;
     margin: 0 auto !important;
-    border-radius: 1.25rem !important;
+    border-radius: 0.875rem !important;
   }
 }
 
@@ -431,11 +376,19 @@ td {
    ========================================================================== */
 @media (min-width: 1024px) {
   .hero-mockup-isometric {
-    transform: perspective(1300px) rotateY(-18deg) rotateX(9deg) rotateZ(1deg);
+    transform: perspective(1300px) rotateY(-18deg) rotateX(9deg) rotateZ(1deg) scale(0.88);
     transition: transform 0.7s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.7s cubic-bezier(0.16, 1, 0.3, 1);
     transform-style: preserve-3d;
   }
   .hero-mockup-isometric:hover {
-    transform: perspective(1300px) rotateY(-10deg) rotateX(5deg) rotateZ(0deg);
+    transform: perspective(1300px) rotateY(-10deg) rotateX(5deg) rotateZ(0deg) scale(0.92);
+  }
+}
+@media (min-width: 1440px) {
+  .hero-mockup-isometric {
+    transform: perspective(1300px) rotateY(-18deg) rotateX(9deg) rotateZ(1deg) scale(0.94);
+  }
+  .hero-mockup-isometric:hover {
+    transform: perspective(1300px) rotateY(-10deg) rotateX(5deg) rotateZ(0deg) scale(0.97);
   }
 }
