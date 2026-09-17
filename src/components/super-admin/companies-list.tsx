@@ -368,12 +368,12 @@ export function CompaniesList({ companies, users = [] }: { companies: any[]; use
                     const suspended = isSuspended(company)
                     const leadDetails = parseLeadDetails(company.working_hours)
                     const companyAdmin = users.find((u: any) => u.company_id === company.id && (u.role_id === 'admin' || u.role === 'admin')) || users.find((u: any) => u.company_id === company.id)
-                    const rawContactName = leadDetails?.contact_name || leadDetails?.registered_by_name || companyAdmin?.name || company.contact_name || ''
+                    const rawContactName = companyAdmin?.name || leadDetails?.contact_name || leadDetails?.registered_by_name || company.contact_name || ''
                     const isValidContact = rawContactName && !rawContactName.toLowerCase().includes('no especificado') && rawContactName.trim().length > 0
                     const resolvedContactName = isValidContact ? rawContactName.trim() : ''
                     const displayContactName = resolvedContactName || 'No especificado'
                     const contactSalutation = resolvedContactName || 'estimado(a) cliente'
-                    const contactPosition = leadDetails?.contact_position || ''
+                    const contactPosition = leadDetails?.contact_position || (companyAdmin ? 'Administrador' : '')
                     const rawPhone = company.phone || leadDetails?.phone || ''
                     const cleanPhone = rawPhone.replace(/\D/g, '')
                     const waPhone = cleanPhone.startsWith('51') ? cleanPhone : (cleanPhone ? `51${cleanPhone}` : '')

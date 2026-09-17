@@ -685,16 +685,26 @@ export async function getCompanyDetails(companyId: string) {
     if (company.working_hours) {
       try {
         const wh = JSON.parse(company.working_hours)
-        const sub = wh.demo_request || wh.registration_request || {}
+        const sub = wh.lead_details || wh.demo_request || wh.registration_request || {}
+
+        // Prioridad consistente: si existe un Administrador en la tabla users, su identidad prevalece
+        const contactName = mainAdmin?.name || sub.contact_name || wh.contact_name || wh.registered_by_name || 'No especificado'
+        const contactPosition = sub.contact_position || wh.contact_position || (mainAdmin ? 'Administrador General' : 'Gerente de Operaciones')
+        const email = mainAdmin?.email || company.contact_email || sub.email || wh.email || ''
+        const phone = company.phone || sub.phone || wh.phone || ''
+        const taxId = company.tax_id || sub.tax_id || wh.tax_id || ''
+        const estimatedWorkers = sub.estimated_workers || wh.estimated_workers || '16 a 50 trabajadores'
+        const notes = sub.notes || wh.notes || ''
+
         leadDetails = {
           ...sub,
-          contact_name: wh.contact_name || sub.contact_name || wh.registered_by_name || mainAdmin?.name || null,
-          contact_position: wh.contact_position || sub.contact_position || 'Gerente de Operaciones',
-          estimated_workers: wh.estimated_workers || sub.estimated_workers || '16 a 50 trabajadores',
-          notes: wh.notes || sub.notes || '',
-          phone: company.phone || wh.phone || sub.phone || '',
-          email: company.contact_email || wh.email || sub.email || mainAdmin?.email || '',
-          tax_id: company.tax_id || wh.tax_id || sub.tax_id || '',
+          contact_name: contactName,
+          contact_position: contactPosition,
+          estimated_workers: estimatedWorkers,
+          notes: notes,
+          phone: phone,
+          email: email,
+          tax_id: taxId,
           request_type: wh.request_type || (wh.demo_request ? 'demo' : (wh.registration_request ? 'register' : 'direct')),
           approval_status: wh.approval_status || (company.status === 'active' ? 'approved' : null),
           approved_at: wh.approved_at || null,
@@ -707,7 +717,7 @@ export async function getCompanyDetails(companyId: string) {
     if (!leadDetails) {
       leadDetails = {
         contact_name: mainAdmin?.name || 'Administrador',
-        contact_position: 'Gerente de Operaciones',
+        contact_position: 'Administrador General',
         estimated_workers: '16 a 50 trabajadores',
         notes: '',
         phone: company.phone || '',
@@ -782,6 +792,17 @@ export async function updateCompanyCorporateDetails(payload: {
       contact_position: payload.contactPosition?.trim() || '',
       estimated_workers: payload.estimatedWorkers?.trim() || '',
       notes: payload.notes?.trim() || '',
+      lead_details: {
+        ...(currentWh.lead_details || {}),
+        contact_name: payload.contactName?.trim() || '',
+        contact_position: payload.contactPosition?.trim() || '',
+        estimated_workers: payload.estimatedWorkers?.trim() || '',
+        notes: payload.notes?.trim() || '',
+        email: payload.contactEmail?.trim().toLowerCase() || '',
+        phone: payload.phone?.trim() || '',
+        tax_id: payload.taxId?.trim() || '',
+        industry: payload.industry?.trim() || ''
+      },
       demo_request: {
         ...(currentWh.demo_request || {}),
         contact_name: payload.contactName?.trim() || '',
@@ -1174,8 +1195,8 @@ export async function generateClientAccessLink(companyId: string) {
     if (company.working_hours) {
       try {
         const wh = JSON.parse(company.working_hours)
-        const lead = wh.demo_request || wh.registration_request
-        if (lead?.contact_name) targetName = lead.contact_name
+        const lead = wh.lead_details || wh.demo_request || wh.registration_request
+        if (!adminUser?.name && lead?.contact_name) targetName = lead.contact_name
         if (lead?.phone && !rawPhone) rawPhone = lead.phone
       } catch (_) {}
     }
