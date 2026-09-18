@@ -6,8 +6,8 @@ export async function GET(request: Request) {
  const companySlug = searchParams.get('companySlug')
 
  let startUrl = '/dashboard'
- let name = 'InthalyOps'
- let shortName = 'Ops'
+ let name = 'INTHALY OPS'
+ let shortName = 'INTHALY OPS'
 
  if (context === 'worker' && companySlug) {
  startUrl = `/w/${companySlug}`
@@ -18,7 +18,7 @@ export async function GET(request: Request) {
  return NextResponse.json({
  name,
  short_name: shortName,
- description: 'Plataforma de gestión de trabajadores',
+ description: 'Sistema de Gestión Empresarial',
  start_url: startUrl,
  display: 'standalone',
  background_color: '#ffffff',
