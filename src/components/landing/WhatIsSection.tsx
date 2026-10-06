@@ -40,11 +40,11 @@ const STRATEGIC_PILLARS = [
   },
   {
     icon: Factory,
-    tag: 'Producción & Finanzas',
-    title: 'Operaciones, Planta y Caja Chica',
+    tag: 'Operaciones & Finanzas',
+    title: 'Operaciones, Mantenimiento y Finanzas',
     description:
-      'Ciclo metalúrgico con pesaje en balanza digital, mantenimiento preventivo de maquinaria pesada, rendición de caja chica y exportaciones ejecutivas.',
-    tags: ['Pesaje en balanza', 'Checklist mecánico', 'Caja chica auditada'],
+      'Control de procesos operativos con pesaje en balanza digital, mantenimiento preventivo de maquinaria, rendición de caja chica y reportes ejecutivos.',
+    tags: ['Pesaje industrial', 'Checklist operativo', 'Caja chica auditada'],
     accentColor: 'from-purple-600 to-slate-900',
     badgeColor: 'bg-purple-50 text-purple-700 border-purple-100',
     iconBg: 'bg-slate-900',
@@ -72,7 +72,7 @@ export function WhatIsSection() {
             ¿Qué es INTHALY OPS?
           </h2>
           <p className="mt-2 text-xs sm:text-sm text-slate-600 max-w-2xl mx-auto leading-relaxed">
-            Una plataforma integral que conecta cuadrillas en campo, almacenes y gerencia en un solo panorama, eliminando la dispersión de planillas Excel.
+            Una plataforma integral que conecta equipos de trabajo, operaciones, almacenes y gerencia en un solo panorama, eliminando la dispersión de planillas Excel.
           </p>
         </div>
 

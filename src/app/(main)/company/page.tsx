@@ -13,6 +13,24 @@ import { CompanyAuthSettings, DEFAULT_AUTH_SETTINGS, getCompanyAuthSettings, ext
 import { CompanyHrSettings, DEFAULT_HR_SETTINGS, getCompanyHrSettings, formatWorkerCode } from '@/lib/company-hr-settings'
 import { FormField, FormInput, FormSelect, FormToggleCard, FormSectionHeader } from '@/components/shared/form-controls'
 
+const INDUSTRIES = [
+  'Minería y Metalurgia',
+  'Construcción e Infraestructura',
+  'Transporte y Logística',
+  'Manufactura e Industria',
+  'Servicios Generales y Contratistas',
+  'Agroindustria y Alimentos',
+  'Seguridad y Vigilancia',
+  'Otro Sector'
+]
+
+const WORKER_RANGES = [
+  '1 a 15 trabajadores',
+  '16 a 50 trabajadores',
+  '51 a 200 trabajadores',
+  'Más de 200 trabajadores'
+]
+
 export default function CompanyProfilePage() {
   const router = useRouter()
   const [loading, setLoading] = useState(true)
@@ -24,10 +42,14 @@ export default function CompanyProfilePage() {
     phone: '',
     contact_email: '',
     tax_id: '',
-    industry: '',
+    industry: 'Minería y Metalurgia',
     timezone: 'UTC-5',
     working_hours: '',
-    logo_url: ''
+    logo_url: '',
+    contact_name: '',
+    contact_position: '',
+    estimated_workers: '16 a 50 trabajadores',
+    notes: ''
   })
   const [authSettings, setAuthSettings] = useState<CompanyAuthSettings>(DEFAULT_AUTH_SETTINGS)
   const [hrSettings, setHrSettings] = useState<CompanyHrSettings>(DEFAULT_HR_SETTINGS)
@@ -61,10 +83,14 @@ export default function CompanyProfilePage() {
           phone: profile.phone || '',
           contact_email: profile.contact_email || '',
           tax_id: profile.tax_id || '',
-          industry: profile.industry || '',
+          industry: profile.industry || 'Minería y Metalurgia',
           timezone: profile.timezone || 'UTC-5',
           working_hours: plainHours,
-          logo_url: profile.logo_url || ''
+          logo_url: profile.logo_url || '',
+          contact_name: profile.contact_name || '',
+          contact_position: profile.contact_position || '',
+          estimated_workers: profile.estimated_workers || '16 a 50 trabajadores',
+          notes: profile.notes || ''
         }))
         setAuthSettings(settings)
         setHrSettings(hrSet)
@@ -131,7 +157,7 @@ export default function CompanyProfilePage() {
             </div>
           )}
 
-          {/* ▼ ACCORDION 1: DETALLES OPERATIVOS E INFORMACIÓN GENERAL */}
+          {/* ▼ ACCORDION 1: DETALLES OPERATIVOS E INFORMACIÓN GENERAL (9 CAMPOS ESTÁNDAR) */}
           <div className="bg-white rounded-2xl shadow-sm border border-slate-200/80 overflow-hidden transition-all">
             <button
               type="button"
@@ -143,8 +169,13 @@ export default function CompanyProfilePage() {
                   <Building2 size={20} />
                 </div>
                 <div className="min-w-0">
-                  <h3 className="text-base font-extrabold text-slate-800 truncate">Detalles Operativos e Información General</h3>
-                  <p className="text-xs font-medium text-slate-500 truncate">Razón social, RUC, dirección, correo y teléfono principal.</p>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h3 className="text-base font-extrabold text-slate-800 truncate">Detalles Operativos e Información General</h3>
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-100">
+                      Ficha Corporativa (9 Campos Estándar)
+                    </span>
+                  </div>
+                  <p className="text-xs font-medium text-slate-500 truncate">Razón social, RUC, contacto responsable, rubro, dotación, dirección y canales de comunicación.</p>
                 </div>
               </div>
               <div className="p-1.5 rounded-lg bg-white border border-slate-200 text-slate-400 shrink-0 ml-2">
@@ -153,74 +184,148 @@ export default function CompanyProfilePage() {
             </button>
 
             {openSections.general && (
-              <div className="p-5 sm:p-6 space-y-5 animate-in fade-in duration-200 border-t border-slate-100">
+              <div className="p-5 sm:p-6 space-y-6 animate-in fade-in duration-200 border-t border-slate-100">
+                {/* 1. Responsable / Contacto Principal */}
+                <div className="p-4 bg-slate-50/70 rounded-xl border border-slate-200/70 space-y-3.5">
+                  <div className="flex items-center gap-2">
+                    <UserCheck size={16} className="text-blue-600 shrink-0" />
+                    <h4 className="text-xs font-bold text-slate-800 uppercase tracking-tight">Contacto Principal / Administrador Responsable</h4>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <FormField label="Nombre Completo del Contacto" required>
+                      <FormInput
+                        required
+                        type="text"
+                        value={formData.contact_name}
+                        onChange={(e) => setFormData(prev => ({ ...prev, contact_name: e.target.value }))}
+                        placeholder="Ej. Ing. Carlos Mendoza / Romel Chinchón"
+                        accentColor="blue"
+                      />
+                    </FormField>
+
+                    <FormField label="Cargo en la Empresa" required>
+                      <FormInput
+                        required
+                        type="text"
+                        value={formData.contact_position}
+                        onChange={(e) => setFormData(prev => ({ ...prev, contact_position: e.target.value }))}
+                        placeholder="Ej. Jefe de Operaciones / Gerente General"
+                        accentColor="blue"
+                      />
+                    </FormField>
+                  </div>
+                </div>
+
+                {/* 2. Datos de Identificación y Rubro */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
-                  <FormField label="Razón Social" required>
+                  <FormField label="Razón Social / Nombre de Empresa" required>
                     <FormInput
                       required
                       type="text"
                       value={formData.name}
                       onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                      placeholder="Ej. Corporación Inthaly S.A.C."
+                      placeholder="Ej. CONSTRUCTORA ROSS / ECOGRADA SAC"
                       accentColor="blue"
                     />
                   </FormField>
 
-                  <FormField label="ID Fiscal / RUC">
+                  <FormField label="ID Fiscal / RUC (11 dígitos)" required>
                     <FormInput
+                      required
                       type="text"
+                      maxLength={11}
                       value={formData.tax_id}
-                      onChange={(e) => setFormData(prev => ({ ...prev, tax_id: e.target.value }))}
+                      onChange={(e) => setFormData(prev => ({ ...prev, tax_id: e.target.value.replace(/\D/g, '') }))}
                       placeholder="Ej. 20123456789"
                       accentColor="blue"
+                      className="font-mono"
                     />
+                  </FormField>
+
+                  <FormField label="Rubro / Sector Operativo" required>
+                    <FormSelect
+                      value={formData.industry}
+                      onChange={(e) => setFormData(prev => ({ ...prev, industry: e.target.value }))}
+                      accentColor="blue"
+                    >
+                      {INDUSTRIES.map(ind => (
+                        <option key={ind} value={ind}>{ind}</option>
+                      ))}
+                    </FormSelect>
+                  </FormField>
+
+                  <FormField label="Personal Aproximado">
+                    <FormSelect
+                      value={formData.estimated_workers}
+                      onChange={(e) => setFormData(prev => ({ ...prev, estimated_workers: e.target.value }))}
+                      accentColor="blue"
+                    >
+                      {WORKER_RANGES.map(rng => (
+                        <option key={rng} value={rng}>{rng}</option>
+                      ))}
+                    </FormSelect>
                   </FormField>
                 </div>
 
-                <FormField label="Dirección Matriz" required>
-                  <div className="relative w-full">
-                    <MapPin className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={16} />
-                    <FormInput
-                      required
-                      type="text"
-                      value={formData.address}
-                      onChange={(e) => setFormData(prev => ({ ...prev, address: e.target.value }))}
-                      placeholder="Av. Javier Prado Este 1234, San Isidro, Lima"
-                      className="pl-10"
-                      accentColor="blue"
-                    />
-                  </div>
-                </FormField>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
-                  <FormField label="E-mail Corporativo" required>
-                    <FormInput
-                      required
-                      type="email"
-                      value={formData.contact_email}
-                      onChange={(e) => setFormData(prev => ({ ...prev, contact_email: e.target.value }))}
-                      placeholder="contacto@empresa.com"
-                      accentColor="blue"
-                    />
-                  </FormField>
-
-                  <FormField label="Teléfono de Contacto">
+                {/* 3. Canales de Comunicación y Ubicación */}
+                <div className="space-y-4 pt-1">
+                  <FormField label="Dirección Matriz" required>
                     <div className="relative w-full">
-                      <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={16} />
+                      <MapPin className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={16} />
                       <FormInput
+                        required
                         type="text"
-                        value={formData.phone}
-                        onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
-                        placeholder="+51 987 654 321"
+                        value={formData.address}
+                        onChange={(e) => setFormData(prev => ({ ...prev, address: e.target.value }))}
+                        placeholder="Av. Javier Prado Este 1234, San Isidro, Lima"
                         className="pl-10"
                         accentColor="blue"
                       />
                     </div>
                   </FormField>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
+                    <FormField label="E-mail Corporativo" required>
+                      <FormInput
+                        required
+                        type="email"
+                        value={formData.contact_email}
+                        onChange={(e) => setFormData(prev => ({ ...prev, contact_email: e.target.value }))}
+                        placeholder="contacto@empresa.com"
+                        accentColor="blue"
+                      />
+                    </FormField>
+
+                    <FormField label="Teléfono / WhatsApp de Contacto" required>
+                      <div className="relative w-full">
+                        <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={16} />
+                        <FormInput
+                          required
+                          type="text"
+                          value={formData.phone}
+                          onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
+                          placeholder="+51 987 654 321"
+                          className="pl-10"
+                          accentColor="blue"
+                        />
+                      </div>
+                    </FormField>
+                  </div>
                 </div>
 
-                {/* Logo Uploader */}
-                <div className="pt-2">
+                {/* 4. Requerimientos Específicos o Mensaje / Notas Operativas */}
+                <FormField label="Requerimientos Específicos o Mensaje / Notas Operativas">
+                  <textarea
+                    rows={3}
+                    value={formData.notes}
+                    onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
+                    placeholder="Describe requerimientos o notas operativas de la empresa (ej. control de tareo en campo, inventario kardex, transporte...)"
+                    className="w-full p-3 rounded-xl border border-slate-200 bg-slate-50/50 text-xs font-medium text-slate-800 focus:bg-white focus:border-blue-500 outline-none resize-none transition-all"
+                  />
+                </FormField>
+
+                {/* 5. Logo Uploader */}
+                <div className="pt-2 border-t border-slate-100">
                   <FormField label="Logo de la Empresa (PNG/JPG)">
                     <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 w-full bg-slate-50/70 p-4 rounded-xl border border-slate-200/80">
                       {formData.logo_url ? (

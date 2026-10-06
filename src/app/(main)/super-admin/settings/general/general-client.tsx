@@ -2,7 +2,7 @@
 
 import { useState, useRef } from 'react'
 import Link from 'next/link'
-import { ArrowLeft, Building2, Globe2, Save, UploadCloud, PaintBucket, X, Image as ImageIcon } from 'lucide-react'
+import { ArrowLeft, Building2, Globe2, Save, UploadCloud, PaintBucket, X, Image as ImageIcon, MessageSquare } from 'lucide-react'
 import { updateGlobalSettings, GlobalSettingsData, uploadEcosystemAsset } from './actions'
 import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase/client'
@@ -26,6 +26,7 @@ export function GeneralSettingsClient({ initialData }: GeneralSettingsClientProp
     ecosystem_favicon: initialData?.ecosystem_favicon || '',
     ecosystem_commercial_name: initialData?.ecosystem_commercial_name || '',
     ecosystem_description: initialData?.ecosystem_description || '',
+    commercial_whatsapp: initialData?.commercial_whatsapp || '51923207309',
     default_language: initialData?.default_language || 'es',
     default_timezone: initialData?.default_timezone || 'America/Lima',
     default_currency: initialData?.default_currency || 'PEN',
@@ -249,6 +250,25 @@ export function GeneralSettingsClient({ initialData }: GeneralSettingsClientProp
                 <PaintBucket size={16} className="absolute left-3 top-3.5 text-slate-400" />
               </div>
             </div>
+          </div>
+
+          <div className="md:col-span-2 pt-2 border-t border-slate-100">
+            <label className={labelClasses}>
+              Línea WhatsApp Comercial y Atención de Prospectos
+            </label>
+            <div className="relative">
+              <input 
+                type="text" 
+                className={`${inputClasses} pl-10 font-mono`} 
+                value={settings.commercial_whatsapp || ''}
+                onChange={e => setSettings({...settings, commercial_whatsapp: e.target.value})}
+                placeholder="Ej. 51923207309"
+              />
+              <MessageSquare size={16} className="absolute left-3 top-3 text-emerald-600" />
+            </div>
+            <p className="text-[10px] text-slate-400 font-medium mt-1.5 ml-1">
+              Este número oficial recibe los mensajes de contacto directo y solicitudes de demostración de la Landing Page. Ingresar código de país y número (ej. 51923207309).
+            </p>
           </div>
         </div>
       </div>

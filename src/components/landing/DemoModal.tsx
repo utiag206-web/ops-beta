@@ -25,12 +25,12 @@ interface DemoModalProps {
 }
 
 const INDUSTRIES = [
-  'Minería y Metalurgia',
   'Construcción e Infraestructura',
+  'Agroindustria y Alimentos',
   'Transporte y Logística',
   'Manufactura e Industria',
   'Servicios Generales y Contratistas',
-  'Agroindustria y Alimentos',
+  'Minería y Metalurgia',
   'Seguridad y Vigilancia',
   'Otro Sector',
 ]
@@ -54,7 +54,7 @@ export function DemoModal({ isOpen, onClose, commercialWhatsApp = '51923207309' 
     phone: '',
     companyName: '',
     taxId: '',
-    industry: 'Minería y Metalurgia',
+    industry: 'Construcción e Infraestructura',
     contactPosition: '',
     estimatedWorkers: '16 a 50 trabajadores',
     message: '',
@@ -308,7 +308,7 @@ export function DemoModal({ isOpen, onClose, commercialWhatsApp = '51923207309' 
                   <input
                     type="text"
                     required
-                    placeholder="Ej. Minera o Constructora SAC"
+                    placeholder="Ej. Constructora, Agroindustria o Servicios SAC"
                     value={formData.companyName}
                     onChange={(e) => setFormData({ ...formData, companyName: e.target.value })}
                     className="w-full h-9 rounded-lg border border-slate-200 bg-slate-50/50 px-3 text-xs font-medium text-slate-800 placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/10 transition-all"

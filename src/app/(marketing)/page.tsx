@@ -18,7 +18,7 @@ export const metadata: Metadata = {
     'logística y transporte',
     'software de operaciones',
     'portal del trabajador',
-    'gestión industrial y minera'
+    'gestión multiempresa e industrial'
   ],
   authors: [{ name: 'INTHALY OPS Team' }],
   creator: 'INTHALY OPS',
@@ -63,7 +63,11 @@ export const metadata: Metadata = {
   },
 }
 
-export default function LandingPage() {
+import { getCommercialWhatsApp } from '@/app/(main)/super-admin/settings/general/actions'
+
+export default async function LandingPage() {
+  const commercialWhatsApp = await getCommercialWhatsApp()
+
   const jsonLd = {
     '@context': 'https://schema.org',
     '@type': 'SoftwareApplication',
@@ -91,7 +95,7 @@ export default function LandingPage() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
-      <LandingClient />
+      <LandingClient commercialWhatsApp={commercialWhatsApp} />
     </>
   )
 }

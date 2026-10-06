@@ -2,7 +2,10 @@ import { cache } from 'react'
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { getPermissionsByRole, hasPermission } from './permissions'
+import { fetchCompanyOperatingProfile, normalizeIndustryCode } from '@/lib/operating-profiles'
 import { cookies } from 'next/headers'
+import { resolvePermissions, serializeToLegacyArray } from '@/lib/rbac/engine'
+import type { UserPermissionOverride } from '@/lib/rbac/types'
 
 export const getUserSession = cache(async function getUserSession() {
  try {
@@ -19,7 +22,7 @@ export const getUserSession = cache(async function getUserSession() {
   const adminSupabase = await createAdminClient()
   const { data: userData, error: userError } = await adminSupabase
   .from('users')
-  .select('*, companies(id, name, logo_url, status)')
+  .select('*, companies(id, name, logo_url, status, industry)')
   .eq('id', user.id)
   .maybeSingle()
 
@@ -49,10 +52,32 @@ export const getUserSession = cache(async function getUserSession() {
      : Promise.resolve({ data: null })
 
    const companyPromise = (impersonating && finalCompanyId && isUuid(finalCompanyId) && finalCompanyId !== userData.company_id)
-     ? adminSupabase.from('companies').select('id, name, logo_url, status').eq('id', finalCompanyId).maybeSingle()
+     ? adminSupabase.from('companies').select('id, name, logo_url, status, industry').eq('id', finalCompanyId).maybeSingle()
      : Promise.resolve({ data: userData.companies })
 
-   const [activeRoleData, workerData, companyRes] = await Promise.all([rolePromise, workerPromise, companyPromise])
+   // RBAC Granular V1: overrides individuales del usuario por empresa
+   const permissionsOverridePromise = (finalCompanyId && isUuid(finalCompanyId))
+     ? adminSupabase
+         .from('user_permissions')
+         .select('user_id, company_id, module, action, granted')
+         .eq('user_id', user.id)
+         .eq('company_id', finalCompanyId)
+     : Promise.resolve({ data: [] as any[] })
+
+   const [activeRoleData, workerData, companyRes, permissionsOverrideRes] = await Promise.all([
+     rolePromise,
+     workerPromise,
+     companyPromise,
+     permissionsOverridePromise
+   ])
+
+   const companyData = companyRes?.data || userData.companies
+   const companyObj = Array.isArray(companyData) ? companyData[0] : companyData
+   const activeCompanyIndustry = companyObj?.industry || (userData.companies as any)?.industry || null
+
+   const operatingProfile = (finalCompanyId && isUuid(finalCompanyId))
+     ? await fetchCompanyOperatingProfile(finalCompanyId, adminSupabase, activeCompanyIndustry)
+     : null
 
   let rbacRole: string = 'trabajador'
   if (activeRoleData?.data?.role_id) {
@@ -63,7 +88,6 @@ export const getUserSession = cache(async function getUserSession() {
 
   let activeWorkerId: string | null = workerData?.data?.id || null
   let activeWorkerStatus: string | null = workerData?.data?.status || null
-  let companyData = companyRes?.data || userData.companies
 
  // Helper function to slugify company name in JS as fallback
  const slugify = (text: string) => {
@@ -78,8 +102,7 @@ export const getUserSession = cache(async function getUserSession() {
  .replace(/-+/g, '-');
  }
 
- const companyObj = Array.isArray(companyData) ? companyData[0] : companyData
- const companySlug = companyObj?.slug || (companyObj?.name ? slugify(companyObj.name) : 'empresa')
+  const companySlug = companyObj?.slug || (companyObj?.name ? slugify(companyObj.name) : 'empresa')
 
   // Proteger acceso a rutas autenticadas: Empresas o usuarios pendientes/inactivos no pueden operar
   if (!isSuperAdminUser) {
@@ -115,11 +138,21 @@ export const getUserSession = cache(async function getUserSession() {
  company_name: companyObj?.name || 'Empresa',
  company_logo: companyObj?.logo_url || null,
  company_slug: companySlug,
+ company_industry: operatingProfile?.industry_key || companyObj?.industry || null,
+ operating_profile: operatingProfile,
  is_impersonating: impersonating,
  display_name: '',
  display_email: '',
- is_view_only: false
+ is_view_only: false,
+ // RBAC Granular V1: overrides + permisos resueltos
+ permission_overrides: ((permissionsOverrideRes as any)?.data || []) as UserPermissionOverride[],
+ resolved_permissions: resolvePermissions(
+   rbacRole,
+   (userData as any)?.area,
+   ((permissionsOverrideRes as any)?.data || []) as UserPermissionOverride[]
+ ),
  }
+
 
  // Identity Masking for Super Admin (Display Only)
  if (impersonating) {

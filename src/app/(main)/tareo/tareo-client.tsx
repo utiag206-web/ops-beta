@@ -16,6 +16,10 @@ import { createClient } from '@/lib/supabase/client'
 import { calculateMonthlyTareoEngine, ExecutiveTareoKPIs, WorkerMonthlySummary } from '@/lib/tareo-engine'
 import { CompanyAttendanceSettings, DEFAULT_HR_SETTINGS } from '@/lib/company-hr-settings'
 import { exportTareoToExcel } from '@/lib/export-utils'
+import { useOffline } from '@/components/providers/offline-provider'
+import { addOperationToQueue } from '@/lib/offline-sync'
+import { v4 as uuidv4 } from 'uuid'
+import { toast } from 'sonner'
 
 interface Worker {
   id: string
@@ -56,6 +60,7 @@ const autoColors: any = {
 }
 
 export default function TareoClient({ initialCycles, workers, userRole, companyId }: TareoPageProps) {
+  const { isOnline, triggerSync } = useOffline()
   const [currentDate, setCurrentDate] = useState(new Date())
   const [tareoRecords, setTareoRecords] = useState<any[]>([])
   const [tareoNotes, setTareoNotes] = useState<any[]>([])
@@ -237,9 +242,20 @@ export default function TareoClient({ initialCycles, workers, userRole, companyI
     })
     
     try {
-      const result = await upsertTareoRecord({ worker_id: workerId, date, status })
-      if (!result.success) {
-        setTareoRecords(oldRecords)
+      if (isOnline) {
+        const result = await upsertTareoRecord({ worker_id: workerId, date, status })
+        if (!result.success) {
+          setTareoRecords(oldRecords)
+        }
+      } else {
+        await addOperationToQueue({
+          id: uuidv4(),
+          entity: 'tareo',
+          action: 'upsert_tareo_record',
+          payload: { id: uuidv4(), worker_id: workerId, date, status },
+          company_id: companyId
+        })
+        triggerSync()
       }
     } catch {
       setTareoRecords(oldRecords)

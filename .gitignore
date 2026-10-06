@@ -49,3 +49,12 @@ next-env.d.ts
 /dev_files.txt
 /prod_files.txt
 
+
+/audit.mjs
+/seed_ops.mjs
+/deploy_prod.zip
+
+desktop.ini
+/backups/
+/docs.tareo/
+/scripts/

@@ -17,6 +17,7 @@ export default async function MovementsPage() {
  initialMovements={initialMovements} 
  workers={workers} 
  userRole={extendedUser?.role_id || 'worker'} 
+ companyId={extendedUser?.company_id || 'unknown'}
  />
  )
 }

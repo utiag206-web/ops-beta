@@ -3,12 +3,17 @@
 import { useState, useEffect } from 'react'
 import { Clock, LogIn, LogOut, CheckCircle2, Loader2, Calendar } from 'lucide-react'
 import { checkIn, checkOut } from '@/app/(main)/attendance/actions'
+import { useOffline } from '@/components/providers/offline-provider'
+import { addOperationToQueue } from '@/lib/offline-sync'
+import { v4 as uuidv4 } from 'uuid'
+import { toast } from 'sonner'
 
 interface AttendanceMarkerProps {
  initialStatus?: any
 }
 
 export function AttendanceMarker({ initialStatus }: AttendanceMarkerProps) {
+ const { isOnline, triggerSync } = useOffline()
  const [status, setStatus] = useState(initialStatus)
  const [isPending, setIsPending] = useState(false)
  const [error, setError] = useState<string | null>(null)
@@ -23,11 +28,25 @@ export function AttendanceMarker({ initialStatus }: AttendanceMarkerProps) {
  setIsPending(true)
  setError(null)
  try {
+ if (isOnline) {
  const result = await checkIn()
  if (result.success) {
  setStatus(result.data)
  } else {
  setError(result.error ?? null)
+ }
+ } else {
+ const localTime = new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
+ setStatus({ ...status, check_in: localTime })
+ await addOperationToQueue({
+ id: uuidv4(),
+ entity: 'attendance',
+ action: 'check_in',
+ payload: { id: uuidv4(), check_in_time: localTime },
+ company_id: 'pending'
+ })
+ toast.info('Sin conexión. Entrada registrada localmente.')
+ triggerSync()
  }
  } catch (err) {
  setError('Error al registrar ingreso')
@@ -40,11 +59,25 @@ export function AttendanceMarker({ initialStatus }: AttendanceMarkerProps) {
  setIsPending(true)
  setError(null)
  try {
+ if (isOnline) {
  const result = await checkOut()
  if (result.success) {
  setStatus((prev: any) => ({ ...prev, check_out: new Date().toLocaleTimeString('en-GB') }))
  } else {
  setError(result.error ?? null)
+ }
+ } else {
+ const localTime = new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
+ setStatus((prev: any) => ({ ...prev, check_out: localTime }))
+ await addOperationToQueue({
+ id: uuidv4(),
+ entity: 'attendance',
+ action: 'check_out',
+ payload: { id: uuidv4(), check_out_time: localTime },
+ company_id: 'pending'
+ })
+ toast.info('Sin conexión. Salida registrada localmente.')
+ triggerSync()
  }
  } catch (err) {
  setError('Error al registrar salida')

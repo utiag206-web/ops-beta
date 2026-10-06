@@ -4,6 +4,7 @@ import "./globals.css";
 
 import { Toaster } from 'sonner';
 import UppercaseEnforcer from "@/components/UppercaseEnforcer";
+import { OfflineProvider } from "@/components/providers/offline-provider";
 
 const inter = Inter({
  variable: "--font-inter",
@@ -45,7 +46,9 @@ export default function RootLayout({
  className={`${inter.variable} antialiased`}
  >
  <UppercaseEnforcer />
- {children}
+ <OfflineProvider>
+  {children}
+ </OfflineProvider>
  <Toaster richColors position="top-right" />
  </body>
  </html>

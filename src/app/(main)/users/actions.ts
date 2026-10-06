@@ -4,6 +4,8 @@ import { revalidatePath } from 'next/cache'
 import { createClient } from '@supabase/supabase-js'
 import { createClient as createServerClient, createAdminClient } from '@/lib/supabase/server'
 import { getUserSession, getStrictCompanyId, applyIsolation } from '@/lib/auth'
+import { resolvePermissions } from '@/lib/rbac/engine'
+import type { Module, Action, UserPermissionOverride } from '@/lib/rbac/types'
 
 // Administrative client for user creation (bypasses regular Auth restrictions)
 let supabaseAdminInstance: any = null
@@ -586,3 +588,187 @@ export async function updateUserPassword(userId: string, password: string) {
  return { success: false, error: error.message }
  }
 }
+
+// ================================================================
+// RBAC Granular V1: User Permission Overrides Management
+// ================================================================
+
+export async function getUserGranularPermissions(userId: string) {
+  try {
+    const { extendedUser } = await getUserSession()
+    const companyId = await getStrictCompanyId()
+    const supabaseAdmin = getSupabaseAdmin()
+
+    if (!['admin', 'super_admin'].includes(extendedUser.role_id)) {
+      return { success: false, error: 'No tienes permisos para ver esta configuración.' }
+    }
+
+    // 1. Obtener datos del usuario objetivo en la empresa (para conocer su rol y área)
+    const { data: targetRoleData } = await supabaseAdmin
+      .from('user_roles')
+      .select('role_id')
+      .eq('user_id', userId)
+      .eq('company_id', companyId)
+      .maybeSingle()
+
+    const { data: targetUserData } = await supabaseAdmin
+      .from('users')
+      .select('role_id, area')
+      .eq('id', userId)
+      .maybeSingle()
+
+    const targetRoleId = targetRoleData?.role_id || targetUserData?.role_id || 'trabajador'
+    const targetArea = targetUserData?.area || null
+
+    // 2. Obtener overrides existentes en user_permissions
+    const { data: overrides, error: overridesError } = await supabaseAdmin
+      .from('user_permissions')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('company_id', companyId)
+
+    if (overridesError) {
+      console.warn('[RBAC_WARN] Error fetching user_permissions:', overridesError.message)
+    }
+
+    const safeOverrides: UserPermissionOverride[] = (overrides || []).map((o: any) => ({
+      user_id: o.user_id,
+      company_id: o.company_id,
+      module: o.module as Module,
+      action: o.action as Action,
+      granted: Boolean(o.granted),
+      granted_by: o.granted_by,
+      created_at: o.created_at
+    }))
+
+    // 3. Resolver permisos base y permisos finales resueltos
+    const baseResolved = resolvePermissions(targetRoleId, targetArea, [])
+    const finalResolved = resolvePermissions(targetRoleId, targetArea, safeOverrides)
+
+    // Convert Map/Set to plain JSON objects for Client Component serialization
+    const baseGrants: Record<string, string[]> = {}
+    baseResolved.grants.forEach((actions, mod) => {
+      baseGrants[mod] = Array.from(actions)
+    })
+
+    const resolvedGrants: Record<string, string[]> = {}
+    finalResolved.grants.forEach((actions, mod) => {
+      resolvedGrants[mod] = Array.from(actions)
+    })
+
+    return {
+      success: true,
+      data: {
+        roleId: targetRoleId,
+        area: targetArea,
+        isWildcard: finalResolved.isWildcard,
+        baseGrants,
+        resolvedGrants,
+        overrides: safeOverrides,
+      }
+    }
+  } catch (error: any) {
+    console.error('[RBAC_ERROR] getUserGranularPermissions:', error)
+    return { success: false, error: error.message }
+  }
+}
+
+export async function setUserPermissionOverride(
+  userId: string,
+  module: Module,
+  action: Action,
+  granted: boolean,
+  reason?: string
+) {
+  try {
+    const { extendedUser } = await getUserSession()
+    const companyId = await getStrictCompanyId()
+    const supabaseAdmin = getSupabaseAdmin()
+
+    if (!['admin', 'super_admin'].includes(extendedUser.role_id)) {
+      return { success: false, error: 'No tienes permisos para modificar permisos.' }
+    }
+
+    const { error } = await supabaseAdmin
+      .from('user_permissions')
+      .upsert({
+        user_id: userId,
+        company_id: companyId,
+        module,
+        action,
+        granted,
+        granted_by: extendedUser.id,
+        reason: reason || 'Ajuste manual desde panel de administración',
+        updated_at: new Date().toISOString()
+      }, {
+        onConflict: 'user_id,company_id,module,action'
+      })
+
+    if (error) throw error
+
+    revalidatePath('/users')
+    return { success: true }
+  } catch (error: any) {
+    console.error('[RBAC_ERROR] setUserPermissionOverride:', error)
+    return { success: false, error: error.message }
+  }
+}
+
+export async function removeUserPermissionOverride(
+  userId: string,
+  module: Module,
+  action: Action
+) {
+  try {
+    const { extendedUser } = await getUserSession()
+    const companyId = await getStrictCompanyId()
+    const supabaseAdmin = getSupabaseAdmin()
+
+    if (!['admin', 'super_admin'].includes(extendedUser.role_id)) {
+      return { success: false, error: 'No tienes permisos para modificar permisos.' }
+    }
+
+    const { error } = await supabaseAdmin
+      .from('user_permissions')
+      .delete()
+      .eq('user_id', userId)
+      .eq('company_id', companyId)
+      .eq('module', module)
+      .eq('action', action)
+
+    if (error) throw error
+
+    revalidatePath('/users')
+    return { success: true }
+  } catch (error: any) {
+    console.error('[RBAC_ERROR] removeUserPermissionOverride:', error)
+    return { success: false, error: error.message }
+  }
+}
+
+export async function resetUserPermissionOverrides(userId: string) {
+  try {
+    const { extendedUser } = await getUserSession()
+    const companyId = await getStrictCompanyId()
+    const supabaseAdmin = getSupabaseAdmin()
+
+    if (!['admin', 'super_admin'].includes(extendedUser.role_id)) {
+      return { success: false, error: 'No tienes permisos para modificar permisos.' }
+    }
+
+    const { error } = await supabaseAdmin
+      .from('user_permissions')
+      .delete()
+      .eq('user_id', userId)
+      .eq('company_id', companyId)
+
+    if (error) throw error
+
+    revalidatePath('/users')
+    return { success: true }
+  } catch (error: any) {
+    console.error('[RBAC_ERROR] resetUserPermissionOverrides:', error)
+    return { success: false, error: error.message }
+  }
+}
+

@@ -11,6 +11,10 @@ import {
 import { registerMovement, updateMovement, deleteMovement } from './actions'
 import { toast } from 'sonner'
 
+import { useOffline } from '@/components/providers/offline-provider'
+import { addOperationToQueue } from '@/lib/offline-sync'
+import { v4 as uuidv4 } from 'uuid'
+
 interface Worker {
  id: string
  name: string
@@ -21,10 +25,12 @@ interface MovementsPageProps {
  initialMovements: any[]
  workers: Worker[]
  userRole: string
+ companyId: string
 }
 
-export default function MovementsClient({ initialMovements, workers, userRole }: MovementsPageProps) {
+export default function MovementsClient({ initialMovements, workers, userRole, companyId }: MovementsPageProps) {
  const router = useRouter()
+ const { isOnline, triggerSync } = useOffline()
  const [hasMounted, setHasMounted] = useState(false)
  const [showModal, setShowModal] = useState(false)
  const [editingItem, setEditingItem] = useState<any>(null)
@@ -90,6 +96,19 @@ export default function MovementsClient({ initialMovements, workers, userRole }:
  date: new Date(formData.date).toISOString()
  }
 
+ if (!isOnline) {
+ const tempId = editingItem ? editingItem.id : `temp-${Date.now()}`
+ await addOperationToQueue({
+ id: uuidv4(),
+ entity: 'movements',
+ action: editingItem ? 'update_movement' : 'create_movement',
+ payload: editingItem ? { id: tempId, updates: submissionData } : { ...submissionData, id: tempId },
+ company_id: companyId
+ })
+ toast.success('Movimiento guardado offline')
+ triggerSync()
+ closeModal()
+ } else {
  let result
  if (editingItem) {
  result = await updateMovement(editingItem.id, submissionData)
@@ -103,6 +122,7 @@ export default function MovementsClient({ initialMovements, workers, userRole }:
  router.refresh()
  } else {
  setErrorMsg(result?.error || 'Ocurrió un error')
+ }
  }
  } catch (error: any) {
  setErrorMsg(error?.message || 'Error inesperado')

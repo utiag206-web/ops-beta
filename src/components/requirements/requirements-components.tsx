@@ -5,6 +5,9 @@ import { Plus, X, Loader2, CheckCircle2, Package, MapPin, Activity, ShieldAlert,
 import { createRequirement, approveRequirementWithMovement } from '@/app/(main)/requerimientos/actions'
 import { getProducts } from '@/app/(main)/inventory/actions'
 import { toast } from 'sonner'
+import { useOffline } from '@/components/providers/offline-provider'
+import { addOperationToQueue } from '@/lib/offline-sync'
+import { v4 as uuidv4 } from 'uuid'
 
 export function RequirementStatusBadge({ status }: { status: string }) {
  const styles: Record<string, string> = {
@@ -49,6 +52,7 @@ export function CreateRequirementModal({ isOpen, onClose, onSuccess }: CreateReq
   const [customProductName, setCustomProductName] = useState('')
   const [customProductUnit, setCustomProductUnit] = useState('UND')
 
+  const { isOnline, triggerSync } = useOffline()
   const [form, setForm] = useState({
     title: '',
     description: '',
@@ -161,13 +165,27 @@ export function CreateRequirementModal({ isOpen, onClose, onSuccess }: CreateReq
       delete payload.specialty
       delete payload.tool_type
 
-      const res = await createRequirement(payload)
-      if (res.error) {
-        toast.error(res.error)
+      if (isOnline) {
+        const res = await createRequirement(payload)
+        if (res.error) {
+          toast.error(res.error)
+        } else {
+          toast.success('Requerimiento creado exitosamente')
+          onSuccess?.()
+          onClose()
+        }
       } else {
-        toast.success('Requerimiento creado exitosamente')
+        await addOperationToQueue({
+          id: uuidv4(),
+          entity: 'requerimientos',
+          action: 'create_requirement',
+          payload: { ...payload, id: uuidv4() },
+          company_id: 'pending' // En Requerimientos company_id is fetched server side. Or we pass it? The server action uses getStrictCompanyId() and sets it. But addOperationToQueue requires it. It will be ignored since the server action re-fetches it.
+        })
+        toast.info('Sin conexión. Requerimiento guardado localmente.')
         onSuccess?.()
         onClose()
+        triggerSync()
       }
     } catch (err: any) {
       toast.error(`Error crítico: ${err.message || 'Error desconocido'}`)
@@ -630,6 +648,7 @@ export function ReportIncidentModal({
  onSuccess?: (category?: string) => void,
  initialCategory?: string 
 }) {
+ const { isOnline, triggerSync } = useOffline()
  const [loading, setLoading] = useState(false)
  const [uploading, setUploading] = useState(false)
  const [files, setFiles] = useState<{file: File, preview: string}[]>([])
@@ -682,31 +701,38 @@ export function ReportIncidentModal({
  try {
  let photoUrls: string[] = []
 
- // 1. Upload files if any
- if (files.length > 0) {
- setUploading(true)
- const { uploadFilesAction } = await import('@/app/actions/storage')
- const filesData = await Promise.all(files.map(async ({ file }) => {
- const reader = new FileReader()
- const base64 = await new Promise<string>((resolve) => {
- reader.onload = () => resolve(reader.result as string)
- reader.readAsDataURL(file)
- })
- return { name: file.name, type: file.type, base64 }
- }))
+  // 1. Upload files if any (online only)
+  let offlineBase64: string | undefined = undefined;
 
- const uploadRes = await uploadFilesAction(filesData, 'soma', 'incidents', 'new')
- setUploading(false)
- if (uploadRes.success && uploadRes.urls) {
- photoUrls = uploadRes.urls
- } else {
- toast.error('Error al subir imágenes. Se guardará sin fotos.')
- }
- }
+  if (files.length > 0) {
+    const filesData = await Promise.all(files.map(async ({ file }) => {
+      const reader = new FileReader()
+      const base64 = await new Promise<string>((resolve) => {
+        reader.onload = () => resolve(reader.result as string)
+        reader.readAsDataURL(file)
+      })
+      return { name: file.name, type: file.type, base64 }
+    }))
 
- // 2. Create Incident
- const { createIncidencia } = await import('@/app/(main)/incidencias/actions')
- const res = await createIncidencia({
+    offlineBase64 = filesData[0].base64; // Store just the first photo for offline mode for simplicity
+
+    if (isOnline) {
+      setUploading(true)
+      const { uploadFilesAction } = await import('@/app/actions/storage')
+      const uploadRes = await uploadFilesAction(filesData, 'soma', 'incidents', 'new')
+      setUploading(false)
+      if (uploadRes.success && uploadRes.urls) {
+        photoUrls = uploadRes.urls
+      } else {
+        toast.error('Error al subir imágenes. Se guardará sin fotos.')
+      }
+    }
+  }
+
+  // 2. Create Incident
+  if (isOnline) {
+    const { createIncidencia } = await import('@/app/(main)/incidencias/actions')
+    const res = await createIncidencia({
  area_location: form.area_location || (form.type === 'maquinaria' ? 'Falla de Equipo' : form.type),
  description: form.description,
  severity: form.severity,
@@ -722,6 +748,29 @@ export function ReportIncidentModal({
  onClose()
  } else {
  toast.error(res.error || 'Error al reportar incidencia')
+ }
+ } else {
+ await addOperationToQueue({
+ id: uuidv4(),
+ entity: 'incidencias',
+ action: 'create_incidencia',
+ payload: {
+ id: uuidv4(),
+ area_location: form.area_location || (form.type === 'maquinaria' ? 'Falla de Equipo' : form.type),
+ description: form.description,
+ severity: form.severity,
+ event_date: form.event_date,
+ incident_category: form.incident_category,
+ corrective_actions: form.corrective_actions,
+ evidence_base64: offlineBase64,
+ company_id: 'pending'
+ },
+ company_id: 'pending'
+ })
+ toast.info('Sin conexión. Incidencia guardada localmente.')
+ onSuccess?.(form.incident_category)
+ onClose()
+ triggerSync()
  }
  } catch (err) {
  toast.error('Error de conexión')

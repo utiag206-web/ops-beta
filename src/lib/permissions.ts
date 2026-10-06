@@ -2,6 +2,10 @@
 // MATRIZ MAESTRA OFICIAL – Inthaly OPS
 // Refleja exactamente la estructura solicitada por el USER
 // ================================================================
+// RBAC Granular V1: se importa el engine para exponerlo
+// sin romper ninguna función existente.
+import { resolvePermissions, can as engineCan, canModule as engineCanModule, serializeToLegacyArray } from '@/lib/rbac/engine'
+import type { Action, Module, UserPermissionOverride } from '@/lib/rbac/types'
 
 export const ROLE_PERMISSIONS: Record<string, string[]> = {
  // 0. SUPER_ADMIN: Control total del sistema
@@ -214,3 +218,46 @@ export function hasPermission(role_id: string, requiredPermission: string, area?
  const permissions = getPermissionsByRole(role_id, area)
  return permissions.includes('*') || permissions.includes(requiredPermission)
 }
+
+// ================================================================
+// RBAC Granular V1 — Extensiones (no rompen APIs existentes)
+// ================================================================
+
+/**
+ * Verifica si un usuario puede realizar una ACCIÓN específica en un módulo.
+ * Extiende hasPermission() con granularidad a nivel de acción.
+ *
+ * @example
+ *   canAction('almacen', 'inventory', 'delete')  // → false
+ *   canAction('admin', 'inventory', 'delete')     // → true
+ *   canAction('jefe_area', 'requerimientos', 'approve', 'Mina') // → true
+ */
+export function canAction(
+  role_id: string,
+  module: Module,
+  action: Action,
+  area?: string | null,
+  overrides?: UserPermissionOverride[]
+): boolean {
+  if (!role_id) return false
+  const resolved = resolvePermissions(role_id, area, overrides)
+  return engineCan(resolved, module, action)
+}
+
+/**
+ * Serializa permisos de un rol a array mixto (legacy + granular).
+ * Formato: ['inventory', 'inventory:read', 'inventory:create', ...]
+ * Permite hydration del cliente con permisos granulares desde la sesión.
+ */
+export function serializeGranularPermissions(
+  role_id: string,
+  area?: string | null,
+  overrides?: UserPermissionOverride[]
+): string[] {
+  const resolved = resolvePermissions(role_id, area, overrides)
+  return serializeToLegacyArray(resolved)
+}
+
+// Re-export del engine para uso directo
+export { resolvePermissions, engineCan as resolveCanAction, engineCanModule as resolveCanModule }
+export type { Action, Module, UserPermissionOverride }

@@ -2,19 +2,22 @@
 
 import { useState } from 'react'
 import { X, Truck, Scale, CheckCircle2, AlertTriangle, FileText, MapPin, User, Layers } from 'lucide-react'
-import { MineralBatch } from './plant-mock-data'
+import { PlantMineralBatch } from '@/app/(main)/operaciones/planta/actions'
+import { MultiplePhotoCapture } from '@/components/shared/MultiplePhotoCapture'
 
 interface MineralReceptionModalProps {
   isOpen: boolean
   onClose: () => void
-  onSubmit: (batch: Omit<MineralBatch, 'id'>) => void
+  onSubmit: (batch: Partial<PlantMineralBatch> & { evidences_base64?: string[] }) => void
 }
 
 export function MineralReceptionModal({ isOpen, onClose, onSubmit }: MineralReceptionModalProps) {
   const [guideNumber, setGuideNumber] = useState('')
+  const [batchCode, setBatchCode] = useState('')
   const [truckPlate, setTruckPlate] = useState('')
   const [driverName, setDriverName] = useState('')
-  const [originMine, setOriginMine] = useState('Nivel 1 - Frente Esperanza')
+  const [originMine, setOriginMine] = useState('')
+  const [dischargeTime, setDischargeTime] = useState('')
   const [mineralType, setMineralType] = useState('Sulfuros Polimetálicos')
   const [grossWeight, setGrossWeight] = useState<number | ''>('')
   const [tareWeight, setTareWeight] = useState<number | ''>('')
@@ -24,6 +27,8 @@ export function MineralReceptionModal({ isOpen, onClose, onSubmit }: MineralRece
   const [qualityNotes, setQualityNotes] = useState('')
   const [stockpile, setStockpile] = useState('En Balanza / Entrada')
   const [operatorName, setOperatorName] = useState('Carlos Ruiz (Líder Planta)')
+  const [trasladoPhotos, setTrasladoPhotos] = useState<string[]>([])
+  const [plantaPhotos, setPlantaPhotos] = useState<string[]>([])
 
   if (!isOpen) return null
 
@@ -39,28 +44,34 @@ export function MineralReceptionModal({ isOpen, onClose, onSubmit }: MineralRece
     }
 
     const now = new Date()
-    const autoCode = `LOT-${now.getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`
+    const finalBatchCode = batchCode.trim() || `LOT-${now.getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`
     const autoGuide = guideNumber.trim() || `GR-002-${Math.floor(100000 + Math.random() * 900000)}`
 
+    const mappedEvidences = [
+      ...trasladoPhotos.map(url => ({ url, stage: 'traslado', uploaded_at: now.toISOString() })),
+      ...plantaPhotos.map(url => ({ url, stage: 'planta', uploaded_at: now.toISOString() }))
+    ]
+
     onSubmit({
-      batchCode: autoCode,
-      guideNumber: autoGuide,
-      receptionDate: now.toISOString().split('T')[0],
-      receptionTime: now.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', hour12: false }),
-      truckPlate: truckPlate.toUpperCase().trim(),
-      driverName: driverName.trim(),
-      originMine,
-      mineralType,
-      grossWeight: Number(gross.toFixed(2)),
-      tareWeight: Number(tare.toFixed(2)),
-      netWeight: Number(net.toFixed(2)),
-      moisturePct: Number(moisturePct) || 0,
-      estimatedGrade: estimatedGrade.trim() || 'Pendiente Muestreo',
-      qualityStatus,
-      qualityNotes: qualityNotes.trim() || 'Ingreso registrado en balanza de planta.',
+      batch_code: finalBatchCode.toUpperCase(),
+      guide_number: autoGuide,
+      reception_date: now.toISOString().split('T')[0],
+      reception_time: now.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', hour12: false }),
+      truck_plate: truckPlate.toUpperCase().trim(),
+      driver_name: driverName.trim(),
+      origin_mine: originMine,
+      discharge_time: dischargeTime || null,
+      mineral_type: mineralType,
+      gross_weight: Number(gross.toFixed(2)),
+      tare_weight: Number(tare.toFixed(2)),
+      net_weight: Number(net.toFixed(2)),
+      moisture_pct: Number(moisturePct) || 0,
+      quality_status: qualityStatus,
+      quality_notes: qualityNotes.trim() || 'Ingreso registrado en balanza de planta.',
       stage: 'ingresado',
-      stockpile,
-      operatorName
+      stockpile: stockpile,
+      operator_name: operatorName,
+      evidences: mappedEvidences.length > 0 ? mappedEvidences : undefined
     })
 
     onClose()
@@ -108,6 +119,17 @@ export function MineralReceptionModal({ isOpen, onClose, onSubmit }: MineralRece
                 />
               </div>
               <div>
+                <label className="text-[11px] font-bold text-slate-600">Código de Mineral/Lote *</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="Ej. LOT-2026-4269"
+                  value={batchCode}
+                  onChange={(e) => setBatchCode(e.target.value)}
+                  className="w-full mt-1 p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold uppercase focus:border-blue-600 focus:bg-white outline-none transition-all"
+                />
+              </div>
+              <div>
                 <label className="text-[11px] font-bold text-slate-600">Placa Volquete / Dumper *</label>
                 <input
                   type="text"
@@ -131,18 +153,30 @@ export function MineralReceptionModal({ isOpen, onClose, onSubmit }: MineralRece
               </div>
               <div>
                 <label className="text-[11px] font-bold text-slate-600">Labor / Frente de Mina de Origen *</label>
-                <select
+                <input
+                  type="text"
+                  required
+                  placeholder="Ej. Frente Norte, Lote 4, etc."
                   value={originMine}
                   onChange={(e) => setOriginMine(e.target.value)}
                   className="w-full mt-1 p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold focus:border-blue-600 focus:bg-white outline-none transition-all"
-                >
-                  <option value="Nivel 1 - Frente Esperanza">Nivel 1 - Frente Esperanza</option>
-                  <option value="Nivel 1 - Tajada 02">Nivel 1 - Tajada 02</option>
-                  <option value="Nivel 2 - Galería Sur 04">Nivel 2 - Galería Sur 04</option>
-                  <option value="Nivel 2 - Chimenea 01">Nivel 2 - Chimenea 01</option>
-                  <option value="Corta Principal - Rajo Norte">Corta Principal - Rajo Norte</option>
-                  <option value="Stockpile Intermedio Mina">Stockpile Intermedio Mina</option>
-                </select>
+                />
+              </div>
+              <div>
+                <label className="text-[11px] font-bold text-slate-600">Hora de salida (Mina)</label>
+                <input
+                  type="time"
+                  value={dischargeTime}
+                  onChange={(e) => setDischargeTime(e.target.value)}
+                  className="w-full mt-1 p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold focus:border-blue-600 focus:bg-white outline-none transition-all"
+                />
+              </div>
+              <div className="col-span-full">
+                <MultiplePhotoCapture 
+                  photos={trasladoPhotos} 
+                  onChange={setTrasladoPhotos} 
+                  label="Evidencias Fotográficas de Traslado (Opcional)" 
+                />
               </div>
             </div>
           </div>
@@ -194,17 +228,21 @@ export function MineralReceptionModal({ isOpen, onClose, onSubmit }: MineralRece
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="text-[11px] font-bold text-slate-600">Tipo de Mineral</label>
-                <select
+                <input
+                  type="text"
+                  list="mineral-types"
                   value={mineralType}
                   onChange={(e) => setMineralType(e.target.value)}
+                  placeholder="Ej. Cuarzo con Pirita"
                   className="w-full mt-1 p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold focus:border-blue-600 focus:bg-white outline-none transition-all"
-                >
-                  <option value="Sulfuros Polimetálicos">Sulfuros Polimetálicos</option>
-                  <option value="Óxidos Auríferos">Óxidos Auríferos</option>
-                  <option value="Cuarzo con Pirita">Cuarzo con Pirita</option>
-                  <option value="Material Mixto">Material Mixto</option>
-                  <option value="Material de Desbroce / Techo">Material de Desbroce / Techo</option>
-                </select>
+                />
+                <datalist id="mineral-types">
+                  <option value="Sulfuros Polimetálicos" />
+                  <option value="Óxidos Auríferos" />
+                  <option value="Cuarzo con Pirita" />
+                  <option value="Material Mixto" />
+                  <option value="Material de Desbroce / Techo" />
+                </datalist>
               </div>
 
               <div>
@@ -287,6 +325,14 @@ export function MineralReceptionModal({ isOpen, onClose, onSubmit }: MineralRece
                   value={qualityNotes}
                   onChange={(e) => setQualityNotes(e.target.value)}
                   className="w-full mt-1 p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-normal focus:border-blue-600 focus:bg-white outline-none transition-all"
+                />
+              </div>
+
+              <div className="col-span-full">
+                <MultiplePhotoCapture 
+                  photos={plantaPhotos} 
+                  onChange={setPlantaPhotos} 
+                  label="Evidencias Fotográficas de Calidad / Planta (Opcional)" 
                 />
               </div>
             </div>

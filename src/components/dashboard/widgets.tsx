@@ -13,20 +13,20 @@ import {
 
 export function StatWidget({ title, value, icon: Icon, color, bg, href, trend, badge }: any) {
   const content = (
-    <div className="bg-white p-3.5 sm:p-4 rounded-xl shadow-xs border border-slate-100 flex flex-col justify-between gap-3 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 group h-full relative overflow-hidden">
-      <div className="absolute -right-4 -top-4 w-24 h-24 bg-slate-50 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-2xl" />
+    <div className="bg-white p-2 sm:p-2.5 rounded-lg shadow-2xs border border-slate-100 flex flex-col justify-between gap-1.5 hover:shadow-xs hover:-translate-y-0.5 transition-all duration-200 group h-full relative overflow-hidden">
+      <div className="absolute -right-4 -top-4 w-20 h-20 bg-slate-50 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-xl" />
       
       <div className="flex items-start justify-between relative z-10">
-        <div className={`${bg} p-2 rounded-lg group-hover:scale-105 transition-transform duration-200 shrink-0 shadow-xs border border-slate-100/50`}>
-          <Icon className={color} size={18} strokeWidth={2.2} />
+        <div className={`${bg} p-1.5 rounded-md group-hover:scale-105 transition-transform duration-200 shrink-0 shadow-2xs border border-slate-100/50`}>
+          <Icon className={color} size={14} strokeWidth={2.2} />
         </div>
         {badge && (
-          <div className={`flex items-center gap-1 px-2 py-0.5 rounded-md text-[9px] font-bold tracking-wider ${badge.color || 'bg-rose-50 border border-rose-100 text-rose-600'}`}>
+          <div className={`flex items-center gap-1 px-1.5 py-0.2 rounded text-[7.5px] font-bold tracking-wider ${badge.color || 'bg-rose-50 border border-rose-100 text-rose-600'}`}>
             {badge.text}
           </div>
         )}
         {trend && (
-          <div className={`flex items-center gap-1 px-2 py-0.5 rounded-md text-[9px] font-bold tracking-wider ${
+          <div className={`flex items-center gap-1 px-1.5 py-0.2 rounded text-[7.5px] font-bold tracking-wider ${
             trend.type === 'up' ? 'bg-emerald-50 border border-emerald-100 text-emerald-600' : 'bg-rose-50 border border-rose-100 text-rose-600'
           }`}>
             {trend.type === 'up' ? '↑' : '↓'} {trend.value}%
@@ -34,14 +34,14 @@ export function StatWidget({ title, value, icon: Icon, color, bg, href, trend, b
         )}
       </div>
 
-      <div className="relative z-10 mt-1">
-        <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1 leading-none">{title}</p>
-        <p className={`font-black text-slate-900 group-hover:text-blue-600 transition-colors leading-none ${
+      <div className="relative z-10 mt-0.5">
+        <p className="text-[8.5px] font-bold text-slate-400 uppercase tracking-wider mb-0.5 leading-none">{title}</p>
+        <p className={`font-black text-slate-900 group-hover:text-blue-600 transition-colors leading-tight ${
           String(value || '').length > 12 
-            ? 'text-base sm:text-lg tracking-tight' 
+            ? 'text-xs sm:text-sm tracking-tight' 
             : String(value || '').length > 8 
-            ? 'text-lg sm:text-xl tracking-tight' 
-            : 'text-xl sm:text-2xl tracking-tight'
+            ? 'text-sm sm:text-base tracking-tight' 
+            : 'text-base sm:text-lg tracking-tight'
         }`}>{value}</p>
       </div>
     </div>
@@ -53,19 +53,19 @@ export function StatWidget({ title, value, icon: Icon, color, bg, href, trend, b
 
 export function AlertWidget({ title, message, icon: Icon, color, bg, href }: any) {
   return (
-    <div className={`${bg} border border-slate-100 p-4 sm:p-5 rounded-xl shadow-xs flex items-center justify-between group hover:shadow-md transition-all duration-200`}>
-      <div className="flex items-center gap-4">
-        <div className="bg-white p-2.5 rounded-xl shadow-xs border border-slate-50 group-hover:rotate-6 transition-transform">
-          <Icon className={color} size={20} strokeWidth={2.2} />
+    <div className={`${bg} border border-slate-100 p-3 sm:p-3.5 rounded-xl shadow-2xs flex items-center justify-between group hover:shadow-xs transition-all duration-200`}>
+      <div className="flex items-center gap-3">
+        <div className="bg-white p-2 rounded-lg shadow-2xs border border-slate-50 group-hover:rotate-6 transition-transform">
+          <Icon className={color} size={17} strokeWidth={2.2} />
         </div>
         <div>
-          <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-0.5">{title}</p>
-          <h4 className="text-lg sm:text-xl font-bold text-slate-900 tracking-tight">{message}</h4>
+          <p className="text-[9px] font-bold text-slate-500 uppercase tracking-wider mb-0.5">{title}</p>
+          <h4 className="text-sm sm:text-base font-bold text-slate-900 tracking-tight">{message}</h4>
         </div>
       </div>
       {href && (
-        <Link href={href} className="p-2 bg-white rounded-lg text-slate-400 shadow-xs opacity-0 group-hover:opacity-100 transition-all hover:text-blue-600 hover:scale-105">
-          <ArrowRight size={18} />
+        <Link href={href} className="p-1.5 bg-white rounded-md text-slate-400 shadow-2xs opacity-0 group-hover:opacity-100 transition-all hover:text-blue-600 hover:scale-105">
+          <ArrowRight size={15} />
         </Link>
       )}
     </div>
@@ -74,41 +74,41 @@ export function AlertWidget({ title, message, icon: Icon, color, bg, href }: any
 
 export function ListWidget({ title, items, icon: Icon, color, hrefLabel, href }: any) {
   return (
-    <div className="bg-white p-4 sm:p-5 rounded-xl shadow-xs border border-slate-100 flex flex-col h-full hover:shadow-md transition-all duration-200 group">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
-        <h3 className="text-base sm:text-lg font-bold text-slate-800 flex items-center gap-3">
-          <div className={`${color.replace('text-', 'bg-')}/10 p-2 rounded-lg`}>
-            <Icon className={color} size={18} strokeWidth={2.2} />
+    <div className="bg-white p-3 sm:p-3.5 rounded-xl shadow-2xs border border-slate-100 flex flex-col h-full hover:shadow-xs transition-all duration-200 group">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
+        <h3 className="text-xs sm:text-sm font-bold text-slate-800 flex items-center gap-2">
+          <div className={`${color.replace('text-', 'bg-')}/10 p-1.5 rounded-md`}>
+            <Icon className={color} size={15} strokeWidth={2.2} />
           </div>
           <span className="tracking-tight">{title}</span>
         </h3>
         {href && (
-          <Link href={href} className="text-[10px] font-bold text-blue-600 hover:text-white hover:bg-blue-600 flex items-center gap-1.5 px-3.5 py-1.5 bg-blue-50 rounded-lg transition-all tracking-tight shadow-xs">
-            {hrefLabel || 'Ver todos'} <ArrowRight size={12} strokeWidth={2.5} />
+          <Link href={href} className="text-[9px] font-bold text-blue-600 hover:text-white hover:bg-blue-600 flex items-center gap-1 px-2.5 py-1 bg-blue-50 rounded-md transition-all tracking-tight shadow-2xs">
+            {hrefLabel || 'Ver todos'} <ArrowRight size={10} strokeWidth={2.5} />
           </Link>
         )}
       </div>
-      <div className="space-y-2.5 flex-1">
+      <div className="space-y-1.5 flex-1">
         {items?.length > 0 ? (
           items.map((item: any, idx: number) => (
-            <div key={idx} className="p-3 bg-slate-50/50 border border-slate-100/50 rounded-xl flex items-center justify-between group/item hover:bg-white hover:shadow-xs hover:border-blue-100 transition-all duration-200">
+            <div key={idx} className="px-2.5 py-1.5 bg-slate-50/50 border border-slate-100/50 rounded-lg flex items-center justify-between group/item hover:bg-white hover:shadow-2xs hover:border-blue-100 transition-all duration-200">
               <div className="flex-1 min-w-0">
                 <p className="text-xs font-bold text-slate-800 truncate tracking-tight group-hover/item:text-blue-600 transition-colors">{item.title || item.name}</p>
-                <p className="text-[10px] font-medium text-slate-400 truncate mt-0.5">{item.subtitle}</p>
+                <p className="text-[9.5px] font-medium text-slate-400 truncate mt-0.5">{item.subtitle}</p>
               </div>
               {item.badge && (
-                <span className={`text-[9px] font-semibold px-2 py-0.5 rounded-md ml-3 shadow-xs border ${item.badgeColor || 'bg-white text-slate-600 border-slate-100'}`}>
+                <span className={`text-[8.5px] font-semibold px-1.5 py-0.2 rounded ml-2 shadow-2xs border ${item.badgeColor || 'bg-white text-slate-600 border-slate-100'}`}>
                   {item.badge}
                 </span>
               )}
             </div>
           ))
         ) : (
-          <div className="h-full min-h-[140px] flex flex-col items-center justify-center text-center p-6 bg-slate-50/30 rounded-xl border-2 border-dashed border-slate-100">
-            <div className="bg-white p-3 rounded-full shadow-xs mb-2">
-              <Icon className="text-slate-200" size={24} />
+          <div className="h-full min-h-[110px] flex flex-col items-center justify-center text-center p-4 bg-slate-50/30 rounded-lg border border-dashed border-slate-100">
+            <div className="bg-white p-2 rounded-full shadow-2xs mb-1.5">
+              <Icon className="text-slate-200" size={18} />
             </div>
-            <p className="text-xs font-medium text-slate-400 tracking-tight">No hay actividad reciente</p>
+            <p className="text-[11px] font-medium text-slate-400 tracking-tight">No hay actividad reciente</p>
           </div>
         )}
       </div>
@@ -334,56 +334,56 @@ export function WelcomeHero({ userName, roleName, area, companyName, viewMode, c
  }
 
   return (
-    <div className="bg-gradient-to-r from-blue-700 via-indigo-700 to-blue-900 rounded-xl sm:rounded-2xl p-4 sm:p-5 lg:p-6 text-white shadow-xl relative overflow-hidden group border border-blue-600/30">
+    <div className="bg-gradient-to-r from-blue-700 via-indigo-700 to-blue-900 rounded-xl px-3.5 py-2.5 sm:px-4 sm:py-3 text-white shadow-md relative overflow-hidden group border border-blue-600/30">
       {/* Background effects */}
-      <div className="absolute top-0 right-0 w-[400px] h-[400px] bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2 blur-[100px] group-hover:bg-white/15 transition-all duration-1000" />
-      <div className="absolute -bottom-20 -left-20 w-60 h-60 bg-blue-400/20 rounded-full blur-[70px] group-hover:bg-indigo-400/20 transition-all duration-1000" />
+      <div className="absolute top-0 right-0 w-[240px] h-[240px] bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2 blur-[60px] group-hover:bg-white/15 transition-all duration-1000" />
+      <div className="absolute -bottom-12 -left-12 w-36 h-36 bg-blue-400/20 rounded-full blur-[50px] group-hover:bg-indigo-400/20 transition-all duration-1000" />
       
-      <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-4 sm:gap-6">
+      <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-2.5 sm:gap-3">
         <div className="max-w-2xl">
-          <div className="flex flex-wrap items-center gap-2 sm:gap-2.5 mb-2.5">
+          <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 mb-1">
             <span 
               style={{ color: '#ffffff' }}
-              className="bg-white/10 backdrop-blur-md text-[9px] font-semibold px-2.5 py-1 rounded-md keep-case tracking-normal border border-white/10"
+              className="bg-white/10 backdrop-blur-md text-[8px] font-semibold px-2 py-0.2 rounded keep-case tracking-normal border border-white/10"
             >
               {roleName} {area ? `| ${area === 'Almacén y Mantenimiento' ? 'Mecánica' : area}` : ''}
             </span>
             <div className="w-1 h-1 bg-white/20 rounded-full" />
             <span 
               style={{ color: '#dbeafe' }}
-              className="text-xs font-bold tracking-normal flex items-center gap-1.5"
+              className="text-[10.5px] font-bold tracking-normal flex items-center gap-1"
             >
-              <Building2 size={13} />
+              <Building2 size={11} />
               {companyName}
             </span>
           </div>
           
           <h1 
             style={{ color: '#ffffff' }}
-            className="text-xl sm:text-2xl font-bold mb-1 tracking-tight leading-snug"
+            className="text-sm sm:text-base font-bold mb-0.5 tracking-tight leading-tight"
           >
             {content.title} 👋
           </h1>
           <p 
             style={{ color: 'rgba(239, 246, 255, 0.85)' }}
-            className="text-xs font-normal leading-relaxed max-w-xl mt-1 keep-case"
+            className="text-[10.5px] font-normal leading-normal max-w-xl keep-case"
           >
             {content.text}
           </p>
         </div>
         
         {viewMode !== 'WORKER' && (
-          <div className="flex items-center gap-3 shrink-0">
+          <div className="flex items-center gap-2 shrink-0">
             <button 
               onClick={() => setIsModalOpen(true)}
-              className="flex items-center gap-3 p-3 bg-white/10 hover:bg-white/20 backdrop-blur-md rounded-xl border border-white/20 hover:scale-102 transition-all text-left group/btn cursor-pointer shadow-md shadow-blue-900/10"
+              className="flex items-center gap-2 px-2.5 py-1.5 bg-white/10 hover:bg-white/20 backdrop-blur-md rounded-lg border border-white/20 hover:scale-102 transition-all text-left group/btn cursor-pointer shadow-2xs"
             >
-              <div className="p-2 bg-white/20 rounded-lg group-hover/btn:bg-white text-white group-hover/btn:text-blue-700 transition-colors">
-                <QrCode size={18} />
+              <div className="p-1 bg-white/20 rounded-md group-hover/btn:bg-white text-white group-hover/btn:text-blue-700 transition-colors">
+                <QrCode size={13} />
               </div>
               <div>
-                <p className="text-[9px] font-bold text-blue-100 uppercase tracking-wider mb-0.5">Acceso Rápido</p>
-                <h4 className="text-xs font-bold text-white tracking-normal leading-none">Acceso Trabajadores</h4>
+                <p className="text-[7.5px] font-bold text-blue-100 uppercase tracking-wider leading-none mb-0.5">Acceso Rápido</p>
+                <h4 className="text-[10px] font-bold text-white tracking-normal leading-none">Acceso Trabajadores</h4>
               </div>
             </button>
           </div>
