@@ -74,7 +74,8 @@ export function OfflineProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   const triggerSync = useCallback(async () => {
-    if (!isOnline || isSyncing) return
+    const online = typeof navigator !== 'undefined' ? navigator.onLine : isOnline
+    if (!online || isSyncing) return
     
     setIsSyncing(true)
     try {
@@ -108,38 +109,50 @@ export function OfflineProvider({ children }: { children: React.ReactNode }) {
   }, [isOnline, isSyncing, updatePendingCount])
 
   useEffect(() => {
-    // Initial state
-    setIsOnline(navigator.onLine)
+    const currentOnline = typeof navigator !== 'undefined' ? navigator.onLine : true
+    setIsOnline(currentOnline)
     updatePendingCount()
+
+    // Auto-sync on initial mount if online
+    if (currentOnline) {
+      triggerSync()
+    }
 
     const handleOnline = () => {
       setIsOnline(true)
-      triggerSync()
+      setTimeout(() => {
+        triggerSync()
+      }, 500)
     }
     const handleOffline = () => setIsOnline(false)
 
     window.addEventListener('online', handleOnline)
     window.addEventListener('offline', handleOffline)
     
-    // Check queue periodically
-    const interval = setInterval(updatePendingCount, 10000)
+    // Check queue periodically and trigger sync if online with pending operations
+    const interval = setInterval(() => {
+      updatePendingCount()
+      if (typeof navigator !== 'undefined' && navigator.onLine && !isSyncing) {
+        triggerSync()
+      }
+    }, 10000)
 
     return () => {
       window.removeEventListener('online', handleOnline)
       window.removeEventListener('offline', handleOffline)
       clearInterval(interval)
     }
-  }, [triggerSync, updatePendingCount])
+  }, [triggerSync, updatePendingCount, isSyncing])
 
   return (
     <OfflineContext.Provider value={{ isOnline, pendingCount, isSyncing, triggerSync }}>
       {children}
-      <OfflineIndicator isOnline={isOnline} pendingCount={pendingCount} isSyncing={isSyncing} />
+      <OfflineIndicator isOnline={isOnline} pendingCount={pendingCount} isSyncing={isSyncing} onSync={triggerSync} />
     </OfflineContext.Provider>
   )
 }
 
-function OfflineIndicator({ isOnline, pendingCount, isSyncing }: { isOnline: boolean, pendingCount: number, isSyncing: boolean }) {
+function OfflineIndicator({ isOnline, pendingCount, isSyncing, onSync }: { isOnline: boolean, pendingCount: number, isSyncing: boolean, onSync?: () => Promise<void> }) {
   const [showSynced, setShowSynced] = useState(false)
 
   useEffect(() => {
@@ -167,10 +180,16 @@ function OfflineIndicator({ isOnline, pendingCount, isSyncing }: { isOnline: boo
       )}
 
       {isOnline && !isSyncing && pendingCount > 0 && (
-        <span className="flex items-center gap-2 text-slate-500">
+        <button
+          type="button"
+          onClick={() => onSync && onSync()}
+          className="flex items-center gap-2 text-amber-800 hover:text-amber-950 transition-colors cursor-pointer"
+          title="Haga clic para sincronizar ahora"
+        >
           <span className="bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full">{pendingCount}</span>
-          Pendientes
-        </span>
+          Pendientes (Sincronizar)
+          <RefreshCw size={13} className="ml-1 opacity-70 hover:opacity-100" />
+        </button>
       )}
 
       {isOnline && !isSyncing && pendingCount === 0 && showSynced && (

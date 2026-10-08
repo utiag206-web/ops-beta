@@ -2,7 +2,7 @@
 // Resilient Offline-First Architecture without obsolete static hashes
 
 const CACHE_PREFIX = 'inthaly-ops'
-const CACHE_VERSION = 'v1.2.0'
+const CACHE_VERSION = 'v1.2.1'
 const STATIC_CACHE = `${CACHE_PREFIX}-static-${CACHE_VERSION}`
 const PAGES_CACHE = `${CACHE_PREFIX}-pages-${CACHE_VERSION}`
 const RSC_CACHE = `${CACHE_PREFIX}-rsc-${CACHE_VERSION}`
@@ -124,12 +124,21 @@ self.addEventListener('fetch', (event) => {
           const networkResponse = await fetch(request)
           if (networkResponse && networkResponse.status === 200) {
             cache.put(request, networkResponse.clone())
+            cache.put(url.pathname, networkResponse.clone())
+            // Warm-cache the HTML document in PAGES_CACHE in the background for smooth offline document navigation
+            caches.open(PAGES_CACHE).then((pCache) => {
+              fetch(url.pathname, { cache: 'no-cache' }).then((docRes) => {
+                if (docRes && docRes.status === 200) {
+                  pCache.put(url.pathname, docRes)
+                }
+              }).catch(() => {})
+            })
           }
           return networkResponse
         } catch (err) {
-          const cached = await cache.match(request)
+          const cached = (await cache.match(request, { ignoreSearch: true, ignoreVary: true })) ||
+                         (await cache.match(url.pathname, { ignoreSearch: true, ignoreVary: true }))
           if (cached) return cached
-          // If no RSC cached, return a synthetic empty RSC response or 408 to allow client graceful handling
           return new Response('', { status: 408, statusText: 'Offline RSC Unavailable' })
         }
       })

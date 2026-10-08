@@ -132,7 +132,8 @@ export async function addOperationToQueue(operation: Omit<SyncOperation, 'sync_s
 export async function getPendingOperations() {
   const db = await getDB()
   if (!db) return []
-  return db.getAllFromIndex('sync_queue', 'by-status', 'PENDING')
+  const allOps = await db.getAll('sync_queue')
+  return allOps.filter(op => op.sync_status === 'PENDING' || op.sync_status === 'FAILED')
 }
 
 export async function updateOperationStatus(id: string, status: SyncOperation['sync_status'], error?: string) {
@@ -247,7 +248,7 @@ export async function saveBatchesToCache(batches: CachedPlantBatch[], companyId:
 
   const tx = db.transaction('plant_batches_cache', 'readwrite')
   for (const b of batches) {
-    if (b && b.id && !b.id.startsWith('temp-')) {
+    if (b && b.id) {
       await tx.store.put({ ...b, company_id: companyId })
     }
   }

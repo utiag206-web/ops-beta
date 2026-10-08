@@ -19,8 +19,8 @@ export function MineralReceptionModal({ isOpen, onClose, onSubmit }: MineralRece
   const [originMine, setOriginMine] = useState('')
   const [dischargeTime, setDischargeTime] = useState('')
   const [mineralType, setMineralType] = useState('Sulfuros Polimetálicos')
-  const [grossWeight, setGrossWeight] = useState<number | ''>('')
-  const [tareWeight, setTareWeight] = useState<number | ''>('')
+  const [grossWeight, setGrossWeight] = useState<string>('')
+  const [tareWeight, setTareWeight] = useState<string>('')
   const [moisturePct, setMoisturePct] = useState<number>(4.5)
   const [estimatedGrade, setEstimatedGrade] = useState('')
   const [qualityStatus, setQualityStatus] = useState<'optimo' | 'regular' | 'observado' | 'rechazado'>('optimo')
@@ -32,8 +32,14 @@ export function MineralReceptionModal({ isOpen, onClose, onSubmit }: MineralRece
 
   if (!isOpen) return null
 
-  const gross = Number(grossWeight) || 0
-  const tare = Number(tareWeight) || 0
+  const parseWeight = (val: string): number => {
+    if (!val) return 0
+    const cleaned = String(val).replace(',', '.')
+    const num = parseFloat(cleaned)
+    return isNaN(num) ? 0 : num
+  }
+  const gross = parseWeight(grossWeight)
+  const tare = parseWeight(tareWeight)
   const net = Math.max(0, gross - tare)
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -196,7 +202,7 @@ export function MineralReceptionModal({ isOpen, onClose, onSubmit }: MineralRece
                   required
                   placeholder="Ej. 29.40"
                   value={grossWeight}
-                  onChange={(e) => setGrossWeight(e.target.value === '' ? '' : parseFloat(e.target.value))}
+                  onChange={(e) => setGrossWeight(e.target.value)}
                   className="w-full mt-1 p-3 bg-white border border-slate-200 rounded-xl text-sm font-black text-slate-800 focus:border-blue-600 outline-none transition-all"
                 />
               </div>
@@ -208,7 +214,7 @@ export function MineralReceptionModal({ isOpen, onClose, onSubmit }: MineralRece
                   required
                   placeholder="Ej. 10.20"
                   value={tareWeight}
-                  onChange={(e) => setTareWeight(e.target.value === '' ? '' : parseFloat(e.target.value))}
+                  onChange={(e) => setTareWeight(e.target.value)}
                   className="w-full mt-1 p-3 bg-white border border-slate-200 rounded-xl text-sm font-black text-slate-800 focus:border-blue-600 outline-none transition-all"
                 />
               </div>

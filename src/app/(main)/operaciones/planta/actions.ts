@@ -141,9 +141,11 @@ export async function createPlantBatch(payload: Partial<PlantMineralBatch>) {
       driver_worker_id: payload.driver_worker_id || null,
       origin_mine: payload.origin_mine,
       mineral_type: payload.mineral_type,
-      gross_weight: payload.gross_weight || 0,
-      tare_weight: payload.tare_weight || 0,
-      net_weight: payload.net_weight || 0,
+      gross_weight: Number(payload.gross_weight) || 0,
+      tare_weight: Number(payload.tare_weight) || 0,
+      net_weight: (payload.net_weight !== undefined && payload.net_weight !== null && !isNaN(Number(payload.net_weight)) && Number(payload.net_weight) > 0)
+        ? Number(payload.net_weight)
+        : Math.max(0, Number(((Number(payload.gross_weight) || 0) - (Number(payload.tare_weight) || 0)).toFixed(2))),
       reception_date: payload.reception_date || new Date().toISOString().split('T')[0],
       reception_time: payload.reception_time || new Date().toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', hour12: false }),
       discharge_time: payload.discharge_time || null,
