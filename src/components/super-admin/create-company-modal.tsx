@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useState } from 'react'
 import { 
@@ -15,9 +15,9 @@ interface CreateCompanyModalProps {
 }
 
 const INDUSTRIES = [
-  'Minería y Metalurgia',
-  'Construcción e Infraestructura',
-  'Transporte y Logística',
+  'MinerÃ­a y Metalurgia',
+  'ConstrucciÃ³n e Infraestructura',
+  'Transporte y LogÃ­stica',
   'Manufactura e Industria',
   'Servicios Generales y Contratistas',
   'Agroindustria y Alimentos',
@@ -29,7 +29,7 @@ const WORKER_RANGES = [
   '1 a 15 trabajadores',
   '16 a 50 trabajadores',
   '51 a 200 trabajadores',
-  'Más de 200 trabajadores',
+  'MÃ¡s de 200 trabajadores',
 ]
 
 export function CreateCompanyModal({ isOpen, onClose }: CreateCompanyModalProps) {
@@ -40,30 +40,42 @@ export function CreateCompanyModal({ isOpen, onClose }: CreateCompanyModalProps)
   const [copied, setCopied] = useState(false)
   
   const [formData, setFormData] = useState({
-    // 9 datos corporativos estándar (idénticos al formulario de demostración)
+    // 9 datos corporativos estÃ¡ndar (idÃ©nticos al formulario de demostraciÃ³n)
     adminName: '',
     contactPosition: '',
     adminEmail: '',
     phone: '',
     name: '',
     taxId: '',
-    industry: 'Minería y Metalurgia',
+    industry: 'MinerÃ­a y Metalurgia',
     estimatedWorkers: '16 a 50 trabajadores',
     notes: '',
-    // Opciones técnicas de creación
+    // Opciones tÃ©cnicas de creaciÃ³n
     adminPassword: '',
     is_test: false
   })
 
-  if (!isOpen) return null
+      if (typeof navigator !== 'undefined' && !navigator.onLine) {
+      setError('Esta operación administrativa requiere conexión a Internet.')
+      setLoading(false)
+      return
+    }
+
+    if (!isOpen) return null
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
     setError(null)
 
+        if (typeof navigator !== 'undefined' && !navigator.onLine) {
+      setError('Esta operación administrativa requiere conexión a Internet.')
+      setLoading(false)
+      return
+    }
+
     if (formData.taxId && formData.taxId.length !== 11) {
-      setError('El RUC debe contener exactamente 11 dígitos numéricos.')
+      setError('El RUC debe contener exactamente 11 dÃ­gitos numÃ©ricos.')
       setLoading(false)
       return
     }
@@ -83,7 +95,13 @@ export function CreateCompanyModal({ isOpen, onClose }: CreateCompanyModalProps)
         is_test: formData.is_test
       })
 
-      if (res.error) {
+          if (typeof navigator !== 'undefined' && !navigator.onLine) {
+      setError('Esta operación administrativa requiere conexión a Internet.')
+      setLoading(false)
+      return
+    }
+
+    if (res.error) {
         setError(res.error)
       } else {
         setSuccess(res)
@@ -102,14 +120,20 @@ export function CreateCompanyModal({ isOpen, onClose }: CreateCompanyModalProps)
     setTimeout(() => setCopied(false), 2500)
   }
 
-  if (success) {
+      if (typeof navigator !== 'undefined' && !navigator.onLine) {
+      setError('Esta operación administrativa requiere conexión a Internet.')
+      setLoading(false)
+      return
+    }
+
+    if (success) {
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
         <div className="bg-white rounded-2xl w-full max-w-md overflow-hidden shadow-2xl p-6 sm:p-7 text-center animate-in zoom-in-95 duration-200">
           <div className="w-14 h-14 bg-emerald-100 text-emerald-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
             <CheckCircle2 size={32} />
           </div>
-          <h2 className="text-xl font-black text-slate-900 mb-1">¡Empresa Creada!</h2>
+          <h2 className="text-xl font-black text-slate-900 mb-1">Â¡Empresa Creada!</h2>
           <p className="text-xs text-slate-500 mb-6">La infraestructura y base de datos han sido inicializadas correctamente.</p>
           
           <div className="bg-slate-50 rounded-xl p-4 text-left space-y-2.5 border border-slate-200/80 mb-6 text-xs">
@@ -127,13 +151,13 @@ export function CreateCompanyModal({ isOpen, onClose }: CreateCompanyModalProps)
             </div>
             {success.password && (
               <div>
-                <p className="text-[10px] font-bold text-slate-400 uppercase">Contraseña Temporal</p>
+                <p className="text-[10px] font-bold text-slate-400 uppercase">ContraseÃ±a Temporal</p>
                 <div className="flex items-center justify-between bg-white px-2.5 py-1.5 rounded-lg border border-slate-200 mt-0.5">
                   <code className="font-mono font-bold text-slate-800 text-xs">{success.password}</code>
                   <button 
                     onClick={() => copyToClipboard(success.password)}
                     className="p-1 hover:bg-slate-50 rounded text-slate-400 hover:text-slate-900 transition-colors cursor-pointer"
-                    title="Copiar contraseña"
+                    title="Copiar contraseÃ±a"
                   >
                     {copied ? <CheckCircle2 size={14} className="text-emerald-600" /> : <Copy size={14} />}
                   </button>
@@ -165,7 +189,7 @@ export function CreateCompanyModal({ isOpen, onClose }: CreateCompanyModalProps)
             <div>
               <h2 className="text-base sm:text-lg font-black text-slate-900 leading-none">Nueva Empresa</h2>
               <p className="text-slate-400 text-xs font-medium mt-1">
-                Ficha corporativa completa y configuración de instancia
+                Ficha corporativa completa y configuraciÃ³n de instancia
               </p>
             </div>
           </div>
@@ -186,11 +210,11 @@ export function CreateCompanyModal({ isOpen, onClose }: CreateCompanyModalProps)
             </div>
           )}
 
-          {/* Bloque: Los 9 Datos Corporativos Estándar */}
+          {/* Bloque: Los 9 Datos Corporativos EstÃ¡ndar */}
           <div className="space-y-3">
             <div className="flex items-center gap-1.5 text-xs font-bold text-slate-800 pb-1 border-b border-slate-100">
               <Sparkles size={14} className="text-blue-600" />
-              <span>Datos Corporativos y de Contacto (Estándar Inthaly)</span>
+              <span>Datos Corporativos y de Contacto (EstÃ¡ndar Inthaly)</span>
             </div>
 
             {/* Fila 1: Contacto y Cargo */}
@@ -224,7 +248,7 @@ export function CreateCompanyModal({ isOpen, onClose }: CreateCompanyModalProps)
               </div>
             </div>
 
-            {/* Fila 2: Correo y Teléfono */}
+            {/* Fila 2: Correo y TelÃ©fono */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-tight mb-1">
@@ -242,7 +266,7 @@ export function CreateCompanyModal({ isOpen, onClose }: CreateCompanyModalProps)
 
               <div>
                 <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-tight mb-1">
-                  Teléfono / WhatsApp *
+                  TelÃ©fono / WhatsApp *
                 </label>
                 <input 
                   required
@@ -273,13 +297,13 @@ export function CreateCompanyModal({ isOpen, onClose }: CreateCompanyModalProps)
 
               <div>
                 <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-tight mb-1">
-                  RUC / Identificación Fiscal *
+                  RUC / IdentificaciÃ³n Fiscal *
                 </label>
                 <input 
                   required
                   type="text"
                   maxLength={11}
-                  placeholder="20XXXXXXXXX (11 dígitos)"
+                  placeholder="20XXXXXXXXX (11 dÃ­gitos)"
                   value={formData.taxId}
                   onChange={(e) => setFormData(prev => ({ ...prev, taxId: e.target.value.replace(/\D/g, '') }))}
                   className="w-full h-9 rounded-lg border border-slate-200 bg-slate-50/50 px-3 text-xs font-medium text-slate-800 placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/10 transition-all font-mono"
@@ -320,10 +344,10 @@ export function CreateCompanyModal({ isOpen, onClose }: CreateCompanyModalProps)
               </div>
             </div>
 
-            {/* Fila 5: Requerimientos Específicos o Mensaje */}
+            {/* Fila 5: Requerimientos EspecÃ­ficos o Mensaje */}
             <div>
               <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-tight mb-1">
-                Requerimientos específicos o mensaje (Opcional)
+                Requerimientos especÃ­ficos o mensaje (Opcional)
               </label>
               <textarea 
                 rows={2}
@@ -335,15 +359,15 @@ export function CreateCompanyModal({ isOpen, onClose }: CreateCompanyModalProps)
             </div>
           </div>
 
-          {/* Bloque: Parámetros Técnicos del Ecosistema */}
+          {/* Bloque: ParÃ¡metros TÃ©cnicos del Ecosistema */}
           <div className="pt-2 border-t border-slate-100 space-y-3">
             <div>
               <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-tight mb-1">
-                Contraseña Temporal de Acceso (Opcional)
+                ContraseÃ±a Temporal de Acceso (Opcional)
               </label>
               <input 
                 type="password"
-                placeholder="Dejar vacío para auto-generar contraseña segura"
+                placeholder="Dejar vacÃ­o para auto-generar contraseÃ±a segura"
                 value={formData.adminPassword}
                 onChange={(e) => setFormData(prev => ({...prev, adminPassword: e.target.value}))}
                 className="w-full h-9 rounded-lg border border-slate-200 bg-slate-50/50 px-3 text-xs font-medium text-slate-800 placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/10 transition-all"
@@ -359,7 +383,7 @@ export function CreateCompanyModal({ isOpen, onClose }: CreateCompanyModalProps)
               />
               <div className="flex flex-col">
                 <span className="text-xs font-bold text-slate-900">Marcar como Empresa de Prueba</span>
-                <span className="text-[10px] text-slate-500">Habilita eliminación futura y marca como entorno demo</span>
+                <span className="text-[10px] text-slate-500">Habilita eliminaciÃ³n futura y marca como entorno demo</span>
               </div>
             </label>
           </div>
@@ -396,3 +420,4 @@ export function CreateCompanyModal({ isOpen, onClose }: CreateCompanyModalProps)
     </div>
   )
 }
+

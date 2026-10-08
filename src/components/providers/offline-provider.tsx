@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react'
 import { Wifi, WifiOff, RefreshCw } from 'lucide-react'
@@ -38,11 +38,33 @@ export function OfflineProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     initializeSyncHandlers()
     if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js').catch((err) => {
-          console.warn('Service Worker registration skipped:', err);
-        });
-      });
+      const registerSW = () => {
+        navigator.serviceWorker
+          .register('/sw.js')
+          .then((reg) => {
+            console.log('[PWA] Service Worker registered successfully, scope:', reg.scope)
+            reg.onupdatefound = () => {
+              const installingWorker = reg.installing
+              if (installingWorker) {
+                installingWorker.onstatechange = () => {
+                  if (installingWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                    console.log('[PWA] New Service Worker version installed.')
+                  }
+                }
+              }
+            }
+          })
+          .catch((err) => {
+            console.warn('[PWA] Service Worker registration failed:', err)
+          })
+      }
+
+      if (document.readyState === 'complete') {
+        registerSW()
+      } else {
+        window.addEventListener('load', registerSW)
+        return () => window.removeEventListener('load', registerSW)
+      }
     }
   }, [])
 
@@ -132,15 +154,15 @@ function OfflineIndicator({ isOnline, pendingCount, isSyncing }: { isOnline: boo
 
   return (
     <div className="fixed bottom-4 right-4 z-50 flex items-center gap-3 px-4 py-2.5 rounded-2xl shadow-xl font-bold text-xs animate-in slide-in-from-bottom-5 bg-white border border-slate-200 text-slate-700">
-      {!isOnline && (
+            {!isOnline && (
         <span className="flex items-center gap-2 text-amber-600">
-          <WifiOff size={16} /> Sin conexión / Trabajando offline
+          <WifiOff size={16} /> Sin conexión · Trabajando sin conexión
         </span>
       )}
       
       {isOnline && isSyncing && (
         <span className="flex items-center gap-2 text-blue-600">
-          <RefreshCw size={16} className="animate-spin" /> Sincronizando...
+          <RefreshCw size={16} className="animate-spin" /> Sincronizando cambios...
         </span>
       )}
 
@@ -153,9 +175,12 @@ function OfflineIndicator({ isOnline, pendingCount, isSyncing }: { isOnline: boo
 
       {isOnline && !isSyncing && pendingCount === 0 && showSynced && (
         <span className="flex items-center gap-2 text-emerald-600 animate-in fade-in">
-          <Wifi size={16} /> ✓ Todo sincronizado
+          <Wifi size={16} /> âœ“ Todo sincronizado
         </span>
       )}
     </div>
   )
 }
+
+
+

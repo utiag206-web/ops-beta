@@ -1,4 +1,4 @@
-import { Sidebar } from '@/components/layout/sidebar'
+﻿import { Sidebar } from '@/components/layout/sidebar'
 import { Header } from '@/components/layout/header'
 import { getUserSession, getActiveViewMode } from '@/lib/auth'
 import { OnboardingCheck } from '@/components/auth/onboarding-check'
@@ -12,6 +12,7 @@ import { getCapabilityForRoute, isCapabilityAvailable } from '@/lib/operating-pr
 import { redirect } from 'next/navigation'
 import { getGlobalSettings } from '@/app/(main)/super-admin/settings/general/actions'
 import { serializeToLegacyArray } from '@/lib/rbac/engine'
+import { OfflineSessionProvider } from '@/components/providers/offline-session-provider'
 
 export default async function DashboardLayout({
   children,
@@ -44,20 +45,20 @@ export default async function DashboardLayout({
 
   // 3. Super Admin Global Guard
   if (isSuperAdmin && !isImpersonating && !pathname.startsWith('/super-admin')) {
-    console.log(`[LAYOUT] 🛡️ SuperAdmin detected outside /super-admin. Redirecting to /super-admin`)
+    console.log(`[LAYOUT] ðŸ›¡ï¸ SuperAdmin detected outside /super-admin. Redirecting to /super-admin`)
     redirect('/super-admin')
   }
 
   // 4. Access Control Block for non-SuperAdmins
   if (!isSuperAdmin && pathname.startsWith('/super-admin')) {
-    console.log(`[LAYOUT] ⛔ Non-SuperAdmin tried to access /super-admin. Redirecting to /dashboard`)
+    console.log(`[LAYOUT] â›” Non-SuperAdmin tried to access /super-admin. Redirecting to /dashboard`)
     redirect('/dashboard')
   }
 
   // 5. Worker Specific Guards (Optimized PRE-DEPLOY: No redundant DB fetch)
   if (userRole === 'trabajador' || viewMode === 'WORKER') {
     if (userRole === 'trabajador' && extendedUser.worker_id && !extendedUser.worker_status) {
-      console.warn(`[LAYOUT] ⚠️ Worker profile missing or inactive for ${extendedUser.email}`)
+      console.warn(`[LAYOUT] âš ï¸ Worker profile missing or inactive for ${extendedUser.email}`)
       redirect('/login')
     }
 
@@ -68,7 +69,7 @@ export default async function DashboardLayout({
   }
 
   // 6. Capability Gateway Guard: COMPANY_CAPABILITY
-  // Si la ruta está asociada a una capacidad y no está disponible para la empresa, denegar acceso directo por URL.
+  // Si la ruta estÃ¡ asociada a una capacidad y no estÃ¡ disponible para la empresa, denegar acceso directo por URL.
   if (!isSuperAdmin && pathname && pathname !== '/dashboard' && pathname !== '/profile') {
     const routeCapability = getCapabilityForRoute(pathname)
     if (routeCapability) {
@@ -79,7 +80,7 @@ export default async function DashboardLayout({
         industry: companyIndustry
       })
       if (!isAvailable) {
-        console.warn(`[CAPABILITY_GATEWAY] ⛔ Access Denied: Route '${pathname}' requires capability '${routeCapability}', which is not active/available for company industry '${companyIndustry || 'LEGACY'}'`)
+        console.warn(`[CAPABILITY_GATEWAY] â›” Access Denied: Route '${pathname}' requires capability '${routeCapability}', which is not active/available for company industry '${companyIndustry || 'LEGACY'}'`)
         redirect('/dashboard')
       }
     }
@@ -96,7 +97,8 @@ export default async function DashboardLayout({
   }
 
   return (
-    <GlobalSettingsProvider settings={globalSettings}>
+    <OfflineSessionProvider initialUser={extendedUser}>
+      <GlobalSettingsProvider settings={globalSettings}>
       <RbacProvider 
         role_id={extendedUser?.role_id} 
         permissions={
@@ -126,6 +128,8 @@ export default async function DashboardLayout({
           </SidebarProvider>
         </OperationalContextProvider>
       </RbacProvider>
-    </GlobalSettingsProvider>
+      </GlobalSettingsProvider>
+    </OfflineSessionProvider>
   )
 }
+
