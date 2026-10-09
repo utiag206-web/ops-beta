@@ -2,7 +2,6 @@
 
 import React, { useEffect, useState } from 'react'
 import { AlertCircle, RefreshCw, Home, WifiOff } from 'lucide-react'
-import Link from 'next/link'
 
 export default function GlobalError({
   error,
@@ -14,7 +13,7 @@ export default function GlobalError({
   const [isOffline, setIsOffline] = useState(false)
 
   useEffect(() => {
-    console.error('[CLIENT_SIDE_EXCEPTION_CAPTURED]', error)
+    console.error('[GLOBAL_ERROR_CAPTURED]', error)
     if (typeof navigator !== 'undefined') {
       setIsOffline(!navigator.onLine)
     }
@@ -39,12 +38,12 @@ export default function GlobalError({
 
         <div className="space-y-2">
           <h1 className="text-xl font-black text-white">
-            {isOffline ? 'Modo sin conexión' : 'Recuperación de pantalla'}
+            {isOffline ? 'Modo sin conexión' : 'Recuperación del sistema'}
           </h1>
           <p className="text-xs text-slate-400 leading-relaxed">
             {isOffline 
-              ? 'La aplicación se encuentra operando sin conexión a Internet. Puedes reintentar cargar esta sección o regresar al panel principal.'
-              : 'Ocurrió un contratiempo temporal en la navegación del cliente. Puedes recargar los datos o volver a la vista principal.'}
+              ? 'La aplicación se encuentra operando sin conexión a Internet. Puedes reintentar la carga o volver a la vista principal.'
+              : 'Ocurrió un contratiempo temporal en la aplicación. Puedes recargar o volver a la vista principal.'}
           </p>
         </div>
 
@@ -62,12 +61,13 @@ export default function GlobalError({
           >
             <RefreshCw size={15} /> Reintentar
           </button>
-          <Link
-            href="/dashboard"
+          <button
+            type="button"
+            onClick={() => { window.location.href = '/dashboard' }}
             className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-slate-700 hover:bg-slate-600 text-slate-200 font-bold text-xs transition-colors"
           >
             <Home size={15} /> Ir al Inicio
-          </Link>
+          </button>
         </div>
       </div>
     </div>

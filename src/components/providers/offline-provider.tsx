@@ -1,5 +1,7 @@
 'use client'
 
+import { warmApplicationRoutes } from '@/lib/prewarm-routes'
+
 import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react'
 import { Wifi, WifiOff, RefreshCw } from 'lucide-react'
 import { getPendingOperations, updateOperationStatus, removeOperationFromQueue, replaceTemporaryIdInQueue } from '@/lib/offline-sync'
@@ -37,6 +39,7 @@ export function OfflineProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     initializeSyncHandlers()
+    warmApplicationRoutes()
     if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
       const registerSW = () => {
         navigator.serviceWorker

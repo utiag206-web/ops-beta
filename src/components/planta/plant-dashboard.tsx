@@ -10,7 +10,7 @@ import { PlantMineralBatch, PlantMineralSample, getPlantSamples, createPlantBatc
 import { MineralReceptionModal } from './mineral-reception-modal'
 import { EditTrasladoModal, EditPlantaModal, MuestreoModal, LaboratorioModal } from './plant-modals'
 import { useOffline } from '@/components/providers/offline-provider'
-import { addOperationToQueue, getPendingOperations, saveBatchesToCache, getCachedBatches, saveSamplesToCache, getCachedSamples, updateBatchInCache } from '@/lib/offline-sync'
+import { addOperationToQueue, getPendingOperations, removeOperationFromQueue, saveBatchesToCache, getCachedBatches, saveSamplesToCache, getCachedSamples, updateBatchInCache } from '@/lib/offline-sync'
 import { v4 as uuidv4 } from 'uuid'
 
 export function PlantDashboard({ companyId, initialBatches, persistToServer = false }: { companyId: string, initialBatches: PlantMineralBatch[], persistToServer?: boolean }) {
@@ -159,10 +159,21 @@ export function PlantDashboard({ companyId, initialBatches, persistToServer = fa
         const cleanUpdates = processedEvidences ? { ...updates, evidences: processedEvidences } : { ...updates }
         const res = await updatePlantBatch(batchId, cleanUpdates)
         if (res.success && res.data) {
-          const updated = batches.map(b => b.id === batchId ? res.data! : b)
+          const freshBatch = { ...res.data!, isPending: false }
+          const updated = batches.map(b => b.id === batchId ? freshBatch : b)
           setBatches(updated)
-          await updateBatchInCache(batchId, res.data as any)
-          if (detailBatch && detailBatch.id === batchId) setDetailBatch(res.data)
+          await updateBatchInCache(batchId, freshBatch as any)
+          if (detailBatch && detailBatch.id === batchId) setDetailBatch(freshBatch)
+
+          // Clear any obsolete pending/failed sync_queue operations for this batch
+          try {
+            const pending = await getPendingOperations()
+            for (const op of pending) {
+              if (op.entity === 'planta_mineral' && (op.payload?.id === batchId || op.payload?.updates?.id === batchId)) {
+                await removeOperationFromQueue(op.id)
+              }
+            }
+          } catch (_) {}
           return
         } else if (res.error && !res.error.toLowerCase().includes('fetch') && !res.error.toLowerCase().includes('network')) {
           alert(res.error)
@@ -221,8 +232,21 @@ export function PlantDashboard({ companyId, initialBatches, persistToServer = fa
           const res = await updatePlantSample(cleanSample.id, cleanSample)
           if (res.success && res.data) {
             const bId = res.data.batch_id
-            const newSamples = (samples[bId] || []).map(s => s.id === res.data!.id ? res.data! : s)
+            const freshSample = { ...res.data!, isPending: false }
+            const newSamples = (samples[bId] || []).map(s => s.id === res.data!.id ? freshSample : s)
             setSamples(prev => ({ ...prev, [bId]: newSamples }))
+            await saveSamplesToCache(newSamples as any, bId)
+
+            // Clear any obsolete sync_queue operations for this sample
+            try {
+              const pending = await getPendingOperations()
+              for (const op of pending) {
+                if (op.entity === 'planta_mineral' && (op.payload?.id === cleanSample.id || op.payload?.updates?.id === cleanSample.id)) {
+                  await removeOperationFromQueue(op.id)
+                }
+              }
+            } catch (_) {}
+
             if (cleanSample.status === 'ley_acordada') {
               await handleUpdateBatch(bId, { stage: 'ley_final' })
             }
@@ -343,13 +367,13 @@ export function PlantDashboard({ companyId, initialBatches, persistToServer = fa
   }
 
   const handleAnular = async (batchId: string) => {
-    if (confirm('Â¿EstÃ¡ seguro de anular este ingreso? Se mantendrÃ¡ el registro pero ya no estarÃ¡ activo en el flujo.')) {
+    if (confirm('¿Está seguro de anular este ingreso? Se mantendrá el registro pero ya no estará activo en el flujo.')) {
       await handleUpdateBatch(batchId, { stage: 'anulado' })
     }
   }
 
   const handleReactivar = async (batchId: string) => {
-    if (confirm('Â¿EstÃ¡ seguro de reactivar este registro anulado?')) {
+    if (confirm('¿Está seguro de reactivar este registro anulado?')) {
       await handleUpdateBatch(batchId, { stage: 'ingresado' })
     }
   }
@@ -363,7 +387,7 @@ export function PlantDashboard({ companyId, initialBatches, persistToServer = fa
             <div className="bg-blue-100 text-blue-600 p-2.5 rounded-xl"><Factory size={24} /></div>
             Control de Planta y Mineral
           </h1>
-          <p className="text-sm mt-2 text-slate-500 font-medium">GestiÃ³n y trazabilidad de ingresos, muestreo y leyes.</p>
+          <p className="text-sm mt-2 text-slate-500 font-medium">Gestión y trazabilidad de ingresos, muestreo y leyes.</p>
         </div>
         <div className="flex gap-3 items-center w-full md:w-auto">
           <div className="relative flex-1 md:flex-none">
@@ -441,7 +465,7 @@ function BatchCard({ batch, sample, onViewDetail, onAnular, onReactivar }: { bat
           <div className="flex items-center gap-2 mb-1">
             <span className="font-black text-slate-800">{batch.batch_code}</span>
             {isAnulado && <span className="text-[10px] bg-red-100 text-red-700 px-2 rounded-full font-bold">ANULADO</span>}
-            {((batch as any).isPending || (sample as any)?.isPending) && <span className="text-[10px] bg-amber-100 text-amber-700 px-2 rounded-full font-bold" title="Pendiente de sincronizaciÃ³n">PENDIENTE</span>}
+            {((batch as any).isPending || (sample as any)?.isPending) && <span className="text-[10px] bg-amber-100 text-amber-700 px-2 rounded-full font-bold" title="Pendiente de sincronización">PENDIENTE</span>}
           </div>
           <div className="text-xl font-black text-blue-600 flex items-center gap-2">
             <Truck size={18} /> {batch.truck_plate}
@@ -536,7 +560,7 @@ function BatchDetailView({ batch, sample, onBack, onEditTraslado, onEditPlanta, 
           <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Estado General</p>
           <div className="flex gap-2 justify-end items-center">
             <span className="bg-slate-800 text-white px-3 py-1.5 rounded-lg text-xs font-black capitalize">{batch.stage.replace('_', ' ')}</span>
-            {((batch as any).isPending || (sample as any)?.isPending) && <span className="bg-amber-100 border border-amber-300 text-amber-800 px-3 py-1.5 rounded-lg text-xs font-black">Pendiente de SincronizaciÃ³n</span>}
+            {((batch as any).isPending || (sample as any)?.isPending) && <span className="bg-amber-100 border border-amber-300 text-amber-800 px-3 py-1.5 rounded-lg text-xs font-black">Pendiente de Sincronización</span>}
             {batch.stage === 'anulado' && onReactivar && (
               <button onClick={onReactivar} className="bg-emerald-50 text-emerald-600 border border-emerald-200 hover:bg-emerald-100 hover:text-emerald-700 px-3 py-1.5 rounded-lg text-xs font-black flex items-center gap-1 transition-colors">
                 <RefreshCw size={14} /> Reactivar
@@ -558,7 +582,7 @@ function BatchDetailView({ batch, sample, onBack, onEditTraslado, onEditPlanta, 
         >
           <div className="grid grid-cols-2 md:grid-cols-4 gap-y-6 gap-x-4">
             <Field label="Placa" value={batch.truck_plate} highlight />
-            <Field label="VehÃ­culo" value={batch.vehicle_asset_id ? 'Asignado (Sistema)' : 'Externo'} />
+            <Field label="Vehículo" value={batch.vehicle_asset_id ? 'Asignado (Sistema)' : 'Externo'} />
             <Field label="Responsable (Chofer)" value={batch.driver_name} />
             <Field label="Procedencia / Labor" value={batch.origin_mine} />
             
@@ -569,7 +593,7 @@ function BatchDetailView({ batch, sample, onBack, onEditTraslado, onEditPlanta, 
           </div>
           {batch.evidences && batch.evidences.filter((e:any) => e.stage === 'traslado').length > 0 && (
             <div className="mt-6 border-t border-blue-100 pt-6">
-              <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-3">Evidencias FotogrÃ¡ficas</p>
+              <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-3">Evidencias Fotográficas</p>
               <div className="flex flex-wrap gap-3">
                 {batch.evidences.filter((e:any) => e.stage === 'traslado').map((e: any, idx: number) => (
                   <button
@@ -577,7 +601,7 @@ function BatchDetailView({ batch, sample, onBack, onEditTraslado, onEditPlanta, 
                     type="button"
                     onClick={() => setPreviewImage({ url: e.url, title: `Evidencia de Traslado #${idx + 1}`, stage: 'Traslado' })}
                     className="group relative block w-24 h-24 rounded-xl overflow-hidden border border-slate-200 hover:border-blue-500 hover:ring-2 hover:ring-blue-400/40 transition-all shadow-sm bg-slate-100 text-left focus:outline-none cursor-pointer"
-                    title="Clic para ampliar fotografÃ­a"
+                    title="Clic para ampliar fotografía"
                   >
                     <img src={e.url} alt="evidencia traslado" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
                     <div className="absolute inset-0 bg-slate-900/0 group-hover:bg-slate-900/35 transition-colors flex items-center justify-center">
@@ -598,14 +622,14 @@ function BatchDetailView({ batch, sample, onBack, onEditTraslado, onEditPlanta, 
           onEdit={batch.stage !== 'anulado' ? onEditPlanta : undefined}
         >
           <div className="grid grid-cols-2 md:grid-cols-4 gap-y-6 gap-x-4">
-            <Field label="RecepciÃ³n (Fecha)" value={batch.reception_date} />
+            <Field label="Recepción (Fecha)" value={batch.reception_date} />
             <Field label="Resultado % Humedad" value={batch.moisture_pct ? `${batch.moisture_pct}%` : '-'} highlight />
             <Field label="Chancado (Estado)" value={<span className="capitalize">{batch.quality_status || '-'}</span>} />
             <Field label="Procesamiento (Etapa)" value={<span className="capitalize">{batch.stage.replace('_', ' ')}</span>} />
           </div>
           {batch.evidences && batch.evidences.filter((e:any) => e.stage === 'planta').length > 0 && (
             <div className="mt-6 border-t border-amber-100 pt-6">
-              <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-3">Evidencias FotogrÃ¡ficas</p>
+              <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-3">Evidencias Fotográficas</p>
               <div className="flex flex-wrap gap-3">
                 {batch.evidences.filter((e:any) => e.stage === 'planta').map((e: any, idx: number) => (
                   <button
@@ -613,7 +637,7 @@ function BatchDetailView({ batch, sample, onBack, onEditTraslado, onEditPlanta, 
                     type="button"
                     onClick={() => setPreviewImage({ url: e.url, title: `Evidencia de Planta #${idx + 1}`, stage: 'Planta' })}
                     className="group relative block w-24 h-24 rounded-xl overflow-hidden border border-slate-200 hover:border-amber-500 hover:ring-2 hover:ring-amber-400/40 transition-all shadow-sm bg-slate-100 text-left focus:outline-none cursor-pointer"
-                    title="Clic para ampliar fotografÃ­a"
+                    title="Clic para ampliar fotografía"
                   >
                     <img src={e.url} alt="evidencia planta" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
                     <div className="absolute inset-0 bg-slate-900/0 group-hover:bg-slate-900/35 transition-colors flex items-center justify-center">
@@ -633,19 +657,19 @@ function BatchDetailView({ batch, sample, onBack, onEditTraslado, onEditPlanta, 
           headerColor="bg-indigo-50/50 border-indigo-100"
           onEdit={batch.stage !== 'anulado' ? onEditMuestreo : undefined}
           isEmpty={!sample}
-          emptyText="No se ha registrado el muestreo aÃºn."
+          emptyText="No se ha registrado el muestreo aún."
         >
           {sample && (
             <div className="grid grid-cols-2 md:grid-cols-4 gap-y-6 gap-x-4">
-              <Field label="CÃ³digo de muestra" value={sample.sample_code} highlight />
+              <Field label="Código de muestra" value={sample.sample_code} highlight />
               <Field label="Fecha y hora" value={`${sample.sampling_date} - ${sample.sampling_time}`} />
               <Field label="Responsable" value={sample.sampler_name} />
-              <Field label="Contramuestra" value={sample.has_counter_sample ? 'SÃ­, extraÃ­da' : 'No extraÃ­da'} />
+              <Field label="Contramuestra" value={sample.has_counter_sample ? 'Sí, extraída' : 'No extraÃ­da'} />
             </div>
           )}
           {sample && sample.evidences && sample.evidences.filter((e:any) => e.stage === 'muestreo').length > 0 && (
             <div className="mt-6 border-t border-indigo-100 pt-6">
-              <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-3">Evidencias FotogrÃ¡ficas</p>
+              <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-3">Evidencias Fotográficas</p>
               <div className="flex flex-wrap gap-3">
                 {sample.evidences.filter((e:any) => e.stage === 'muestreo').map((e: any, idx: number) => (
                   <button
@@ -653,7 +677,7 @@ function BatchDetailView({ batch, sample, onBack, onEditTraslado, onEditPlanta, 
                     type="button"
                     onClick={() => setPreviewImage({ url: e.url, title: `Evidencia de Muestreo #${idx + 1}`, stage: 'Muestreo' })}
                     className="group relative block w-24 h-24 rounded-xl overflow-hidden border border-slate-200 hover:border-indigo-500 hover:ring-2 hover:ring-indigo-400/40 transition-all shadow-sm bg-slate-100 text-left focus:outline-none cursor-pointer"
-                    title="Clic para ampliar fotografÃ­a"
+                    title="Clic para ampliar fotografía"
                   >
                     <img src={e.url} alt="evidencia muestreo" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
                     <div className="absolute inset-0 bg-slate-900/0 group-hover:bg-slate-900/35 transition-colors flex items-center justify-center">
@@ -678,7 +702,7 @@ function BatchDetailView({ batch, sample, onBack, onEditTraslado, onEditPlanta, 
         >
           {sample && (sample.lab_notes || sample.obtained_grade || sample.final_agreed_grade) && (
             <div className="grid grid-cols-2 md:grid-cols-3 gap-y-6 gap-x-4">
-              <Field label="CÃ³digo del mineral/lote" value={batch.batch_code} />
+              <Field label="Código del mineral/lote" value={batch.batch_code} />
               <Field label="Fecha del resultado" value={sample.lab_result_date || '-'} />
               <Field label="Resultado de laboratorio" value={sample.lab_notes || '-'} />
               
@@ -692,7 +716,7 @@ function BatchDetailView({ batch, sample, onBack, onEditTraslado, onEditPlanta, 
           )}
           {sample && sample.evidences && sample.evidences.filter((e:any) => e.stage === 'laboratorio').length > 0 && (
             <div className="mt-6 border-t border-emerald-100 pt-6">
-              <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-3">Evidencias FotogrÃ¡ficas</p>
+              <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-3">Evidencias Fotográficas</p>
               <div className="flex flex-wrap gap-3">
                 {sample.evidences.filter((e:any) => e.stage === 'laboratorio').map((e: any, idx: number) => (
                   <button
@@ -700,7 +724,7 @@ function BatchDetailView({ batch, sample, onBack, onEditTraslado, onEditPlanta, 
                     type="button"
                     onClick={() => setPreviewImage({ url: e.url, title: `Evidencia de Laboratorio #${idx + 1}`, stage: 'Laboratorio' })}
                     className="group relative block w-24 h-24 rounded-xl overflow-hidden border border-slate-200 hover:border-emerald-500 hover:ring-2 hover:ring-emerald-400/40 transition-all shadow-sm bg-slate-100 text-left focus:outline-none cursor-pointer"
-                    title="Clic para ampliar fotografÃ­a"
+                    title="Clic para ampliar fotografía"
                   >
                     <img src={e.url} alt="evidencia laboratorio" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
                     <div className="absolute inset-0 bg-slate-900/0 group-hover:bg-slate-900/35 transition-colors flex items-center justify-center">
@@ -714,7 +738,7 @@ function BatchDetailView({ batch, sample, onBack, onEditTraslado, onEditPlanta, 
         </SectionCard>
       </div>
 
-      {/* Modal Flotante de VisualizaciÃ³n de FotografÃ­as (Lightbox) */}
+      {/* Modal Flotante de Visualización de FotografÃ­as (Lightbox) */}
       {previewImage && (
         <div 
           className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-md p-3 sm:p-6 animate-in fade-in duration-200"
@@ -743,7 +767,7 @@ function BatchDetailView({ batch, sample, onBack, onEditTraslado, onEditPlanta, 
                     target="_blank"
                     rel="noopener noreferrer"
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-xs font-bold transition-colors"
-                    title="Abrir URL original en pestaÃ±a independiente"
+                    title="Abrir URL original en pestaña independiente"
                   >
                     <ExternalLink size={14} />
                     <span className="hidden sm:inline">Abrir original</span>

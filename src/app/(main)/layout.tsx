@@ -69,7 +69,7 @@ export default async function DashboardLayout({
   }
 
   // 6. Capability Gateway Guard: COMPANY_CAPABILITY
-  // Si la ruta estÃ¡ asociada a una capacidad y no estÃ¡ disponible para la empresa, denegar acceso directo por URL.
+  // Si la ruta está asociada a una capacidad y no está disponible para la empresa, denegar acceso directo por URL.
   if (!isSuperAdmin && pathname && pathname !== '/dashboard' && pathname !== '/profile') {
     const routeCapability = getCapabilityForRoute(pathname)
     if (routeCapability) {

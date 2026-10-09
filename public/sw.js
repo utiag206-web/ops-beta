@@ -1,8 +1,8 @@
 // INTHALY OPS - Production Service Worker (Next.js 15 App Router Compatible)
-// Resilient Offline-First Architecture without obsolete static hashes
+// Universal Offline Navigation & Resilient Module-Level Offline-First Architecture
 
 const CACHE_PREFIX = 'inthaly-ops'
-const CACHE_VERSION = 'v1.2.3'
+const CACHE_VERSION = 'v1.2.4'
 const STATIC_CACHE = `${CACHE_PREFIX}-static-${CACHE_VERSION}`
 const PAGES_CACHE = `${CACHE_PREFIX}-pages-${CACHE_VERSION}`
 const RSC_CACHE = `${CACHE_PREFIX}-rsc-${CACHE_VERSION}`
@@ -63,7 +63,7 @@ self.addEventListener('fetch', (event) => {
   // Only handle GET requests from same-origin
   if (request.method !== 'GET') return
   if (url.origin !== self.location.origin) {
-    // Cross-origin: fonts.gstatic.com or fonts.googleapis.com
+    // Cross-origin fonts
     if (url.hostname.includes('gstatic.com') || url.hostname.includes('googleapis.com')) {
       event.respondWith(
         caches.open(MEDIA_CACHE).then(async (cache) => {
@@ -119,7 +119,7 @@ self.addEventListener('fetch', (event) => {
           if (networkResponse && networkResponse.status === 200) {
             cache.put(request, networkResponse.clone())
             cache.put(url.pathname, networkResponse.clone())
-            // Warm-cache the HTML document in PAGES_CACHE in the background for smooth offline document navigation
+            // Warm-cache the HTML document in PAGES_CACHE in the background
             caches.open(PAGES_CACHE).then((pCache) => {
               fetch(url.pathname, { cache: 'no-cache' }).then((docRes) => {
                 if (docRes && docRes.status === 200) {
@@ -133,10 +133,15 @@ self.addEventListener('fetch', (event) => {
           const cached = (await cache.match(request, { ignoreSearch: true, ignoreVary: true })) ||
                          (await cache.match(url.pathname, { ignoreSearch: true, ignoreVary: true }))
           if (cached) return cached
-          // CRITICAL: NEVER return synthetic 408/500/200 for missing RSC offline!
-          // Next.js router throws an unhandled client exception on non-flight HTTP responses.
-          // Throwing a TypeError simulates network failure, triggering Next.js router
-          // fallback to hard navigation (window.location), which is then served by PAGES_CACHE!
+
+          // Fallback to cached dashboard RSC payload so client-side router transition succeeds
+          const fallbackRsc = (await cache.match('/dashboard', { ignoreSearch: true, ignoreVary: true })) ||
+                              (await cache.match('/super-admin', { ignoreSearch: true, ignoreVary: true }))
+          if (fallbackRsc) {
+            console.log('[SW] Serving App Shell fallback RSC for:', url.pathname)
+            return fallbackRsc
+          }
+
           throw new TypeError('Offline RSC fetch failure - falling back to document navigation')
         }
       })
@@ -194,25 +199,25 @@ self.addEventListener('fetch', (event) => {
             return cachedPage
           }
 
-          // Fallback to cached App Shell or /offline
+          // UNIVERSAL OFFLINE NAVIGATION:
+          // If this is an authenticated app navigation, ALWAYS serve the cached App Shell (/dashboard or /super-admin)!
+          // This ensures the user stays inside the application shell (Header, Sidebar, Navigation) rather than being trapped in an isolated offline screen!
+          const dashboardFallback = await cache.match('/dashboard')
+          if (dashboardFallback) {
+            console.log('[SW] Serving cached /dashboard App Shell for un-cached route:', url.pathname)
+            return dashboardFallback
+          }
+
+          const superAdminFallback = await cache.match('/super-admin')
+          if (superAdminFallback) {
+            console.log('[SW] Serving cached /super-admin App Shell for un-cached route:', url.pathname)
+            return superAdminFallback
+          }
+
+          // If no App Shell is cached at all (e.g. brand new install opened offline before any login), fallback to /offline
           const staticCache = await caches.open(STATIC_CACHE)
           const offlineFallback = await staticCache.match('/offline')
-          if (offlineFallback) {
-            console.log('[SW] Serving /offline fallback for:', url.pathname)
-            return offlineFallback
-          }
-
-          // Super Admin or Company context fallback for start_url (/dashboard or /)
-          if (url.pathname === '/dashboard' || url.pathname === '/') {
-            const superAdminFallback = await cache.match('/super-admin')
-            if (superAdminFallback) return superAdminFallback
-            const dashboardFallback = await cache.match('/dashboard')
-            if (dashboardFallback) return dashboardFallback
-          }
-
-          // Last resort: try root /dashboard if available
-          const dashboardFallback = await cache.match('/dashboard')
-          if (dashboardFallback) return dashboardFallback
+          if (offlineFallback) return offlineFallback
 
           return new Response('<h1>Sin conexión</h1><p>Esta aplicación está operando sin conexión a Internet.</p>', {
             headers: { 'Content-Type': 'text/html; charset=utf-8' },
