@@ -1,8 +1,8 @@
-﻿// INTHALY OPS - Production Service Worker (Next.js 15 App Router Compatible)
+// INTHALY OPS - Production Service Worker (Next.js 15 App Router Compatible)
 // Resilient Offline-First Architecture without obsolete static hashes
 
 const CACHE_PREFIX = 'inthaly-ops'
-const CACHE_VERSION = 'v1.2.1'
+const CACHE_VERSION = 'v1.2.3'
 const STATIC_CACHE = `${CACHE_PREFIX}-static-${CACHE_VERSION}`
 const PAGES_CACHE = `${CACHE_PREFIX}-pages-${CACHE_VERSION}`
 const RSC_CACHE = `${CACHE_PREFIX}-rsc-${CACHE_VERSION}`
@@ -23,22 +23,16 @@ const PRECACHE_ASSETS = [
 self.addEventListener('install', (event) => {
   self.skipWaiting()
   event.waitUntil(
-    (async () => {
-      const cache = await caches.open(STATIC_CACHE)
-      // Use allSettled so that missing optional icons never abort SW installation
-      await Promise.allSettled(
-        PRECACHE_ASSETS.map(async (url) => {
-          try {
-            const response = await fetch(url, { cache: 'no-cache' })
-            if (response.ok) {
-              await cache.put(url, response)
-            }
-          } catch (e) {
-            console.warn('[SW] Precache non-critical failure for:', url, e)
-          }
-        })
+    caches.open(STATIC_CACHE).then((cache) => {
+      console.log('[SW] Precaching resilient offline shell assets...')
+      return Promise.allSettled(
+        PRECACHE_ASSETS.map((url) =>
+          cache.add(url).catch((err) => {
+            console.warn('[SW] Failed to precache asset:', url, err)
+          })
+        )
       )
-    })()
+    })
   )
 })
 
@@ -139,7 +133,11 @@ self.addEventListener('fetch', (event) => {
           const cached = (await cache.match(request, { ignoreSearch: true, ignoreVary: true })) ||
                          (await cache.match(url.pathname, { ignoreSearch: true, ignoreVary: true }))
           if (cached) return cached
-          return new Response('', { status: 408, statusText: 'Offline RSC Unavailable' })
+          // CRITICAL: NEVER return synthetic 408/500/200 for missing RSC offline!
+          // Next.js router throws an unhandled client exception on non-flight HTTP responses.
+          // Throwing a TypeError simulates network failure, triggering Next.js router
+          // fallback to hard navigation (window.location), which is then served by PAGES_CACHE!
+          throw new TypeError('Offline RSC fetch failure - falling back to document navigation')
         }
       })
     )
@@ -174,6 +172,18 @@ self.addEventListener('fetch', (event) => {
             // Save both the full request and the URL pathname for robust matching
             cache.put(request, networkResponse.clone())
             cache.put(url.pathname, networkResponse.clone())
+
+            // Pre-warm the RSC payload for this route so client-side navigation has it cached
+            caches.open(RSC_CACHE).then(async (rscCache) => {
+              try {
+                const rscRes = await fetch(url.pathname, {
+                  headers: { 'RSC': '1' }
+                })
+                if (rscRes && rscRes.status === 200) {
+                  rscCache.put(url.pathname, rscRes)
+                }
+              } catch (_) {}
+            })
           }
           return networkResponse
         } catch (err) {
@@ -214,4 +224,3 @@ self.addEventListener('fetch', (event) => {
     return
   }
 })
-

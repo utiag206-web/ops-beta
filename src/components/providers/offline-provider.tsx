@@ -1,8 +1,9 @@
-﻿'use client'
+'use client'
 
-import React, { createContext, useContext, useEffect, useState, useCallback } from 'react'
+import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react'
 import { Wifi, WifiOff, RefreshCw } from 'lucide-react'
 import { getPendingOperations, updateOperationStatus, removeOperationFromQueue, replaceTemporaryIdInQueue } from '@/lib/offline-sync'
+import { initializeSyncHandlers } from '@/lib/sync-handlers'
 
 // Registry of handlers for different entities
 type SyncHandlerResult = boolean | { success: boolean, newId?: string };
@@ -28,12 +29,11 @@ const OfflineContext = createContext<OfflineContextType>({
 
 export const useOffline = () => useContext(OfflineContext)
 
-import { initializeSyncHandlers } from '@/lib/sync-handlers'
-
 export function OfflineProvider({ children }: { children: React.ReactNode }) {
   const [isOnline, setIsOnline] = useState(true)
   const [pendingCount, setPendingCount] = useState(0)
   const [isSyncing, setIsSyncing] = useState(false)
+  const isSyncingRef = useRef(false)
 
   useEffect(() => {
     initializeSyncHandlers()
@@ -69,18 +69,28 @@ export function OfflineProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   const updatePendingCount = useCallback(async () => {
-    const pending = await getPendingOperations()
-    setPendingCount(pending.length)
+    try {
+      const pending = await getPendingOperations()
+      setPendingCount(pending.length)
+      return pending.length
+    } catch {
+      return 0
+    }
   }, [])
 
   const triggerSync = useCallback(async () => {
-    const online = typeof navigator !== 'undefined' ? navigator.onLine : isOnline
-    if (!online || isSyncing) return
+    const online = typeof navigator !== 'undefined' ? navigator.onLine : true
+    if (!online || isSyncingRef.current) return
     
+    isSyncingRef.current = true
     setIsSyncing(true)
+
     try {
       const pending = await getPendingOperations()
-      
+      if (pending.length === 0) {
+        return
+      }
+
       for (const op of pending) {
         const handler = syncHandlers[op.entity]
         if (handler) {
@@ -104,45 +114,54 @@ export function OfflineProvider({ children }: { children: React.ReactNode }) {
       }
     } finally {
       await updatePendingCount()
+      isSyncingRef.current = false
       setIsSyncing(false)
     }
-  }, [isOnline, isSyncing, updatePendingCount])
+  }, [updatePendingCount])
 
   useEffect(() => {
     const currentOnline = typeof navigator !== 'undefined' ? navigator.onLine : true
     setIsOnline(currentOnline)
-    updatePendingCount()
-
-    // Auto-sync on initial mount if online
-    if (currentOnline) {
-      triggerSync()
-    }
+    
+    updatePendingCount().then((count) => {
+      if (currentOnline && count > 0) {
+        triggerSync()
+      }
+    })
 
     const handleOnline = () => {
       setIsOnline(true)
-      setTimeout(() => {
-        triggerSync()
-      }, 500)
+      updatePendingCount().then((count) => {
+        if (count > 0) {
+          setTimeout(() => {
+            triggerSync()
+          }, 500)
+        }
+      })
     }
-    const handleOffline = () => setIsOnline(false)
+    
+    const handleOffline = () => {
+      setIsOnline(false)
+    }
 
     window.addEventListener('online', handleOnline)
     window.addEventListener('offline', handleOffline)
     
-    // Check queue periodically and trigger sync if online with pending operations
+    // Check queue periodically and trigger sync only if online with pending operations
     const interval = setInterval(() => {
-      updatePendingCount()
-      if (typeof navigator !== 'undefined' && navigator.onLine && !isSyncing) {
-        triggerSync()
-      }
-    }, 10000)
+      updatePendingCount().then((count) => {
+        if (typeof navigator !== 'undefined' && navigator.onLine && count > 0 && !isSyncingRef.current) {
+          triggerSync()
+        }
+      })
+    }, 15000)
 
     return () => {
       window.removeEventListener('online', handleOnline)
       window.removeEventListener('offline', handleOffline)
       clearInterval(interval)
     }
-  }, [triggerSync, updatePendingCount, isSyncing])
+  }, [triggerSync, updatePendingCount])
 
   return (
     <OfflineContext.Provider value={{ isOnline, pendingCount, isSyncing, triggerSync }}>
@@ -154,22 +173,25 @@ export function OfflineProvider({ children }: { children: React.ReactNode }) {
 
 function OfflineIndicator({ isOnline, pendingCount, isSyncing, onSync }: { isOnline: boolean, pendingCount: number, isSyncing: boolean, onSync?: () => Promise<void> }) {
   const [showSynced, setShowSynced] = useState(false)
+  const prevPendingRef = useRef(pendingCount)
 
   useEffect(() => {
-    if (isOnline && pendingCount === 0 && !isSyncing) {
+    if (isOnline && !isSyncing && prevPendingRef.current > 0 && pendingCount === 0) {
       setShowSynced(true)
       const t = setTimeout(() => setShowSynced(false), 3000)
+      prevPendingRef.current = 0
       return () => clearTimeout(t)
     }
+    prevPendingRef.current = pendingCount
   }, [isOnline, pendingCount, isSyncing])
 
   if (isOnline && pendingCount === 0 && !isSyncing && !showSynced) return null
 
   return (
-    <div className="fixed bottom-4 right-4 z-50 flex items-center gap-3 px-4 py-2.5 rounded-2xl shadow-xl font-bold text-xs animate-in slide-in-from-bottom-5 bg-white border border-slate-200 text-slate-700">
-            {!isOnline && (
+    <div className="fixed bottom-4 right-4 z-50 flex items-center gap-3 px-4 py-2.5 rounded-2xl shadow-xl font-bold text-xs animate-in slide-in-from-bottom-5 bg-white border border-slate-200 text-slate-700 pointer-events-auto">
+      {!isOnline && (
         <span className="flex items-center gap-2 text-amber-600">
-          <WifiOff size={16} /> Sin conexión · Trabajando sin conexión
+          <WifiOff size={16} /> Sin conexión — Modo Offline
         </span>
       )}
       
@@ -194,12 +216,9 @@ function OfflineIndicator({ isOnline, pendingCount, isSyncing, onSync }: { isOnl
 
       {isOnline && !isSyncing && pendingCount === 0 && showSynced && (
         <span className="flex items-center gap-2 text-emerald-600 animate-in fade-in">
-          <Wifi size={16} /> âœ“ Todo sincronizado
+          <Wifi size={16} /> ✓ Todo sincronizado
         </span>
       )}
     </div>
   )
 }
-
-
-

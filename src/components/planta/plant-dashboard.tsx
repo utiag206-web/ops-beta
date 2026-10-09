@@ -27,17 +27,45 @@ export function PlantDashboard({ companyId, initialBatches, persistToServer = fa
   const [editMuestreoBatch, setEditMuestreoBatch] = useState<PlantMineralBatch | null>(null)
   const [editLaboratorioSample, setEditLaboratorioSample] = useState<{sample: PlantMineralSample | null, batch: PlantMineralBatch} | null>(null)
 
+  // Keep detailBatch synchronized with batches state changes
   useEffect(() => {
+    if (detailBatch) {
+      const updated = batches.find(b => b.id === detailBatch.id)
+      if (updated && updated !== detailBatch) {
+        setDetailBatch(updated)
+      }
+    }
+  }, [batches, detailBatch])
+
+    useEffect(() => {
     const initOfflineAndSamples = async () => {
       let currentBatches = [...initialBatches]
       let currentSamples = { ...samples }
       
-      // 1. Read Cache: Save server batches if online, or load from IndexedDB if offline/empty
-      if (initialBatches && initialBatches.length > 0) {
-        await saveBatchesToCache(initialBatches as any, companyId)
-      } else {
-        const cached = await getCachedBatches(companyId)
+      // 1. Read Cache: Offline-First resilient cache hydration
+      const isActuallyOnline = typeof navigator !== 'undefined' ? navigator.onLine : true
+      const cached = await getCachedBatches(companyId)
+
+      if (!isActuallyOnline) {
+        // OFFLINE: ALWAYS prioritize IndexedDB cache over stale initialBatches from cached HTML!
         if (cached && cached.length > 0) {
+          currentBatches = [...(cached as any)]
+        } else {
+          currentBatches = [...initialBatches]
+        }
+      } else {
+        // ONLINE: Fresh server batches received. Merge with local state and cache.
+        if (initialBatches && initialBatches.length > 0) {
+          const merged = initialBatches.map(b => {
+            const local = cached.find(c => c.id === b.id)
+            if (local && (local as any).isPending) {
+              return local as any
+            }
+            return b
+          })
+          currentBatches = merged
+          await saveBatchesToCache(merged as any, companyId)
+        } else if (cached && cached.length > 0) {
           currentBatches = [...(cached as any)]
         }
       }
@@ -161,6 +189,7 @@ export function PlantDashboard({ companyId, initialBatches, persistToServer = fa
 
     const updatedBatch = { ...batches.find(b => b.id === batchId)!, ...finalUpdates, isPending: true }
     setBatches(batches.map(b => b.id === batchId ? updatedBatch : b))
+    await updateBatchInCache(batchId, updatedBatch as any)
     if (detailBatch && detailBatch.id === batchId) setDetailBatch(updatedBatch)
     if (isOnline) triggerSync()
   }

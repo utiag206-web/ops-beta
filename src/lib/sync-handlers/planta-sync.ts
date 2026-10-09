@@ -1,3 +1,4 @@
+import { updateBatchInCache, saveBatchesToCache } from '@/lib/offline-sync'
 import { createPlantBatch, updatePlantBatch, createPlantSample, updatePlantSample } from '@/app/(main)/operaciones/planta/actions'
 import { uploadBase64Photo } from '@/lib/upload-base64'
 
@@ -27,6 +28,10 @@ export async function plantaSyncHandler(action: string, payload: any): Promise<b
       }
       case 'update_batch': {
         const res = await updatePlantBatch(payload.id, payload.updates)
+        if (res.success && res.data) {
+          await updateBatchInCache(payload.id, res.data as any)
+          return { success: true }
+        }
         return res.success ? { success: true } : false
       }
       case 'create_sample': {
