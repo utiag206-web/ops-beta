@@ -33,8 +33,11 @@ export function AssetsList({ initialAssets }: { initialAssets: Asset[] }) {
 
  // Sync state with props when router.refresh() updates the server component
  useEffect(() => {
- setAssets(initialAssets)
- }, [initialAssets])
+    setAssets(initialAssets)
+    if (initialAssets && initialAssets.length > 0 && typeof window !== 'undefined') {
+      localStorage.setItem('assets_cache', JSON.stringify(initialAssets))
+    }
+  }, [initialAssets])
 
  const handleEdit = (asset: any) => {
  setEditingAsset(asset)

@@ -6,6 +6,9 @@ import {
   AlertCircle, X, Eye, Pencil, Trash2, Ban, ShieldAlert, Loader2
 } from 'lucide-react'
 import { toast } from 'sonner'
+import { useOffline } from '@/components/providers/offline-provider'
+import { addOperationToQueue, getPendingOperations } from '@/lib/offline-sync'
+import { v4 as uuidv4 } from 'uuid'
 import { useRbac } from '@/components/providers/rbac-provider'
 import {
   ChecklistRecord,
@@ -47,6 +50,7 @@ export function ChecklistView({
   const scopedKey = companyId ? `checklists_${companyId}` : 'mecanica_checklists'
 
   const { can } = useRbac()
+  const { isOnline, triggerSync } = useOffline()
   const canCreate = persistToServer ? can('mecanica', 'create') : true
   const canUpdate = persistToServer ? can('mecanica', 'update') : true
   const canDelete = persistToServer ? can('mecanica', 'delete') : true
@@ -54,14 +58,12 @@ export function ChecklistView({
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   const [items, setItems] = useState<ChecklistItem[]>(() => {
-    if (persistToServer) {
-      return initialItems || []
-    }
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem(scopedKey)
       if (saved) {
         try {
-          return JSON.parse(saved)
+          const parsed = JSON.parse(saved)
+          if (Array.isArray(parsed) && parsed.length > 0) return parsed
         } catch (e) {
           console.error('[MECANICA_CHECKLISTS] Error parsing stored checklists:', e)
         }
@@ -70,12 +72,41 @@ export function ChecklistView({
     return initialItems?.length ? initialItems : []
   })
 
-  // Sincronizar si cambian initialItems desde servidor
+  // Sincronizar si cambian initialItems desde servidor y reanudar pendientes
   useEffect(() => {
-    if (persistToServer) {
-      setItems(initialItems || [])
+    if (persistToServer && initialItems && initialItems.length > 0) {
+      setItems(initialItems)
+      if (typeof window !== 'undefined') {
+        localStorage.setItem(scopedKey, JSON.stringify(initialItems))
+      }
     }
-  }, [initialItems, persistToServer])
+    const replayPending = async () => {
+      try {
+        const pending = await getPendingOperations()
+        const checkOps = pending.filter(p => p.entity === 'mecanica')
+        if (checkOps.length > 0) {
+          setItems(prev => {
+            let updated = [...prev]
+            for (const op of checkOps) {
+              if (op.action === 'create_checklist') {
+                if (!updated.some(i => i.id === op.payload.id)) {
+                  updated = [{ ...op.payload, isPending: true }, ...updated]
+                }
+              }
+              if (op.action === 'update_checklist') {
+                updated = updated.map(i => i.id === op.payload.id ? { ...i, ...op.payload.updates, isPending: true } : i)
+              }
+              if (op.action === 'anular_checklist') {
+                updated = updated.map(i => i.id === op.payload.id ? { ...i, status: 'anulado', isPending: true } : i)
+              }
+            }
+            return updated
+          })
+        }
+      } catch (_) {}
+    }
+    replayPending()
+  }, [initialItems, persistToServer, scopedKey])
 
   const [searchTerm, setSearchTerm] = useState('')
   const [filterStatus, setFilterStatus] = useState('todos')

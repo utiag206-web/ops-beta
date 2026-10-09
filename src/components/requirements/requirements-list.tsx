@@ -22,7 +22,18 @@ import {
 import { toast } from 'sonner'
 
 export default function RequirementsPage({ userRole, initialData = [] }: { userRole: string, initialData?: any[] }) {
-  const [requirements, setRequirements] = useState<any[]>(initialData)
+  const [requirements, setRequirements] = useState<any[]>(() => {
+    if (typeof window !== 'undefined') {
+      const cached = localStorage.getItem('requirements_cache')
+      if (cached) {
+        try {
+          const parsed = JSON.parse(cached)
+          if (Array.isArray(parsed) && parsed.length > 0) return parsed
+        } catch (_) {}
+      }
+    }
+    return initialData || []
+  })
   const [loading, setLoading] = useState(false)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [selectedRequirement, setSelectedRequirement] = useState<any | null>(null)
@@ -32,6 +43,37 @@ export default function RequirementsPage({ userRole, initialData = [] }: { userR
     status: 'todos',
     priority: 'todas'
   })
+
+  useEffect(() => {
+    if (initialData && initialData.length > 0) {
+      setRequirements(initialData)
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('requirements_cache', JSON.stringify(initialData))
+      }
+    }
+
+    const replayPendingRequirements = async () => {
+      try {
+        const { getPendingOperations } = await import('@/lib/offline-sync')
+        const pending = await getPendingOperations()
+        const reqPending = pending.filter(p => p.entity === 'requerimientos')
+        if (reqPending.length > 0) {
+          setRequirements(prev => {
+            let updated = [...prev]
+            for (const op of reqPending) {
+              if (op.action === 'create_requirement') {
+                if (!updated.some(r => r.id === op.payload.id)) {
+                  updated = [{ ...op.payload, status: 'pendiente', isPending: true, created_at: new Date().toISOString() }, ...updated]
+                }
+              }
+            }
+            return updated
+          })
+        }
+      } catch (_) {}
+    }
+    replayPendingRequirements()
+  }, [initialData])
 
   const isGlobalAdmin = userRole === 'admin' || userRole === 'gerente' || userRole === 'operaciones' || userRole === 'almacen'
   const isJefeArea = userRole === 'jefe_area'

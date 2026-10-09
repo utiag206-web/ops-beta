@@ -2,7 +2,7 @@
 
 import React from 'react'
 import Link from 'next/link'
-import { WifiOff, ArrowLeft, RefreshCw, Layers, ShieldCheck } from 'lucide-react'
+import { WifiOff, ArrowLeft, RefreshCw, ShieldCheck } from 'lucide-react'
 
 export default function OfflineFallbackPage() {
   return (
@@ -22,17 +22,17 @@ export default function OfflineFallbackPage() {
             INTHALY OPS OFFLINE
           </h1>
           <p className="text-sm text-slate-400 leading-relaxed">
-            Esta pantalla se muestra porque la ruta solicitada no estaba en cachéé. Sin embargo, tus módulos Offline-First y tus datos locales siguen completamente seguros.
+            Esta pantalla se muestra porque la ruta solicitada no estaba en cache. Sin embargo, tus modulos Offline-First y tus datos locales siguen completamente seguros.
           </p>
         </div>
 
         <div className="bg-slate-950/50 border border-slate-800 rounded-xl p-4 text-left space-y-2.5 text-xs text-slate-300">
           <div className="flex items-center gap-2 font-medium text-slate-200">
             <ShieldCheck size={16} className="text-emerald-400" />
-            <span>Garantía de Persistencia Local</span>
+            <span>Garantia de Persistencia Local</span>
           </div>
           <p className="text-slate-400 text-[11px] leading-relaxed">
-            Las operaciones que registres en módulos offline quedarán en cola en tu dispositivo y se sincronizarán automáticamente al detectar conexión.
+            Las operaciones que registres en modulos offline quedaran en cola en tu dispositivo y se sincronizaran automaticamente al detectar conexion.
           </p>
         </div>
 
@@ -58,7 +58,7 @@ export default function OfflineFallbackPage() {
       </div>
 
       <p className="text-xs text-slate-500 mt-8">
-        INTHALY OPS • Arquitectura Offline-First Enterprise
+        INTHALY OPS — Arquitectura Offline-First Enterprise
       </p>
     </div>
   )

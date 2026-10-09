@@ -33,6 +33,12 @@ export function WorkersList({ workers, canManage = false }: { workers: Worker[],
  const [activeTab, setActiveTab] = useState<'activo' | 'inactivo'>('activo')
  const [isExporting, setIsExporting] = useState(false)
 
+  useEffect(() => {
+    if (workers && workers.length > 0 && typeof window !== 'undefined') {
+      localStorage.setItem('workers_cache', JSON.stringify(workers))
+    }
+  }, [workers])
+
  useEffect(() => {
    const { createClient } = require('@/lib/supabase/client')
    const supabase = createClient()

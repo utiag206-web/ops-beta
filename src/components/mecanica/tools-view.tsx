@@ -6,6 +6,9 @@ import {
   Trash2, X, Pencil, ShieldAlert, Ban, Loader2
 } from 'lucide-react'
 import { toast } from 'sonner'
+import { useOffline } from '@/components/providers/offline-provider'
+import { addOperationToQueue, getPendingOperations } from '@/lib/offline-sync'
+import { v4 as uuidv4 } from 'uuid'
 import { useRbac } from '@/components/providers/rbac-provider'
 import {
   ToolRecord,
@@ -32,6 +35,7 @@ export function ToolsView({
   const scopedKey = companyId ? `tools_${companyId}` : 'mecanica_tools'
 
   const { can } = useRbac()
+  const { isOnline, triggerSync } = useOffline()
   const canCreate = persistToServer ? can('mecanica', 'create') : true
   const canUpdate = persistToServer ? can('mecanica', 'update') : true
   const canDelete = persistToServer ? can('mecanica', 'delete') : true
@@ -39,14 +43,12 @@ export function ToolsView({
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   const [items, setItems] = useState<ToolItem[]>(() => {
-    if (persistToServer) {
-      return initialItems || []
-    }
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem(scopedKey)
       if (saved) {
         try {
-          return JSON.parse(saved)
+          const parsed = JSON.parse(saved)
+          if (Array.isArray(parsed) && parsed.length > 0) return parsed
         } catch (e) {
           console.error('[MECANICA_TOOLS] Error parsing stored tools:', e)
         }
@@ -55,12 +57,41 @@ export function ToolsView({
     return initialItems?.length ? initialItems : []
   })
 
-  // Sincronizar si cambian initialItems desde servidor
+  // Sincronizar si cambian initialItems desde servidor y reanudar pendientes
   useEffect(() => {
-    if (persistToServer) {
-      setItems(initialItems || [])
+    if (persistToServer && initialItems && initialItems.length > 0) {
+      setItems(initialItems)
+      if (typeof window !== 'undefined') {
+        localStorage.setItem(scopedKey, JSON.stringify(initialItems))
+      }
     }
-  }, [initialItems, persistToServer])
+    const replayPending = async () => {
+      try {
+        const pending = await getPendingOperations()
+        const toolOps = pending.filter(p => p.entity === 'mecanica')
+        if (toolOps.length > 0) {
+          setItems(prev => {
+            let updated = [...prev]
+            for (const op of toolOps) {
+              if (op.action === 'create_tool') {
+                if (!updated.some(i => i.id === op.payload.id)) {
+                  updated = [{ ...op.payload, isPending: true }, ...updated]
+                }
+              }
+              if (op.action === 'update_tool') {
+                updated = updated.map(i => i.id === op.payload.id ? { ...i, ...op.payload.updates, isPending: true } : i)
+              }
+              if (op.action === 'anular_tool') {
+                updated = updated.map(i => i.id === op.payload.id ? { ...i, status: 'anulado', isPending: true } : i)
+              }
+            }
+            return updated
+          })
+        }
+      } catch (_) {}
+    }
+    replayPending()
+  }, [initialItems, persistToServer, scopedKey])
 
   const [searchTerm, setSearchTerm] = useState('')
   const [filterCondition, setFilterCondition] = useState('todos')
@@ -132,6 +163,33 @@ export function ToolsView({
       setIsSubmitting(true)
       try {
         if (editingItem) {
+          if (!isOnline) {
+            const updated = {
+              ...editingItem,
+              ...form,
+              code: form.code.toUpperCase(),
+              name: form.name.trim(),
+              isPending: true
+            }
+            setItems(prev => {
+              const next = prev.map(item => item.id === editingItem.id ? updated : item)
+              if (typeof window !== 'undefined') localStorage.setItem(scopedKey, JSON.stringify(next))
+              return next
+            })
+            await addOperationToQueue({
+              id: uuidv4(),
+              entity: 'mecanica',
+              action: 'update_tool',
+              payload: { id: editingItem.id, updates: form },
+              company_id: companyId || 'default'
+            })
+            toast.info('Sin conexión. Herramienta actualizada localmente.')
+            triggerSync()
+            setIsModalOpen(false)
+            setEditingItem(null)
+            return
+          }
+
           const res = await updateToolRecord(editingItem.id, {
             code: form.code.toUpperCase(),
             name: form.name.trim(),
@@ -148,9 +206,46 @@ export function ToolsView({
             return
           }
 
-          setItems(prev => prev.map(item => item.id === editingItem.id ? (res.data as ToolItem) : item))
+          setItems(prev => {
+            const next = prev.map(item => item.id === editingItem.id ? (res.data as ToolItem) : item)
+            if (typeof window !== 'undefined') localStorage.setItem(scopedKey, JSON.stringify(next))
+            return next
+          })
           toast.success('Herramienta actualizada con éxito en base de datos')
         } else {
+          if (!isOnline) {
+            const tempId = 'tool-' + Date.now()
+            const newItem = {
+              id: tempId,
+              code: form.code.toUpperCase(),
+              name: form.name.trim(),
+              category: form.category,
+              brand: form.brand?.trim() || null,
+              condition: form.condition,
+              assigned_to: form.assigned_to?.trim() || null,
+              location: form.location?.trim() || 'Taller',
+              last_inspection_date: form.last_inspection_date || null,
+              created_at: new Date().toISOString(),
+              isPending: true
+            }
+            setItems(prev => {
+              const next = [newItem as any, ...prev]
+              if (typeof window !== 'undefined') localStorage.setItem(scopedKey, JSON.stringify(next))
+              return next
+            })
+            await addOperationToQueue({
+              id: uuidv4(),
+              entity: 'mecanica',
+              action: 'create_tool',
+              payload: { ...newItem, id: tempId },
+              company_id: companyId || 'default'
+            })
+            toast.info('Sin conexión. Herramienta registrada localmente.')
+            triggerSync()
+            setIsModalOpen(false)
+            return
+          }
+
           const res = await createToolRecord({
             code: form.code.toUpperCase(),
             name: form.name.trim(),
@@ -167,7 +262,11 @@ export function ToolsView({
             return
           }
 
-          setItems(prev => [res.data as ToolItem, ...prev])
+          setItems(prev => {
+            const next = [res.data as ToolItem, ...prev]
+            if (typeof window !== 'undefined') localStorage.setItem(scopedKey, JSON.stringify(next))
+            return next
+          })
           toast.success('Herramienta registrada con éxito en base de datos')
         }
 

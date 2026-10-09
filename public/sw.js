@@ -1,8 +1,8 @@
 // INTHALY OPS - Production Service Worker (Next.js 15 App Router Compatible)
-// Universal Offline Navigation & Resilient Module-Level Offline-First Architecture
+// Universal Offline Navigation & Sanitized Cache-API Match Architecture
 
 const CACHE_PREFIX = 'inthaly-ops'
-const CACHE_VERSION = 'v1.2.4'
+const CACHE_VERSION = 'v1.2.5'
 const STATIC_CACHE = `${CACHE_PREFIX}-static-${CACHE_VERSION}`
 const PAGES_CACHE = `${CACHE_PREFIX}-pages-${CACHE_VERSION}`
 const RSC_CACHE = `${CACHE_PREFIX}-rsc-${CACHE_VERSION}`
@@ -18,6 +18,20 @@ const PRECACHE_ASSETS = [
   '/icon-512x512.png',
   '/apple-touch-icon.png',
 ]
+
+// Sanitizer helper: Removes Vary header to ensure Cache API matches offline requests reliably
+async function cleanResponseForCache(response) {
+  const blob = await response.clone().blob()
+  const headers = new Headers(response.headers)
+  headers.delete('vary')
+  headers.delete('Vary')
+  headers.set('Cache-Control', 'public, max-age=31536000')
+  return new Response(blob, {
+    status: response.status,
+    statusText: response.statusText,
+    headers: headers
+  })
+}
 
 // 1. INSTALL
 self.addEventListener('install', (event) => {
@@ -96,7 +110,7 @@ self.addEventListener('fetch', (event) => {
 
         try {
           const networkResponse = await fetch(request)
-          if (networkResponse && networkResponse.status === 200) {
+          if (networkResponse && networkResponse.status === 200 && !networkResponse.redirected) {
             cache.put(request, networkResponse.clone())
           }
           return networkResponse
@@ -113,38 +127,28 @@ self.addEventListener('fetch', (event) => {
   const isRsc = request.headers.get('RSC') === '1' || url.searchParams.has('_rsc')
   if (isRsc) {
     event.respondWith(
-      caches.open(RSC_CACHE).then(async (cache) => {
+      (async () => {
+        const cache = await caches.open(RSC_CACHE)
         try {
           const networkResponse = await fetch(request)
-          if (networkResponse && networkResponse.status === 200) {
-            cache.put(request, networkResponse.clone())
-            cache.put(url.pathname, networkResponse.clone())
-            // Warm-cache the HTML document in PAGES_CACHE in the background
-            caches.open(PAGES_CACHE).then((pCache) => {
-              fetch(url.pathname, { cache: 'no-cache' }).then((docRes) => {
-                if (docRes && docRes.status === 200) {
-                  pCache.put(url.pathname, docRes)
-                }
-              }).catch(() => {})
-            })
+          if (networkResponse && networkResponse.status === 200 && !networkResponse.redirected) {
+            const sanitized = await cleanResponseForCache(networkResponse)
+            await cache.put(url.pathname, sanitized.clone())
+            await cache.put(request, sanitized)
           }
           return networkResponse
         } catch (err) {
-          const cached = (await cache.match(request, { ignoreSearch: true, ignoreVary: true })) ||
-                         (await cache.match(url.pathname, { ignoreSearch: true, ignoreVary: true }))
-          if (cached) return cached
-
-          // Fallback to cached dashboard RSC payload so client-side router transition succeeds
-          const fallbackRsc = (await cache.match('/dashboard', { ignoreSearch: true, ignoreVary: true })) ||
-                              (await cache.match('/super-admin', { ignoreSearch: true, ignoreVary: true }))
-          if (fallbackRsc) {
-            console.log('[SW] Serving App Shell fallback RSC for:', url.pathname)
-            return fallbackRsc
+          const cached = (await cache.match(url.pathname, { ignoreSearch: true })) ||
+                         (await cache.match(request, { ignoreSearch: true }))
+          if (cached) {
+            return cached
           }
-
-          throw new TypeError('Offline RSC fetch failure - falling back to document navigation')
+          // IMPORTANT: Do NOT return mismatched RSC payloads (such as /dashboard) for other routes!
+          // Throwing a TypeError simulates network failure, which allows Next.js router
+          // to trigger native document navigation fallback, served cleanly from PAGES_CACHE.
+          throw new TypeError('Offline RSC unavailable')
         }
-      })
+      })()
     )
     return
   }
@@ -167,54 +171,31 @@ self.addEventListener('fetch', (event) => {
     return
   }
 
-  // D. Navigation Requests (HTML Documents: mode === 'navigate')
-  if (request.mode === 'navigate') {
+  // D. Navigation Requests and HTML Documents (mode === 'navigate' OR Accept text/html)
+  const isHtml = request.mode === 'navigate' || 
+                 (request.headers.get('Accept')?.includes('text/html') && !isRsc)
+  if (isHtml) {
     event.respondWith(
-      caches.open(PAGES_CACHE).then(async (cache) => {
+      (async () => {
+        const cache = await caches.open(PAGES_CACHE)
         try {
           const networkResponse = await fetch(request)
-          if (networkResponse && networkResponse.status === 200) {
-            // Save both the full request and the URL pathname for robust matching
-            cache.put(request, networkResponse.clone())
-            cache.put(url.pathname, networkResponse.clone())
-
-            // Pre-warm the RSC payload for this route so client-side navigation has it cached
-            caches.open(RSC_CACHE).then(async (rscCache) => {
-              try {
-                const rscRes = await fetch(url.pathname, {
-                  headers: { 'RSC': '1' }
-                })
-                if (rscRes && rscRes.status === 200) {
-                  rscCache.put(url.pathname, rscRes)
-                }
-              } catch (_) {}
-            })
+          if (networkResponse && networkResponse.status === 200 && !networkResponse.redirected) {
+            const sanitized = await cleanResponseForCache(networkResponse)
+            await cache.put(url.pathname, sanitized.clone())
+            await cache.put(request, sanitized)
           }
           return networkResponse
         } catch (err) {
-          // Network failed: Try matching exact request or pathname from pages cache
-          const cachedPage = (await cache.match(request)) || (await cache.match(url.pathname))
+          const cachedPage = (await cache.match(url.pathname, { ignoreSearch: true })) ||
+                             (await cache.match(request, { ignoreSearch: true }))
           if (cachedPage) {
-            console.log('[SW] Serving cached page for:', url.pathname)
             return cachedPage
           }
 
-          // UNIVERSAL OFFLINE NAVIGATION:
-          // If this is an authenticated app navigation, ALWAYS serve the cached App Shell (/dashboard or /super-admin)!
-          // This ensures the user stays inside the application shell (Header, Sidebar, Navigation) rather than being trapped in an isolated offline screen!
-          const dashboardFallback = await cache.match('/dashboard')
-          if (dashboardFallback) {
-            console.log('[SW] Serving cached /dashboard App Shell for un-cached route:', url.pathname)
-            return dashboardFallback
-          }
+          // Dedicated offline fallback: NEVER return /dashboard HTML for other routes
+          // to prevent Next.js App Router hydration mismatches
 
-          const superAdminFallback = await cache.match('/super-admin')
-          if (superAdminFallback) {
-            console.log('[SW] Serving cached /super-admin App Shell for un-cached route:', url.pathname)
-            return superAdminFallback
-          }
-
-          // If no App Shell is cached at all (e.g. brand new install opened offline before any login), fallback to /offline
           const staticCache = await caches.open(STATIC_CACHE)
           const offlineFallback = await staticCache.match('/offline')
           if (offlineFallback) return offlineFallback
@@ -224,7 +205,7 @@ self.addEventListener('fetch', (event) => {
             status: 200
           })
         }
-      })
+      })()
     )
     return
   }

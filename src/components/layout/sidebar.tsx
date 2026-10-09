@@ -12,7 +12,7 @@ import {
 } from 'lucide-react'
 import { logout } from '@/app/(auth)/login/actions'
 import { stopImpersonation } from '@/app/(main)/super-admin/actions'
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { useUserRole } from '@/components/providers/rbac-provider'
 import { useSidebar } from '@/components/providers/sidebar-provider'
 import { useGlobalSettings } from '@/components/providers/global-settings-provider'
@@ -170,8 +170,17 @@ function getCookie(name: string): string | undefined {
 }
 
 export function Sidebar() {
- const pathname = usePathname()
- const router = useRouter()
+  const pathname = usePathname()
+  const router = useRouter()
+  const pendingNavTimerRef = useRef<NodeJS.Timeout | null>(null)
+
+  // Clear any pending offline fallback on route change or unmount
+  useEffect(() => {
+    if (pendingNavTimerRef.current) {
+      clearTimeout(pendingNavTimerRef.current)
+      pendingNavTimerRef.current = null
+    }
+  }, [pathname])
  const { role_id, user, hasAccess, isImpersonating } = useUserRole()
   const { isCapabilityAvailable, isCapabilityVisibleInSidebar, getCapabilityStatus, industryLabel } = useOperationalContext()
   const { term } = useTerminology()
@@ -617,6 +626,23 @@ export function Sidebar() {
                             return
                           }
                           handleItemClick(group.id, item.href, item.name, e)
+
+                          // Safe Offline Navigation Guard:
+                          // If offline, Next.js client transition should complete from RSC_CACHE in <50ms.
+                          // If client-side transition stalls or fails (>1200ms), fallback to cached document navigation.
+                          // Debounced with ref to avoid race conditions during rapid clicks.
+                          if (typeof navigator !== 'undefined' && !navigator.onLine && item.href !== pathname) {
+                            if (pendingNavTimerRef.current) {
+                              clearTimeout(pendingNavTimerRef.current)
+                            }
+                            const targetPath = item.href
+                            pendingNavTimerRef.current = setTimeout(() => {
+                              if (window.location.pathname !== targetPath) {
+                                console.warn('[Offline Nav] Transition stalled, fallback to cached document:', targetPath)
+                                window.location.href = targetPath
+                              }
+                            }, 1200)
+                          }
                         }}
                         className={`flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg font-medium text-xs group/item nth-nav-item transition-all ${
                           isActive ? 'nth-nav-item-active' : ''
@@ -666,7 +692,21 @@ export function Sidebar() {
       </div>
 
       <div className="pt-3 pb-2 mt-auto border-t border-white/10 shrink-0">
-        <form action={logout}>
+        <form 
+          action={logout}
+          onSubmit={async () => {
+            try {
+              const { clearOfflineSession } = await import('@/lib/offline-sync')
+              await clearOfflineSession()
+              if (typeof caches !== 'undefined') {
+                const keys = await caches.keys()
+                await Promise.all(
+                  keys.filter(k => k.includes('-pages-') || k.includes('-rsc-')).map(k => caches.delete(k))
+                )
+              }
+            } catch (_) {}
+          }}
+        >
           <button type="submit" className="flex w-full items-center gap-2.5 px-2.5 py-1.5 transition-all rounded-lg font-medium text-xs group nth-nav-item">
             <div className="w-6 h-6 rounded-md bg-white/5 flex items-center justify-center group-hover:bg-white/15 transition-colors shrink-0">
               <LogOut size={14} className="opacity-60 group-hover:opacity-100" />

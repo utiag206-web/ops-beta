@@ -6,6 +6,9 @@ import {
   Pencil, Trash2, Ban, CheckCircle2, ShieldAlert, Loader2
 } from 'lucide-react'
 import { toast } from 'sonner'
+import { useOffline } from '@/components/providers/offline-provider'
+import { addOperationToQueue, getPendingOperations } from '@/lib/offline-sync'
+import { v4 as uuidv4 } from 'uuid'
 import { useRbac } from '@/components/providers/rbac-provider'
 import {
   FuelRecord,
@@ -44,6 +47,7 @@ export function FuelView({
   const scopedKey = companyId ? `fuel_${companyId}_${storageKey}` : `fuel_${storageKey}`
 
   const { can } = useRbac()
+  const { isOnline, triggerSync } = useOffline()
   const canCreate = persistToServer ? can('mecanica', 'create') : true
   const canUpdate = persistToServer ? can('mecanica', 'update') : true
   const canDelete = persistToServer ? can('mecanica', 'delete') : true
@@ -51,14 +55,12 @@ export function FuelView({
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   const [records, setRecords] = useState<FuelRecord[]>(() => {
-    if (persistToServer) {
-      return initialRecords || []
-    }
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem(scopedKey)
       if (saved) {
         try {
-          return JSON.parse(saved)
+          const parsed = JSON.parse(saved)
+          if (Array.isArray(parsed) && parsed.length > 0) return parsed
         } catch (e) {
           console.error('[MECANICA_FUEL] Error parsing stored records:', e)
         }
@@ -67,12 +69,41 @@ export function FuelView({
     return initialRecords?.length ? initialRecords : []
   })
 
-  // Sincronizar si cambian initialRecords desde servidor
+  // Sincronizar si cambian initialRecords desde servidor y reanudar pendientes
   useEffect(() => {
-    if (persistToServer) {
-      setRecords(initialRecords || [])
+    if (persistToServer && initialRecords && initialRecords.length > 0) {
+      setRecords(initialRecords)
+      if (typeof window !== 'undefined') {
+        localStorage.setItem(scopedKey, JSON.stringify(initialRecords))
+      }
     }
-  }, [initialRecords, persistToServer])
+    const replayPending = async () => {
+      try {
+        const pending = await getPendingOperations()
+        const fuelOps = pending.filter(p => p.entity === 'mecanica')
+        if (fuelOps.length > 0) {
+          setRecords(prev => {
+            let updated = [...prev]
+            for (const op of fuelOps) {
+              if (op.action === 'create_fuel') {
+                if (!updated.some(i => i.id === op.payload.id)) {
+                  updated = [{ ...op.payload, isPending: true }, ...updated]
+                }
+              }
+              if (op.action === 'update_fuel') {
+                updated = updated.map(i => i.id === op.payload.id ? { ...i, ...op.payload.updates, isPending: true } : i)
+              }
+              if (op.action === 'anular_fuel') {
+                updated = updated.map(i => i.id === op.payload.id ? { ...i, status: 'anulado', isPending: true } : i)
+              }
+            }
+            return updated
+          })
+        }
+      } catch (_) {}
+    }
+    replayPending()
+  }, [initialRecords, persistToServer, scopedKey])
 
   const [searchTerm, setSearchTerm] = useState('')
   const [filterTurn, setFilterTurn] = useState('todos')
@@ -144,6 +175,37 @@ export function FuelView({
       setIsSubmitting(true)
       try {
         if (editingRecord) {
+          if (!isOnline) {
+            const updatedRec = {
+              ...editingRecord,
+              date: form.date,
+              gallons: Number(form.gallons),
+              initial_hours: Number(form.initial_hours),
+              final_hours: Number(form.final_hours),
+              operator: form.operator,
+              turn: form.turn,
+              observation: form.observation || null,
+              isPending: true
+            }
+            setRecords(prev => {
+              const next = prev.map(r => r.id === editingRecord.id ? updatedRec : r)
+              if (typeof window !== 'undefined') localStorage.setItem(scopedKey, JSON.stringify(next))
+              return next
+            })
+            await addOperationToQueue({
+              id: uuidv4(),
+              entity: 'mecanica',
+              action: 'update_fuel',
+              payload: { id: editingRecord.id, updates: form },
+              company_id: companyId || 'default'
+            })
+            toast.info('Sin conexión. Combustible actualizado localmente.')
+            triggerSync()
+            setIsModalOpen(false)
+            setEditingRecord(null)
+            return
+          }
+
           const res = await updateFuelRecord(editingRecord.id, {
             date: form.date,
             gallons: Number(form.gallons),
@@ -159,9 +221,50 @@ export function FuelView({
             return
           }
 
-          setRecords(prev => prev.map(r => r.id === editingRecord.id ? (res.data as FuelRecord) : r))
+          setRecords(prev => {
+            const next = prev.map(r => r.id === editingRecord.id ? (res.data as FuelRecord) : r)
+            if (typeof window !== 'undefined') localStorage.setItem(scopedKey, JSON.stringify(next))
+            return next
+          })
           toast.success('Despacho de combustible actualizado con éxito en base de datos')
         } else {
+          if (!isOnline) {
+            const tempId = 'fuel-' + Date.now()
+            const newRec = {
+              id: tempId,
+              equipment_name: defaultEquipmentName,
+              equipment_code: defaultEquipmentCode,
+              equipment_type: equipmentType,
+              date: form.date,
+              gallons: Number(form.gallons),
+              initial_hours: Number(form.initial_hours),
+              final_hours: Number(form.final_hours),
+              hours_operated: hoursOp,
+              ratio: ratio,
+              operator: form.operator,
+              turn: form.turn,
+              observation: form.observation || null,
+              created_at: new Date().toISOString(),
+              isPending: true
+            }
+            setRecords(prev => {
+              const next = [newRec as any, ...prev]
+              if (typeof window !== 'undefined') localStorage.setItem(scopedKey, JSON.stringify(next))
+              return next
+            })
+            await addOperationToQueue({
+              id: uuidv4(),
+              entity: 'mecanica',
+              action: 'create_fuel',
+              payload: { ...newRec, id: tempId },
+              company_id: companyId || 'default'
+            })
+            toast.info('Sin conexión. Combustible registrado localmente.')
+            triggerSync()
+            setIsModalOpen(false)
+            return
+          }
+
           const res = await createFuelRecord({
             equipment_name: defaultEquipmentName,
             equipment_code: defaultEquipmentCode,
@@ -180,7 +283,11 @@ export function FuelView({
             return
           }
 
-          setRecords(prev => [res.data as FuelRecord, ...prev])
+          setRecords(prev => {
+            const next = [res.data as FuelRecord, ...prev]
+            if (typeof window !== 'undefined') localStorage.setItem(scopedKey, JSON.stringify(next))
+            return next
+          })
           toast.success('Despacho de combustible registrado con éxito en base de datos')
         }
 

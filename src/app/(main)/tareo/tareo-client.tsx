@@ -114,12 +114,50 @@ export default function TareoClient({ initialCycles, workers, userRole, companyI
       setTareoRecords(res.records)
       setTareoNotes(res.notes)
       setAttendanceLogs(res.punches)
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('tareo_cache_' + currentMonthStr, JSON.stringify(res.records))
+        localStorage.setItem('tareo_notes_' + currentMonthStr, JSON.stringify(res.notes))
+        localStorage.setItem('tareo_punches_' + currentMonthStr, JSON.stringify(res.punches))
+      }
       if ((res as any).attendanceSettings) {
         setAttendanceSettings((res as any).attendanceSettings)
       }
     } catch (e) {
-      console.error("[TAREO] Error loading optimized data:", e)
+      console.warn("[TAREO] Modo Offline: cargando datos de tareo desde caché local:", e)
+      if (typeof window !== 'undefined') {
+        const cached = localStorage.getItem('tareo_cache_' + currentMonthStr)
+        if (cached) {
+          try { setTareoRecords(JSON.parse(cached)) } catch (_) {}
+        }
+        const cachedNotes = localStorage.getItem('tareo_notes_' + currentMonthStr)
+        if (cachedNotes) {
+          try { setTareoNotes(JSON.parse(cachedNotes)) } catch (_) {}
+        }
+        const cachedPunches = localStorage.getItem('tareo_punches_' + currentMonthStr)
+        if (cachedPunches) {
+          try { setAttendanceLogs(JSON.parse(cachedPunches)) } catch (_) {}
+        }
+      }
     } finally {
+      // Replay pending tareo operations onto records
+      try {
+        const { getPendingOperations } = await import('@/lib/offline-sync')
+        const pending = await getPendingOperations()
+        const tareoPending = pending.filter(p => p.entity === 'tareo')
+        if (tareoPending.length > 0) {
+          setTareoRecords(prev => {
+            let updated = [...prev]
+            for (const op of tareoPending) {
+              if (op.action === 'upsert_tareo_record') {
+                const { worker_id, date, status } = op.payload
+                updated = updated.filter(r => !(r.worker_id === worker_id && r.date === date))
+                if (status) updated.push({ worker_id, date, status, isPending: true })
+              }
+            }
+            return updated
+          })
+        }
+      } catch (_) {}
       if (!isBackground) setLoading(false)
     }
   }, [currentMonthStr, daysInMonth])
@@ -255,6 +293,12 @@ export default function TareoClient({ initialCycles, workers, userRole, companyI
           payload: { id: uuidv4(), worker_id: workerId, date, status },
           company_id: companyId
         })
+        if (typeof window !== 'undefined') {
+          const updated = tareoRecords.filter(r => !(r.worker_id === workerId && r.date === date))
+          if (status) updated.push({ worker_id: workerId, date, status, isPending: true })
+          localStorage.setItem('tareo_cache_' + currentMonthStr, JSON.stringify(updated))
+        }
+        toast.info('Sin conexión. Tareo guardado localmente.')
         triggerSync()
       }
     } catch {

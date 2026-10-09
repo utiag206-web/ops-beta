@@ -30,7 +30,18 @@ export default function StopHsecPage() {
  const { role_id, user } = useRbac()
  const { isOnline, triggerSync } = useOffline()
  const companyId = user?.active_company_id || user?.company_id || ''
- const [stops, setStops] = useState<any[]>([])
+ const [stops, setStops] = useState<any[]>(() => {
+    if (typeof window !== 'undefined') {
+      const cached = localStorage.getItem('hsec_stops_cache')
+      if (cached) {
+        try {
+          const parsed = JSON.parse(cached)
+          if (Array.isArray(parsed) && parsed.length > 0) return parsed
+        } catch (_) {}
+      }
+    }
+    return []
+  })
  const [loading, setLoading] = useState(true)
  const [isModalOpen, setIsModalOpen] = useState(false)
  const [editStop, setEditStop] = useState<any | null>(null)

@@ -90,10 +90,24 @@ export function CreateRequirementModal({ isOpen, onClose, onSuccess }: CreateReq
 
       const loadProducts = async () => {
         setFetchingProducts(true)
-        const { getProductsMinimal } = await import('@/app/(main)/inventory/actions')
-        const res = await getProductsMinimal()
-        if (res.data) setProducts(res.data)
-        setFetchingProducts(false)
+        try {
+          const { getProductsMinimal } = await import('@/app/(main)/inventory/actions')
+          const res = await getProductsMinimal()
+          if (res?.data && res.data.length > 0) {
+            setProducts(res.data)
+            if (typeof window !== 'undefined') localStorage.setItem('products_cache_minimal', JSON.stringify(res.data))
+          } else if (typeof window !== 'undefined') {
+            const cached = localStorage.getItem('products_cache_minimal')
+            if (cached) setProducts(JSON.parse(cached))
+          }
+        } catch (_) {
+          if (typeof window !== 'undefined') {
+            const cached = localStorage.getItem('products_cache_minimal')
+            if (cached) setProducts(JSON.parse(cached))
+          }
+        } finally {
+          setFetchingProducts(false)
+        }
       }
       loadProducts()
     }

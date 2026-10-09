@@ -6,6 +6,9 @@ import {
   DollarSign, X, Pencil, Trash2, Ban, ShieldAlert, Loader2
 } from 'lucide-react'
 import { toast } from 'sonner'
+import { useOffline } from '@/components/providers/offline-provider'
+import { addOperationToQueue, getPendingOperations } from '@/lib/offline-sync'
+import { v4 as uuidv4 } from 'uuid'
 import { useRbac } from '@/components/providers/rbac-provider'
 import { 
   createMaintenanceRecord, 
@@ -61,6 +64,7 @@ export function MaintenanceView({
   const scopedKey = companyId ? `mecanica_${companyId}_${storageKey}` : `mecanica_${storageKey}`
 
   const { can } = useRbac()
+  const { isOnline, triggerSync } = useOffline()
   const canCreate = persistToServer ? can('mecanica', 'create') : true
   const canUpdate = persistToServer ? can('mecanica', 'update') : true
   const canDelete = persistToServer ? can('mecanica', 'delete') : true
@@ -68,28 +72,55 @@ export function MaintenanceView({
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   const [items, setItems] = useState<MaintenanceItem[]>(() => {
-    if (persistToServer) {
-      return initialItems
-    }
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem(scopedKey)
       if (saved) {
         try {
-          return JSON.parse(saved)
+          const parsed = JSON.parse(saved)
+          if (Array.isArray(parsed) && parsed.length > 0) return parsed
         } catch (e) {
           console.error('[MECANICA_MAINTENANCE] Error parsing stored items:', e)
         }
       }
     }
-    return initialItems.length > 0 ? initialItems : []
+    return initialItems?.length ? initialItems : []
   })
 
-  // Sincronizar si cambian initialItems desde el servidor
+  // Sincronizar si cambian initialItems desde el servidor y reanudar pendientes
   useEffect(() => {
-    if (persistToServer) {
+    if (persistToServer && initialItems && initialItems.length > 0) {
       setItems(initialItems)
+      if (typeof window !== 'undefined') {
+        localStorage.setItem(scopedKey, JSON.stringify(initialItems))
+      }
     }
-  }, [initialItems, persistToServer])
+    const replayPending = async () => {
+      try {
+        const pending = await getPendingOperations()
+        const maintOps = pending.filter(p => p.entity === 'mecanica')
+        if (maintOps.length > 0) {
+          setItems(prev => {
+            let updated = [...prev]
+            for (const op of maintOps) {
+              if (op.action === 'create_maintenance') {
+                if (!updated.some(i => i.id === op.payload.id)) {
+                  updated = [{ ...op.payload, isPending: true }, ...updated]
+                }
+              }
+              if (op.action === 'update_maintenance') {
+                updated = updated.map(i => i.id === op.payload.id ? { ...i, ...op.payload.updates, isPending: true } : i)
+              }
+              if (op.action === 'anular_maintenance') {
+                updated = updated.map(i => i.id === op.payload.id ? { ...i, status: 'anulado' as const, isPending: true } : i)
+              }
+            }
+            return updated
+          })
+        }
+      } catch (_) {}
+    }
+    replayPending()
+  }, [initialItems, persistToServer, scopedKey])
 
   const [searchTerm, setSearchTerm] = useState('')
   const [filterType, setFilterType] = useState('todos')
@@ -107,7 +138,7 @@ export function MaintenanceView({
     technician: '',
     date: new Date().toISOString().split('T')[0],
     hours_or_km: 0,
-    status: 'completado' as 'completado' | 'en_progreso' | 'programado' | 'anulado' | 'archivado',
+    status: 'completado' as const as 'completado' | 'en_progreso' | 'programado' | 'anulado' | 'archivado',
     cost: 0,
     next_service: ''
   })
@@ -130,7 +161,7 @@ export function MaintenanceView({
       technician: '',
       date: new Date().toISOString().split('T')[0],
       hours_or_km: 0,
-      status: 'completado',
+      status: 'completado' as const,
       cost: 0,
       next_service: ''
     })
@@ -167,6 +198,33 @@ export function MaintenanceView({
       setIsSubmitting(true)
       try {
         if (editingItem) {
+          if (!isOnline) {
+            const updatedItem: any = {
+              ...editingItem,
+              ...form,
+              equipment_code: form.equipment_code.toUpperCase(),
+              equipment_type: equipmentType,
+              isPending: true
+            }
+            setItems(prev => {
+              const next = prev.map(item => item.id === editingItem.id ? updatedItem : item)
+              if (typeof window !== 'undefined') localStorage.setItem(scopedKey, JSON.stringify(next))
+              return next
+            })
+            await addOperationToQueue({
+              id: uuidv4(),
+              entity: 'mecanica',
+              action: 'update_maintenance',
+              payload: { id: editingItem.id, updates: form },
+              company_id: companyId || 'default'
+            })
+            toast.info('Sin conexión. Mantenimiento actualizado localmente.')
+            triggerSync()
+            setIsModalOpen(false)
+            setEditingItem(null)
+            return
+          }
+
           const res = await updateMaintenanceRecord(editingItem.id, {
             equipment_name: form.equipment_name,
             equipment_code: form.equipment_code.toUpperCase(),
@@ -186,9 +244,49 @@ export function MaintenanceView({
             return
           }
 
-          setItems(prev => prev.map(item => item.id === editingItem.id ? (res.data as any) : item))
+          setItems(prev => {
+            const next = prev.map(item => item.id === editingItem.id ? (res.data as any) : item)
+            if (typeof window !== 'undefined') localStorage.setItem(scopedKey, JSON.stringify(next))
+            return next
+          })
           toast.success('Mantenimiento actualizado exitosamente en servidor')
         } else {
+          if (!isOnline) {
+            const tempId = 'maint-' + Date.now()
+            const newItem: any = {
+              id: tempId,
+              equipment_name: form.equipment_name,
+              equipment_code: form.equipment_code.toUpperCase(),
+              equipment_type: equipmentType,
+              maintenance_type: form.maintenance_type,
+              description: form.description,
+              technician: form.technician,
+              date: form.date,
+              hours_or_km: form.hours_or_km,
+              status: form.status,
+              cost: form.cost,
+              next_service: form.next_service || null,
+              created_at: new Date().toISOString(),
+              isPending: true
+            }
+            setItems(prev => {
+              const next = [newItem as any, ...prev]
+              if (typeof window !== 'undefined') localStorage.setItem(scopedKey, JSON.stringify(next))
+              return next
+            })
+            await addOperationToQueue({
+              id: uuidv4(),
+              entity: 'mecanica',
+              action: 'create_maintenance',
+              payload: { ...newItem, id: tempId },
+              company_id: companyId || 'default'
+            })
+            toast.info('Sin conexión. Mantenimiento registrado localmente.')
+            triggerSync()
+            setIsModalOpen(false)
+            return
+          }
+
           const res = await createMaintenanceRecord({
             equipment_name: form.equipment_name,
             equipment_code: form.equipment_code.toUpperCase(),
@@ -208,7 +306,11 @@ export function MaintenanceView({
             return
           }
 
-          setItems(prev => [res.data as any, ...prev])
+          setItems(prev => {
+            const next = [res.data as any, ...prev]
+            if (typeof window !== 'undefined') localStorage.setItem(scopedKey, JSON.stringify(next))
+            return next
+          })
           toast.success('Mantenimiento registrado con éxito en base de datos')
         }
 
@@ -261,17 +363,38 @@ export function MaintenanceView({
   // Anular registro (preserva historial técnico)
   const handleAnular = async (id: string) => {
     if (persistToServer) {
+      if (!isOnline) {
+        setItems(prev => {
+          const next = prev.map(item => item.id === id ? { ...item, status: 'anulado' as const, isPending: true } : item)
+          if (typeof window !== 'undefined') localStorage.setItem(scopedKey, JSON.stringify(next))
+          return next
+        })
+        await addOperationToQueue({
+          id: uuidv4(),
+          entity: 'mecanica',
+          action: 'anular_maintenance',
+          payload: { id },
+          company_id: companyId || 'default'
+        })
+        toast.info('Sin conexión. Anulado localmente.')
+        triggerSync()
+        return
+      }
       const res = await anularMaintenanceRecord(id)
       if (!res.success) {
         toast.error(res.error || 'Error al anular mantenimiento')
         return
       }
-      setItems(prev => prev.map(item => item.id === id ? { ...item, status: 'anulado' } : item))
+      setItems(prev => {
+        const next = prev.map(item => item.id === id ? { ...item, status: 'anulado' as const } : item)
+        if (typeof window !== 'undefined') localStorage.setItem(scopedKey, JSON.stringify(next))
+        return next
+      })
       toast.info('Mantenimiento marcado como anulado (historial preservado en DB)')
       return
     }
 
-    setItems(prev => prev.map(item => item.id === id ? { ...item, status: 'anulado' } : item))
+    setItems(prev => prev.map(item => item.id === id ? { ...item, status: 'anulado' as const } : item))
     toast.info('Mantenimiento marcado como anulado (historial preservado)')
   }
 
@@ -283,12 +406,12 @@ export function MaintenanceView({
         toast.error(res.error || 'Error al reactivar mantenimiento')
         return
       }
-      setItems(prev => prev.map(item => item.id === id ? { ...item, status: 'completado' } : item))
+      setItems(prev => prev.map(item => item.id === id ? { ...item, status: 'completado' as const } : item))
       toast.success('Mantenimiento reactivado a completado en servidor')
       return
     }
 
-    setItems(prev => prev.map(item => item.id === id ? { ...item, status: 'completado' } : item))
+    setItems(prev => prev.map(item => item.id === id ? { ...item, status: 'completado' as const } : item))
     toast.success('Mantenimiento reactivado a completado')
   }
 

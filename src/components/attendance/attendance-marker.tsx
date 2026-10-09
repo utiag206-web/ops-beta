@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { Clock, LogIn, LogOut, CheckCircle2, Loader2, Calendar } from 'lucide-react'
 import { checkIn, checkOut } from '@/app/(main)/attendance/actions'
 import { useOffline } from '@/components/providers/offline-provider'
-import { addOperationToQueue } from '@/lib/offline-sync'
+import { addOperationToQueue, getPendingOperations } from '@/lib/offline-sync'
 import { v4 as uuidv4 } from 'uuid'
 import { toast } from 'sonner'
 
@@ -37,7 +37,7 @@ export function AttendanceMarker({ initialStatus }: AttendanceMarkerProps) {
  }
  } else {
  const localTime = new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
- setStatus({ ...status, check_in: localTime })
+ const updatedStatus = { ...status, check_in: localTime, isPending: true }; setStatus(updatedStatus); if (typeof window !== 'undefined') localStorage.setItem('attendance_status_cache', JSON.stringify(updatedStatus));
  await addOperationToQueue({
  id: uuidv4(),
  entity: 'attendance',
@@ -68,7 +68,7 @@ export function AttendanceMarker({ initialStatus }: AttendanceMarkerProps) {
  }
  } else {
  const localTime = new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
- setStatus((prev: any) => ({ ...prev, check_out: localTime }))
+ const updatedStatus = { ...status, check_out: localTime, isPending: true }; setStatus(updatedStatus); if (typeof window !== 'undefined') localStorage.setItem('attendance_status_cache', JSON.stringify(updatedStatus));
  await addOperationToQueue({
  id: uuidv4(),
  entity: 'attendance',
