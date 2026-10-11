@@ -26,6 +26,10 @@ export default function CapacitacionesSomaPage() {
  const isSomaRole = ['admin', 'soma', 'operaciones', 'jefe_area', 'super_admin', 'superadmin'].includes(role_id || '')
 
  const handleDelete = async (id: string) => {
+ if (typeof navigator !== 'undefined' && !navigator.onLine) {
+   toast.error('Eliminar capacitaciones requiere conexión a Internet')
+   return
+ }
  if (!confirm('¿Estás seguro de que deseas eliminar este registro de capacitación? Esta acción no se puede deshacer.')) return
  try {
  const res = await deleteSomaTraining(id)
@@ -44,20 +48,70 @@ export default function CapacitacionesSomaPage() {
  async function loadData() {
  setLoading(true)
  try {
- const [tData, wData] = await Promise.all([
- getSomaTrainings(),
- getWorkers('active')
- ])
- setTrainings(tData)
- setWorkers(wData)
- setSelectedTraining((prev: any) => {
- if (!prev) return null
- return tData.find((t: any) => t.id === prev.id) || null
- })
+   let tData: any[] | null = null
+   let wData: any[] | null = null
+
+   if (typeof navigator !== 'undefined' && navigator.onLine) {
+     try {
+       const [trainingsRes, workersRes] = await Promise.all([
+         getSomaTrainings(),
+         getWorkers('active')
+       ])
+       tData = trainingsRes || []
+       wData = workersRes || []
+       try {
+         if (typeof localStorage !== 'undefined') {
+           localStorage.setItem('soma_trainings_cache', JSON.stringify(tData))
+           localStorage.setItem('soma_workers_cache', JSON.stringify(wData))
+         }
+       } catch (_) {}
+     } catch (netErr) {
+       console.warn('[Capacitaciones] Error de red:', netErr)
+     }
+   }
+
+   if (tData !== null && wData !== null) {
+     setTrainings(tData)
+     setWorkers(wData)
+     setSelectedTraining((prev: any) => {
+       if (!prev) return null
+       return tData?.find((t: any) => t.id === prev.id) || null
+     })
+   } else {
+     // Recuperación desde caché local
+     let recoveredTrainings: any[] = []
+     let recoveredWorkers: any[] = []
+     try {
+       if (typeof localStorage !== 'undefined') {
+         const rawT = localStorage.getItem('soma_trainings_cache')
+         const rawW = localStorage.getItem('soma_workers_cache')
+         if (rawT) {
+           const parsedT = JSON.parse(rawT)
+           if (Array.isArray(parsedT)) recoveredTrainings = parsedT
+         }
+         if (rawW) {
+           const parsedW = JSON.parse(rawW)
+           if (Array.isArray(parsedW)) recoveredWorkers = parsedW
+         }
+       }
+     } catch (_) {}
+
+     setTrainings(recoveredTrainings)
+     setWorkers(recoveredWorkers)
+     setSelectedTraining((prev: any) => {
+       if (!prev) return null
+       return recoveredTrainings.find((t: any) => t.id === prev.id) || null
+     })
+
+     // No mostrar toast de error agresivo si está offline
+     if (typeof navigator !== 'undefined' && navigator.onLine && recoveredTrainings.length === 0) {
+       toast.error('Error al cargar datos')
+     }
+   }
  } catch (error) {
- toast.error('Error al cargar datos')
+   console.error('[Capacitaciones] Error in loadData:', error)
  } finally {
- setLoading(false)
+   setLoading(false)
  }
  }
 

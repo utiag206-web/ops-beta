@@ -71,54 +71,117 @@ export default function CompanyProfilePage() {
 
   useEffect(() => {
     async function loadData() {
-      const profile = await getCompanyProfile()
-      if (profile) {
-        const settings = getCompanyAuthSettings(profile)
-        const hrSet = getCompanyHrSettings(profile)
-        const plainHours = extractPlainWorkingHours(profile.working_hours)
-        setFormData(prev => ({
-          ...prev,
-          name: profile.name || '',
-          address: profile.address || '',
-          phone: profile.phone || '',
-          contact_email: profile.contact_email || '',
-          tax_id: profile.tax_id || '',
-          industry: profile.industry || 'Minería y Metalurgia',
-          timezone: profile.timezone || 'UTC-5',
-          working_hours: plainHours,
-          logo_url: profile.logo_url || '',
-          contact_name: profile.contact_name || '',
-          contact_position: profile.contact_position || '',
-          estimated_workers: profile.estimated_workers || '16 a 50 trabajadores',
-          notes: profile.notes || ''
-        }))
-        setAuthSettings(settings)
-        setHrSettings(hrSet)
+      try {
+        let profile: any = null
+        if (typeof navigator !== 'undefined' && navigator.onLine) {
+          try {
+            profile = await getCompanyProfile()
+            if (profile && typeof localStorage !== 'undefined') {
+              localStorage.setItem('company_profile_cache', JSON.stringify(profile))
+            }
+          } catch (netErr) {
+            console.warn('[Company] Error al consultar perfil en línea:', netErr)
+          }
+        }
+
+        // Recuperación desde caché local cuando no hay conexión o falla la red
+        if (!profile) {
+          try {
+            if (typeof localStorage !== 'undefined') {
+              const raw = localStorage.getItem('company_profile_cache')
+              if (raw) {
+                const parsed = JSON.parse(raw)
+                if (parsed && typeof parsed === 'object') {
+                  profile = parsed
+                }
+              }
+            }
+          } catch (_) {}
+        }
+
+        // Obtener sesión offline para verificar aislamiento multiempresa
+        let offlineSession: any = null
+        try {
+          const { getOfflineSession } = await import('@/lib/offline-sync')
+          offlineSession = await getOfflineSession()
+        } catch (_) {}
+
+        if (profile) {
+          // Seguridad: Garantizar que no se muestren datos de otra empresa
+          const activeCompanyId = offlineSession?.active_company_id || offlineSession?.company_id
+          if (!activeCompanyId || !profile.id || profile.id === activeCompanyId) {
+            const settings = getCompanyAuthSettings(profile)
+            const hrSet = getCompanyHrSettings(profile)
+            const plainHours = extractPlainWorkingHours(profile.working_hours)
+            setFormData(prev => ({
+              ...prev,
+              name: profile.name || '',
+              address: profile.address || '',
+              phone: profile.phone || '',
+              contact_email: profile.contact_email || '',
+              tax_id: profile.tax_id || '',
+              industry: profile.industry || 'Minería y Metalurgia',
+              timezone: profile.timezone || 'UTC-5',
+              working_hours: plainHours,
+              logo_url: profile.logo_url || '',
+              contact_name: profile.contact_name || '',
+              contact_position: profile.contact_position || '',
+              estimated_workers: profile.estimated_workers || '16 a 50 trabajadores',
+              notes: profile.notes || ''
+            }))
+            setAuthSettings(settings)
+            setHrSettings(hrSet)
+          } else if (offlineSession) {
+            setFormData(prev => ({
+              ...prev,
+              name: offlineSession.company_name || prev.name,
+              industry: offlineSession.company_industry || prev.industry
+            }))
+          }
+        } else if (offlineSession) {
+          setFormData(prev => ({
+            ...prev,
+            name: offlineSession.company_name || prev.name,
+            industry: offlineSession.company_industry || prev.industry
+          }))
+        }
+      } catch (err) {
+        console.error('[Company] Error in loadData:', err)
+      } finally {
+        setLoading(false)
       }
-      setLoading(false)
     }
     loadData()
   }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (typeof navigator !== 'undefined' && !navigator.onLine) {
+      setMessage({ type: 'error', text: 'La actualización de la empresa requiere conexión a Internet.' })
+      return
+    }
     setSaving(true)
     setMessage(null)
 
-    const result = await updateCompanyProfile({
-      ...formData,
-      auth_settings: authSettings,
-      hr_settings: hrSettings
-    })
-    
-    if (result.success) {
-      setMessage({ type: 'success', text: 'Configuración de empresa actualizada correctamente.' })
-      window.scrollTo({ top: 0, behavior: 'smooth' })
-      router.refresh()
-    } else {
-      setMessage({ type: 'error', text: result.error || 'Error al actualizar.' })
+    try {
+      const result = await updateCompanyProfile({
+        ...formData,
+        auth_settings: authSettings,
+        hr_settings: hrSettings
+      })
+      
+      if (result.success) {
+        setMessage({ type: 'success', text: 'Configuración de empresa actualizada correctamente.' })
+        window.scrollTo({ top: 0, behavior: 'smooth' })
+        router.refresh()
+      } else {
+        setMessage({ type: 'error', text: result.error || 'Error al actualizar.' })
+      }
+    } catch (err: any) {
+      setMessage({ type: 'error', text: err?.message || 'Error al actualizar.' })
+    } finally {
+      setSaving(false)
     }
-    setSaving(false)
   }
 
   if (loading) {

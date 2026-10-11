@@ -6,7 +6,7 @@ import {
  MapPin, CheckCircle2, ChevronRight, X, 
  Loader2, Camera, Filter, Grid, List,
  ArrowRight, Info, AlertCircle, Activity,
- Calendar, Users, Pencil, Trash2
+ Calendar, Users, Pencil, Trash2, Clock
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { getHsecStops, createHsecStop, closeHsecStop, updateHsecStop, deleteHsecStop } from './actions'
@@ -75,9 +75,74 @@ export default function StopHsecPage() {
 
  async function loadStops() {
  setLoading(true)
- const data = await getHsecStops()
- setStops(data)
- setLoading(false)
+ try {
+   let serverData: any[] | null = null
+   if (typeof navigator !== 'undefined' && navigator.onLine) {
+     try {
+       serverData = await getHsecStops()
+       if (Array.isArray(serverData)) {
+         try {
+           localStorage.setItem('hsec_stops_cache', JSON.stringify(serverData))
+         } catch (_) {}
+       }
+     } catch (netErr) {
+       console.warn('[HSEC] Error al consultar servidor:', netErr)
+     }
+   }
+
+   let baseStops = serverData
+   if (!baseStops || baseStops.length === 0) {
+     try {
+       const cached = localStorage.getItem('hsec_stops_cache')
+       if (cached) {
+         const parsed = JSON.parse(cached)
+         if (Array.isArray(parsed)) baseStops = parsed
+       }
+     } catch (_) {}
+   }
+
+   if (!baseStops) baseStops = []
+
+   // Combinar operaciones pendientes de la cola local de sincronización
+   try {
+     const { getPendingOperations } = await import('@/lib/offline-sync')
+     const pendingOps = await getPendingOperations()
+     const hsecOps = pendingOps.filter(op => op.entity === 'hsec')
+
+     if (hsecOps.length > 0) {
+       let merged = [...baseStops]
+       for (const op of hsecOps) {
+         if (op.action === 'create_hsec_stop' && op.payload) {
+           const exists = merged.some(s => s.id === op.payload.id)
+           if (!exists) {
+             merged.unshift({
+               ...op.payload,
+               created_at: op.created_at || new Date().toISOString(),
+               status: op.payload.status || 'abierta',
+               _is_pending: true,
+               sync_status: op.sync_status
+             })
+           }
+         } else if (op.action === 'delete_hsec_stop' && op.payload?.id) {
+           merged = merged.filter(s => s.id !== op.payload.id)
+         } else if (op.action === 'close_hsec_stop' && op.payload?.id) {
+           merged = merged.map(s => s.id === op.payload.id ? { ...s, status: 'cerrada', _is_pending: true } : s)
+         } else if (op.action === 'update_hsec_stop' && op.payload?.id) {
+           merged = merged.map(s => s.id === op.payload.id ? { ...s, ...op.payload.updates, _is_pending: true } : s)
+         }
+       }
+       baseStops = merged
+     }
+   } catch (queueErr) {
+     console.warn('[HSEC] Error al leer cola offline:', queueErr)
+   }
+
+   setStops(baseStops)
+ } catch (err) {
+   console.error('[HSEC] Error in loadStops:', err)
+ } finally {
+   setLoading(false)
+ }
  }
 
  const filteredStops = stops.filter(s => filter === 'all' || s.status === filter)
@@ -171,9 +236,17 @@ export default function StopHsecPage() {
  }`}>
  {stop.type === 'acto_inseguro' ? 'Acto' : 'Condición'}
  </span>
- <span className="text-[10px] font-bold text-slate-400 tracking-tight">
- {format(new Date(stop.created_at), 'dd MMM', { locale: es })}
- </span>
+ <div className="flex items-center gap-2">
+   {stop._is_pending && (
+     <span className="px-2 py-0.5 rounded-full text-[9px] font-black bg-amber-50 text-amber-700 border border-amber-200 flex items-center gap-1 shadow-xs">
+       <Clock size={10} className="animate-spin text-amber-600" />
+       Pendiente sinc.
+     </span>
+   )}
+   <span className="text-[10px] font-bold text-slate-400 tracking-tight">
+     {format(new Date(stop.created_at), 'dd MMM', { locale: es })}
+   </span>
+ </div>
  </div>
 
  <h3 className="text-xl font-black text-slate-800 tracking-tight line-clamp-2 min-h-[3.5rem] mb-4 group-hover:text-rose-600 transition-colors">

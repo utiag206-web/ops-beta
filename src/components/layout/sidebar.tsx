@@ -628,20 +628,16 @@ export function Sidebar() {
                           handleItemClick(group.id, item.href, item.name, e)
 
                           // Safe Offline Navigation Guard:
-                          // If offline, Next.js client transition should complete from RSC_CACHE in <50ms.
-                          // If client-side transition stalls or fails (>1200ms), fallback to cached document navigation.
-                          // Debounced with ref to avoid race conditions during rapid clicks.
-                          if (typeof navigator !== 'undefined' && !navigator.onLine && item.href !== pathname) {
-                            if (pendingNavTimerRef.current) {
-                              clearTimeout(pendingNavTimerRef.current)
+                          // When offline, Next.js client-side soft transitions attempt RSC fetches which fail immediately (5ms),
+                          // unmounting the shell and triggering root error.tsx.
+                          // Instead, intercept with immediate native document navigation to leverage Service Worker PAGES_CACHE (same as F5),
+                          // preserving App Shell and eliminating black screens across all submodules.
+                          if (typeof navigator !== 'undefined' && !navigator.onLine) {
+                            e.preventDefault()
+                            if (item.href !== pathname) {
+                              window.location.href = item.href
                             }
-                            const targetPath = item.href
-                            pendingNavTimerRef.current = setTimeout(() => {
-                              if (window.location.pathname !== targetPath) {
-                                console.warn('[Offline Nav] Transition stalled, fallback to cached document:', targetPath)
-                                window.location.href = targetPath
-                              }
-                            }, 1200)
+                            return
                           }
                         }}
                         className={`flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg font-medium text-xs group/item nth-nav-item transition-all ${

@@ -31,16 +31,51 @@ export default function WarehousesPage() {
  const loadData = async () => {
  setLoading(true)
  try {
- const res = await getWarehouses()
- if (res.error) {
- toast.error(res.error)
- } else if (res.data) {
- setWarehouses(res.data)
- }
+   let serverData: any[] | null = null
+   if (typeof navigator !== 'undefined' && navigator.onLine) {
+     try {
+       const res = await getWarehouses()
+       if (res?.data) {
+         serverData = res.data
+         try {
+           if (typeof localStorage !== 'undefined') {
+             localStorage.setItem('warehouses_cache', JSON.stringify(res.data))
+           }
+         } catch (_) {}
+       } else if (res?.error) {
+         toast.error(res.error)
+       }
+     } catch (netErr) {
+       console.warn('[Warehouses] Error al conectar con servidor:', netErr)
+     }
+   }
+
+   if (serverData) {
+     setWarehouses(serverData)
+   } else {
+     // Recuperación desde caché local
+     let loadedFromCache = false
+     try {
+       if (typeof localStorage !== 'undefined') {
+         const raw = localStorage.getItem('warehouses_cache')
+         if (raw) {
+           const parsed = JSON.parse(raw)
+           if (Array.isArray(parsed) && parsed.length > 0) {
+             setWarehouses(parsed)
+             loadedFromCache = true
+           }
+         }
+       }
+     } catch (_) {}
+
+     if (!loadedFromCache && typeof navigator !== 'undefined' && navigator.onLine) {
+       toast.error('Error al conectar con el servidor de inventario')
+     }
+   }
  } catch (err: any) {
- toast.error('Error al conectar con el servidor de inventario')
+   console.error('[Warehouses] loadData error:', err)
  } finally {
- setLoading(false)
+   setLoading(false)
  }
  }
 
@@ -52,6 +87,11 @@ export default function WarehousesPage() {
  if (!isAdmin) {
  toast.error('No tienes permisos para eliminar almacenes')
  return
+ }
+
+ if (typeof navigator !== 'undefined' && !navigator.onLine) {
+   toast.error('La eliminación de almacenes requiere conexión a Internet')
+   return
  }
 
  if (!confirm(`¿Estás seguro de eliminar el almacén "${name}"?`)) return

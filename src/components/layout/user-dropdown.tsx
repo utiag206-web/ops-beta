@@ -61,7 +61,15 @@ export function UserDropdown({
  
  <Link 
  href="/profile" 
- onClick={() => setIsOpen(false)}
+ onClick={(e) => {
+   setIsOpen(false)
+   if (typeof navigator !== 'undefined' && !navigator.onLine) {
+     e.preventDefault()
+     if (window.location.pathname !== '/profile') {
+       window.location.href = '/profile'
+     }
+   }
+ }}
  className="flex items-center gap-3 px-4 py-2.5 text-sm text-slate-600 hover:bg-blue-50 hover:text-blue-700 transition-colors font-medium"
  >
  <UserCircle size={18} />
@@ -70,7 +78,15 @@ export function UserDropdown({
  
  <Link 
             href={settingsHref} 
-            onClick={() => setIsOpen(false)}
+            onClick={(e) => {
+              setIsOpen(false)
+              if (typeof navigator !== 'undefined' && !navigator.onLine) {
+                e.preventDefault()
+                if (window.location.pathname !== settingsHref) {
+                  window.location.href = settingsHref
+                }
+              }
+            }}
             className="flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-slate-600 hover:bg-blue-50 hover:text-blue-700 transition-colors"
           >
             <Settings size={18} />

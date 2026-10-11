@@ -38,6 +38,10 @@ export function WarehouseForm({ isOpen, onClose, onSuccess, editingWarehouse }: 
 
  const handleSubmit = async (e: React.FormEvent) => {
  e.preventDefault()
+ if (typeof navigator !== 'undefined' && !navigator.onLine) {
+   toast.error('La creación y edición de almacenes requiere conexión a Internet')
+   return
+ }
  if (!form.name.trim()) {
  toast.error('El nombre del almacén es obligatorio')
  return
