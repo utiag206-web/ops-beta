@@ -134,6 +134,7 @@ export function OfflineProvider({ children }: { children: React.ReactNode }) {
 
     const handleOnline = () => {
       setIsOnline(true)
+      warmApplicationRoutes(true)
       updatePendingCount().then((count) => {
         if (count > 0) {
           setTimeout(() => {

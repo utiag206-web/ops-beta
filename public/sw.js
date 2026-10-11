@@ -1,8 +1,8 @@
 // INTHALY OPS - Production Service Worker (Next.js 15 App Router Compatible)
-// Universal Offline Navigation & Sanitized Cache-API Match Architecture
+// Universal Offline Navigation, Static Asset Pre-caching & Sanitized Cache-API Match Architecture
 
 const CACHE_PREFIX = 'inthaly-ops'
-const CACHE_VERSION = 'v1.2.5'
+const CACHE_VERSION = 'v1.2.6'
 const STATIC_CACHE = `${CACHE_PREFIX}-static-${CACHE_VERSION}`
 const PAGES_CACHE = `${CACHE_PREFIX}-pages-${CACHE_VERSION}`
 const RSC_CACHE = `${CACHE_PREFIX}-rsc-${CACHE_VERSION}`
@@ -81,7 +81,7 @@ self.addEventListener('fetch', (event) => {
     if (url.hostname.includes('gstatic.com') || url.hostname.includes('googleapis.com')) {
       event.respondWith(
         caches.open(MEDIA_CACHE).then(async (cache) => {
-          const cached = await cache.match(request)
+          const cached = await cache.match(request, { ignoreSearch: true, ignoreVary: true })
           if (cached) return cached
           try {
             const res = await fetch(request)
@@ -105,13 +105,16 @@ self.addEventListener('fetch', (event) => {
   if (url.pathname.startsWith('/_next/static/')) {
     event.respondWith(
       caches.open(STATIC_CACHE).then(async (cache) => {
-        const cached = await cache.match(request)
+        const cached = (await cache.match(request, { ignoreSearch: true, ignoreVary: true })) ||
+                       (await cache.match(url.pathname, { ignoreSearch: true, ignoreVary: true }))
         if (cached) return cached
 
         try {
           const networkResponse = await fetch(request)
           if (networkResponse && networkResponse.status === 200 && !networkResponse.redirected) {
-            cache.put(request, networkResponse.clone())
+            const sanitized = await cleanResponseForCache(networkResponse)
+            await cache.put(request, sanitized.clone())
+            await cache.put(url.pathname, sanitized)
           }
           return networkResponse
         } catch (err) {
@@ -138,14 +141,11 @@ self.addEventListener('fetch', (event) => {
           }
           return networkResponse
         } catch (err) {
-          const cached = (await cache.match(url.pathname, { ignoreSearch: true })) ||
-                         (await cache.match(request, { ignoreSearch: true }))
+          const cached = (await cache.match(url.pathname, { ignoreSearch: true, ignoreVary: true })) ||
+                         (await cache.match(request, { ignoreSearch: true, ignoreVary: true }))
           if (cached) {
             return cached
           }
-          // IMPORTANT: Do NOT return mismatched RSC payloads (such as /dashboard) for other routes!
-          // Throwing a TypeError simulates network failure, which allows Next.js router
-          // to trigger native document navigation fallback, served cleanly from PAGES_CACHE.
           throw new TypeError('Offline RSC unavailable')
         }
       })()
@@ -157,7 +157,7 @@ self.addEventListener('fetch', (event) => {
   if (/\.(png|jpg|jpeg|svg|webp|ico|woff|woff2|ttf|eot)$/i.test(url.pathname)) {
     event.respondWith(
       caches.open(MEDIA_CACHE).then(async (cache) => {
-        const cached = await cache.match(request)
+        const cached = await cache.match(request, { ignoreSearch: true, ignoreVary: true })
         const fetchPromise = fetch(request).then((networkRes) => {
           if (networkRes && networkRes.status === 200) {
             cache.put(request, networkRes.clone())
@@ -187,15 +187,22 @@ self.addEventListener('fetch', (event) => {
           }
           return networkResponse
         } catch (err) {
-          const cachedPage = (await cache.match(url.pathname, { ignoreSearch: true })) ||
-                             (await cache.match(request, { ignoreSearch: true }))
+          // 1. Exact match on requested route
+          let cachedPage = (await cache.match(url.pathname, { ignoreSearch: true, ignoreVary: true })) ||
+                           (await cache.match(request, { ignoreSearch: true, ignoreVary: true }))
           if (cachedPage) {
             return cachedPage
           }
 
-          // Dedicated offline fallback: NEVER return /dashboard HTML for other routes
-          // to prevent Next.js App Router hydration mismatches
+          // 2. Cold-start resilience: If root "/" is opened offline, serve cached /dashboard
+          if (url.pathname === '/' || url.pathname === '') {
+            const dashboardFallback = await cache.match('/dashboard', { ignoreSearch: true, ignoreVary: true })
+            if (dashboardFallback) {
+              return dashboardFallback
+            }
+          }
 
+          // 3. Dedicated offline fallback page
           const staticCache = await caches.open(STATIC_CACHE)
           const offlineFallback = await staticCache.match('/offline')
           if (offlineFallback) return offlineFallback

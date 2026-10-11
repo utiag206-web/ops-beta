@@ -29,6 +29,18 @@ export default function GlobalError({
     }
   }, [error])
 
+  const handleRetry = () => {
+    try {
+      reset()
+    } catch {
+      window.location.replace('/dashboard')
+    }
+  }
+
+  const handleGoHome = () => {
+    window.location.replace('/dashboard')
+  }
+
   return (
     <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4">
       <div className="max-w-md w-full bg-slate-800 border border-slate-700/80 rounded-3xl p-6 sm:p-8 text-center shadow-2xl space-y-6">
@@ -50,20 +62,14 @@ export default function GlobalError({
         <div className="flex flex-col sm:flex-row gap-3 pt-2">
           <button
             type="button"
-            onClick={() => {
-              try {
-                reset()
-              } catch {
-                window.location.reload()
-              }
-            }}
+            onClick={handleRetry}
             className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs transition-colors shadow-lg shadow-blue-900/30"
           >
             <RefreshCw size={15} /> Reintentar
           </button>
           <button
             type="button"
-            onClick={() => { window.location.href = '/dashboard' }}
+            onClick={handleGoHome}
             className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-slate-700 hover:bg-slate-600 text-slate-200 font-bold text-xs transition-colors"
           >
             <Home size={15} /> Ir al Inicio

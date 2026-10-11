@@ -1,4 +1,4 @@
-﻿'use client'
+'use client'
 
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react'
 import { 
@@ -8,6 +8,7 @@ import {
   isOfflineSessionValid, 
   OfflineAuthSession 
 } from '@/lib/offline-sync'
+import { warmApplicationRoutes } from '@/lib/prewarm-routes'
 import { ShieldAlert, RefreshCw, Wifi } from 'lucide-react'
 
 interface OfflineSessionContextType {
@@ -62,9 +63,11 @@ export function OfflineSessionProvider({
   // 2. Initialize and synchronize local session snapshot
   useEffect(() => {
     const handleConnectivity = () => {
-      setIsOffline(!navigator.onLine)
-      if (navigator.onLine) {
+      const online = navigator.onLine
+      setIsOffline(!online)
+      if (online) {
         revalidateOnlineSession()
+        warmApplicationRoutes()
       }
     }
 
@@ -72,7 +75,7 @@ export function OfflineSessionProvider({
     window.addEventListener('online', handleConnectivity)
     window.addEventListener('offline', handleConnectivity)
 
-    // A. ONLINE: Save/update offline session snapshot from authenticated SSR user
+    // A. ONLINE: Save/update offline session snapshot from authenticated SSR user & trigger route prewarming
     if (initialUser && navigator.onLine) {
       setCurrentUser(initialUser)
       setIsSessionValid(true)
@@ -98,6 +101,9 @@ export function OfflineSessionProvider({
       }).catch((err) => {
         console.warn('[OFFLINE_SESSION] Could not save offline snapshot:', err)
       })
+
+      // Prime offline routes & static chunks immediately for authenticated session
+      warmApplicationRoutes()
     }
 
     // B. OFFLINE / FALLBACK: Recover session from IndexedDB if initialUser is missing or network is down
