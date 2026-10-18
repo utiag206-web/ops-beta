@@ -84,7 +84,7 @@ export async function getWorkersShort() {
     supabase.from('workers').select('id, name, last_name, dni, position, status, worker_financial(daily_rate, monthly_salary)'),
     companyId,
     extendedUser.role_id
-  ).eq('status', 'active').order('name', { ascending: true })
+  ).or('status.eq.active,status.eq.ACTIVO,status.eq.Activo,status.is.null').order('name', { ascending: true })
 
   if (error) return []
   return (data || []).map((w: any) => {

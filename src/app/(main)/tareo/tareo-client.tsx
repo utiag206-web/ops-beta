@@ -61,7 +61,8 @@ const autoColors: any = {
   'AC': 'bg-green-100 text-green-800 font-bold',
 }
 
-export default function TareoClient({ initialCycles, workers, userRole, companyId }: TareoPageProps) {
+export default function TareoClient({ initialCycles, workers: propWorkers, userRole, companyId }: TareoPageProps) {
+  const [workers, setWorkers] = useState<Worker[]>(propWorkers || [])
   const { isOnline, triggerSync } = useOffline()
   const [currentDate, setCurrentDate] = useState(new Date())
   const [tareoRecords, setTareoRecords] = useState<any[]>([])
@@ -139,6 +140,15 @@ export default function TareoClient({ initialCycles, workers, userRole, companyI
       if (cachedSettings) {
         setAttendanceSettings(JSON.parse(cachedSettings))
       }
+      const cachedWorkers = localStorage.getItem(`${cacheKeyPrefix}_workers`) || localStorage.getItem('workers_cache')
+      if (cachedWorkers && (!propWorkers || propWorkers.length === 0)) {
+        try {
+          const parsedW = JSON.parse(cachedWorkers)
+          if (Array.isArray(parsedW) && parsedW.length > 0) {
+            setWorkers(parsedW)
+          }
+        } catch (_) {}
+      }
       
       if (hasData) {
         setLoading(false)
@@ -149,6 +159,15 @@ export default function TareoClient({ initialCycles, workers, userRole, companyI
       console.warn('[TAREO] Error al hidratar desde caché local:', e)
     }
   }, [cacheKeyPrefix])
+
+  useEffect(() => {
+    if (propWorkers && propWorkers.length > 0) {
+      setWorkers(propWorkers)
+      if (typeof window !== 'undefined') {
+        localStorage.setItem(`${cacheKeyPrefix}_workers`, JSON.stringify(propWorkers))
+      }
+    }
+  }, [propWorkers, cacheKeyPrefix])
 
   const loadData = useCallback(async (isBackground: boolean = false) => {
     if (!isBackground) {
@@ -215,7 +234,7 @@ export default function TareoClient({ initialCycles, workers, userRole, companyI
           })
         }
       } catch (_) {}
-      if (!isBackground) setLoading(false)
+      setLoading(false)
     }
   }, [currentMonthStr, daysInMonth, cacheKeyPrefix])
 
@@ -313,8 +332,10 @@ export default function TareoClient({ initialCycles, workers, userRole, companyI
 
     const gpsKeys = new Set<string>()
     attendanceLogs.forEach(l => {
-      if (l.latitude && l.longitude) {
-        gpsKeys.add(`${l.worker_id}-${l.date_local}`)
+      const lat = l.latitude !== undefined && l.latitude !== null ? Number(l.latitude) : null
+      const lng = l.longitude !== undefined && l.longitude !== null ? Number(l.longitude) : null
+      if (lat !== null && lng !== null && !isNaN(lat) && !isNaN(lng) && lat !== 0) {
+        gpsKeys.add(`${l.worker_id}-${l.date_local || l.date}`)
       }
     })
 

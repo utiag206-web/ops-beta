@@ -133,7 +133,8 @@ export async function getPendingOperations() {
   const db = await getDB()
   if (!db) return []
   const allOps = await db.getAll('sync_queue')
-  return allOps.filter(op => op.sync_status === 'PENDING' || op.sync_status === 'FAILED')
+  // Exclude operations that have permanently failed (max 4 retries) to prevent infinite sync loops
+  return allOps.filter(op => (op.sync_status === 'PENDING' || op.sync_status === 'FAILED') && (op.retry_count || 0) < 4)
 }
 
 export async function updateOperationStatus(id: string, status: SyncOperation['sync_status'], error?: string) {

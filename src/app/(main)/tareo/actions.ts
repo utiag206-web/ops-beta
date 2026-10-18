@@ -335,7 +335,7 @@ export async function getTareoDashboardData(month: string, startDate: string, en
  const companyId = await getStrictCompanyId()
  const supabase = await createAdminClient()
 
- const [records, notes, config, punches] = await Promise.all([
+ const [records, notes, config, punchesLogs, attRecords] = await Promise.all([
  applyIsolation(supabase.from('tareo_records').select('worker_id, date, status, is_manual'), companyId, extendedUser.role_id)
  .gte('date', startDate)
  .lte('date', endDate),
@@ -347,14 +347,38 @@ export async function getTareoDashboardData(month: string, startDate: string, en
  applyIsolation(supabase.from('attendance_logs').select('worker_id, date_local, type, timestamp, latitude, longitude'), companyId, extendedUser.role_id)
  .gte('date_local', startDate)
  .lte('date_local', endDate)
- .order('timestamp', { ascending: true })
+ .order('timestamp', { ascending: true }),
+ applyIsolation(supabase.from('attendance').select('worker_id, date, latitude, longitude, check_in_lat, check_in_lng'), companyId, extendedUser.role_id)
+ .gte('date', startDate)
+ .lte('date', endDate)
  ])
+
+ const combinedPunches: any[] = [...(punchesLogs.data || [])]
+ if (attRecords.data && attRecords.data.length > 0) {
+   for (const a of attRecords.data) {
+     const lat = a.latitude || a.check_in_lat
+     const lng = a.longitude || a.check_in_lng
+     if (lat && lng) {
+       const exists = combinedPunches.some(p => p.worker_id === a.worker_id && p.date_local === a.date && p.latitude && p.longitude)
+       if (!exists) {
+         combinedPunches.push({
+           worker_id: a.worker_id,
+           date_local: a.date,
+           type: 'in',
+           timestamp: a.date + 'T00:00:00Z',
+           latitude: Number(lat),
+           longitude: Number(lng)
+         })
+       }
+     }
+   }
+ }
 
  return {
  records: records.data || [],
  notes: notes.data || [],
  dailyHours: config.data?.daily_hours || 10.25,
- punches: punches.data || []
+ punches: combinedPunches
  }
 }
 

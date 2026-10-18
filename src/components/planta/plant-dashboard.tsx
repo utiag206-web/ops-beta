@@ -134,6 +134,16 @@ export function PlantDashboard({ companyId, initialBatches, persistToServer = fa
     b.truck_plate.toLowerCase().includes(searchTerm.toLowerCase())
   )
 
+    useEffect(() => {
+    const handleSync = (e: any) => {
+      if (e.detail?.oldId && e.detail?.newBatch) {
+        setBatches(prev => prev.map(b => b.id === e.detail.oldId ? { ...e.detail.newBatch, isPending: false } : b))
+      }
+    }
+    window.addEventListener('plant_batch_synced', handleSync)
+    return () => window.removeEventListener('plant_batch_synced', handleSync)
+  }, [])
+
   const { isOnline, triggerSync } = useOffline()
 
   const handleUpdateBatch = async (batchId: string, updates: Partial<PlantMineralBatch>) => {
@@ -333,7 +343,7 @@ export function PlantDashboard({ companyId, initialBatches, persistToServer = fa
         const res = await createPlantBatch(cleanBatch)
         if (res.success && res.data) {
           // Direct real UUID from Supabase, no sync_queue, no temp ID
-          setBatches([res.data, ...batches])
+          setBatches(prev => [res.data!, ...prev.filter(b => b.id !== res.data!.id)])
           await saveBatchesToCache([res.data as any], companyId)
           setIsReceptionModalOpen(false)
           return
@@ -361,7 +371,7 @@ export function PlantDashboard({ companyId, initialBatches, persistToServer = fa
       company_id: companyId
     })
     await saveBatchesToCache([newBatch as any], companyId)
-    setBatches([{ ...newBatch, isPending: true }, ...batches])
+    setBatches(prev => [{ ...newBatch, isPending: true }, ...prev.filter(b => b.id !== newBatch.id)])
     setIsReceptionModalOpen(false)
     if (isOnline) triggerSync()
   }

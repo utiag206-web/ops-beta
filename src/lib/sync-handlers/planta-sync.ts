@@ -22,9 +22,20 @@ export async function plantaSyncHandler(action: string, payload: any): Promise<b
 
     switch (action) {
       case 'create_batch': {
-        const { id, isPending, ...batchData } = payload;
+        const { id: oldId, isPending, ...batchData } = payload;
         const res = await createPlantBatch(batchData)
-        return res.success ? { success: true, newId: res.data?.id } : false
+        if (res.success && res.data) {
+          try {
+            await saveBatchesToCache([res.data as any], safeCompanyId)
+            if (typeof window !== 'undefined') {
+              window.dispatchEvent(new CustomEvent('plant_batch_synced', { 
+                detail: { oldId, newBatch: res.data } 
+              }))
+            }
+          } catch (_) {}
+          return { success: true, newId: res.data.id }
+        }
+        return false
       }
       case 'update_batch': {
         const res = await updatePlantBatch(payload.id, payload.updates)

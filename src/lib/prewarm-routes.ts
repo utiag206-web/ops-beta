@@ -8,6 +8,8 @@ export const APP_ROUTES = [
 
   // 2. Control de Planta y Mineral (Offline-First Completo)
   '/operaciones/planta',
+  '/operaciones/produccion',
+  '/operaciones/maderas',
 
   // 3. Mecánica y Submódulos
   '/mecanica',
