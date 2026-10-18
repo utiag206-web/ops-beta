@@ -344,7 +344,7 @@ export async function getTareoDashboardData(month: string, startDate: string, en
  applyIsolation(supabase.from('tareo_config').select('daily_hours'), companyId, extendedUser.role_id)
  .eq('month', month)
  .maybeSingle(),
- applyIsolation(supabase.from('attendance_logs').select('id, worker_id, date_local, type, timestamp, latitude, longitude, accuracy, address'), companyId, extendedUser.role_id)
+ applyIsolation(supabase.from('attendance_logs').select('worker_id, date_local, type, timestamp, latitude, longitude'), companyId, extendedUser.role_id)
  .gte('date_local', startDate)
  .lte('date_local', endDate)
  .order('timestamp', { ascending: true })
@@ -358,3 +358,38 @@ export async function getTareoDashboardData(month: string, startDate: string, en
  }
 }
 
+
+export async function getAttendanceDayDetail(workerId: string, date: string) {
+  const { extendedUser } = await getUserSession()
+  const companyId = await getStrictCompanyId()
+  const supabase = await createAdminClient()
+
+  const [logsRes, attRes] = await Promise.all([
+    applyIsolation(
+      supabase
+        .from('attendance_logs')
+        .select('id, worker_id, date_local, type, timestamp, latitude, longitude, accuracy, address')
+        .eq('worker_id', workerId)
+        .eq('date_local', date)
+        .order('timestamp', { ascending: true }),
+      companyId,
+      extendedUser.role_id
+    ),
+    applyIsolation(
+      supabase
+        .from('attendance')
+        .select('id, worker_id, date, check_in, check_out, break_start, break_end, latitude, longitude, check_in_lat, check_in_lng, check_out_lat, check_out_lng')
+        .eq('worker_id', workerId)
+        .eq('date', date)
+        .maybeSingle(),
+      companyId,
+      extendedUser.role_id
+    )
+  ])
+
+  return {
+    success: true,
+    punches: logsRes.data || [],
+    attendance: attRes.data || null
+  }
+}

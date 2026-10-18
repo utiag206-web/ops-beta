@@ -4,19 +4,29 @@ import { Calendar, Clock, User, CheckCircle2, ArrowRight, MapPin } from 'lucide-
 import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import { useOperationalContext } from '@/components/providers/operational-context-provider'
 
 interface AttendanceListProps {
  records: any[]
  isWorker?: boolean
+ companyId?: string
 }
 
-export function AttendanceList({ records, isWorker = false }: AttendanceListProps) {
+export function AttendanceList({ records, isWorker = false, companyId }: AttendanceListProps) {
   const router = useRouter()
+  const operationalContext = useOperationalContext()
+  const effectiveCompanyId = companyId || operationalContext?.companyId
 
   useEffect(() => {
+    if (!effectiveCompanyId) return
     const supabase = createClient()
-    const channel = supabase.channel('attendance_list_changes')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'attendance' }, () => {
+    const channel = supabase.channel(`attendance_list_${effectiveCompanyId}`)
+      .on('postgres_changes', { 
+        event: '*', 
+        schema: 'public', 
+        table: 'attendance',
+        filter: `company_id=eq.${effectiveCompanyId}`
+      }, () => {
         console.log('[REALTIME] Attendance list updated')
         router.refresh()
       })
@@ -25,7 +35,7 @@ export function AttendanceList({ records, isWorker = false }: AttendanceListProp
     return () => {
       supabase.removeChannel(channel)
     }
-  }, [router])
+  }, [router, effectiveCompanyId])
 
  if (records.length === 0) {
  return (

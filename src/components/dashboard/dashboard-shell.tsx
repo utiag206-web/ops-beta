@@ -56,17 +56,25 @@ export function DashboardShell({ user, stats, localIp }: DashboardShellProps) {
  const router = useRouter()
 
  useEffect(() => {
- const supabase = createClient()
- const channel = supabase.channel('dashboard_changes')
- .on('postgres_changes', { event: '*', schema: 'public', table: 'attendance' }, () => {
- router.refresh()
- })
- .subscribe()
+    const companyId = user?.active_company_id || user?.company_id
+    if (!companyId) return
 
- return () => {
- supabase.removeChannel(channel)
- }
- }, [router])
+    const supabase = createClient()
+    const channel = supabase.channel(`dashboard_changes_${companyId}`)
+      .on('postgres_changes', { 
+        event: '*', 
+        schema: 'public', 
+        table: 'attendance',
+        filter: `company_id=eq.${companyId}`
+      }, () => {
+        router.refresh()
+      })
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [router, user?.active_company_id, user?.company_id])
 
  const renderDashboardWidgets = () => {
  switch (viewMode) {

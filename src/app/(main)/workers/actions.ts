@@ -13,7 +13,7 @@ export async function getWorkers(status?: string, isRecent?: boolean) {
 
  let query = supabase
  .from('workers')
- .select('*, worker_financial(daily_rate, monthly_salary)')
+ .select('id, name, last_name, dni, position, status, phone, hire_date, photo_url, created_at, company_id, worker_financial(daily_rate, monthly_salary)')
  
  query = applyIsolation(query, companyId, extendedUser.role_id)
 
@@ -81,13 +81,25 @@ export async function getWorkersShort() {
 
   const supabase = await createAdminClient()
   const { data, error } = await applyIsolation(
-  supabase.from('workers').select('*'),
-  companyId,
-  extendedUser.role_id
+    supabase.from('workers').select('id, name, last_name, dni, position, status, worker_financial(daily_rate, monthly_salary)'),
+    companyId,
+    extendedUser.role_id
   ).eq('status', 'active').order('name', { ascending: true })
 
   if (error) return []
-  return data
+  return (data || []).map((w: any) => {
+    const fin = Array.isArray(w.worker_financial) ? w.worker_financial[0] : w.worker_financial
+    return {
+      id: w.id,
+      name: w.name,
+      last_name: w.last_name,
+      dni: w.dni,
+      position: w.position,
+      status: w.status,
+      daily_rate: fin?.daily_rate || 0,
+      monthly_salary: fin?.monthly_salary || 0
+    }
+  })
 }
 
 export async function getAllWorkersForExport() {

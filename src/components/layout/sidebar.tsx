@@ -216,24 +216,25 @@ export function Sidebar() {
 
  const handleItemClick = (groupId: string, href: string, itemName: string, e: React.MouseEvent) => {
  if (isWorkerPure) {
- document.cookie = 'view_mode=WORKER; path=/; max-age=31536000; SameSite=Lax'
- return
+   if (viewMode !== 'WORKER') {
+     document.cookie = 'view_mode=WORKER; path=/; max-age=31536000; SameSite=Lax'
+     setViewMode('WORKER')
+   }
+   return
  }
  const targetMode = groupId === 'mi-portal-personal' ? 'WORKER' : 'OPERATIONAL'
  
  if (isEligible && targetMode !== viewMode) {
- e.preventDefault()
- document.cookie = `view_mode=${targetMode}; path=/; max-age=31536000; SameSite=Lax`
- setViewMode(targetMode)
- window.location.href = href
+   e.preventDefault()
+   document.cookie = `view_mode=${targetMode}; path=/; max-age=31536000; SameSite=Lax`
+   setViewMode(targetMode)
+   window.location.href = href
  } else {
- if (groupId === 'mi-portal-personal') {
- document.cookie = 'view_mode=WORKER; path=/; max-age=31536000; SameSite=Lax'
- } else if (groupId !== 'dashboard' && groupId !== 'configuracion') {
- document.cookie = 'view_mode=OPERATIONAL; path=/; max-age=31536000; SameSite=Lax'
- } else if (groupId === 'dashboard' && href === '/dashboard') {
- document.cookie = 'view_mode=OPERATIONAL; path=/; max-age=31536000; SameSite=Lax'
- }
+   // Solo escribir la cookie si hay un cambio real de modo para no invalidar el router cache de Next.js
+   if (targetMode !== viewMode) {
+     document.cookie = `view_mode=${targetMode}; path=/; max-age=31536000; SameSite=Lax`
+     setViewMode(targetMode)
+   }
  }
  }
 

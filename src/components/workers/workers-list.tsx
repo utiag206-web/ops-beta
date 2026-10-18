@@ -9,7 +9,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import * as XLSX from 'xlsx'
-import { useTerminology } from '@/components/providers/operational-context-provider'
+import { useTerminology, useOperationalContext } from '@/components/providers/operational-context-provider'
 
 type Worker = {
  id: string
@@ -39,11 +39,19 @@ export function WorkersList({ workers, canManage = false }: { workers: Worker[],
     }
   }, [workers])
 
+ const { companyId } = useOperationalContext()
+
  useEffect(() => {
+   if (!companyId) return
    const { createClient } = require('@/lib/supabase/client')
    const supabase = createClient()
-   const channel = supabase.channel('workers_list_changes')
-     .on('postgres_changes', { event: '*', schema: 'public', table: 'workers' }, () => {
+   const channel = supabase.channel(`workers_list_${companyId}`)
+     .on('postgres_changes', { 
+       event: '*', 
+       schema: 'public', 
+       table: 'workers',
+       filter: `company_id=eq.${companyId}`
+     }, () => {
        console.log('[REALTIME] Workers list updated')
        router.refresh()
      })
@@ -52,7 +60,7 @@ export function WorkersList({ workers, canManage = false }: { workers: Worker[],
    return () => {
      supabase.removeChannel(channel)
    }
- }, [router])
+ }, [router, companyId])
 
  const handleExportExcel = async () => {
    setIsExporting(true)
