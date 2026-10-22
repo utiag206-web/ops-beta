@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import Image from 'next/image'
+import { InthalyIsotype } from '@/components/brand/InthalyLogo'
 import Link from 'next/link'
 import { ArrowRight, Menu, X } from 'lucide-react'
 
@@ -32,16 +33,7 @@ export function LandingNavbar({ onOpenDemo }: LandingNavbarProps) {
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
         {/* Brand */}
         <Link href="/" className="group flex items-center gap-2.5">
-          <div className="relative flex h-9 w-9 items-center justify-center overflow-hidden rounded-xl bg-blue-600 shadow-md shadow-blue-500/20 transition-transform duration-300 group-hover:scale-105 border border-blue-400/30">
-            <Image
-              src="/logo-ops.png"
-              alt="INTHALY OPS Logo"
-              width={36}
-              height={36}
-              className="h-full w-full object-cover"
-              priority
-            />
-          </div>
+          <InthalyIsotype size={36} className="transition-transform duration-300 group-hover:scale-105" />
           <div className="flex flex-col">
             <span className="text-lg font-black tracking-tight text-white leading-tight">
               INTHALY <span className="text-blue-400">OPS</span>

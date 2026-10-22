@@ -73,10 +73,10 @@ export default async function WorkerPortalPage({ params }: PageProps) {
  // 2. Fetch worker session
  let session = await getWorkerSession()
 
- // 3. Multi-tenant check: if worker is logged into a different company, flag session as mismatched
+ // 3. Multi-tenant check: if worker is logged into a different company, clear session cleanly for current view
  if (session && session.companyId !== company.id) {
- console.log(`[TENANT_ISOLATION] Flagging mismatched session. Logged in: ${session.companyName} (${session.companyId}), Requesting: ${company.name} (${company.id})`)
- session = { ...session, isMismatched: true }
+   console.log(`[TENANT_ISOLATION] Different company session found. Logged in: ${session.companyName} (${session.companyId}), Viewing: ${company.name} (${company.id})`)
+   session = null
  }
 
  // 4. Render the client side portal

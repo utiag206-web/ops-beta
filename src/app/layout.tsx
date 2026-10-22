@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 
@@ -11,15 +11,32 @@ const inter = Inter({
  subsets: ["latin"],
 });
 
+
+export const viewport: Viewport = {
+  themeColor: '#0f172a',
+  colorScheme: 'dark light',
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+};
+
 export const metadata: Metadata = {
   metadataBase: new URL('https://sistemaops.inthaly.com'),
   title: "INTHALY OPS",
   description: "Sistema de Gestión Empresarial",
   manifest: "/manifest.json",
   icons: {
-    icon: "/logo-ops.png",
-    shortcut: "/logo-ops.png",
-    apple: "/apple-touch-icon.png",
+    icon: [
+      { url: '/favicon.ico', sizes: '32x32' },
+      { url: '/icon.svg', type: 'image/svg+xml' },
+      { url: '/icon-192x192.png', sizes: '192x192', type: 'image/png' },
+      { url: '/icon-512x512.png', sizes: '512x512', type: 'image/png' },
+    ],
+    shortcut: '/favicon.ico',
+    apple: [
+      { url: '/apple-touch-icon.png', sizes: '180x180', type: 'image/png' },
+    ],
   },
   openGraph: {
     title: "INTHALY OPS",

@@ -71,7 +71,15 @@ import { createAdminClient } from '@/lib/supabase/server'
 /**
  * Obtiene la configuración global del ecosistema (Memoizado por ciclo de request)
  */
+let cachedGlobalSettings: { data: GlobalSettingsData; timestamp: number } | null = null
+const GLOBAL_SETTINGS_TTL = 60 * 1000 // 60s memory cache
+
 export const getGlobalSettings = cache(async function getGlobalSettings(): Promise<GlobalSettingsData | null> {
+  const now = Date.now()
+  if (cachedGlobalSettings && (now - cachedGlobalSettings.timestamp) < GLOBAL_SETTINGS_TTL) {
+    return cachedGlobalSettings.data
+  }
+
   try {
     const supabase = await createAdminClient()
     
@@ -82,18 +90,21 @@ export const getGlobalSettings = cache(async function getGlobalSettings(): Promi
       .maybeSingle()
 
     if (error || !data) {
-      return null
+      return cachedGlobalSettings ? cachedGlobalSettings.data : null
     }
 
     const { description, commercial_whatsapp } = parseEcosystemDescription(data.ecosystem_description)
 
-    return {
+    const result = {
       ...data,
       ecosystem_description: description,
       commercial_whatsapp: commercial_whatsapp || '51923207309'
     } as GlobalSettingsData
+
+    cachedGlobalSettings = { data: result, timestamp: now }
+    return result
   } catch (err) {
-    return null
+    return cachedGlobalSettings ? cachedGlobalSettings.data : null
   }
 })
 
@@ -148,6 +159,7 @@ export async function updateGlobalSettings(settings: GlobalSettingsData): Promis
 
   // Refresca completamente el layout maestro para que los Server Components (como el layout) 
   // vuelvan a hacer fetch de la configuracin global y actualicen el frontend.
+  cachedGlobalSettings = null
   revalidatePath('/', 'layout')
 
   return { success: true }

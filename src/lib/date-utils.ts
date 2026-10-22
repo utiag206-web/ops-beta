@@ -6,24 +6,34 @@ const timezoneMap: Record<string, string> = {
  'UTC-3': 'America/Argentina/Buenos_Aires',
 }
 
-export async function getCompanyTimezone(companyId: string): Promise<string> {
- try {
- const supabase = await createAdminClient()
- const { data, error } = await supabase
- .from('companies')
- .select('timezone')
- .eq('id', companyId)
- .single()
+const timezoneCache = new Map<string, { tz: string; expires: number }>()
 
- if (error || !data) {
- return 'America/Lima'
+export async function getCompanyTimezone(companyId: string): Promise<string> {
+ if (!companyId) return 'America/Lima'
+ const cached = timezoneCache.get(companyId)
+ if (cached && cached.expires > Date.now()) {
+   return cached.tz
  }
 
- const tz = data.timezone || 'UTC-5'
- return timezoneMap[tz] || 'America/Lima'
+ try {
+   const supabase = await createAdminClient()
+   const { data, error } = await supabase
+     .from('companies')
+     .select('timezone')
+     .eq('id', companyId)
+     .maybeSingle()
+
+   if (error || !data) {
+     return 'America/Lima'
+   }
+
+   const tz = data.timezone || 'UTC-5'
+   const resolved = timezoneMap[tz] || 'America/Lima'
+   timezoneCache.set(companyId, { tz: resolved, expires: Date.now() + 10 * 60 * 1000 })
+   return resolved
  } catch (err) {
- console.error('[DATE_UTILS] Error getting company timezone:', err)
- return 'America/Lima'
+   console.error('[DATE_UTILS] Error getting company timezone:', err)
+   return 'America/Lima'
  }
 }
 

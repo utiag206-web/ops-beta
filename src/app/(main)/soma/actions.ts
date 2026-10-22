@@ -7,27 +7,44 @@ import { getWorkerSession } from '@/app/actions/worker-auth'
 
 // SOMA Trainings Actions
 export async function getSomaTrainings() {
- const { extendedUser } = await getUserSession()
- const companyId = await getStrictCompanyId()
- const supabase = await createAdminClient()
- const { data, error } = await applyIsolation(
- supabase.from('soma_trainings').select(`
- *,
- participants:soma_training_participants(
- id,
- status,
- worker:workers(id, name, last_name, position)
- )
- `),
- companyId,
- extendedUser.role_id
- ).order('date', { ascending: false })
+  try {
+    const { extendedUser } = await getUserSession()
+    if (!extendedUser) return []
+    const companyId = await getStrictCompanyId()
+    if (!companyId) return []
 
- if (error) {
- console.error('Error fetching soma trainings:', error)
- return []
- }
- return data || []
+    const supabase = await createAdminClient()
+    const { data, error } = await applyIsolation(
+      supabase.from('soma_trainings').select(`
+        id,
+        company_id,
+        title,
+        description,
+        trainer,
+        date,
+        expiry_date,
+        material_url,
+        created_at,
+        participants:soma_training_participants(
+          id,
+          status,
+          worker_id,
+          worker:workers(id, name, last_name, position)
+        )
+      `),
+      companyId,
+      extendedUser.role_id
+    ).order('date', { ascending: false })
+
+    if (error) {
+      console.error('Error fetching soma trainings:', error)
+      return []
+    }
+    return data || []
+  } catch (err) {
+    console.error('Unexpected error in getSomaTrainings:', err)
+    return []
+  }
 }
 
 export async function createSomaTraining(payload: {
@@ -219,29 +236,46 @@ export async function deleteSomaTraining(id: string) {
 
 // SOMA Talks Actions
 export async function getSomaTalks() {
- const { extendedUser } = await getUserSession()
- const companyId = await getStrictCompanyId()
- const supabase = await createAdminClient()
- const { data, error } = await applyIsolation(
- supabase.from('soma_talks').select(`
- *,
- leader:users!leader_id(name),
- participants:soma_talk_participants(
- id,
- status,
- confirmed_at,
- worker:workers(id, name, last_name, position)
- )
- `),
- companyId,
- extendedUser.role_id
- ).order('date', { ascending: false })
+  try {
+    const { extendedUser } = await getUserSession()
+    if (!extendedUser) return []
+    const companyId = await getStrictCompanyId()
+    if (!companyId) return []
 
- if (error) {
- console.error('Error fetching soma talks:', error)
- return []
- }
- return data || []
+    const supabase = await createAdminClient()
+    const { data, error } = await applyIsolation(
+      supabase.from('soma_talks').select(`
+        id,
+        company_id,
+        topic,
+        description,
+        leader_id,
+        date,
+        target_area,
+        photo_url,
+        created_at,
+        leader:users!leader_id(name),
+        participants:soma_talk_participants(
+          id,
+          status,
+          confirmed_at,
+          worker_id,
+          worker:workers(id, name, last_name, position)
+        )
+      `),
+      companyId,
+      extendedUser.role_id
+    ).order('date', { ascending: false })
+
+    if (error) {
+      console.error('Error fetching soma talks:', error)
+      return []
+    }
+    return data || []
+  } catch (err) {
+    console.error('Unexpected error in getSomaTalks:', err)
+    return []
+  }
 }
 
 export async function createSomaTalk(payload: {

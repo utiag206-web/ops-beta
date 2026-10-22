@@ -74,7 +74,7 @@ export default async function AttendancePage(props: { searchParams: Promise<{ da
  <Calendar size={18} className="text-blue-600" />
  Historial de Marcaciones
  </h2>
- <AttendanceList records={records} isWorker={true} />
+ <AttendanceList records={records} isWorker={true} companyId={companyId} />
  </div>
  </div>
  )
@@ -126,7 +126,7 @@ export default async function AttendancePage(props: { searchParams: Promise<{ da
  <Calendar size={20} className="text-blue-600" />
  Registros Recientes
  </h4>
- <AttendanceList records={records} />
+ <AttendanceList records={records} companyId={companyId} />
  </div>
  </div>
  </div>

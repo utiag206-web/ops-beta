@@ -21,19 +21,21 @@ export async function GET(request: Request) {
  description: 'Sistema de Gestión Empresarial',
  start_url: startUrl,
  display: 'standalone',
- background_color: '#ffffff',
- theme_color: '#2563eb',
+ background_color: '#0f172a',
+ theme_color: '#1e40af',
  icons: [
  {
  src: '/icon-192x192.png',
  sizes: '192x192',
- type: 'image/png'
+ type: 'image/png',
+        purpose: 'any maskable'
  },
  {
- src: '/icon-512x512.png',
- sizes: '512x512',
- type: 'image/png'
- }
+        src: '/icon-512x512.png',
+        sizes: '512x512',
+        type: 'image/png',
+        purpose: 'any maskable'
+      }
  ]
  }, {
  headers: {

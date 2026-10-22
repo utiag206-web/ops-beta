@@ -491,185 +491,236 @@ export async function importProducts(productsData: any[]) {
  const supabase = await createAdminClient()
 
  if (!extendedUser || !companyId) return { success: false, error: 'Acceso denegado.' }
+ if (!productsData || productsData.length === 0) return { success: false, error: 'No se encontraron productos para importar.' }
 
- // Retrieve existing products to perform a programmatic upsert
+ // 1. Filtrar productos válidos
+ const validRows: any[] = []
+ for (const p of productsData) {
+   const code = p.code?.toString().trim().toUpperCase()
+   const name = p.name?.toString().trim().toUpperCase()
+   if (!code || !name) continue
+
+   let category = (p.category || 'EPP').trim()
+   const lowerCat = category.toLowerCase()
+   if (lowerCat === 'epp') {
+     category = 'EPP'
+   } else {
+     category = category.charAt(0).toUpperCase() + category.slice(1)
+   }
+
+   const unit = (p.unit || 'unidad').toLowerCase().trim()
+   let inferredType = 'consumible'
+   const excelType = p.type ? p.type.toString().toLowerCase().trim() : ''
+   if (['consumible', 'no consumible', 'herramienta', 'equipo'].includes(excelType)) {
+     inferredType = excelType
+   } else {
+     const catLower = category.toLowerCase()
+     if (catLower.includes('herramienta') || catLower.includes('ferreteria') || catLower.includes('ferretería') || catLower.includes('madera')) {
+       inferredType = 'herramienta'
+     } else if (catLower.includes('epp') || catLower.includes('equipo')) {
+       inferredType = 'equipo'
+     } else if (catLower.includes('repuesto')) {
+       inferredType = 'no consumible'
+     }
+   }
+
+   validRows.push({
+     company_id: companyId,
+     code,
+     name,
+     category,
+     unit: ['unidad', 'kg', 'litros', 'metros', 'par', 'caja', 'unidades', 'global'].includes(unit) ? unit : 'unidad',
+     type: inferredType,
+     min_stock: Number(p.stock_minimo) || 0,
+     has_expiry: false,
+     equivalence: p.equivalence || null,
+     expiry_date: null,
+     // Campos auxiliares para stock inicial
+     _initial_stock: Number(p.stock_inicial) || 0,
+     _almacen_destino: p.almacen_destino?.toString().trim() || null,
+     _observaciones: p.observaciones || null
+   })
+ }
+
+ if (validRows.length === 0) {
+   return { success: false, error: 'Ningún producto contiene los campos mínimos requeridos (Código y Nombre).' }
+ }
+
+ // 2. Optimización: Pre-sembrar categorías únicas de forma masiva (en vez de 1 consulta por fila)
+ const distinctCats = Array.from(new Set(validRows.map(r => r.category).filter(Boolean)))
+ for (const cat of distinctCats) {
+   await ensureProductCategory(companyId, cat)
+ }
+
+ // 3. Pre-cargar almacenes y tipo de movimiento ING una sola vez
+ const [whRes, mtRes] = await Promise.all([
+   supabase.from('warehouses').select('id, name, is_default').eq('company_id', companyId),
+   supabase.from('movement_types').select('id').eq('company_id', companyId).eq('code', 'ING').maybeSingle()
+ ])
+
+ const whMap = new Map<string, string>()
+ whRes.data?.forEach(wh => whMap.set(wh.name.toLowerCase().trim(), wh.id))
+ const defaultWarehouseId = whRes.data?.find((w: any) => w.is_default)?.id || whRes.data?.[0]?.id || null
+ const mtIngId = mtRes.data?.id || null
+
+ // 4. Consulta indexada selectiva de productos existentes
+ const incomingCodes = Array.from(new Set(validRows.map(r => r.code)))
  const { data: existingProducts, error: fetchError } = await supabase
- .from('products')
- .select('id, code')
- .eq('company_id', companyId)
+   .from('products')
+   .select('id, code')
+   .eq('company_id', companyId)
+   .in('code', incomingCodes)
 
  if (fetchError) {
- console.error('Error fetching existing products for import:', fetchError)
- return { success: false, error: fetchError.message }
+   console.error('[IMPORT_PRODUCTS] Error fetching existing:', fetchError)
+   return { success: false, error: fetchError.message }
  }
 
  const prodMap = new Map<string, string>()
  existingProducts?.forEach(p => {
- if (p.code) {
- prodMap.set(p.code.toUpperCase().trim(), p.id)
- }
+   if (p.code) prodMap.set(p.code.toUpperCase().trim(), p.id)
  })
 
- const { data: warehouses } = await supabase
- .from('warehouses')
- .select('id, name, is_default')
- .eq('company_id', companyId)
+ // 5. Agrupar productos para Batch Insert y Concurrent Update
+ const toInsert: any[] = []
+ const toUpdate: { id: string; payload: any; initialStock: number; whName: string | null; obs: string | null }[] = []
+ const seenNewCodes = new Set<string>()
 
- const whMap = new Map<string, string>()
- warehouses?.forEach(wh => {
- whMap.set(wh.name.toLowerCase().trim(), wh.id)
- })
+ for (const item of validRows) {
+   const { _initial_stock, _almacen_destino, _observaciones, ...productPayload } = item
+   const existingId = prodMap.get(item.code)
 
- let defaultWarehouseId = warehouses?.find((w: any) => w.is_default)?.id || warehouses?.[0]?.id || null
- const results = []
-
- for (const p of productsData) {
- const code = p.code?.toString().trim().toUpperCase()
- if (!code || !p.name) continue
-
- let category = (p.category || 'EPP').trim()
- const lowerCat = category.toLowerCase()
- if (lowerCat === 'epp') {
- category = 'EPP'
- } else {
- // Capitalize first letter of custom categories for clean formatting
- category = category.charAt(0).toUpperCase() + category.slice(1)
+   if (existingId) {
+     toUpdate.push({
+       id: existingId,
+       payload: productPayload,
+       initialStock: _initial_stock,
+       whName: _almacen_destino,
+       obs: _observaciones
+     })
+   } else {
+     if (!seenNewCodes.has(item.code)) {
+       seenNewCodes.add(item.code)
+       toInsert.push({
+         ...productPayload,
+         _meta: { initialStock: _initial_stock, whName: _almacen_destino, obs: _observaciones }
+       })
+     }
+   }
  }
 
- // Ensure the category exists in the product_categories table
- await ensureProductCategory(companyId, category)
+ let insertedCount = 0
+ let updatedCount = 0
+ const stockMovements: any[] = []
+ const stockUpdates: { productId: string; warehouseId: string; quantity: number }[] = []
 
- const unit = (p.unit || 'unidad').toLowerCase().trim()
- 
- // Smart inference of product type
- let inferredType = 'consumible'
- const excelType = p.type ? p.type.toString().toLowerCase().trim() : ''
- if (['consumible', 'no consumible', 'herramienta', 'equipo'].includes(excelType)) {
- inferredType = excelType
- } else {
- const catLower = category.toLowerCase()
- if (catLower.includes('herramienta') || catLower.includes('ferreteria') || catLower.includes('ferretería') || catLower.includes('madera')) {
- inferredType = 'herramienta'
- } else if (catLower.includes('epp') || catLower.includes('equipo')) {
- inferredType = 'equipo'
- } else if (catLower.includes('repuesto')) {
- inferredType = 'no consumible'
- }
- }
+ // 6. Inserción masiva de productos (Batch Insert con retorno de ID)
+ const INSERT_BATCH_SIZE = 50
+ for (let i = 0; i < toInsert.length; i += INSERT_BATCH_SIZE) {
+   const batch = toInsert.slice(i, i + INSERT_BATCH_SIZE)
+   const cleanBatch = batch.map(({ _meta, ...clean }) => clean)
+   const { data: insertedRows, error: insErr } = await supabase
+     .from('products')
+     .insert(cleanBatch)
+     .select('id, code')
 
- const productPayload = {
- company_id: companyId,
- code,
- name: p.name.toString().trim().toUpperCase(),
- category, // Dynamic category!
- unit: ['unidad', 'kg', 'litros', 'metros', 'par', 'caja', 'unidades', 'global'].includes(unit) ? unit : 'unidad',
- type: inferredType,
- min_stock: Number(p.stock_minimo) || 0,
- has_expiry: false,
- equivalence: p.equivalence || null,
- expiry_date: null
- }
-
- let product = null
- const existingId = prodMap.get(code)
-
- if (existingId) {
- const { data: updatedProduct, error: updateErr } = await supabase
- .from('products')
- .update(productPayload)
- .eq('id', existingId)
- .select()
- .maybeSingle()
-
- if (updateErr) {
- console.error('Update product error during import:', updateErr)
- continue
- }
- product = updatedProduct
- } else {
- const { data: insertedProduct, error: insertErr } = await supabase
- .from('products')
- .insert([productPayload])
- .select()
- .maybeSingle()
-
- if (insertErr) {
- console.error('Insert product error during import:', insertErr)
- continue
- }
- product = insertedProduct
+   if (insErr) {
+     console.warn('[IMPORT_PRODUCTS] Batch insert notice, falling back to item-by-item:', insErr.message)
+     for (const single of batch) {
+       const { _meta, ...cleanSingle } = single
+       const { data: sRow, error: sErr } = await supabase.from('products').insert([cleanSingle]).select('id, code').maybeSingle()
+       if (!sErr && sRow) {
+         insertedCount++
+         prodMap.set(sRow.code, sRow.id)
+         if (_meta.initialStock > 0) {
+           prepareStockData(sRow.id, _meta.initialStock, _meta.whName, _meta.obs)
+         }
+       }
+     }
+   } else if (insertedRows) {
+     insertedCount += insertedRows.length
+     insertedRows.forEach((r, idx) => {
+       prodMap.set(r.code, r.id)
+       const meta = batch[idx]?._meta
+       if (meta && meta.initialStock > 0) {
+         prepareStockData(r.id, meta.initialStock, meta.whName, meta.obs)
+       }
+     })
+   }
  }
 
- if (!product) continue
-
- const initialStock = Number(p.stock_inicial) || 0
- if (initialStock > 0) {
- let warehouseId = defaultWarehouseId
- const whName = p.almacen_destino?.toString().trim()
- 
- if (whName) {
- const matchKey = whName.toLowerCase()
- if (whMap.has(matchKey)) {
- warehouseId = whMap.get(matchKey)!
- } else {
- const { data: newWh, error: newWhErr } = await supabase
- .from('warehouses')
- .insert({
- company_id: companyId,
- name: whName,
- code: whName.substring(0, 5).toUpperCase() + Math.floor(Math.random() * 100)
- })
- .select('id')
- .single()
-
- if (!newWhErr && newWh) {
- warehouseId = newWh.id
- whMap.set(matchKey, newWh.id)
- }
- }
+ // Helper para resolver almacén de stock
+ function prepareStockData(productId: string, qty: number, whName: string | null, obs: string | null) {
+   let targetWhId = defaultWarehouseId
+   if (whName) {
+     const match = whMap.get(whName.toLowerCase().trim())
+     if (match) targetWhId = match
+   }
+   if (targetWhId) {
+     stockUpdates.push({ productId, warehouseId: targetWhId, quantity: qty })
+     stockMovements.push({
+       product_id: productId,
+       warehouse_id: targetWhId,
+       company_id: companyId,
+       user_id: extendedUser.id,
+       movement_type_id: mtIngId,
+       type: 'ingreso',
+       quantity: qty,
+       observation: obs || 'Carga inicial masiva de productos',
+       document_type: 'ING',
+       document_number: 'IMPORTACION'
+     })
+   }
  }
 
- if (warehouseId) {
- await supabase.rpc('set_inventory_stock', {
- p_product_id: product.id,
- p_warehouse_id: warehouseId,
- p_company_id: companyId,
- p_quantity: initialStock
- })
-
- const { data: mtIng } = await supabase
- .from('movement_types')
- .select('id')
- .eq('company_id', companyId)
- .eq('code', 'ING')
- .maybeSingle()
-
- await supabase
- .from('inventory_movements')
- .insert([{
- product_id: product.id,
- warehouse_id: warehouseId,
- company_id: companyId,
- user_id: extendedUser.id,
- movement_type_id: mtIng?.id || null,
- type: 'ingreso',
- quantity: initialStock,
- observation: p.observaciones || 'Carga inicial masiva de productos',
- document_type: 'ING',
- document_number: 'IMPORTACION'
- }])
+ // 7. Actualizaciones concurrentes de productos
+ const UPDATE_CHUNK = 10
+ for (let i = 0; i < toUpdate.length; i += UPDATE_CHUNK) {
+   const chunk = toUpdate.slice(i, i + UPDATE_CHUNK)
+   await Promise.all(chunk.map(async item => {
+     const { error: upErr } = await supabase.from('products').update(item.payload).eq('id', item.id)
+     if (!upErr) {
+       updatedCount++
+       if (item.initialStock > 0) {
+         prepareStockData(item.id, item.initialStock, item.whName, item.obs)
+       }
+     }
+   }))
  }
- }
- results.push(product)
+
+ // 8. Registro de Stock Inicial en lote (Batch Movements + Parallel RPCs)
+ if (stockMovements.length > 0) {
+   // Movimientos en lote único
+   await supabase.from('inventory_movements').insert(stockMovements)
+
+   // RPCs de stock en paralelo
+   const STOCK_RPC_CHUNK = 10
+   for (let i = 0; i < stockUpdates.length; i += STOCK_RPC_CHUNK) {
+     const rpcChunk = stockUpdates.slice(i, i + STOCK_RPC_CHUNK)
+     await Promise.all(rpcChunk.map(su => 
+       supabase.rpc('set_inventory_stock', {
+         p_product_id: su.productId,
+         p_warehouse_id: su.warehouseId,
+         p_company_id: companyId,
+         p_quantity: su.quantity
+       })
+     ))
+   }
  }
 
  revalidatePath('/inventory/products')
  revalidatePath('/inventory/stock')
  revalidatePath('/inventory/history')
- return { success: true, count: results.length }
+
+ return { 
+   success: true, 
+   count: insertedCount + updatedCount, 
+   insertedCount, 
+   updatedCount 
+ }
  } catch (err: any) {
- console.error('importProducts error:', err)
- return { success: false, error: err.message }
+ console.error('[IMPORT_PRODUCTS_EXCEPTION]:', err)
+ return { success: false, error: err.message || 'Error inesperado al importar productos.' }
  }
 }
 
@@ -680,101 +731,119 @@ export async function importInitialStock(stockData: any[]) {
  const supabase = await createAdminClient()
 
  if (!extendedUser || !companyId) return { success: false, error: 'Acceso denegado.' }
+ if (!stockData || stockData.length === 0) return { success: false, error: 'No se encontraron datos de stock para importar.' }
 
- const { data: products } = await supabase
- .from('products')
- .select('id, code')
- .eq('company_id', companyId)
+ // 1. Filtrar válidos
+ const validRows = stockData.filter(item => {
+   const pCode = item.codigo_producto?.toString().trim()
+   const whName = item.almacen?.toString().trim()
+   const qty = Number(item.cantidad) || 0
+   return pCode && whName && qty > 0
+ })
+
+ if (validRows.length === 0) {
+   return { success: false, error: 'No hay filas con código de producto, almacén y cantidad mayor a cero.' }
+ }
+
+ const incomingCodes = Array.from(new Set(validRows.map(r => r.codigo_producto.toString().trim().toUpperCase())))
+
+ // 2. Consultas selectivas y concurrentes
+ const [productsRes, whRes, mtRes] = await Promise.all([
+   supabase.from('products').select('id, code').eq('company_id', companyId).in('code', incomingCodes),
+   supabase.from('warehouses').select('id, name').eq('company_id', companyId),
+   supabase.from('movement_types').select('id').eq('company_id', companyId).eq('code', 'ING').maybeSingle()
+ ])
 
  const prodMap = new Map<string, string>()
- products?.forEach(p => {
- prodMap.set(p.code.toLowerCase().trim(), p.id)
+ productsRes.data?.forEach(p => {
+   if (p.code) prodMap.set(p.code.toUpperCase().trim(), p.id)
  })
-
- const { data: warehouses } = await supabase
- .from('warehouses')
- .select('id, name')
- .eq('company_id', companyId)
 
  const whMap = new Map<string, string>()
- warehouses?.forEach(wh => {
- whMap.set(wh.name.toLowerCase().trim(), wh.id)
+ whRes.data?.forEach(wh => {
+   whMap.set(wh.name.toLowerCase().trim(), wh.id)
  })
 
- const { data: mtIng } = await supabase
- .from('movement_types')
- .select('id')
- .eq('company_id', companyId)
- .eq('code', 'ING')
- .maybeSingle()
+ const mtIngId = mtRes.data?.id || null
 
+ // 3. Preparar movimientos masivos y RPCs
+ const movementsBatch: any[] = []
+ const stockUpdates: { productId: string; warehouseId: string; quantity: number }[] = []
  let count = 0
 
- for (const item of stockData) {
- const pCode = item.codigo_producto?.toString().trim().toLowerCase()
- const whName = item.almacen?.toString().trim().toLowerCase()
- const qty = Number(item.cantidad) || 0
+ for (const item of validRows) {
+   const pCode = item.codigo_producto.toString().trim().toUpperCase()
+   const whName = item.almacen.toString().trim().toLowerCase()
+   const qty = Number(item.cantidad) || 0
 
- if (!pCode || !whName || qty <= 0) continue
+   const productId = prodMap.get(pCode)
+   let warehouseId = whMap.get(whName)
 
- const productId = prodMap.get(pCode)
- let warehouseId = whMap.get(whName)
+   if (!productId) continue
 
- if (!productId) continue
+   // Si el almacén no existe, crear o ignorar
+   if (!warehouseId) {
+     const whRaw = item.almacen.toString().trim()
+     const { data: newWh } = await supabase
+       .from('warehouses')
+       .insert({
+         company_id: companyId,
+         name: whRaw,
+         code: whRaw.substring(0, 5).toUpperCase() + Math.floor(Math.random() * 100)
+       })
+       .select('id')
+       .single()
 
- if (!warehouseId) {
- const whRawName = item.almacen?.toString().trim()
- const { data: newWh, error: newWhErr } = await supabase
- .from('warehouses')
- .insert({
- company_id: companyId,
- name: whRawName,
- code: whRawName.substring(0, 5).toUpperCase() + Math.floor(Math.random() * 100)
- })
- .select('id')
- .single()
+     if (newWh) {
+       warehouseId = newWh.id
+       whMap.set(whName, newWh.id)
+     }
+   }
 
- if (!newWhErr && newWh) {
- warehouseId = newWh.id
- whMap.set(whName, newWh.id)
+   if (warehouseId) {
+     stockUpdates.push({ productId, warehouseId, quantity: qty })
+     movementsBatch.push({
+       product_id: productId,
+       warehouse_id: warehouseId,
+       company_id: companyId,
+       user_id: extendedUser.id,
+       movement_type_id: mtIngId,
+       type: 'ingreso',
+       quantity: qty,
+       observation: 'Carga inicial masiva de stock',
+       document_type: 'ING',
+       document_number: 'IMPORT_STOCK'
+     })
+     count++
+   }
  }
- }
 
- if (warehouseId) {
- await supabase.rpc('set_inventory_stock', {
- p_product_id: productId,
- p_warehouse_id: warehouseId,
- p_company_id: companyId,
- p_quantity: qty
- })
+ // 4. Ejecución en lote
+ if (movementsBatch.length > 0) {
+   await supabase.from('inventory_movements').insert(movementsBatch)
 
- await supabase
- .from('inventory_movements')
- .insert([{
- product_id: productId,
- warehouse_id: warehouseId,
- company_id: companyId,
- user_id: extendedUser.id,
- movement_type_id: mtIng?.id || null,
- type: 'ingreso',
- quantity: qty,
- observation: 'Carga inicial masiva de stock',
- document_type: 'ING',
- document_number: 'IMPORT_STOCK'
- }])
-
- count++
- }
+   const RPC_CHUNK = 10
+   for (let i = 0; i < stockUpdates.length; i += RPC_CHUNK) {
+     const chunk = stockUpdates.slice(i, i + RPC_CHUNK)
+     await Promise.all(chunk.map(su => 
+       supabase.rpc('set_inventory_stock', {
+         p_product_id: su.productId,
+         p_warehouse_id: su.warehouseId,
+         p_company_id: companyId,
+         p_quantity: su.quantity
+       })
+     ))
+   }
  }
 
  revalidatePath('/inventory/stock')
  revalidatePath('/inventory/history')
  revalidatePath('/dashboard')
- 
+
  return { success: true, count }
  } catch (err: any) {
- console.error('importInitialStock error:', err)
- return { success: false, error: err.message }
+ console.error('[IMPORT_INITIAL_STOCK_EXCEPTION]:', err)
+ return { success: false, error: err.message || 'Error al importar stock inicial.' }
  }
 }
 
@@ -812,7 +881,7 @@ export async function getInventoryMovements(limit = 100) {
  const supabase = await createAdminClient()
 
  let query = applyIsolation(
- supabase.from('inventory_movements').select('*, products(name, code, unit, id), users:user_id(name), warehouses!inner(name, area), movement_types(name, effect)'),
+ supabase.from('inventory_movements').select('id, created_at, product_id, warehouse_id, movement_type_id, type, quantity, document_type, document_number, responsible_name, observation, reference, products(id, name, code, unit), warehouses!inner(id, name, area), movement_types(id, name, effect, code), users:user_id(name)'),
  companyId,
  extendedUser.role_id
  )

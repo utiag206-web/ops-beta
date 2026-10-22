@@ -2,7 +2,7 @@
 // Universal Offline Navigation, Static Asset Pre-caching & Sanitized Cache-API Match Architecture
 
 const CACHE_PREFIX = 'inthaly-ops'
-const CACHE_VERSION = 'v1.2.7'
+const CACHE_VERSION = 'v1.3.0'
 const STATIC_CACHE = `${CACHE_PREFIX}-static-${CACHE_VERSION}`
 const PAGES_CACHE = `${CACHE_PREFIX}-pages-${CACHE_VERSION}`
 const RSC_CACHE = `${CACHE_PREFIX}-rsc-${CACHE_VERSION}`
@@ -12,6 +12,8 @@ const CURRENT_CACHES = [STATIC_CACHE, PAGES_CACHE, RSC_CACHE, MEDIA_CACHE]
 
 const PRECACHE_ASSETS = [
   '/offline',
+  '/icon.svg',
+  '/logo-ops.svg',
   '/manifest.json',
   '/logo-ops.png',
   '/icon-192x192.png',

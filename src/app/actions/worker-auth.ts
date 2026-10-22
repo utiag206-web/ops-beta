@@ -264,7 +264,7 @@ export async function loginWorker(companySlug: string, identifier: string, pin: 
     console.error('[WORKER_AUTH] Error updating last_login_at:', err)
   }
 
-  return { success: true, workerId: worker.id, requirePinChange: Boolean(isFirstLoginPending) }
+  return { success: true, workerId: worker.id, requirePinChange: Boolean(isFirstLoginPending), session: sessionData }
   } catch (error: any) {
     console.error('[WORKER_AUTH] Unexpected error:', error)
     return { success: false, error: 'Ocurrió un error inesperado al iniciar sesión.' }

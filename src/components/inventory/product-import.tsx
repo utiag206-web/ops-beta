@@ -27,6 +27,7 @@ export function ProductImport() {
  const [data, setData] = useState<ProductImportData[]>([])
  const [existingCodes, setExistingCodes] = useState<string[]>([])
  const [isPending, setIsPending] = useState(false)
+ const [importStatusMsg, setImportStatusMsg] = useState('Procesando...')
  const [error, setError] = useState<string | null>(null)
  const [fileName, setFileName] = useState<string | null>(null)
 
@@ -160,12 +161,17 @@ export function ProductImport() {
  const handleImport = async () => {
  if (data.length === 0) return
  setIsPending(true)
+ setImportStatusMsg('Validando productos...')
  setError(null)
 
  try {
+ setImportStatusMsg('Guardando catálogo y existencias en lotes...')
  const result = await importProducts(data)
  if (result.success) {
- toast.success(`Se importaron ${result.count} productos correctamente.`)
+ const details = (result.insertedCount !== undefined && result.updatedCount !== undefined)
+   ? ` (${result.insertedCount} nuevos, ${result.updatedCount} actualizados)`
+   : ''
+ toast.success(`Se importaron ${result.count} productos correctamente${details}.`)
  router.push('/inventory/products')
  router.refresh()
  } else {
@@ -175,6 +181,7 @@ export function ProductImport() {
  setError('Ocurrió un error inesperado durante la importación.')
  } finally {
  setIsPending(false)
+ setImportStatusMsg('Procesando...')
  }
  }
 
@@ -263,7 +270,7 @@ export function ProductImport() {
  className="w-full sm:w-auto flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 text-white px-8 py-2.5 rounded-xl text-xs font-black tracking-tight transition-all shadow-lg shadow-indigo-100 active:scale-95"
  >
  {isPending ? <Loader2 className="animate-spin" size={16} /> : <Save size={16} />}
- {isPending ? 'Procesando...' : 'Confirmar Importación'}
+ {isPending ? importStatusMsg : 'Confirmar Importación'}
  </button>
  </div>
  </div>

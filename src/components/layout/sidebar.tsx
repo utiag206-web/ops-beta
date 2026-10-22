@@ -19,6 +19,7 @@ import { useGlobalSettings } from '@/components/providers/global-settings-provid
 import { useOperationalContext, useTerminology } from '@/components/providers/operational-context-provider'
 import { CapabilityKey, SemanticToken } from '@/lib/operating-profiles/types'
 import { RoadmapModal } from './roadmap-modal'
+import { InthalyIsotype } from '@/components/brand/InthalyLogo'
 import { X } from 'lucide-react'
 
 interface NavItemDef {
@@ -532,11 +533,15 @@ export function Sidebar() {
     <div className="px-3 py-2.5 sm:px-3.5 sm:py-3 flex items-center justify-between nth-divider border-b">
       <div className="flex items-center gap-2.5 text-white">
         <div className="w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center rounded-lg nth-logo-box shrink-0">
-          <img 
-            src={settings?.ecosystem_logo || "/logo-ops.png"}
-            alt={settings?.ecosystem_name || "Inthaly OPS Logo"}
-            className="w-5 h-5 sm:w-6 sm:h-6 object-contain"
-          />
+          {settings?.ecosystem_logo ? (
+            <img 
+              src={settings.ecosystem_logo}
+              alt={settings?.ecosystem_name || "Inthaly OPS Logo"}
+              className="w-5 h-5 sm:w-6 sm:h-6 object-contain"
+            />
+          ) : (
+            <InthalyIsotype size={24} />
+          )}
         </div>
         <div className="flex flex-col">
           <span 

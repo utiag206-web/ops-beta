@@ -63,30 +63,14 @@ interface WorkerPortalClientProps {
 
 type TabType = 'inicio' | 'documentos' | 'epps' | 'finanzas' | 'soma'
 
-export default function WorkerPortalClient({ company, session }: WorkerPortalClientProps) {
- const router = useRouter()
+export default function WorkerPortalClient({ company, session: initialSession }: WorkerPortalClientProps) {
+  const router = useRouter()
+  const [session, setSession] = useState(initialSession)
 
- // 0. Detect multi-tenant company mismatch and reset session cookie safely on client side mount
- const [isResettingSession, setIsResettingSession] = useState(false)
-
- useEffect(() => {
- if (session && session.isMismatched) {
- setIsResettingSession(true)
- const triggerLogout = async () => {
- try {
- await logoutWorker()
- toast.success('SINCRONIZANDO PORTAL MULTIEMPRESA...')
- window.location.reload()
- } catch (e) {
- console.error(e)
- window.location.reload()
- }
- }
- triggerLogout()
- }
- }, [session])
-
- const [activeTab, setActiveTab] = useState<TabType>('inicio')
+  useEffect(() => {
+    setSession(initialSession)
+  }, [initialSession])
+  const [activeTab, setActiveTab] = useState<TabType>('inicio')
  const searchParams = useSearchParams()
 
  useEffect(() => {
@@ -123,6 +107,18 @@ export default function WorkerPortalClient({ company, session }: WorkerPortalCli
  const [selectedTalk, setSelectedTalk] = useState<any | null>(null)
  const [selectedTraining, setSelectedTraining] = useState<any | null>(null)
  const [loadingData, setLoadingData] = useState(false)
+  const [loadingStats, setLoadingStats] = useState(false)
+  const [loadingDocs, setLoadingDocs] = useState(false)
+  const [loadingPPE, setLoadingPPE] = useState(false)
+  const [loadingFinances, setLoadingFinances] = useState(false)
+  const [loadingSoma, setLoadingSoma] = useState(false)
+  const [tabLoaded, setTabLoaded] = useState<Record<TabType, boolean>>({
+    inicio: false,
+    documentos: false,
+    epps: false,
+    finanzas: false,
+    soma: false
+  })
  const [markingAttendance, setMarkingAttendance] = useState(false)
  const [isLocationModalOpen, setIsLocationModalOpen] = useState(false)
  const [locationModalPunches, setLocationModalPunches] = useState<LocationPunch[]>([])
@@ -141,33 +137,93 @@ export default function WorkerPortalClient({ company, session }: WorkerPortalCli
  return () => clearInterval(timer)
  }, [])
 
- // Fetch data if session exists
- const loadPortalData = async () => {
- if (!session) return
- setLoadingData(true)
- try {
- const [statsData, docsData, ppeData, finData, talksData, trainingsData] = await Promise.all([
- getWorkerPortalStats(),
- getWorkerPortalDocuments(),
- getWorkerPortalPPEDeliveries(),
- getWorkerPortalFinances(),
- getWorkerPortalSomaTalks(),
- getWorkerPortalSomaTrainings()
- ])
- 
- setStats(statsData)
- setDocuments(docsData)
- setPpeDeliveries(ppeData)
- setFinances(finData)
- setSomaTalks(talksData)
- setSomaTrainings(trainingsData)
- } catch (error) {
- console.error('Error al cargar datos del portal:', error)
- toast.error('Error al sincronizar datos.')
- } finally {
- setLoadingData(false)
- }
- }
+ // 1. Fast initial stats loader (instant attendance & dashboard metrics)
+  const loadPortalStats = async () => {
+    if (!session) return
+    setLoadingStats(true)
+    try {
+      const statsData = await getWorkerPortalStats()
+      if (statsData) {
+        setStats(statsData)
+        setTabLoaded(prev => ({ ...prev, inicio: true }))
+      }
+    } catch (error) {
+      console.error('[WORKER_PORTAL] Error fetching stats:', error)
+    } finally {
+      setLoadingStats(false)
+    }
+  }
+
+  // 2. Individual tab loaders (loaded on-demand or prefetched silently)
+  const loadDocuments = async () => {
+    if (!session || loadingDocs) return
+    setLoadingDocs(true)
+    try {
+      const docsData = await getWorkerPortalDocuments()
+      setDocuments(docsData || [])
+      setTabLoaded(prev => ({ ...prev, documentos: true }))
+    } catch (err) {
+      console.error('[WORKER_PORTAL] Error fetching documents:', err)
+    } finally {
+      setLoadingDocs(false)
+    }
+  }
+
+  const loadPPEs = async () => {
+    if (!session || loadingPPE) return
+    setLoadingPPE(true)
+    try {
+      const ppeData = await getWorkerPortalPPEDeliveries()
+      setPpeDeliveries(ppeData || [])
+      setTabLoaded(prev => ({ ...prev, epps: true }))
+    } catch (err) {
+      console.error('[WORKER_PORTAL] Error fetching PPE deliveries:', err)
+    } finally {
+      setLoadingPPE(false)
+    }
+  }
+
+  const loadFinances = async () => {
+    if (!session || loadingFinances) return
+    setLoadingFinances(true)
+    try {
+      const finData = await getWorkerPortalFinances()
+      setFinances(finData || [])
+      setTabLoaded(prev => ({ ...prev, finanzas: true }))
+    } catch (err) {
+      console.error('[WORKER_PORTAL] Error fetching finances:', err)
+    } finally {
+      setLoadingFinances(false)
+    }
+  }
+
+  const loadSoma = async () => {
+    if (!session || loadingSoma) return
+    setLoadingSoma(true)
+    try {
+      const [talksData, trainingsData] = await Promise.all([
+        getWorkerPortalSomaTalks(),
+        getWorkerPortalSomaTrainings()
+      ])
+      setSomaTalks(talksData || [])
+      setSomaTrainings(trainingsData || [])
+      setTabLoaded(prev => ({ ...prev, soma: true }))
+    } catch (err) {
+      console.error('[WORKER_PORTAL] Error fetching SOMA data:', err)
+    } finally {
+      setLoadingSoma(false)
+    }
+  }
+
+  const loadPortalData = async () => {
+    await loadPortalStats()
+    // Silent background prefetch without blocking UI
+    getWorkerPortalDocuments().then(data => { setDocuments(data || []); setTabLoaded(p => ({ ...p, documentos: true })) })
+    getWorkerPortalPPEDeliveries().then(data => { setPpeDeliveries(data || []); setTabLoaded(p => ({ ...p, epps: true })) })
+    getWorkerPortalFinances().then(data => { setFinances(data || []); setTabLoaded(p => ({ ...p, finanzas: true })) })
+    getWorkerPortalSomaTalks().then(data => setSomaTalks(data || []))
+    getWorkerPortalSomaTrainings().then(data => { setSomaTrainings(data || []); setTabLoaded(p => ({ ...p, soma: true })) })
+  }
 
   const reloadAttendanceStats = async () => {
     try {
@@ -184,52 +240,75 @@ export default function WorkerPortalClient({ company, session }: WorkerPortalCli
     }
   }
 
- const handleConfirmAttendance = async (talkId: string) => {
- try {
- const res = await confirmSomaTalk(talkId)
- if (res.error) throw new Error(res.error)
- toast.success('Asistencia confirmada exitosamente')
- const [talksData, statsData] = await Promise.all([
- getWorkerPortalSomaTalks(),
- getWorkerPortalStats()
- ])
- setSomaTalks(talksData)
- setStats(statsData)
- router.refresh()
- } catch (err: any) {
- toast.error(err.message || 'Error al confirmar asistencia')
- }
- }
+  const handleConfirmAttendance = async (talkId: string) => {
+    try {
+      const res = await confirmSomaTalk(talkId)
+      if (res.error) throw new Error(res.error)
+      toast.success('Asistencia confirmada exitosamente')
+      const [talksData, statsData] = await Promise.all([
+        getWorkerPortalSomaTalks(),
+        getWorkerPortalStats()
+      ])
+      setSomaTalks(talksData)
+      setStats(statsData)
+      router.refresh()
+    } catch (err: any) {
+      toast.error(err.message || 'Error al confirmar asistencia')
+    }
+  }
 
- const handleConfirmTraining = async (trainingId: string) => {
- try {
- const res = await confirmSomaTraining(trainingId)
- if (res.error) throw new Error(res.error)
- toast.success('Capacitación confirmada exitosamente')
- const [trainingsData, statsData] = await Promise.all([
- getWorkerPortalSomaTrainings(),
- getWorkerPortalStats()
- ])
- setSomaTrainings(trainingsData)
- setStats(statsData)
- router.refresh()
- } catch (err: any) {
- toast.error(err.message || 'Error al confirmar capacitación')
- }
- }
+  const handleConfirmTraining = async (trainingId: string) => {
+    try {
+      const res = await confirmSomaTraining(trainingId)
+      if (res.error) throw new Error(res.error)
+      toast.success('Capacitación confirmada exitosamente')
+      const [trainingsData, statsData] = await Promise.all([
+        getWorkerPortalSomaTrainings(),
+        getWorkerPortalStats()
+      ])
+      setSomaTrainings(trainingsData)
+      setStats(statsData)
+      router.refresh()
+    } catch (err: any) {
+      toast.error(err.message || 'Error al confirmar capacitación')
+    }
+  }
 
- useEffect(() => {
- if (session) {
- loadPortalData()
- } else {
- setIdentifier('')
- setPin('')
- setLoginError(null)
- setShowPassword(false)
- }
- }, [session])
+  // Instant stats load on session mount + silent background prefetch
+  useEffect(() => {
+    if (session) {
+      loadPortalStats()
+      const prefetchTimer = setTimeout(() => {
+        getWorkerPortalDocuments().then(data => { setDocuments(data || []); setTabLoaded(p => ({ ...p, documentos: true })) })
+        getWorkerPortalPPEDeliveries().then(data => { setPpeDeliveries(data || []); setTabLoaded(p => ({ ...p, epps: true })) })
+        getWorkerPortalFinances().then(data => { setFinances(data || []); setTabLoaded(p => ({ ...p, finanzas: true })) })
+        getWorkerPortalSomaTalks().then(data => setSomaTalks(data || []))
+        getWorkerPortalSomaTrainings().then(data => { setSomaTrainings(data || []); setTabLoaded(p => ({ ...p, soma: true })) })
+      }, 300)
+      return () => clearTimeout(prefetchTimer)
+    } else {
+      setIdentifier('')
+      setPin('')
+      setLoginError(null)
+      setShowPassword(false)
+    }
+  }, [session?.workerId])
 
- // Handle Login
+  // Lazy load tab data on active tab switch
+  useEffect(() => {
+    if (!session) return
+    if (activeTab === 'documentos' && !tabLoaded.documentos) {
+      loadDocuments()
+    } else if (activeTab === 'epps' && !tabLoaded.epps) {
+      loadPPEs()
+    } else if (activeTab === 'finanzas' && !tabLoaded.finanzas) {
+      loadFinances()
+    } else if (activeTab === 'soma' && !tabLoaded.soma) {
+      loadSoma()
+    }
+  }, [activeTab, session])
+
+  // Handle Login
  const handleLogin = async (e: React.FormEvent) => {
  e.preventDefault()
  if (!identifier.trim() || !pin.trim()) {
@@ -603,29 +682,7 @@ export default function WorkerPortalClient({ company, session }: WorkerPortalCli
  document.cookie = 'view_mode=OPERATIONAL; path=/; max-age=31536000; SameSite=Lax'
  }
 
- if (isResettingSession) {
- return (
- <div className="min-h-screen bg-slate-950 flex flex-col justify-center items-center p-6 text-center relative overflow-hidden font-sans">
- <div className="absolute top-[-30%] left-[-10%] w-[80%] h-[60%] rounded-full bg-blue-900/20 blur-[130px]" />
- <div className="w-full max-w-md bg-slate-900/80 backdrop-blur-md border border-slate-800 rounded-[2.5rem] p-8 shadow-2xl space-y-6 relative z-10">
- <div className="text-center space-y-4 relative z-10 w-full px-6">
- <RefreshCw className="animate-spin text-white/80 mx-auto" size={48} />
- <h1 className="text-xl font-black text-white tracking-tight">Actualizando tu panel</h1>
- <div className="h-1 w-24 bg-white/20 rounded-full mx-auto overflow-hidden"></div>
- <p className="text-xs font-bold text-blue-400 tracking-tight">Multiempresa Corporativa</p>
- </div>
- <p className="text-white/70 text-sm max-w-[280px] mx-auto leading-relaxed">
- Hemos detectado un cambio de empresa activa a través de su código QR o enlace. Actualizando tus credenciales de forma segura...
- </p>
- <div className="border-t border-slate-800 pt-5">
- <p className="text-xs text-slate-500 font-medium">
- Por favor, espere un momento mientras reconfiguramos su portal de acceso.
- </p>
- </div>
- </div>
- </div>
- )
- }
+ 
 
  // -------------------------------------------------------------
  // RENDERING: FIRST LOGIN PIN CHANGE
@@ -921,13 +978,7 @@ export default function WorkerPortalClient({ company, session }: WorkerPortalCli
  {/* 2. MAIN CONTAINER */}
  <main className="max-w-4xl mx-auto px-4 mt-6 relative z-20">
  
- {/* Loading overlay */}
- {loadingData && (
- <div className="fixed top-4 right-4 z-[150] bg-slate-900/95 backdrop-blur text-white px-4 py-2.5 rounded-2xl shadow-xl flex items-center gap-2.5 text-[10px] font-black tracking-tight border border-slate-800 animate-in fade-in slide-in-from-top-4 duration-300">
- <RefreshCw className="animate-spin text-blue-600" size={16} />
- <span>Actualizando...</span>
- </div>
- )}
+ {/* Loading indicator removed for non-intrusive silent sync */}
 
  {/* TAB 1: INICIO */}
  {activeTab === 'inicio' && (
@@ -1203,7 +1254,13 @@ export default function WorkerPortalClient({ company, session }: WorkerPortalCli
  <p className="text-xs text-slate-400 font-bold tracking-normal">Accede a tus boletas de pago, contratos y certificados</p>
  </div>
 
- {documents.length === 0 ? (
+ {loadingDocs ? (
+          <div className="space-y-3 p-4">
+            {[1, 2, 3].map(i => (
+              <div key={i} className="h-16 bg-slate-100 animate-pulse rounded-2xl" />
+            ))}
+          </div>
+        ) : documents.length === 0 ? (
  <div className="p-12 text-center border border-dashed border-slate-200 rounded-3xl space-y-3">
  <FileText className="mx-auto text-slate-300" size={48} />
  <p className="font-bold text-slate-500">No se encontraron documentos</p>
@@ -1259,7 +1316,13 @@ export default function WorkerPortalClient({ company, session }: WorkerPortalCli
  </div>
  </div>
 
- {ppeDeliveries.length === 0 ? (
+ {loadingPPE ? (
+          <div className="space-y-3 p-4">
+            {[1, 2, 3].map(i => (
+              <div key={i} className="h-20 bg-slate-100 animate-pulse rounded-2xl" />
+            ))}
+          </div>
+        ) : ppeDeliveries.length === 0 ? (
  <div className="p-12 text-center border border-dashed border-slate-200 rounded-3xl space-y-3">
  <ShieldCheck className="mx-auto text-slate-300" size={48} />
  <p className="font-bold text-slate-500">No se registran entregas de EPP</p>
@@ -1346,7 +1409,13 @@ export default function WorkerPortalClient({ company, session }: WorkerPortalCli
  </div>
  </div>
 
- {finances.length === 0 ? (
+ {loadingFinances ? (
+          <div className="space-y-3 p-4">
+            {[1, 2, 3].map(i => (
+              <div key={i} className="h-16 bg-slate-100 animate-pulse rounded-2xl" />
+            ))}
+          </div>
+        ) : finances.length === 0 ? (
  <div className="p-12 text-center border border-dashed border-slate-200 rounded-3xl space-y-3">
  <BadgeDollarSign className="mx-auto text-slate-300" size={48} />
  <p className="font-bold text-slate-500">No se registra historial financiero</p>
