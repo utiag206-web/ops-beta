@@ -55,6 +55,7 @@ export async function getDashboardStats() {
 
  // 2. FETCH POR MODO EXCLUSIVO
  if (isAdmin) {
+ const isSuperAdmin = user.role_id === 'super_admin' || user.role_id === 'superadmin'
  const sevenDaysAgo = new Date()
  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
  const sevenDaysAgoStr = sevenDaysAgo.toISOString().split('T')[0]
@@ -67,9 +68,9 @@ export async function getDashboardStats() {
  applyIsolation(supabase.from('incidencias').select('id', { count: 'exact', head: true }), companyId, user.role_id).eq('status', 'abierta'),
  applyIsolation(supabase.from('requirements').select('id', { count: 'exact', head: true }), companyId, user.role_id).eq('status', 'pendiente'),
  applyIsolation(supabase.from('worker_movements').select('id', { count: 'exact', head: true }), companyId, user.role_id).gte('created_at', today),
- applyIsolation(supabase.from('inventory_stock').select('product_id, quantity, products(min_stock)'), companyId, user.role_id),
- applyIsolation(supabase.from('inventory_movements').select('created_at, type, effect, quantity'), companyId, user.role_id).gte('created_at', sevenDaysAgoStr),
- supabase.from('companies').select('id', { count: 'exact', head: true }).eq('status', 'active'),
+ applyIsolation(supabase.from('inventory_stock').select('product_id, quantity'), companyId, user.role_id),
+ applyIsolation(supabase.from('inventory_movements').select('created_at, effect, quantity'), companyId, user.role_id).gte('created_at', sevenDaysAgoStr),
+ isSuperAdmin ? supabase.from('companies').select('id', { count: 'exact', head: true }).eq('status', 'active') : Promise.resolve({ count: 1 } as any),
  applyIsolation(supabase.from('bonuses').select('id', { count: 'exact', head: true }), companyId, user.role_id).eq('status', 'pending'),
  applyIsolation(supabase.from('transport_payments').select('id', { count: 'exact', head: true }), companyId, user.role_id).eq('status', 'pending'),
  applyIsolation(supabase.from('assets').select('id', { count: 'exact', head: true }), companyId, user.role_id),
@@ -77,8 +78,6 @@ export async function getDashboardStats() {
  applyIsolation(supabase.from('worker_movements').select('created_at'), companyId, user.role_id).gte('created_at', sevenDaysAgoStr),
  applyIsolation(supabase.from('requirements').select('created_at'), companyId, user.role_id).gte('created_at', sevenDaysAgoStr)
  ])
-
- const isSuperAdmin = user.role_id === 'super_admin' || user.role_id === 'superadmin'
 
  const balance = (cashTotal.data || []).reduce((acc: number, t: any) => {
  const val = Number(t.amount) || 0
@@ -174,7 +173,7 @@ export async function getDashboardStats() {
  const [trains, talks, inc, ppe, stops] = await Promise.all([
  applyIsolation(supabase.from('soma_trainings').select('id, expiry_date'), companyId, user.role_id),
  applyIsolation(supabase.from('soma_talks').select('id', { count: 'exact', head: true }), companyId, user.role_id),
- applyIsolation(supabase.from('incidencias').select('*'), companyId, user.role_id),
+ applyIsolation(supabase.from('incidencias').select('id, status, severity, created_at'), companyId, user.role_id),
  applyIsolation(supabase.from('ppe_deliveries').select('id, equipment_name, worker:workers(name)'), companyId, user.role_id).eq('status', 'pending_signature').limit(5),
  applyIsolation(supabase.from('soma_hsec_stop').select('id', { count: 'exact', head: true }), companyId, user.role_id).eq('status', 'abierta')
  ])
@@ -199,7 +198,7 @@ export async function getDashboardStats() {
  applyIsolation(supabase.from('petty_cash_transactions').select('amount, type'), companyId, user.role_id).ilike('area', 'Cocina'),
  applyIsolation(supabase.from('inventory_stock').select('product_id, quantity, products(min_stock), warehouses!inner(area)'), companyId, user.role_id).ilike('warehouses.area', 'Cocina'),
  applyIsolation(supabase.from('inventory_movements').select('quantity, type, warehouses!inner(area), products(name)'), companyId, user.role_id).gte('created_at', today).ilike('warehouses.area', 'Cocina'),
- applyIsolation(supabase.from('requirements').select('*'), companyId, user.role_id).ilike('area', 'Cocina').eq('status', 'pendiente')
+ applyIsolation(supabase.from('requirements').select('id', { count: 'exact', head: true }), companyId, user.role_id).ilike('area', 'Cocina').eq('status', 'pendiente')
  ])
 
  // Calculate Kitchen critical products in memory
@@ -220,7 +219,7 @@ export async function getDashboardStats() {
  consumptionToday: (movs.data || []).filter((m: any) => m.type === 'salida').reduce((acc: number, m: any) => acc + (Number(m.quantity) || 0), 0),
  incomingToday: (movs.data || []).filter((m: any) => m.type === 'ingreso').reduce((acc: number, m: any) => acc + (Number(m.quantity) || 0), 0),
  balance: (cash?.data || []).reduce((acc: number, t: any) => t.type === 'ingreso' ? acc + (Number(t.amount) || 0) : acc - (Number(t.amount) || 0), 0),
- pendingRequirements: reqs.data?.length || 0,
+ pendingRequirements: reqs.count || 0,
  recentPurchases: (movs.data || []).filter((m: any) => m.type === 'ingreso').slice(0, 5)
  }
  }
@@ -284,7 +283,7 @@ export async function getDashboardStats() {
  }
   else if (isMecanica) {
     const [assetsQuery, reqsQuery, incQuery, cashTotal] = await Promise.all([
-      applyIsolation(supabase.from('assets').select('*'), companyId, user.role_id),
+      applyIsolation(supabase.from('assets').select('id, name, type'), companyId, user.role_id),
       applyIsolation(supabase.from('requirements').select('id', { count: 'exact', head: true }), companyId, user.role_id).eq('status', 'pendiente'),
       applyIsolation(supabase.from('incidencias').select('id', { count: 'exact', head: true }), companyId, user.role_id).eq('status', 'abierta'),
       applyIsolation(supabase.from('petty_cash_transactions').select('amount, type'), companyId, user.role_id)
@@ -374,10 +373,10 @@ export async function getDashboardStats() {
  // 4. DATOS PERSONALES PARA ADMINS/JEFES QUE SON TRABAJADORES
  if (user.worker_id && !isWorker) {
  const [ppe, bns, trns, att] = await Promise.all([
- supabase.from('ppe_deliveries').select('*').eq('worker_id', user.worker_id).order('delivery_date', { ascending: false }).limit(3),
- supabase.from('bonuses').select('*').eq('worker_id', user.worker_id).order('date', { ascending: false }).limit(3),
- supabase.from('transport_payments').select('*').eq('worker_id', user.worker_id).order('date', { ascending: false }).limit(3),
- supabase.from('attendance').select('*').eq('worker_id', user.worker_id).order('date', { ascending: false }).limit(5)
+ supabase.from('ppe_deliveries').select('id, delivery_date, equipment_name, status').eq('worker_id', user.worker_id).order('delivery_date', { ascending: false }).limit(3),
+ supabase.from('bonuses').select('id, date, amount, reason').eq('worker_id', user.worker_id).order('date', { ascending: false }).limit(3),
+ supabase.from('transport_payments').select('id, date, amount, destination').eq('worker_id', user.worker_id).order('date', { ascending: false }).limit(3),
+ supabase.from('attendance').select('id, date, check_in, check_out').eq('worker_id', user.worker_id).order('date', { ascending: false }).limit(5)
  ])
  stats.personalStats = { ppe: ppe.data || [], bonuses: bns.data || [], transport: trns.data || [], attendance: att.data || [] }
  }

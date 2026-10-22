@@ -77,6 +77,9 @@ export async function submitDemoRequest(payload: DemoRequestPayload) {
         contact_position: contactPosition,
         estimated_workers: estimatedWorkers,
         notes: message,
+        phone,
+        email,
+        tax_id: taxId,
         submitted_at: new Date().toISOString(),
       },
     }

@@ -9,6 +9,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import * as XLSX from 'xlsx'
+import { useTerminology, useOperationalContext } from '@/components/providers/operational-context-provider'
 
 type Worker = {
  id: string
@@ -24,6 +25,7 @@ type Worker = {
 
 export function WorkersList({ workers, canManage = false }: { workers: Worker[], canManage?: boolean }) {
  const router = useRouter()
+ const { term } = useTerminology()
  const [isAddModalOpen, setIsAddModalOpen] = useState(false)
  const [editingWorker, setEditingWorker] = useState<Worker | null>(null)
  const [searchTerm, setSearchTerm] = useState('')
@@ -31,11 +33,25 @@ export function WorkersList({ workers, canManage = false }: { workers: Worker[],
  const [activeTab, setActiveTab] = useState<'activo' | 'inactivo'>('activo')
  const [isExporting, setIsExporting] = useState(false)
 
+  useEffect(() => {
+    if (workers && workers.length > 0 && typeof window !== 'undefined') {
+      localStorage.setItem('workers_cache', JSON.stringify(workers))
+    }
+  }, [workers])
+
+ const { companyId } = useOperationalContext()
+
  useEffect(() => {
+   if (!companyId) return
    const { createClient } = require('@/lib/supabase/client')
    const supabase = createClient()
-   const channel = supabase.channel('workers_list_changes')
-     .on('postgres_changes', { event: '*', schema: 'public', table: 'workers' }, () => {
+   const channel = supabase.channel(`workers_list_${companyId}`)
+     .on('postgres_changes', { 
+       event: '*', 
+       schema: 'public', 
+       table: 'workers',
+       filter: `company_id=eq.${companyId}`
+     }, () => {
        console.log('[REALTIME] Workers list updated')
        router.refresh()
      })
@@ -44,7 +60,7 @@ export function WorkersList({ workers, canManage = false }: { workers: Worker[],
    return () => {
      supabase.removeChannel(channel)
    }
- }, [router])
+ }, [router, companyId])
 
  const handleExportExcel = async () => {
    setIsExporting(true)
@@ -160,7 +176,7 @@ export function WorkersList({ workers, canManage = false }: { workers: Worker[],
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-3 bg-white p-4 sm:p-5 rounded-xl border border-slate-100 shadow-xs">
         <div>
           <h1 className="text-xl sm:text-2xl font-bold text-slate-800 tracking-tight">Gestión de Personal</h1>
-          <p className="text-xs text-slate-500 font-medium mt-0.5">Listado maestro de trabajadores y colaboradores.</p>
+          <p className="text-xs text-slate-500 font-medium mt-0.5">Listado maestro de {term('worker.plural', 'trabajadores').toLowerCase()} y colaboradores.</p>
         </div>
         {canManage && (
           <div className="flex items-center gap-2">

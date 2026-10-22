@@ -99,7 +99,15 @@ function LoginForm() {
             </div>
 
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-slate-700 mb-1">Contraseña</label>
+              <div className="flex items-center justify-between mb-1">
+                <label htmlFor="password" className="block text-sm font-medium text-slate-700">Contraseña</label>
+                <Link 
+                  href="/forgot-password" 
+                  className="text-xs font-semibold text-blue-600 hover:text-blue-700 hover:underline transition-colors"
+                >
+                  ¿Olvidaste tu contraseña?
+                </Link>
+              </div>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
                 <input
@@ -142,11 +150,11 @@ function LoginForm() {
               )}
             </button>
 
-            <div className="text-center mt-6">
-              <p className="text-sm text-slate-500">
-                ¿No tienes una cuenta?{' '}
-                <Link href="/register" className="text-blue-600 font-bold hover:underline">
-                  Regístrate aquí
+            <div className="text-center mt-5 pt-3 border-t border-slate-100">
+              <p className="text-xs text-slate-500">
+                ¿Tu empresa aún no cuenta con acceso corporativo?{' '}
+                <Link href="/" className="text-blue-600 font-bold hover:underline">
+                  Solicita una demostración
                 </Link>
               </p>
             </div>

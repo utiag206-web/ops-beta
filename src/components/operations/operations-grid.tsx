@@ -261,11 +261,14 @@ export default function OperationsDataGrid({
 
  // Save via modal form callback
  const handleSaveModal = async (formData: any) => {
- const isNew = !formData.id
- const rowId = formData.id || `temp_${Date.now()}`
+    const isNew = !formData.id || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(formData.id)
+    const payload = { ...formData }
+    if (isNew) {
+      delete payload.id
+    }
 
- try {
- const res = await onUpsert(formData)
+    try {
+      const res = await onUpsert(payload)
  if (res.success && res.data) {
  setRows(prev => {
  if (isNew) {

@@ -22,7 +22,18 @@ import {
 import { toast } from 'sonner'
 
 export default function RequirementsPage({ userRole, initialData = [] }: { userRole: string, initialData?: any[] }) {
-  const [requirements, setRequirements] = useState<any[]>(initialData)
+  const [requirements, setRequirements] = useState<any[]>(() => {
+    if (typeof window !== 'undefined') {
+      const cached = localStorage.getItem('requirements_cache')
+      if (cached) {
+        try {
+          const parsed = JSON.parse(cached)
+          if (Array.isArray(parsed) && parsed.length > 0) return parsed
+        } catch (_) {}
+      }
+    }
+    return initialData || []
+  })
   const [loading, setLoading] = useState(false)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [selectedRequirement, setSelectedRequirement] = useState<any | null>(null)
@@ -33,16 +44,108 @@ export default function RequirementsPage({ userRole, initialData = [] }: { userR
     priority: 'todas'
   })
 
+  useEffect(() => {
+    if (initialData && initialData.length > 0) {
+      setRequirements(initialData)
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('requirements_cache', JSON.stringify(initialData))
+      }
+    }
+
+    const replayPendingRequirements = async () => {
+      try {
+        const { getPendingOperations } = await import('@/lib/offline-sync')
+        const pending = await getPendingOperations()
+        const reqPending = pending.filter(p => p.entity === 'requerimientos')
+        if (reqPending.length > 0) {
+          setRequirements(prev => {
+            let updated = [...prev]
+            for (const op of reqPending) {
+              if (op.action === 'create_requirement') {
+                if (!updated.some(r => r.id === op.payload.id)) {
+                  updated = [{ ...op.payload, status: 'pendiente', isPending: true, created_at: new Date().toISOString() }, ...updated]
+                }
+              }
+            }
+            return updated
+          })
+        }
+      } catch (_) {}
+    }
+    replayPendingRequirements()
+  }, [initialData])
+
   const isGlobalAdmin = userRole === 'admin' || userRole === 'gerente' || userRole === 'operaciones' || userRole === 'almacen'
   const isJefeArea = userRole === 'jefe_area'
 
   const fetchData = async () => {
     setLoading(true)
-    const res = await getRequirements(filters)
-    if (res.data) {
-      setRequirements(res.data)
+    try {
+      let serverData: any[] | null = null
+      if (typeof navigator !== 'undefined' && navigator.onLine) {
+        try {
+          const res = await getRequirements(filters)
+          if (res?.data) {
+            serverData = res.data
+            try {
+              if (typeof localStorage !== 'undefined') {
+                localStorage.setItem('requirements_cache', JSON.stringify(serverData))
+              }
+            } catch (_) {}
+          }
+        } catch (netErr) {
+          console.warn('[Requirements] Server fetch failed:', netErr)
+        }
+      }
+
+      let baseList = serverData
+      if (!baseList || baseList.length === 0) {
+        try {
+          if (typeof localStorage !== 'undefined') {
+            const raw = localStorage.getItem('requirements_cache')
+            if (raw) {
+              const cached = JSON.parse(raw)
+              if (Array.isArray(cached)) baseList = cached
+            }
+          }
+        } catch (_) {}
+      }
+
+      if (!baseList) baseList = []
+
+      // Combinar operaciones pendientes de la cola de sincronización local
+      try {
+        const { getPendingOperations } = await import('@/lib/offline-sync')
+        const pendingOps = await getPendingOperations()
+        const reqOps = pendingOps.filter(p => p.entity === 'requerimientos')
+        if (reqOps.length > 0) {
+          let updated = [...baseList]
+          for (const op of reqOps) {
+            if (op.action === 'create_requirement' && op.payload) {
+              if (!updated.some(r => r.id === op.payload.id)) {
+                updated.unshift({
+                  ...op.payload,
+                  status: op.payload.status || 'pendiente',
+                  isPending: true,
+                  created_at: op.payload.created_at || op.created_at || new Date().toISOString()
+                })
+              }
+            } else if (op.action === 'update_status' && op.payload?.id) {
+              updated = updated.map(r => r.id === op.payload.id ? { ...r, status: op.payload.status, isPending: true } : r)
+            }
+          }
+          baseList = updated
+        }
+      } catch (queueErr) {
+        console.warn('[Requirements] Error al leer cola offline:', queueErr)
+      }
+
+      setRequirements(baseList)
+    } catch (err) {
+      console.error('[Requirements] Error in fetchData:', err)
+    } finally {
+      setLoading(false)
     }
-    setLoading(false)
   }
 
   useEffect(() => {
@@ -233,7 +336,15 @@ export default function RequirementsPage({ userRole, initialData = [] }: { userR
                       <PriorityBadge priority={req.priority} />
                     </td>
                     <td className="py-6 px-6 text-center">
-                      <RequirementStatusBadge status={req.status} />
+                      <div className="flex flex-col items-center gap-1">
+                        <RequirementStatusBadge status={req.status} />
+                        {req.isPending && (
+                          <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 border border-amber-200 flex items-center gap-1 shadow-xs">
+                            <Clock size={10} className="animate-spin text-amber-600" />
+                            Pendiente sinc.
+                          </span>
+                        )}
+                      </div>
                     </td>
                     <td className="py-6 px-6 text-center">
                       <span className="text-[10px] font-bold text-slate-500">

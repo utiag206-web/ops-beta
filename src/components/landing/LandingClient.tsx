@@ -9,7 +9,11 @@ import { SoftwareShowcase } from './SoftwareShowcase'
 import { CtaFooterSection } from './CtaFooterSection'
 import { DemoModal } from './DemoModal'
 
-export function LandingClient() {
+interface LandingClientProps {
+  commercialWhatsApp?: string
+}
+
+export function LandingClient({ commercialWhatsApp = '51923207309' }: LandingClientProps) {
   const [isDemoModalOpen, setIsDemoModalOpen] = useState(false)
 
   const handleOpenDemo = () => setIsDemoModalOpen(true)
@@ -34,11 +38,11 @@ export function LandingClient() {
         <SoftwareShowcase />
 
         {/* BLOQUE 5 — LLAMADO A LA ACCIÓN (CTA) & FOOTER */}
-        <CtaFooterSection onOpenDemo={handleOpenDemo} />
+        <CtaFooterSection onOpenDemo={handleOpenDemo} commercialWhatsApp={commercialWhatsApp} />
       </main>
 
       {/* Interactive Demo Request Modal */}
-      <DemoModal isOpen={isDemoModalOpen} onClose={handleCloseDemo} />
+      <DemoModal isOpen={isDemoModalOpen} onClose={handleCloseDemo} commercialWhatsApp={commercialWhatsApp} />
     </div>
   )
 }

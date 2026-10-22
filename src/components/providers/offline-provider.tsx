@@ -1,0 +1,228 @@
+'use client'
+
+import { warmApplicationRoutes } from '@/lib/prewarm-routes'
+
+import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react'
+import { Wifi, WifiOff, RefreshCw } from 'lucide-react'
+import { getPendingOperations, updateOperationStatus, removeOperationFromQueue, replaceTemporaryIdInQueue } from '@/lib/offline-sync'
+import { initializeSyncHandlers } from '@/lib/sync-handlers'
+
+// Registry of handlers for different entities
+type SyncHandlerResult = boolean | { success: boolean, newId?: string };
+const syncHandlers: Record<string, (action: string, payload: any) => Promise<SyncHandlerResult>> = {}
+
+export function registerSyncHandler(entity: string, handler: (action: string, payload: any) => Promise<SyncHandlerResult>) {
+  syncHandlers[entity] = handler
+}
+
+interface OfflineContextType {
+  isOnline: boolean
+  pendingCount: number
+  isSyncing: boolean
+  triggerSync: () => Promise<void>
+}
+
+const OfflineContext = createContext<OfflineContextType>({
+  isOnline: true,
+  pendingCount: 0,
+  isSyncing: false,
+  triggerSync: async () => {}
+})
+
+export const useOffline = () => useContext(OfflineContext)
+
+export function OfflineProvider({ children }: { children: React.ReactNode }) {
+  const [isOnline, setIsOnline] = useState(true)
+  const [pendingCount, setPendingCount] = useState(0)
+  const [isSyncing, setIsSyncing] = useState(false)
+  const isSyncingRef = useRef(false)
+
+  useEffect(() => {
+    initializeSyncHandlers()
+    warmApplicationRoutes()
+    if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
+      const registerSW = () => {
+        navigator.serviceWorker
+          .register('/sw.js')
+          .then((reg) => {
+            console.log('[PWA] Service Worker registered successfully, scope:', reg.scope)
+            reg.onupdatefound = () => {
+              const installingWorker = reg.installing
+              if (installingWorker) {
+                installingWorker.onstatechange = () => {
+                  if (installingWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                    console.log('[PWA] New Service Worker version installed.')
+                  }
+                }
+              }
+            }
+          })
+          .catch((err) => {
+            console.warn('[PWA] Service Worker registration failed:', err)
+          })
+      }
+
+      if (document.readyState === 'complete') {
+        registerSW()
+      } else {
+        window.addEventListener('load', registerSW)
+        return () => window.removeEventListener('load', registerSW)
+      }
+    }
+  }, [])
+
+  const updatePendingCount = useCallback(async () => {
+    try {
+      const pending = await getPendingOperations()
+      setPendingCount(pending.length)
+      return pending.length
+    } catch {
+      return 0
+    }
+  }, [])
+
+  const triggerSync = useCallback(async () => {
+    const online = typeof navigator !== 'undefined' ? navigator.onLine : true
+    if (!online || isSyncingRef.current) return
+    
+    isSyncingRef.current = true
+    setIsSyncing(true)
+
+    try {
+      const pending = await getPendingOperations()
+      if (pending.length === 0) {
+        return
+      }
+
+      for (const op of pending) {
+        const handler = syncHandlers[op.entity]
+        if (handler) {
+          await updateOperationStatus(op.id, 'SYNCING')
+          try {
+            const result = await handler(op.action, op.payload)
+            const success = typeof result === 'object' ? result.success : result;
+            
+            if (success) {
+              if (typeof result === 'object' && result.newId) {
+                await replaceTemporaryIdInQueue(op.payload.id, result.newId)
+              }
+              await removeOperationFromQueue(op.id)
+            } else {
+              await updateOperationStatus(op.id, 'FAILED', 'Handler returned false')
+            }
+          } catch (error: any) {
+            await updateOperationStatus(op.id, 'FAILED', error.message)
+          }
+        }
+      }
+    } finally {
+      await updatePendingCount()
+      isSyncingRef.current = false
+      setIsSyncing(false)
+    }
+  }, [updatePendingCount])
+
+  useEffect(() => {
+    const currentOnline = typeof navigator !== 'undefined' ? navigator.onLine : true
+    setIsOnline(currentOnline)
+    
+    updatePendingCount().then((count) => {
+      if (currentOnline && count > 0) {
+        triggerSync()
+      }
+    })
+
+    const handleOnline = () => {
+      setIsOnline(true)
+      warmApplicationRoutes(true)
+      updatePendingCount().then((count) => {
+        if (count > 0) {
+          setTimeout(() => {
+            triggerSync()
+          }, 500)
+        }
+      })
+    }
+    
+    const handleOffline = () => {
+      setIsOnline(false)
+    }
+
+    window.addEventListener('online', handleOnline)
+    window.addEventListener('offline', handleOffline)
+    
+    // Check queue periodically and trigger sync only if online with pending operations
+    const interval = setInterval(() => {
+      updatePendingCount().then((count) => {
+        if (typeof navigator !== 'undefined' && navigator.onLine && count > 0 && !isSyncingRef.current) {
+          triggerSync()
+        }
+      })
+    }, 15000)
+
+    return () => {
+      window.removeEventListener('online', handleOnline)
+      window.removeEventListener('offline', handleOffline)
+      clearInterval(interval)
+    }
+  }, [triggerSync, updatePendingCount])
+
+  return (
+    <OfflineContext.Provider value={{ isOnline, pendingCount, isSyncing, triggerSync }}>
+      {children}
+      <OfflineIndicator isOnline={isOnline} pendingCount={pendingCount} isSyncing={isSyncing} onSync={triggerSync} />
+    </OfflineContext.Provider>
+  )
+}
+
+function OfflineIndicator({ isOnline, pendingCount, isSyncing, onSync }: { isOnline: boolean, pendingCount: number, isSyncing: boolean, onSync?: () => Promise<void> }) {
+  const [showSynced, setShowSynced] = useState(false)
+  const prevPendingRef = useRef(pendingCount)
+
+  useEffect(() => {
+    if (isOnline && !isSyncing && prevPendingRef.current > 0 && pendingCount === 0) {
+      setShowSynced(true)
+      const t = setTimeout(() => setShowSynced(false), 3000)
+      prevPendingRef.current = 0
+      return () => clearTimeout(t)
+    }
+    prevPendingRef.current = pendingCount
+  }, [isOnline, pendingCount, isSyncing])
+
+  if (isOnline && pendingCount === 0 && !isSyncing && !showSynced) return null
+
+  return (
+    <div className="fixed bottom-4 right-4 z-50 flex items-center gap-3 px-4 py-2.5 rounded-2xl shadow-xl font-bold text-xs animate-in slide-in-from-bottom-5 bg-white border border-slate-200 text-slate-700 pointer-events-auto">
+      {!isOnline && (
+        <span className="flex items-center gap-2 text-amber-600">
+          <WifiOff size={16} /> Sin conexión — Modo Offline
+        </span>
+      )}
+      
+      {isOnline && isSyncing && (
+        <span className="flex items-center gap-2 text-blue-600">
+          <RefreshCw size={16} className="animate-spin" /> Sincronizando cambios...
+        </span>
+      )}
+
+      {isOnline && !isSyncing && pendingCount > 0 && (
+        <button
+          type="button"
+          onClick={() => onSync && onSync()}
+          className="flex items-center gap-2 text-amber-800 hover:text-amber-950 transition-colors cursor-pointer"
+          title="Haga clic para sincronizar ahora"
+        >
+          <span className="bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full">{pendingCount}</span>
+          Pendientes (Sincronizar)
+          <RefreshCw size={13} className="ml-1 opacity-70 hover:opacity-100" />
+        </button>
+      )}
+
+      {isOnline && !isSyncing && pendingCount === 0 && showSynced && (
+        <span className="flex items-center gap-2 text-emerald-600 animate-in fade-in">
+          <Wifi size={16} /> ✓ Todo sincronizado
+        </span>
+      )}
+    </div>
+  )
+}

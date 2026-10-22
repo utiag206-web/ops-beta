@@ -4,31 +4,36 @@ import { useState, useRef, useEffect } from 'react'
 import Link from 'next/link'
 import { UserCircle, Settings, LogOut, ChevronDown } from 'lucide-react'
 import { logout } from '@/app/(auth)/login/actions'
+import { useUserRole } from '@/components/providers/rbac-provider'
 
 export function UserDropdown({ 
- userName, 
- userRole, 
- initial 
+  userName, 
+  userRole, 
+  initial 
 }: { 
- userName: string, 
- userRole: string,
- initial: string 
+  userName: string, 
+  userRole: string,
+  initial: string 
 }) {
   const [isOpen, setIsOpen] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
+  const { role_id } = useUserRole()
   
+  const normRole = (role_id || '').toLowerCase()
   const roleStr = userRole.toLowerCase()
-  const isSuperAdmin = roleStr.includes('super_admin') || roleStr.includes('superadmin') || roleStr.includes('super admin')
+  const isSuperAdmin = normRole === 'super_admin' || normRole === 'superadmin' || roleStr.includes('super admin') || roleStr.includes('super administrador')
 
- useEffect(() => {
- function handleClickOutside(event: MouseEvent) {
- if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
- setIsOpen(false)
- }
- }
- document.addEventListener('mousedown', handleClickOutside)
- return () => document.removeEventListener('mousedown', handleClickOutside)
- }, [])
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
+
+  const settingsHref = isSuperAdmin ? '/super-admin/settings' : '/company'
 
  return (
  <div className="relative" ref={dropdownRef}>
@@ -56,7 +61,15 @@ export function UserDropdown({
  
  <Link 
  href="/profile" 
- onClick={() => setIsOpen(false)}
+ onClick={(e) => {
+   setIsOpen(false)
+   if (typeof navigator !== 'undefined' && !navigator.onLine) {
+     e.preventDefault()
+     if (window.location.pathname !== '/profile') {
+       window.location.href = '/profile'
+     }
+   }
+ }}
  className="flex items-center gap-3 px-4 py-2.5 text-sm text-slate-600 hover:bg-blue-50 hover:text-blue-700 transition-colors font-medium"
  >
  <UserCircle size={18} />
@@ -64,23 +77,21 @@ export function UserDropdown({
  </Link>
  
  <Link 
-          href={isSuperAdmin ? "/super-admin/settings" : "/settings"} 
-          onClick={(e) => {
-            if (!isSuperAdmin) {
-              e.preventDefault()
-            } else {
+            href={settingsHref} 
+            onClick={(e) => {
               setIsOpen(false)
-            }
-          }}
-          className={`flex items-center gap-3 px-4 py-2.5 text-sm font-medium transition-colors ${
-            isSuperAdmin 
-              ? 'text-slate-600 hover:bg-blue-50 hover:text-blue-700' 
-              : 'text-slate-600 opacity-50 cursor-not-allowed'
-          }`}
-        >
-          <Settings size={18} />
-          Configuración
-        </Link>
+              if (typeof navigator !== 'undefined' && !navigator.onLine) {
+                e.preventDefault()
+                if (window.location.pathname !== settingsHref) {
+                  window.location.href = settingsHref
+                }
+              }
+            }}
+            className="flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-slate-600 hover:bg-blue-50 hover:text-blue-700 transition-colors"
+          >
+            <Settings size={18} />
+            {isSuperAdmin ? 'Configuración Global' : 'Datos de Empresa'}
+          </Link>
  
  <div className="h-px bg-slate-50 my-1 mx-2"></div>
  

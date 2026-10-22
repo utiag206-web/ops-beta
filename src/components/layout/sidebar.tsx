@@ -8,110 +8,138 @@ import {
  ChevronDown, ChevronRight, Package, LayoutGrid, Box, History,
  AlertCircle, GraduationCap, MessageSquare, Eye, ShieldAlert, Clock,
  ArrowLeft, Hammer, Trees, Wrench, Truck, Cpu, Fuel, Activity, ClipboardCheck,
- FileSpreadsheet, Factory, Layers
+ FileSpreadsheet, Factory, Layers, Settings, Boxes, Sprout, HeartHandshake
 } from 'lucide-react'
 import { logout } from '@/app/(auth)/login/actions'
 import { stopImpersonation } from '@/app/(main)/super-admin/actions'
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { useUserRole } from '@/components/providers/rbac-provider'
 import { useSidebar } from '@/components/providers/sidebar-provider'
 import { useGlobalSettings } from '@/components/providers/global-settings-provider'
+import { useOperationalContext, useTerminology } from '@/components/providers/operational-context-provider'
+import { CapabilityKey, SemanticToken } from '@/lib/operating-profiles/types'
+import { RoadmapModal } from './roadmap-modal'
 import { X } from 'lucide-react'
 
-// MASTER LIST: Grupos de navegación por defecto
-const navGroups = [
- {
- id: 'super-admin',
- label: 'Centro Corporativo',
- items: [
- { name: 'Panel Corporativo', href: '/super-admin', icon: ShieldAlert, module: 'super-admin' },
- ]
- },
- {
- id: 'dashboard',
- label: 'Centro de Control',
- items: [
- { name: 'Panel Principal', href: '/dashboard', icon: LayoutDashboard, module: 'dashboard' },
- ]
- },
- {
- id: 'operaciones',
- label: 'Gestión de Mina',
- items: [
- { name: 'Personal de Mina', href: '/workers', icon: Users, module: 'workers' },
- { name: 'Control de Asistencia', href: '/attendance', icon: Calendar, module: 'attendance' },
- { name: 'Tareo Operativo', href: '/tareo', icon: Calendar, module: 'tareo' },
- { name: 'Control de Producción', href: '/operaciones/produccion', icon: Hammer, module: 'produccion' },
- { name: 'Control de Planta y Mineral', href: '/operaciones/planta', icon: Factory, module: 'planta' },
- { name: 'Control de Maderas', href: '/operaciones/maderas', icon: Trees, module: 'maderas' },
- { name: 'Logística de Personal', href: '/movements', icon: Ship, module: 'movements' },
- { name: 'Control de Activos', href: '/assets', icon: Package, module: 'assets' },
- { name: 'Requerimientos', href: '/requerimientos', icon: FileText, module: 'requerimientos' },
- { name: 'Control Financiero', href: '/caja-chica', icon: Coins, module: 'caja-chica' },
- ]
- },
- {
- id: 'mecanica',
- label: 'Área de Mecánica',
- items: [
- { name: 'Mantenimiento Vehículos', href: '/mecanica/mantenimiento-vehiculos', icon: Truck, module: 'mecanica' },
- { name: 'Generador (Mantenimiento)', href: '/mecanica/generador-mantenimiento', icon: Activity, module: 'mecanica' },
- { name: 'Generador (Combustible)', href: '/mecanica/generador-combustible', icon: Fuel, module: 'mecanica' },
- { name: 'Compresora (Mantenimiento)', href: '/mecanica/compresora-mantenimiento', icon: Cpu, module: 'mecanica' },
- { name: 'Compresora (Combustible)', href: '/mecanica/compresora-combustible', icon: Fuel, module: 'mecanica' },
- { name: 'Equipos de Mina', href: '/mecanica/equipos-mina', icon: Wrench, module: 'mecanica' },
- { name: 'Checklists Pre-Operacionales', href: '/mecanica/checklists', icon: ClipboardCheck, module: 'mecanica' },
- { name: 'Control de Herramientas', href: '/mecanica/herramientas', icon: Hammer, module: 'mecanica' },
- ]
- },
- {
- id: 'inventario',
- label: 'Centro Logístico',
- items: [
- { name: 'Catálogo de Productos', href: '/inventory/products', icon: LayoutGrid, module: 'inventory' },
- { name: 'Control de Stock', href: '/inventory/stock', icon: Box, module: 'inventory' },
- { name: 'Trazabilidad Kardex', href: '/inventory/kardex', icon: History, module: 'inventory' },
- { name: 'Historial Movimientos', href: '/inventory/history', icon: History, module: 'inventory' },
- ]
- },
- {
- id: 'soma',
- label: 'Gestión HSEC (SOMA)',
- items: [
- { name: 'Plan de Capacitaciones', href: '/soma/capacitaciones', icon: GraduationCap, module: 'soma-capacitaciones' },
- { name: 'Charlas de Seguridad', href: '/soma/charlas', icon: MessageSquare, module: 'soma-charlas' },
- { name: 'Inspecciones HSEC', href: '/soma/hsec', icon: Eye, module: 'soma-hsec' },
- { name: 'Incidencias SOMA', href: '/incidencias?category=soma', icon: ShieldAlert, module: 'incidencias' },
- ]
- },
- {
- id: 'gestion',
- label: 'Servicios al Personal',
- items: [
- { name: 'Gestión Documental', href: '/documents', icon: FileText, module: 'documents' },
- { name: 'Control de EPP', href: '/ppe', icon: Shield, module: 'ppe' },
- { name: 'Control de Campamento', href: '/camp', icon: Bed, module: 'camp' },
- { name: 'Bonificaciones', href: '/bonuses', icon: Coins, module: 'bonuses' },
- ]
- },
- {
- id: 'analytics',
- label: 'Reportes y Analítica',
- items: [
- { name: 'Centro de Exportaciones', href: '/reports/export-center', icon: FileSpreadsheet, module: 'reports' },
- { name: 'Inteligencia Operacional', href: '/reports', icon: BarChart3, module: 'reports' },
- ]
- },
- {
- id: 'configuracion',
- label: 'Administración',
- items: [
- { name: 'Datos de Empresa', href: '/company', icon: Building2, module: 'company' },
- { name: 'Gestión de Almacenes', href: '/configuracion/warehouses', icon: Map, module: 'inventory' },
- { name: 'Usuarios y Accesos', href: '/users', icon: Shield, module: 'users' },
- { name: 'Mi Cuenta', href: '/profile', icon: UserCircle, module: 'profile' },
- ]
- }
+interface NavItemDef {
+  name: string
+  href: string
+  icon: any
+  module: string
+  capability?: CapabilityKey
+  token?: SemanticToken
+}
+
+interface NavGroupDef {
+  id: string
+  label: string
+  token?: SemanticToken
+  items: NavItemDef[]
+}
+
+// MASTER LIST: Grupos de navegación con mapeo a Capability Gateway
+const navGroups: NavGroupDef[] = [
+  {
+    id: 'super-admin',
+    label: 'Centro Corporativo',
+    items: [
+      { name: 'Panel Corporativo', href: '/super-admin', icon: ShieldAlert, module: 'super-admin' },
+      { name: 'Configuración Global', href: '/super-admin/settings', icon: Settings, module: 'super-admin' },
+      { name: 'Industrias y Capacidades', href: '/super-admin/settings/capabilities', icon: Boxes, module: 'super-admin' },
+    ]
+  },
+  {
+    id: 'dashboard',
+    label: 'Centro de Control',
+    items: [
+      { name: 'Panel Principal', href: '/dashboard', icon: LayoutDashboard, module: 'dashboard' },
+    ]
+  },
+  {
+    id: 'operaciones',
+    label: 'Operaciones',
+    token: 'operation.module_name',
+    items: [
+      { name: 'Personal', token: 'worker.plural', href: '/workers', icon: Users, module: 'workers', capability: 'workers' },
+      { name: 'Control de Asistencia', href: '/attendance', icon: Calendar, module: 'attendance', capability: 'attendance' },
+      { name: 'Tareo Operativo', href: '/tareo', icon: Calendar, module: 'tareo', capability: 'tareo' },
+      { name: 'Lotes y Cultivos', href: '/operaciones/campo', icon: Sprout, module: 'operaciones', capability: 'campo_lotes' },
+      { name: 'Producción Agrícola', href: '/operaciones/produccion-agricola', icon: Layers, module: 'operaciones', capability: 'produccion_agricola' },
+      { name: 'Control de Producción', href: '/operaciones/produccion', icon: Hammer, module: 'produccion', capability: 'operaciones_mina' },
+      { name: 'Control de Planta y Mineral', href: '/operaciones/planta', icon: Factory, module: 'planta', capability: 'planta_mineral' },
+      { name: 'Control de Maderas', href: '/operaciones/maderas', icon: Trees, module: 'maderas', capability: 'maderas' },
+      { name: 'Control de Avance de Obra', href: '/operaciones/avance-obra', icon: Building2, module: 'operaciones', capability: 'avance_obra' },
+      { name: 'Logística de Personal', href: '/movements', icon: Ship, module: 'movements', capability: 'logistica_rutas' },
+      { name: 'Telemetría y Rastreo GPS', href: '/operaciones/telemetria', icon: Cpu, module: 'movements', capability: 'telemetria_gps' },
+      { name: 'Control de Activos', href: '/assets', icon: Package, module: 'assets', capability: 'assets' },
+      { name: 'Requerimientos', href: '/requerimientos', icon: FileText, module: 'requerimientos', capability: 'requerimientos' },
+      { name: 'Control Financiero', href: '/caja-chica', icon: Coins, module: 'caja-chica', capability: 'caja-chica' },
+    ]
+  },
+  {
+    id: 'mecanica',
+    label: 'Área de Mecánica',
+    token: 'maintenance.module_name',
+    items: [
+      { name: 'Mantenimiento de Vehículos', href: '/mecanica/mantenimiento-vehiculos', icon: Truck, module: 'mecanica', capability: 'mecanica' },
+      { name: 'Generador Eléctrico', href: '/mecanica/generador-mantenimiento', icon: Activity, module: 'mecanica', capability: 'mecanica' },
+      { name: 'Compresora de Aire', href: '/mecanica/compresora-mantenimiento', icon: Cpu, module: 'mecanica', capability: 'mecanica' },
+      { name: 'Equipos de Mina', href: '/mecanica/equipos-mina', icon: Wrench, module: 'mecanica', capability: 'mecanica' },
+      { name: 'Checklists Pre-Uso', href: '/mecanica/checklists', icon: ClipboardCheck, module: 'mecanica', capability: 'checklists' },
+      { name: 'Control de Herramientas', href: '/mecanica/herramientas', icon: Hammer, module: 'mecanica', capability: 'herramientas' },
+      { name: 'Requerimientos de Taller', href: '/requerimientos', icon: FileText, module: 'requerimientos', capability: 'requerimientos' },
+    ]
+  },
+  {
+    id: 'inventario',
+    label: 'Centro Logístico',
+    items: [
+      { name: 'Catálogo de Productos', href: '/inventory/products', icon: LayoutGrid, module: 'inventory', capability: 'inventory' },
+      { name: 'Control de Stock', href: '/inventory/stock', icon: Box, module: 'inventory', capability: 'inventory' },
+      { name: 'Trazabilidad Kardex', href: '/inventory/kardex', icon: History, module: 'inventory', capability: 'inventory' },
+      { name: 'Historial Movimientos', href: '/inventory/history', icon: History, module: 'inventory', capability: 'inventory' },
+    ]
+  },
+  {
+    id: 'soma',
+    label: 'Gestión HSEC (SOMA)',
+    items: [
+      { name: 'Plan de Capacitaciones', href: '/soma/capacitaciones', icon: GraduationCap, module: 'soma-capacitaciones', capability: 'soma' },
+      { name: 'Charlas de Seguridad', href: '/soma/charlas', icon: MessageSquare, module: 'soma-charlas', capability: 'soma' },
+      { name: 'Inspecciones HSEC', href: '/soma/hsec', icon: Eye, module: 'soma-hsec', capability: 'soma' },
+      { name: 'Incidencias SOMA', href: '/incidencias?category=soma', icon: ShieldAlert, module: 'incidencias', capability: 'soma' },
+    ]
+  },
+  {
+    id: 'gestion',
+    label: 'Servicios al Personal',
+    items: [
+      { name: 'Gestión Documental', href: '/documents', icon: FileText, module: 'documents', capability: 'documents' },
+      { name: 'Clínica / Salud Ocupacional', href: '/servicios/salud-ocupacional', icon: Activity, module: 'documents', capability: 'salud_ocupacional' },
+      { name: 'Bienestar Social', href: '/servicios/bienestar-social', icon: HeartHandshake, module: 'documents', capability: 'bienestar_social' },
+      { name: 'Control de EPP', href: '/ppe', icon: Shield, module: 'ppe', capability: 'soma' },
+      { name: 'Control de Campamento', href: '/camp', icon: Bed, module: 'camp', capability: 'workers' },
+      { name: 'Bonificaciones', href: '/bonuses', icon: Coins, module: 'bonuses', capability: 'bonuses' },
+    ]
+  },
+  {
+    id: 'analytics',
+    label: 'Reportes y Analítica',
+    items: [
+      { name: 'Centro de Exportaciones', href: '/reports/export-center', icon: FileSpreadsheet, module: 'reports', capability: 'reports' },
+      { name: 'Inteligencia Operacional', href: '/reports', icon: BarChart3, module: 'reports', capability: 'reports' },
+    ]
+  },
+  {
+    id: 'configuracion',
+    label: 'Administración',
+    items: [
+      { name: 'Datos de Empresa', href: '/company', icon: Building2, module: 'company', capability: 'company' },
+      { name: 'Gestión de Almacenes', href: '/configuracion/warehouses', icon: Map, module: 'inventory', capability: 'inventory' },
+      { name: 'Usuarios y Accesos', href: '/users', icon: Shield, module: 'users', capability: 'users' },
+      { name: 'Mi Cuenta', href: '/profile', icon: UserCircle, module: 'profile', capability: 'profile' },
+    ]
+  }
 ]
 
 import { normalizeAreaName } from '@/lib/permissions'
@@ -144,13 +172,25 @@ function getCookie(name: string): string | undefined {
 }
 
 export function Sidebar() {
- const pathname = usePathname()
- const router = useRouter()
+  const pathname = usePathname()
+  const router = useRouter()
+  const pendingNavTimerRef = useRef<NodeJS.Timeout | null>(null)
+
+  // Clear any pending offline fallback on route change or unmount
+  useEffect(() => {
+    if (pendingNavTimerRef.current) {
+      clearTimeout(pendingNavTimerRef.current)
+      pendingNavTimerRef.current = null
+    }
+  }, [pathname])
  const { role_id, user, hasAccess, isImpersonating } = useUserRole()
- const { isOpen, setIsOpen } = useSidebar()
- const settings = useGlobalSettings()
- const [collapsed, setCollapsed] = useState<Record<string, boolean>>({})
- const [isExiting, setIsExiting] = useState(false)
+  const { isCapabilityAvailable, isCapabilityVisibleInSidebar, getCapabilityStatus, industryLabel } = useOperationalContext()
+  const { term } = useTerminology()
+  const { isOpen, setIsOpen } = useSidebar()
+  const settings = useGlobalSettings()
+  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({})
+  const [isExiting, setIsExiting] = useState(false)
+  const [roadmapItem, setRoadmapItem] = useState<{ key: CapabilityKey | null; name: string } | null>(null)
  
  // Note: Resize listener moved to SidebarProvider for global stability
 
@@ -178,24 +218,25 @@ export function Sidebar() {
 
  const handleItemClick = (groupId: string, href: string, itemName: string, e: React.MouseEvent) => {
  if (isWorkerPure) {
- document.cookie = 'view_mode=WORKER; path=/; max-age=31536000; SameSite=Lax'
- return
+   if (viewMode !== 'WORKER') {
+     document.cookie = 'view_mode=WORKER; path=/; max-age=31536000; SameSite=Lax'
+     setViewMode('WORKER')
+   }
+   return
  }
  const targetMode = groupId === 'mi-portal-personal' ? 'WORKER' : 'OPERATIONAL'
  
  if (isEligible && targetMode !== viewMode) {
- e.preventDefault()
- document.cookie = `view_mode=${targetMode}; path=/; max-age=31536000; SameSite=Lax`
- setViewMode(targetMode)
- window.location.href = href
+   e.preventDefault()
+   document.cookie = `view_mode=${targetMode}; path=/; max-age=31536000; SameSite=Lax`
+   setViewMode(targetMode)
+   window.location.href = href
  } else {
- if (groupId === 'mi-portal-personal') {
- document.cookie = 'view_mode=WORKER; path=/; max-age=31536000; SameSite=Lax'
- } else if (groupId !== 'dashboard' && groupId !== 'configuracion') {
- document.cookie = 'view_mode=OPERATIONAL; path=/; max-age=31536000; SameSite=Lax'
- } else if (groupId === 'dashboard' && href === '/dashboard') {
- document.cookie = 'view_mode=OPERATIONAL; path=/; max-age=31536000; SameSite=Lax'
- }
+   // Solo escribir la cookie si hay un cambio real de modo para no invalidar el router cache de Next.js
+   if (targetMode !== viewMode) {
+     document.cookie = `view_mode=${targetMode}; path=/; max-age=31536000; SameSite=Lax`
+     setViewMode(targetMode)
+   }
  }
  }
 
@@ -295,15 +336,6 @@ export function Sidebar() {
             }
           }
           if (g.id === 'mecanica') return g
-          if (g.id === 'operaciones') return { 
-            ...g, 
-            label: 'Gestión Auxiliar',
-            items: g.items.filter(i => ['requerimientos', 'caja-chica', 'assets'].includes(i.module)) 
-          }
-          if (g.id === 'soma') return {
-            ...g,
-            items: g.items.filter(i => ['soma-capacitaciones', 'soma-charlas'].includes(i.module))
-          }
           if (g.id === 'configuracion') return { ...g, items: g.items.filter(i => i.module === 'profile') }
           return { ...g, items: [] }
         })
@@ -388,7 +420,40 @@ export function Sidebar() {
         break;
     }
 
-    let finalGroups = resolved.filter(group => group.items.length > 0)
+    // Capa de Decisión: Capability Gateway (Dimensión Empresa)
+    // Filtra los items según su visibilidad en el Mapa Operativo de la Empresa
+    const capabilityResolved = resolved.map(g => {
+      const allowedItems = g.items
+        .filter((item: any) => {
+          if (!item.capability) return true
+          return isCapabilityVisibleInSidebar(item.capability)
+        })
+        .map((item: any) => {
+          const status = item.capability ? getCapabilityStatus(item.capability) : 'ACTIVE'
+          let displayName = item.name
+          if (item.token) {
+            displayName = term(item.token, item.name)
+          }
+          return {
+            ...item,
+            name: displayName,
+            status
+          }
+        })
+
+      let groupLabel = g.label
+      if ((g as any).token) {
+        groupLabel = term((g as any).token, g.label)
+      }
+
+      return {
+        ...g,
+        label: groupLabel,
+        items: allowedItems
+      }
+    })
+
+    let finalGroups = capabilityResolved.filter(group => group.items.length > 0)
     const showWorkerOnly = viewMode === 'WORKER' || isWorkerPure
 
     if (showWorkerOnly) {
@@ -420,7 +485,7 @@ export function Sidebar() {
     }
 
     return finalGroups
-  }, [isImpersonating, context, viewMode, isWorkerPure, isEligible, user?.company_slug])
+  }, [isImpersonating, context, viewMode, isWorkerPure, isEligible, user?.company_slug, isCapabilityAvailable, term])
 
  return (
  <>
@@ -481,7 +546,9 @@ export function Sidebar() {
             {settings?.ecosystem_name || "Inthaly OPS"}
           </span>
           <div className="flex items-center gap-1 mt-0.5">
-            <span className="text-[10px] font-medium text-white/80 tracking-normal">Sistema de Gestión</span>
+            <span className="text-[10px] font-semibold text-white/90 tracking-normal px-1.5 py-0.5 bg-white/10 rounded-sm">
+              {industryLabel || "Sistema de Gestión"}
+            </span>
           </div>
         </div>
       </div>
@@ -537,24 +604,74 @@ export function Sidebar() {
                     }
                     
                     const Icon = item.icon
+                    const status = item.status || 'ACTIVE'
+                    const isComingSoon = status === 'COMING_SOON'
+                    const isPrototype = status === 'PROTOTYPE'
+                    const isBeta = status === 'BETA'
 
                     return (
                       <Link
                         key={`${group.id}-${item.href}-${item.name}`}
                         href={item.href}
-                        onClick={(e) => handleItemClick(group.id, item.href, item.name, e)}
-                        className={`flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg font-medium text-xs group/item nth-nav-item ${
+                        prefetch={false}
+                        onClick={(e) => {
+                          if (isComingSoon) {
+                            e.preventDefault()
+                            setRoadmapItem({ key: item.capability || null, name: item.name })
+                            return
+                          }
+                          handleItemClick(group.id, item.href, item.name, e)
+
+                          // Safe Offline Navigation Guard:
+                          // When offline, Next.js client-side soft transitions attempt RSC fetches which fail immediately (5ms),
+                          // unmounting the shell and triggering root error.tsx.
+                          // Instead, intercept with immediate native document navigation to leverage Service Worker PAGES_CACHE (same as F5),
+                          // preserving App Shell and eliminating black screens across all submodules.
+                          if (typeof navigator !== 'undefined' && !navigator.onLine) {
+                            e.preventDefault()
+                            if (item.href !== pathname) {
+                              window.location.href = item.href
+                            }
+                            return
+                          }
+                        }}
+                        className={`flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg font-medium text-xs group/item nth-nav-item transition-all ${
                           isActive ? 'nth-nav-item-active' : ''
-                        }`}
+                        } ${isComingSoon ? 'opacity-80 hover:opacity-100' : ''}`}
                       >
                         <Icon 
                           size={14} 
                           strokeWidth={2.2} 
-                          className={`transition-colors shrink-0 ${isActive ? 'text-blue-600' : 'opacity-70'}`} 
+                          className={`transition-colors shrink-0 ${
+                            isActive 
+                              ? 'text-blue-600' 
+                              : isComingSoon 
+                              ? 'text-amber-400/80 group-hover/item:text-amber-400' 
+                              : isPrototype 
+                              ? 'text-purple-400/80 group-hover/item:text-purple-400' 
+                              : 'opacity-70'
+                          }`} 
                         />
                         <span className="tracking-tight truncate text-[11px] sm:text-xs">
                           {item.name}
                         </span>
+
+                        {/* Lifecycle Badges */}
+                        {isBeta && (
+                          <span className="ml-auto text-[9px] font-bold px-1.5 py-0.2 rounded-sm bg-blue-500/20 text-blue-300 border border-blue-500/30 shrink-0">
+                            Beta
+                          </span>
+                        )}
+                        {isPrototype && (
+                          <span className="ml-auto text-[9px] font-bold px-1.5 py-0.2 rounded-sm bg-purple-500/20 text-purple-300 border border-purple-500/30 shrink-0">
+                            Prototipo
+                          </span>
+                        )}
+                        {isComingSoon && (
+                          <span className="ml-auto text-[9px] font-semibold px-1.5 py-0.2 rounded-sm bg-amber-500/15 text-amber-300 border border-amber-500/25 shrink-0">
+                            Próximamente
+                          </span>
+                        )}
                       </Link>
                     )
                   })}
@@ -566,7 +683,21 @@ export function Sidebar() {
       </div>
 
       <div className="pt-3 pb-2 mt-auto border-t border-white/10 shrink-0">
-        <form action={logout}>
+        <form 
+          action={logout}
+          onSubmit={async () => {
+            try {
+              const { clearOfflineSession } = await import('@/lib/offline-sync')
+              await clearOfflineSession()
+              if (typeof caches !== 'undefined') {
+                const keys = await caches.keys()
+                await Promise.all(
+                  keys.filter(k => k.includes('-pages-') || k.includes('-rsc-')).map(k => caches.delete(k))
+                )
+              }
+            } catch (_) {}
+          }}
+        >
           <button type="submit" className="flex w-full items-center gap-2.5 px-2.5 py-1.5 transition-all rounded-lg font-medium text-xs group nth-nav-item">
             <div className="w-6 h-6 rounded-md bg-white/5 flex items-center justify-center group-hover:bg-white/15 transition-colors shrink-0">
               <LogOut size={14} className="opacity-60 group-hover:opacity-100" />
@@ -578,6 +709,14 @@ export function Sidebar() {
     </nav>
   </aside>
 
+  {/* Roadmap Modal for COMING_SOON capabilities */}
+  <RoadmapModal
+    isOpen={Boolean(roadmapItem)}
+    onClose={() => setRoadmapItem(null)}
+    capabilityKey={roadmapItem?.key || null}
+    capabilityName={roadmapItem?.name || ''}
+    industryLabel={industryLabel}
+  />
  </>
  )
 }

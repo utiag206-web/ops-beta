@@ -11,6 +11,10 @@ import {
 import { registerMovement, updateMovement, deleteMovement } from './actions'
 import { toast } from 'sonner'
 
+import { useOffline } from '@/components/providers/offline-provider'
+import { addOperationToQueue } from '@/lib/offline-sync'
+import { v4 as uuidv4 } from 'uuid'
+
 interface Worker {
  id: string
  name: string
@@ -21,10 +25,57 @@ interface MovementsPageProps {
  initialMovements: any[]
  workers: Worker[]
  userRole: string
+ companyId: string
 }
 
-export default function MovementsClient({ initialMovements, workers, userRole }: MovementsPageProps) {
+export default function MovementsClient({ initialMovements, workers, userRole, companyId }: MovementsPageProps) {
  const router = useRouter()
+ const [movements, setMovements] = useState<any[]>(() => {
+   if (typeof window !== 'undefined') {
+     const cached = localStorage.getItem('movements_cache')
+     if (cached) {
+       try {
+         const parsed = JSON.parse(cached)
+         if (Array.isArray(parsed) && parsed.length > 0) return parsed
+       } catch (_) {}
+     }
+   }
+   return initialMovements || []
+ })
+
+ useEffect(() => {
+   if (initialMovements && movements.length > 0) {
+     setMovements(initialMovements)
+     if (typeof window !== 'undefined') {
+       localStorage.setItem('movements_cache', JSON.stringify(initialMovements))
+     }
+   }
+   const replayPending = async () => {
+     try {
+       const { getPendingOperations } = await import('@/lib/offline-sync')
+       const pending = await getPendingOperations()
+       const movPending = pending.filter(p => p.entity === 'movements')
+       if (movPending.length > 0) {
+         setMovements(prev => {
+           let updated = [...prev]
+           for (const op of movPending) {
+             if (op.action === 'create_movement') {
+               if (!updated.some(m => m.id === op.payload.id)) {
+                 updated = [{ ...op.payload, isPending: true, created_at: new Date().toISOString() }, ...updated]
+               }
+             }
+             if (op.action === 'delete_movement') {
+               updated = updated.filter(m => m.id !== op.payload.id)
+             }
+           }
+           return updated
+         })
+       }
+     } catch (_) {}
+   }
+   replayPending()
+ }, [initialMovements])
+ const { isOnline, triggerSync } = useOffline()
  const [hasMounted, setHasMounted] = useState(false)
  const [showModal, setShowModal] = useState(false)
  const [editingItem, setEditingItem] = useState<any>(null)
@@ -90,6 +141,24 @@ export default function MovementsClient({ initialMovements, workers, userRole }:
  date: new Date(formData.date).toISOString()
  }
 
+ if (!isOnline) {
+ const tempId = editingItem ? editingItem.id : `temp-${Date.now()}`
+ await addOperationToQueue({
+ id: uuidv4(),
+ entity: 'movements',
+ action: editingItem ? 'update_movement' : 'create_movement',
+ payload: editingItem ? { id: tempId, updates: submissionData } : { ...submissionData, id: tempId },
+ company_id: companyId
+ })
+ setMovements(prev => {
+   const updated = [{ ...submissionData, id: tempId, isPending: true, created_at: new Date().toISOString() }, ...prev]
+   if (typeof window !== 'undefined') localStorage.setItem('movements_cache', JSON.stringify(updated))
+   return updated
+ })
+ toast.success('Movimiento guardado offline')
+ triggerSync()
+ closeModal()
+ } else {
  let result
  if (editingItem) {
  result = await updateMovement(editingItem.id, submissionData)
@@ -103,6 +172,7 @@ export default function MovementsClient({ initialMovements, workers, userRole }:
  router.refresh()
  } else {
  setErrorMsg(result?.error || 'Ocurrió un error')
+ }
  }
  } catch (error: any) {
  setErrorMsg(error?.message || 'Error inesperado')
@@ -159,7 +229,7 @@ export default function MovementsClient({ initialMovements, workers, userRole }:
  <h2 className="font-black text-slate-700 tracking-tight text-xs">Historial Logístico Operativo</h2>
  </div>
  <span className="bg-slate-100 text-slate-500 px-3 py-1 rounded-full text-[10px] font-black">
- {initialMovements.length} REGISTROS
+ {movements.length} REGISTROS
  </span>
  </div>
  
@@ -176,7 +246,7 @@ export default function MovementsClient({ initialMovements, workers, userRole }:
  </tr>
  </thead>
  <tbody className="divide-y divide-slate-50">
- {initialMovements.map((item) => {
+ {movements.map((item) => {
  const isSubida = item.subida_date !== null
  const opDate = item.subida_date || item.bajada_date
  
@@ -246,7 +316,7 @@ export default function MovementsClient({ initialMovements, workers, userRole }:
  </tr>
  )
  })}
- {initialMovements.length === 0 && (
+ {movements.length === 0 && (
  <tr>
  <td colSpan={6} className="px-10 py-32 text-center">
  <div className="flex flex-col items-center gap-4">

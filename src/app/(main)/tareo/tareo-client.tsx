@@ -10,12 +10,18 @@ import {
 import { 
   getTareoRecords, upsertTareoRecord,
   getTareoConfig, upsertTareoConfig, getTareoNotes, upsertTareoNote,
-  getAttendancePunches, syncAttendancePunches, getTareoDashboardData
+  getAttendancePunches, syncAttendancePunches, getTareoDashboardData,
+  getAttendanceDayDetail
 } from './actions'
+import { AttendanceLocationModal, LocationPunch } from '@/components/attendance/AttendanceLocationModal'
 import { createClient } from '@/lib/supabase/client'
 import { calculateMonthlyTareoEngine, ExecutiveTareoKPIs, WorkerMonthlySummary } from '@/lib/tareo-engine'
 import { CompanyAttendanceSettings, DEFAULT_HR_SETTINGS } from '@/lib/company-hr-settings'
 import { exportTareoToExcel } from '@/lib/export-utils'
+import { useOffline } from '@/components/providers/offline-provider'
+import { addOperationToQueue } from '@/lib/offline-sync'
+import { v4 as uuidv4 } from 'uuid'
+import { toast } from 'sonner'
 
 interface Worker {
   id: string
@@ -55,7 +61,9 @@ const autoColors: any = {
   'AC': 'bg-green-100 text-green-800 font-bold',
 }
 
-export default function TareoClient({ initialCycles, workers, userRole, companyId }: TareoPageProps) {
+export default function TareoClient({ initialCycles, workers: propWorkers, userRole, companyId }: TareoPageProps) {
+  const [workers, setWorkers] = useState<Worker[]>(propWorkers || [])
+  const { isOnline, triggerSync } = useOffline()
   const [currentDate, setCurrentDate] = useState(new Date())
   const [tareoRecords, setTareoRecords] = useState<any[]>([])
   const [tareoNotes, setTareoNotes] = useState<any[]>([])
@@ -65,9 +73,14 @@ export default function TareoClient({ initialCycles, workers, userRole, companyI
   const [updatingCells, setUpdatingCells] = useState<Set<string>>(new Set())
   const [searchTerm, setSearchTerm] = useState('')
   
-  const [showLogsModal, setShowLogsModal] = useState<{workerId: string, date: string} | null>(null)
-  const [activePunches, setActivePunches] = useState<{ time: string, type: 'in' | 'out' | 'break_start' | 'break_end', latitude?: number, longitude?: number, accuracy?: number, address?: string }[]>([])
-  const [savingLog, setSavingLog] = useState(false)
+  // Modal de evidencia de ubicación y marcación GPS
+  const [modalData, setModalData] = useState<{
+    isOpen: boolean
+    workerId: string
+    workerName: string
+    date: string
+    punches: LocationPunch[]
+  } | null>(null)
 
   const loggedPunches = useMemo(() => {
     const set = new Set<string>()
@@ -99,8 +112,73 @@ export default function TareoClient({ initialCycles, workers, userRole, companyI
     })
   }, [currentDate])
 
+  // Clave de caché aislada por empresa, rol de usuario y periodo
+  const cacheKeyPrefix = useMemo(() => {
+    return `tareo_${companyId}_${userRole}_${currentMonthStr}`
+  }, [companyId, userRole, currentMonthStr])
+
+  // Hidratación inmediata desde caché (Stale-While-Revalidate)
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    try {
+      const cachedRecords = localStorage.getItem(`${cacheKeyPrefix}_records`)
+      const cachedNotes = localStorage.getItem(`${cacheKeyPrefix}_notes`)
+      const cachedPunches = localStorage.getItem(`${cacheKeyPrefix}_punches`)
+      const cachedSettings = localStorage.getItem(`${cacheKeyPrefix}_settings`)
+      
+      let hasData = false
+      if (cachedRecords) {
+        setTareoRecords(JSON.parse(cachedRecords))
+        hasData = true
+      }
+      if (cachedNotes) {
+        setTareoNotes(JSON.parse(cachedNotes))
+      }
+      if (cachedPunches) {
+        setAttendanceLogs(JSON.parse(cachedPunches))
+      }
+      if (cachedSettings) {
+        setAttendanceSettings(JSON.parse(cachedSettings))
+      }
+      const cachedWorkers = localStorage.getItem(`${cacheKeyPrefix}_workers`) || localStorage.getItem('workers_cache')
+      if (cachedWorkers && (!propWorkers || propWorkers.length === 0)) {
+        try {
+          const parsedW = JSON.parse(cachedWorkers)
+          if (Array.isArray(parsedW) && parsedW.length > 0) {
+            setWorkers(parsedW)
+          }
+        } catch (_) {}
+      }
+      
+      if (hasData) {
+        setLoading(false)
+      } else {
+        setLoading(true)
+      }
+    } catch (e) {
+      console.warn('[TAREO] Error al hidratar desde caché local:', e)
+    }
+  }, [cacheKeyPrefix])
+
+  useEffect(() => {
+    if (propWorkers && propWorkers.length > 0) {
+      setWorkers(propWorkers)
+      if (typeof window !== 'undefined') {
+        localStorage.setItem(`${cacheKeyPrefix}_workers`, JSON.stringify(propWorkers))
+      }
+    }
+  }, [propWorkers, cacheKeyPrefix])
+
   const loadData = useCallback(async (isBackground: boolean = false) => {
-    if (!isBackground) setLoading(true)
+    if (!isBackground) {
+      if (typeof window !== 'undefined') {
+        const hasCache = !!localStorage.getItem(`${cacheKeyPrefix}_records`)
+        if (!hasCache) setLoading(true)
+      } else {
+        setLoading(true)
+      }
+    }
+
     const start = daysInMonth[0].dateString
     const end = daysInMonth[daysInMonth.length - 1].dateString
     
@@ -109,41 +187,88 @@ export default function TareoClient({ initialCycles, workers, userRole, companyI
       setTareoRecords(res.records)
       setTareoNotes(res.notes)
       setAttendanceLogs(res.punches)
+      if (typeof window !== 'undefined') {
+        localStorage.setItem(`${cacheKeyPrefix}_records`, JSON.stringify(res.records))
+        localStorage.setItem(`${cacheKeyPrefix}_notes`, JSON.stringify(res.notes))
+        localStorage.setItem(`${cacheKeyPrefix}_punches`, JSON.stringify(res.punches))
+      }
       if ((res as any).attendanceSettings) {
         setAttendanceSettings((res as any).attendanceSettings)
+        if (typeof window !== 'undefined') {
+          localStorage.setItem(`${cacheKeyPrefix}_settings`, JSON.stringify((res as any).attendanceSettings))
+        }
       }
     } catch (e) {
-      console.error("[TAREO] Error loading optimized data:", e)
+      console.warn("[TAREO] Modo Offline: cargando datos de tareo desde caché local:", e)
+      if (typeof window !== 'undefined') {
+        const cached = localStorage.getItem(`${cacheKeyPrefix}_records`)
+        if (cached) {
+          try { setTareoRecords(JSON.parse(cached)) } catch (_) {}
+        }
+        const cachedNotes = localStorage.getItem(`${cacheKeyPrefix}_notes`)
+        if (cachedNotes) {
+          try { setTareoNotes(JSON.parse(cachedNotes)) } catch (_) {}
+        }
+        const cachedPunches = localStorage.getItem(`${cacheKeyPrefix}_punches`)
+        if (cachedPunches) {
+          try { setAttendanceLogs(JSON.parse(cachedPunches)) } catch (_) {}
+        }
+      }
     } finally {
-      if (!isBackground) setLoading(false)
+      // Replay pending tareo operations onto records
+      try {
+        const { getPendingOperations } = await import('@/lib/offline-sync')
+        const pending = await getPendingOperations()
+        const tareoPending = pending.filter(p => p.entity === 'tareo')
+        if (tareoPending.length > 0) {
+          setTareoRecords(prev => {
+            let updated = [...prev]
+            for (const op of tareoPending) {
+              if (op.action === 'upsert_tareo_record') {
+                const { worker_id, date, status } = op.payload
+                updated = updated.filter(r => !(r.worker_id === worker_id && r.date === date))
+                if (status) updated.push({ worker_id, date, status, isPending: true })
+              }
+            }
+            return updated
+          })
+        }
+      } catch (_) {}
+      setLoading(false)
     }
-  }, [currentMonthStr, daysInMonth])
+  }, [currentMonthStr, daysInMonth, cacheKeyPrefix])
 
   useEffect(() => {
-    loadData()
+    loadData(true)
 
     const supabase = createClient()
-    const channel1 = supabase.channel('tareo_attendance_changes')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'attendance' }, (payload) => {
-        console.log('[REALTIME] Attendance event received:', payload)
+    const channel1 = supabase.channel(`tareo_attendance_${companyId}_${currentMonthStr}`)
+      .on('postgres_changes', { 
+        event: '*', 
+        schema: 'public', 
+        table: 'attendance', 
+        filter: `company_id=eq.${companyId}` 
+      }, () => {
         loadData(true)
       })
-      .subscribe((status) => {
-        console.log('[REALTIME] Attendance channel status:', status)
-      })
+      .subscribe()
       
-    const channel2 = supabase.channel('tareo_attendance_logs_changes')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'attendance_logs' }, (payload) => {
-        console.log('[REALTIME] Attendance logs event received:', payload)
+    const channel2 = supabase.channel(`tareo_attendance_logs_${companyId}_${currentMonthStr}`)
+      .on('postgres_changes', { 
+        event: '*', 
+        schema: 'public', 
+        table: 'attendance_logs', 
+        filter: `company_id=eq.${companyId}` 
+      }, () => {
         loadData(true)
       })
-      .subscribe((status) => {
-        console.log('[REALTIME] Attendance logs channel status:', status)
-      })
+      .subscribe()
 
-    // Robust Fallback: Poll every 30 seconds in the background
+    // Robust Fallback: Poll every 30 seconds only if window is active
     const fallbackInterval = setInterval(() => {
-      loadData(true)
+      if (typeof document !== 'undefined' && !document.hidden) {
+        loadData(true)
+      }
     }, 30000)
 
     return () => {
@@ -151,7 +276,7 @@ export default function TareoClient({ initialCycles, workers, userRole, companyI
       supabase.removeChannel(channel2)
       clearInterval(fallbackInterval)
     }
-  }, [loadData, companyId])
+  }, [loadData, companyId, currentMonthStr])
 
   const filteredWorkers = useMemo(() => {
     const lowerSearch = (searchTerm || '').toLowerCase()
@@ -161,7 +286,7 @@ export default function TareoClient({ initialCycles, workers, userRole, companyI
     )
   }, [workers, searchTerm])
 
-  // Lógica del Motor de Tareo e Indicadores
+  // Lógica del Motor de Tareo e Indicadores (intacta)
   const { workerSummaries, kpis, workerStatusesMap, gpsKeys } = useMemo(() => {
     const map: Record<string, Record<string, { status: string; isManual: boolean }>> = {}
     
@@ -207,8 +332,10 @@ export default function TareoClient({ initialCycles, workers, userRole, companyI
 
     const gpsKeys = new Set<string>()
     attendanceLogs.forEach(l => {
-      if (l.latitude && l.longitude) {
-        gpsKeys.add(`${l.worker_id}-${l.date_local}`)
+      const lat = l.latitude !== undefined && l.latitude !== null ? Number(l.latitude) : null
+      const lng = l.longitude !== undefined && l.longitude !== null ? Number(l.longitude) : null
+      if (lat !== null && lng !== null && !isNaN(lat) && !isNaN(lng) && lat !== 0) {
+        gpsKeys.add(`${l.worker_id}-${l.date_local || l.date}`)
       }
     })
 
@@ -237,9 +364,27 @@ export default function TareoClient({ initialCycles, workers, userRole, companyI
     })
     
     try {
-      const result = await upsertTareoRecord({ worker_id: workerId, date, status })
-      if (!result.success) {
-        setTareoRecords(oldRecords)
+      if (isOnline) {
+        const result = await upsertTareoRecord({ worker_id: workerId, date, status })
+          if (!result.success) {
+            setTareoRecords(oldRecords)
+            toast.error(result.error || 'No se pudo guardar la asistencia')
+          }
+      } else {
+        await addOperationToQueue({
+          id: uuidv4(),
+          entity: 'tareo',
+          action: 'upsert_tareo_record',
+          payload: { id: uuidv4(), worker_id: workerId, date, status },
+          company_id: companyId
+        })
+        if (typeof window !== 'undefined') {
+          const updated = tareoRecords.filter(r => !(r.worker_id === workerId && r.date === date))
+          if (status) updated.push({ worker_id: workerId, date, status, isPending: true })
+          localStorage.setItem(`${cacheKeyPrefix}_records`, JSON.stringify(updated))
+        }
+        toast.info('Sin conexión. Tareo guardado localmente.')
+        triggerSync()
       }
     } catch {
       setTareoRecords(oldRecords)
@@ -252,24 +397,90 @@ export default function TareoClient({ initialCycles, workers, userRole, companyI
     }
   }
 
+  // Apertura del modal de evidencia y enriquecimiento bajo demanda
   const openLogModal = (workerId: string, date: string) => {
-    const existing = attendanceLogs
+    const worker = workers.find(w => w.id === workerId)
+    const workerName = worker ? `${worker.name} ${worker.last_name || ''}`.trim() : 'Trabajador'
+
+    // Datos inmediatos desde la memoria local
+    const localPunches: LocationPunch[] = attendanceLogs
       .filter(l => l.worker_id === workerId && l.date_local === date)
-      .map(l => {
-        const dateObj = new Date(l.timestamp)
-        const timeStr = dateObj.toLocaleTimeString('en-US', { hour12: false, timeZone: 'America/Lima', hour: '2-digit', minute: '2-digit' })
-        return { 
-          type: l.type as 'in'|'out'|'break_start'|'break_end', 
-          time: timeStr,
-          latitude: l.latitude,
-          longitude: l.longitude,
-          accuracy: l.accuracy,
-          address: l.address
+      .map(l => ({
+        type: l.type,
+        timestamp: l.timestamp,
+        latitude: l.latitude != null ? Number(l.latitude) : undefined,
+        longitude: l.longitude != null ? Number(l.longitude) : undefined,
+        accuracy: l.accuracy != null ? Number(l.accuracy) : undefined,
+        address: l.address || undefined
+      }))
+
+    setModalData({
+      isOpen: true,
+      workerId,
+      workerName,
+      date,
+      punches: localPunches
+    })
+
+    // Enriquecer con direcciones, precisión o registro clásico de attendance si está online
+    if (isOnline) {
+      getAttendanceDayDetail(workerId, date).then(res => {
+        if (res?.success) {
+          let enrichedPunches: LocationPunch[] = (res.punches || []).map((p: any) => ({
+            type: p.type,
+            timestamp: p.timestamp,
+            latitude: p.latitude != null ? Number(p.latitude) : undefined,
+            longitude: p.longitude != null ? Number(p.longitude) : undefined,
+            accuracy: p.accuracy != null ? Number(p.accuracy) : undefined,
+            address: p.address || undefined
+          }))
+
+          // Fallback a la tabla attendance si no hubo attendance_logs
+          if (enrichedPunches.length === 0 && res.attendance) {
+            const att = res.attendance
+            const fallbackPunches: LocationPunch[] = []
+            if (att.check_in) {
+              fallbackPunches.push({
+                type: 'in',
+                timestamp: `${date}T${att.check_in}`,
+                latitude: (att.check_in_lat ?? att.latitude) != null ? Number(att.check_in_lat ?? att.latitude) : undefined,
+                longitude: (att.check_in_lng ?? att.longitude) != null ? Number(att.check_in_lng ?? att.longitude) : undefined
+              })
+            }
+            if (att.break_start) {
+              fallbackPunches.push({
+                type: 'break_start',
+                timestamp: `${date}T${att.break_start}`
+              })
+            }
+            if (att.break_end) {
+              fallbackPunches.push({
+                type: 'break_end',
+                timestamp: `${date}T${att.break_end}`
+              })
+            }
+            if (att.check_out) {
+              fallbackPunches.push({
+                type: 'out',
+                timestamp: `${date}T${att.check_out}`,
+                latitude: (att.check_out_lat ?? att.latitude) != null ? Number(att.check_out_lat ?? att.latitude) : undefined,
+                longitude: (att.check_out_lng ?? att.longitude) != null ? Number(att.check_out_lng ?? att.longitude) : undefined
+              })
+            }
+            enrichedPunches = fallbackPunches
+          }
+
+          setModalData(prev => {
+            if (prev && prev.workerId === workerId && prev.date === date) {
+              return { ...prev, punches: enrichedPunches }
+            }
+            return prev
+          })
         }
+      }).catch(err => {
+        console.warn('[TAREO] Error al enriquecer detalle:', err)
       })
-    
-    setActivePunches(existing)
-    setShowLogsModal({ workerId, date })
+    }
   }
 
   const handleExportExcel = () => {
@@ -363,9 +574,9 @@ export default function TareoClient({ initialCycles, workers, userRole, companyI
             <TrendingUp size={16} className="text-indigo-600" />
           </div>
           <div className="mt-2">
-            <span className="text-2xl font-black text-indigo-900">{kpis.horasEfectivasMes}h</span>
+            <span className="text-2xl font-black text-slate-800">{kpis.horasEfectivasMes}h</span>
           </div>
-          <span className="text-[10px] font-bold text-indigo-600 mt-1">{kpis.porcentajeHorasEfectivas}% Cumplimiento</span>
+          <span className="text-[10px] font-bold text-slate-400 mt-1">{kpis.porcentajeHorasEfectivas}% ejecutado</span>
         </div>
 
         <div className="bg-white p-3.5 rounded-2xl border border-slate-200/80 shadow-sm flex flex-col justify-between">
@@ -374,80 +585,60 @@ export default function TareoClient({ initialCycles, workers, userRole, companyI
             <Zap size={16} className="text-amber-500" />
           </div>
           <div className="mt-2">
-            <span className="text-2xl font-black text-amber-900">{kpis.horasExtrasMes}h</span>
+            <span className="text-2xl font-black text-amber-600">+{kpis.horasExtrasMes}h</span>
           </div>
-          <span className="text-[10px] font-bold text-amber-600 mt-1">Redondeo: {attendanceSettings.rounding_mode || '15 min'}</span>
+          <span className="text-[10px] font-bold text-slate-400 mt-1">Aprobadas</span>
         </div>
 
         <div className="bg-white p-3.5 rounded-2xl border border-slate-200/80 shadow-sm flex flex-col justify-between">
           <div className="flex items-center justify-between text-slate-500">
-            <span className="text-[10px] font-black uppercase tracking-wider">Min. Tardanza</span>
+            <span className="text-[10px] font-black uppercase tracking-wider">Tardanzas</span>
             <AlertTriangle size={16} className="text-rose-500" />
           </div>
           <div className="mt-2">
-            <span className="text-2xl font-black text-rose-800">{kpis.minutosTardanzaAcumulados}m</span>
+            <span className="text-2xl font-black text-rose-600">{kpis.minutosTardanzaAcumulados}m</span>
           </div>
-          <span className="text-[10px] font-bold text-rose-600 mt-1">({kpis.horasPerdidasTardanza}h perdidas)</span>
+          <span className="text-[10px] font-bold text-rose-500/80 mt-1">{kpis.horasPerdidasTardanza}h perdidas</span>
         </div>
 
         <div className="bg-white p-3.5 rounded-2xl border border-slate-200/80 shadow-sm flex flex-col justify-between">
           <div className="flex items-center justify-between text-slate-500">
-            <span className="text-[10px] font-black uppercase tracking-wider">% Puntualidad</span>
+            <span className="text-[10px] font-black uppercase tracking-wider">Puntualidad</span>
             <ShieldCheck size={16} className="text-teal-600" />
           </div>
           <div className="mt-2">
-            <span className="text-2xl font-black text-teal-900">{kpis.porcentajePuntualidad}%</span>
+            <span className="text-2xl font-black text-teal-600">{kpis.porcentajePuntualidad}%</span>
           </div>
-          <span className="text-[10px] font-bold text-teal-600 mt-1">Tol: {attendanceSettings.late_tolerance_minutes} min</span>
+          <span className="text-[10px] font-bold text-slate-400 mt-1">Tolerancia: {attendanceSettings.late_tolerance_minutes}m</span>
         </div>
       </div>
 
-      {/* LEYENDA TAREO */}
-      <div className="flex flex-wrap gap-2 px-4 py-3 bg-white rounded-2xl border border-slate-100 shadow-sm">
-        <span className="text-[10px] font-black text-slate-400 tracking-tight mr-2 flex items-center">Leyenda Oficial:</span>
-        {[
-          { c: 'P', l: 'Presente', bg: 'bg-emerald-100 text-emerald-800' },
-          { c: 'PR', l: 'Pres. con Refrig.', bg: 'bg-emerald-50 text-emerald-700' },
-          { c: 'AC', l: 'Asist. Completa', bg: 'bg-green-200 text-green-900' },
-          { c: 'F', l: 'Falta', bg: 'bg-rose-100 text-rose-800' },
-          { c: 'INC', l: 'Incompleto', bg: 'bg-orange-100 text-orange-800' },
-          { c: 'V', l: 'Vacaciones', bg: 'bg-purple-100 text-purple-800' },
-          { c: 'DM', l: 'Desc. Médico', bg: 'bg-sky-100 text-sky-800' },
-          { c: 'DL', l: 'Desc. Laborado', bg: 'bg-cyan-100 text-cyan-800' },
-          { c: 'S', l: 'Suspensión', bg: 'bg-amber-100 text-amber-800' },
-          { c: 'L', l: 'Libre', bg: 'bg-slate-50 text-slate-500' },
-        ].map(item => (
-          <div key={item.c} className="flex items-center gap-1.5 border border-slate-100 px-2 py-1 rounded-lg">
-            <span className={`w-7 text-center text-[10px] font-black py-0.5 rounded ${item.bg}`}>{item.c}</span>
-            <span className="text-[10px] font-bold text-slate-600">{item.l}</span>
-          </div>
-        ))}
-      </div>
-
-      {/* MATRIZ PRINCIPAL DE TAREO */}
-      <div className="bg-white border border-slate-300 rounded-2xl overflow-x-auto relative z-0 shadow-sm">
+      {/* MATRIZ OPERATIVA DE TAREO */}
+      <div className="bg-white rounded-3xl border border-slate-200/80 shadow-sm overflow-x-auto relative min-h-[400px]">
         {loading ? (
-          <div className="h-96 flex flex-col items-center justify-center text-slate-400 gap-4">
-            <div className="w-10 h-10 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
-            <span className="font-bold text-sm">Procesando Motor de Tareo...</span>
+          <div className="absolute inset-0 bg-white/70 backdrop-blur-sm z-30 flex items-center justify-center">
+            <div className="flex flex-col items-center gap-2">
+              <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
+              <span className="text-xs font-bold text-slate-500">Cargando datos de tareo...</span>
+            </div>
+          </div>
+        ) : null}
+
+        {filteredWorkers.length === 0 ? (
+          <div className="py-20 text-center text-slate-400">
+            <Users size={32} className="mx-auto mb-2 opacity-50" />
+            <p className="font-bold text-sm">No se encontraron trabajadores registrados.</p>
           </div>
         ) : (
-          <table className="w-max text-left border-collapse whitespace-nowrap table-fixed">
+          <table className="w-full border-collapse text-[11px]">
             <thead>
-              <tr className="bg-slate-800 text-white">
-                <th rowSpan={2} className="md:sticky md:left-0 z-20 bg-slate-800 border border-slate-700 px-2 py-1 text-[11px] font-bold text-center w-[40px] align-middle">ITEM</th>
-                <th rowSpan={2} className="md:sticky md:left-[40px] z-20 bg-slate-800 border border-slate-700 px-3 py-1 text-[11px] font-bold text-center w-[220px] align-middle">Apellidos y Nombres</th>
-                <th rowSpan={2} className="md:sticky md:left-[260px] z-20 bg-slate-800 border border-slate-700 px-3 py-1 text-[11px] font-bold text-center w-[130px] align-middle">Cargo</th>
-                {daysInMonth.map((d) => (
-                  <th key={`wd-${d.day}`} className={`px-1 py-1 text-center border border-slate-700 min-w-[32px] ${d.isWeekend ? 'text-rose-400' : 'text-slate-100'}`}>
-                    <div className="text-[11px] font-black uppercase">{d.weekday}</div>
-                  </th>
-                ))}
-                <th colSpan={6} className="bg-indigo-700 border border-indigo-600 px-2 py-0.5 text-[10px] font-black text-center text-white">Resumen Inteligente de Producción</th>
-              </tr>
-              <tr className="bg-slate-800 text-white">
-                {daysInMonth.map((d) => (
-                  <th key={`d-${d.day}`} className="px-1 py-1 text-center border border-slate-700 min-w-[32px]">
+              <tr className="bg-slate-50 border-b border-slate-200 text-slate-600 select-none">
+                <th className="md:sticky md:left-0 z-30 bg-slate-50 border border-slate-300 px-0.5 py-1 text-center font-black w-[40px]">#</th>
+                <th className="md:sticky md:left-[40px] z-30 bg-slate-50 border border-slate-300 px-2 py-1 text-left font-black w-[220px]">TRABAJADOR</th>
+                <th className="md:sticky md:left-[260px] z-30 bg-slate-50 border border-slate-300 px-2 py-1 text-left font-black w-[130px]">CARGO</th>
+                {daysInMonth.map(d => (
+                  <th key={d.day} className={`border border-slate-300 p-0 text-center min-w-[32px] ${d.isWeekend ? 'bg-slate-200/50' : 'bg-slate-50'}`}>
+                    <div className="text-[9px] text-slate-400 font-bold leading-none pt-0.5">{d.weekday}</div>
                     <div className="text-[11px] font-black">{String(d.day).padStart(2, '0')}</div>
                   </th>
                 ))}
@@ -481,113 +672,18 @@ export default function TareoClient({ initialCycles, workers, userRole, companyI
         )}
       </div>
 
-      {showLogsModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-white rounded-3xl max-w-md w-full shadow-2xl overflow-hidden border border-slate-100 flex flex-col max-h-[90vh]">
-            <div className="p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
-              <div>
-                <h3 className="font-black text-slate-800 text-lg">Registro de Marcaciones</h3>
-                <p className="text-xs font-bold text-slate-500 mt-0.5">
-                  Fecha: {showLogsModal.date}
-                </p>
-              </div>
-              <button 
-                onClick={() => setShowLogsModal(null)}
-                className="w-8 h-8 flex items-center justify-center rounded-full bg-slate-200 text-slate-600 hover:bg-slate-300 hover:text-slate-800 transition-colors"
-              >
-                <X size={16} />
-              </button>
-            </div>
-            
-            <div className="p-5 overflow-y-auto flex-1">
-              {activePunches.length === 0 ? (
-                <div className="text-center py-10">
-                  <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center mx-auto mb-3 text-slate-400">
-                    <Clock size={20} />
-                  </div>
-                  <p className="text-slate-500 font-bold text-sm">No hay marcaciones registradas para este día.</p>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {activePunches.map((punch, idx) => (
-                    <div key={idx} className="flex gap-4 p-4 rounded-2xl border border-slate-100 bg-white shadow-sm">
-                      <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${
-                        punch.type === 'in' ? 'bg-emerald-100 text-emerald-600' :
-                        punch.type === 'out' ? 'bg-amber-100 text-amber-600' :
-                        punch.type === 'break_start' ? 'bg-orange-100 text-orange-600' :
-                        'bg-teal-100 text-teal-600'
-                      }`}>
-                        {punch.type === 'in' ? <LogIn size={18} /> : 
-                         punch.type === 'out' ? <LogOut size={18} /> : 
-                         punch.type === 'break_start' ? <Utensils size={18} /> : 
-                         <CheckCircle2 size={18} />}
-                      </div>
-                      <div className="flex-1">
-                        <div className="flex items-center justify-between">
-                          <p className="font-black text-slate-800 text-sm">
-                            {punch.type === 'in' ? 'Entrada' : 
-                             punch.type === 'out' ? 'Salida' : 
-                             punch.type === 'break_start' ? 'Inicio Refrigerio' : 
-                             'Fin Refrigerio'}
-                          </p>
-                          <span className="font-bold text-slate-500 text-sm">{punch.time}</span>
-                        </div>
-                        
-                        {(punch.latitude && punch.longitude) ? (
-                          <div className="mt-3 bg-slate-50 rounded-xl p-3 flex flex-col gap-2 border border-slate-100">
-                            <div className="flex items-start gap-2 text-xs font-medium text-slate-600">
-                              <MapPin size={14} className="shrink-0 text-blue-500 mt-0.5" />
-                              <span className="leading-tight">
-                                {punch.address || `${punch.latitude}, ${punch.longitude}`}
-                                {punch.accuracy && <span className="block text-slate-400 text-[10px] mt-0.5">Precisión GPS: ±{Math.round(punch.accuracy)}m</span>}
-                              </span>
-                            </div>
-                            <a 
-                              href={`https://www.google.com/maps/search/?api=1&query=${punch.latitude},${punch.longitude}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-[11px] font-black text-blue-600 bg-blue-50 hover:bg-blue-100 transition-colors py-1.5 px-3 rounded-lg text-center flex items-center justify-center gap-1.5 w-max"
-                            >
-                              Ver en Mapa
-                            </a>
-                          </div>
-                        ) : (
-                          <div className="mt-2 flex items-center gap-1.5 text-[11px] font-bold text-slate-400">
-                            <Info size={12} />
-                            <span>Sin datos de ubicación GPS</span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
+      {/* MODAL DE EVIDENCIA DE UBICACIÓN Y MARCADOR GPS */}
+      {modalData && (
+        <AttendanceLocationModal
+          isOpen={modalData.isOpen}
+          onClose={() => setModalData(null)}
+          workerName={modalData.workerName}
+          date={modalData.date}
+          punches={modalData.punches}
+        />
       )}
     </div>
   )
-}
-
-function areRowsEqual(prevProps: any, nextProps: any) {
-  if (prevProps.worker.id !== nextProps.worker.id) return false
-  if (prevProps.idx !== nextProps.idx) return false
-  if (prevProps.canWrite !== nextProps.canWrite) return false
-  if (prevProps.daysInMonth.length !== nextProps.daysInMonth.length) return false
-  
-  const prevStatuses = prevProps.workerStatuses || {}
-  const nextStatuses = nextProps.workerStatuses || {}
-  
-  for (const d of nextProps.daysInMonth) {
-    const prev = prevStatuses[d.dateString] || { status: '', isManual: false }
-    const next = nextStatuses[d.dateString] || { status: '', isManual: false }
-    if (prev.status !== next.status || prev.isManual !== next.isManual) {
-      return false
-    }
-  }
-
-  return true
 }
 
 const WorkerRow = React.memo(function WorkerRow({ 
@@ -623,16 +719,19 @@ const WorkerRow = React.memo(function WorkerRow({
             </select>
             {logged && (
               <div 
-                onClick={() => onOpenLogs(worker.id, d.dateString)}
-                className={`absolute bottom-0 right-0 p-0.5 cursor-pointer flex items-center justify-center transition-all hover:scale-110 z-10`}
-                title={hasGps ? "Ver registro (Incluye GPS)" : "Ver registro de marcaciones"}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onOpenLogs(worker.id, d.dateString)
+                }}
+                className="absolute bottom-0.5 right-0.5 p-0.5 cursor-pointer flex items-center justify-center transition-all hover:scale-125 z-10"
+                title={hasGps ? "Ver evidencia GPS y marcaciones" : "Ver marcaciones (Sin ubicación GPS)"}
               >
                 {hasGps ? (
-                  <div className="bg-white rounded-full shadow-sm p-0.5 border border-blue-200">
+                  <div className="bg-white rounded-full shadow-md p-0.5 border border-blue-400">
                     <MapPin size={10} className="text-blue-600 fill-blue-100" />
                   </div>
                 ) : (
-                  <div className="w-2 h-2 rounded-full bg-blue-400 shadow-sm border border-white" />
+                  <div className="w-2.5 h-2.5 rounded-full bg-blue-500 shadow-sm border border-white" />
                 )}
               </div>
             )}
@@ -648,3 +747,27 @@ const WorkerRow = React.memo(function WorkerRow({
     </tr>
   )
 }, areRowsEqual)
+
+function areRowsEqual(prevProps: any, nextProps: any) {
+  if (prevProps.worker.id !== nextProps.worker.id) return false
+  if (prevProps.idx !== nextProps.idx) return false
+  if (prevProps.canWrite !== nextProps.canWrite) return false
+  if (prevProps.daysInMonth.length !== nextProps.daysInMonth.length) return false
+  if (prevProps.loggedPunches !== nextProps.loggedPunches) return false
+  if (prevProps.gpsKeys !== nextProps.gpsKeys) return false
+  if (prevProps.summary !== nextProps.summary) return false
+  if (prevProps.updatingCells !== nextProps.updatingCells) return false
+  
+  const prevStatuses = prevProps.workerStatuses || {}
+  const nextStatuses = nextProps.workerStatuses || {}
+  
+  for (const d of nextProps.daysInMonth) {
+    const prev = prevStatuses[d.dateString] || { status: '', isManual: false }
+    const next = nextStatuses[d.dateString] || { status: '', isManual: false }
+    if (prev.status !== next.status || prev.isManual !== next.isManual) {
+      return false
+    }
+  }
+
+  return true
+}

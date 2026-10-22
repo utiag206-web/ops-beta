@@ -111,6 +111,7 @@ export default function WorkerPortalClient({ company, session }: WorkerPortalCli
  const [pinChangeError, setPinChangeError] = useState<string | null>(null)
  const [pinChangeLoading, setPinChangeLoading] = useState(false)
  const [mustChangePin, setMustChangePin] = useState(false)
+ const [pendingWorkerId, setPendingWorkerId] = useState<string | null>(null)
 
  // Portal Data States
  const [stats, setStats] = useState<any>(null)
@@ -244,18 +245,21 @@ export default function WorkerPortalClient({ company, session }: WorkerPortalCli
  if (res.success) {
  toast.success('¡Acceso exitoso!')
  if (res.requirePinChange) {
+ if ((res as any).workerId) setPendingWorkerId((res as any).workerId)
  setMustChangePin(true)
+ setLoginLoading(false)
  } else if (res.redirectToDashboard) {
  window.location.href = '/dashboard'
  } else {
- router.refresh()
+ // Forzar recarga completa para montar el portal con la cookie worker_session
+ window.location.reload()
  }
  } else {
  setLoginError(res.error || 'Identificador o PIN incorrecto.')
+ setLoginLoading(false)
  }
  } catch (error) {
  setLoginError('Ocurrió un error inesperado al iniciar sesión.')
- } finally {
  setLoginLoading(false)
  }
  }
@@ -280,7 +284,7 @@ export default function WorkerPortalClient({ company, session }: WorkerPortalCli
  setPinChangeError(null)
 
  try {
- const workerId = session?.workerId
+ const workerId = session?.workerId || pendingWorkerId
  const res = await updateWorkerPin(workerId || '', newPin.trim())
  if (res.success) {
  toast.success('¡Nueva contraseña configurada exitosamente!')
@@ -617,6 +621,73 @@ export default function WorkerPortalClient({ company, session }: WorkerPortalCli
  <p className="text-xs text-slate-500 font-medium">
  Por favor, espere un momento mientras reconfiguramos su portal de acceso.
  </p>
+ </div>
+ </div>
+ </div>
+ )
+ }
+
+ // -------------------------------------------------------------
+ // RENDERING: FIRST LOGIN PIN CHANGE
+ // -------------------------------------------------------------
+ if (mustChangePin || (session && session.requirePinChange)) {
+ return (
+ <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-600/40 to-blue-900/40 p-4 font-sans antialiased text-slate-800 relative overflow-hidden">
+ <div className="absolute top-[-20%] left-[-10%] w-[60%] h-[60%] rounded-full bg-white/40 blur-[100px]" />
+ <div className="absolute bottom-[-20%] right-[-10%] w-[60%] h-[60%] rounded-full bg-blue-400/20 blur-[100px]" />
+ 
+ <div className="w-full max-w-md bg-white/95 backdrop-blur-md rounded-3xl shadow-2xl overflow-hidden border border-white/50 relative z-10">
+ <div className="p-8 text-center bg-gradient-to-r from-blue-800/90 to-blue-600/90 backdrop-blur-sm border-b border-white/20">
+ <div className="w-16 h-16 bg-white/95 rounded-2xl mx-auto flex items-center justify-center shadow-lg mb-4 overflow-hidden border border-white/50 text-blue-700">
+ <Key size={32} />
+ </div>
+ <h1 className="text-xl font-black text-white leading-tight">Configura tu Contraseña</h1>
+ <p className="text-blue-100 mt-2 text-xs font-semibold">Por seguridad de tu cuenta, ingresa una nueva contraseña o PIN personal</p>
+ </div>
+
+ <div className="p-8">
+ <form onSubmit={handleFirstLoginPinChange} className="space-y-5 text-left">
+ {pinChangeError && (
+ <div className="p-3 bg-red-50 border border-red-200 rounded-lg flex items-center gap-2 text-sm text-red-600">
+ <AlertTriangle className="flex-shrink-0" size={18} />
+ <span>{pinChangeError}</span>
+ </div>
+ )}
+
+ <div>
+ <label className="block text-xs font-bold text-slate-700 mb-1">Nueva Contraseña o PIN (mínimo 4 caracteres)</label>
+ <input
+ type="password"
+ required
+ minLength={4}
+ value={newPin}
+ onChange={(e) => setNewPin(e.target.value)}
+ placeholder="••••••••"
+ className="w-full bg-slate-50 border-2 border-slate-200 focus:border-blue-600 focus:bg-white rounded-xl py-3 px-4 text-slate-900 font-bold outline-none"
+ />
+ </div>
+
+ <div>
+ <label className="block text-xs font-bold text-slate-700 mb-1">Confirmar Nueva Contraseña</label>
+ <input
+ type="password"
+ required
+ minLength={4}
+ value={confirmPin}
+ onChange={(e) => setConfirmPin(e.target.value)}
+ placeholder="••••••••"
+ className="w-full bg-slate-50 border-2 border-slate-200 focus:border-blue-600 focus:bg-white rounded-xl py-3 px-4 text-slate-900 font-bold outline-none"
+ />
+ </div>
+
+ <button
+ type="submit"
+ disabled={pinChangeLoading}
+ className="w-full h-12 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-black text-sm flex items-center justify-center gap-2 shadow-lg shadow-blue-500/20 active:scale-98 transition-all disabled:opacity-50"
+ >
+ {pinChangeLoading ? <Loader2 className="animate-spin" size={18} /> : <span>Guardar y Entrar al Portal</span>}
+ </button>
+ </form>
  </div>
  </div>
  </div>

@@ -12,11 +12,33 @@ export interface GlobalSettingsData {
   brand_color?: string
   ecosystem_commercial_name?: string
   ecosystem_description?: string
+  commercial_whatsapp?: string
   default_language: string
   default_timezone: string
   default_currency: string
   default_date_format: string
   default_number_format: string
+}
+
+function parseEcosystemDescription(raw?: string | null): { description: string; commercial_whatsapp: string } {
+  if (!raw) return { description: '', commercial_whatsapp: '' }
+  try {
+    if (raw.trim().startsWith('{')) {
+      const parsed = JSON.parse(raw)
+      return {
+        description: parsed.description || '',
+        commercial_whatsapp: parsed.commercial_whatsapp || ''
+      }
+    }
+  } catch (_) {}
+  return { description: raw, commercial_whatsapp: '' }
+}
+
+function packEcosystemDescription(description: string, commercial_whatsapp?: string): string {
+  return JSON.stringify({
+    description: description || '',
+    commercial_whatsapp: (commercial_whatsapp || '').trim().replace(/\s+/g, '')
+  })
 }
 
 const getSupabaseClient = async () => {
@@ -63,11 +85,25 @@ export const getGlobalSettings = cache(async function getGlobalSettings(): Promi
       return null
     }
 
-    return data as GlobalSettingsData
+    const { description, commercial_whatsapp } = parseEcosystemDescription(data.ecosystem_description)
+
+    return {
+      ...data,
+      ecosystem_description: description,
+      commercial_whatsapp: commercial_whatsapp || '51923207309'
+    } as GlobalSettingsData
   } catch (err) {
     return null
   }
 })
+
+/**
+ * Obtiene el número de WhatsApp comercial configurado
+ */
+export async function getCommercialWhatsApp(): Promise<string> {
+  const settings = await getGlobalSettings()
+  return settings?.commercial_whatsapp || '51923207309'
+}
 
 /**
  * Actualiza la configuración global del ecosistema
@@ -82,6 +118,11 @@ export async function updateGlobalSettings(settings: GlobalSettingsData): Promis
 
   const supabase = await getSupabaseClient()
 
+  const packedDescription = packEcosystemDescription(
+    settings.ecosystem_description || '',
+    settings.commercial_whatsapp
+  )
+
   // Actualizar configuración (la política RLS también validará el rol por seguridad)
   const { error } = await supabase
     .from('global_settings')
@@ -91,7 +132,7 @@ export async function updateGlobalSettings(settings: GlobalSettingsData): Promis
       ecosystem_favicon: settings.ecosystem_favicon,
       brand_color: settings.brand_color,
       ecosystem_commercial_name: settings.ecosystem_commercial_name,
-      ecosystem_description: settings.ecosystem_description,
+      ecosystem_description: packedDescription,
       default_language: settings.default_language,
       default_timezone: settings.default_timezone,
       default_currency: settings.default_currency,

@@ -133,49 +133,9 @@ export default async function SuperAdminPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-3">
-        {/* Companies List (Main Section) */}
-        <div className="xl:col-span-2">
-          <CompaniesList companies={companies} />
-        </div>
-
-        {/* Global Users List (Sidebar Section) */}
-        <div className="bg-white rounded-xl border border-slate-100 shadow-2xs overflow-hidden flex flex-col h-full">
-          <div className="px-3 py-2 sm:px-3.5 sm:py-2.5 border-b border-slate-50 flex items-center justify-between">
-            <div>
-              <h2 className="text-xs font-bold text-slate-900">Accesos Globales</h2>
-              <p className="text-slate-400 text-[9.5px] font-medium">{users.length} usuarios registrados</p>
-            </div>
-            <Database size={14} className="text-slate-400" />
-          </div>
-          <div className="flex-1 overflow-y-auto custom-scrollbar max-h-[500px]">
-            <div className="divide-y divide-slate-50">
-              {users.map((user: any) => {
-                const isSuper = user.role_id?.toLowerCase() === 'super_admin' || user.role_id?.toLowerCase() === 'superadmin'
-                return (
-                  <div key={user.id} className={`px-2.5 py-1.5 hover:bg-slate-50 transition-colors ${isSuper ? 'bg-blue-50/30' : ''}`}>
-                    <div className="flex items-center justify-between gap-1.5">
-                      <span className="font-bold text-[11px] text-slate-800 leading-tight flex items-center gap-1 truncate">
-                        {isSuper && <Shield size={11} className="text-blue-600 shrink-0" />}
-                        {user.name}
-                      </span>
-                      <span className={`px-1.5 py-0.2 rounded text-[7.5px] font-bold tracking-wider uppercase shrink-0 ${
-                        isSuper ? 'bg-blue-600 text-white shadow-2xs' : 'bg-slate-100 text-slate-600'
-                      }`}>
-                        {user.role_id}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-1.5 text-[9px] text-slate-400 font-medium truncate mt-0.5">
-                      <span className="truncate">{user.email}</span>
-                      <span className="text-slate-300">•</span>
-                      <span className="truncate text-slate-500">{user.companies?.name || 'ECOSISTEMA GLOBAL'}</span>
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-          </div>
-        </div>
+      {/* Main Directory Area - Full Width */}
+      <div className="w-full">
+        <CompaniesList companies={companies} users={users} />
       </div>
     </div>
   )

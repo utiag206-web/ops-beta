@@ -1,5 +1,7 @@
 'use server'
 
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
 import { createAdminClient } from '@/lib/supabase/server'
 import { getUserSession, getStrictCompanyId, applyIsolation } from '@/lib/auth'
 import { revalidatePath } from 'next/cache'
@@ -45,28 +47,29 @@ export async function upsertProductionRecord(record: any) {
  const companyId = await getStrictCompanyId()
  const supabase = await createAdminClient()
 
- const payload = {
- ...record,
- company_id: companyId,
- created_by: record.created_by || extendedUser.id,
- warehouse_id: record.warehouse_id || null
- }
+ const payload: any = {
+    ...record,
+    company_id: companyId,
+    created_by: record.created_by || extendedUser.id,
+    warehouse_id: (record.warehouse_id && UUID_REGEX.test(record.warehouse_id)) ? record.warehouse_id : null
+  }
 
- // Si tiene ID, realizamos una validación previa de aislamiento para evitar hackeo
- if (payload.id) {
- const { data: existing, error: checkError } = await supabase
- .from('production_control')
- .select('id, company_id')
- .eq('id', payload.id)
- .single()
+  if (payload.id && UUID_REGEX.test(payload.id)) {
+    const { data: existing, error: checkError } = await supabase
+      .from('production_control')
+      .select('id, company_id')
+      .eq('id', payload.id)
+      .single()
 
- if (checkError || !existing) {
- throw new Error('Registro no encontrado para modificar')
- }
- if (existing.company_id !== companyId) {
- throw new Error('No autorizado para modificar este registro')
- }
- }
+    if (checkError || !existing) {
+      throw new Error('Registro no encontrado para modificar')
+    }
+    if (existing.company_id !== companyId) {
+      throw new Error('No autorizado para modificar este registro')
+    }
+  } else {
+    delete payload.id
+  }
 
  const { data, error } = await supabase
  .from('production_control')
@@ -181,28 +184,29 @@ export async function upsertWoodRecord(record: any) {
  const companyId = await getStrictCompanyId()
  const supabase = await createAdminClient()
 
- const payload = {
- ...record,
- company_id: companyId,
- created_by: record.created_by || extendedUser.id,
- warehouse_id: record.warehouse_id || null
- }
+ const payload: any = {
+    ...record,
+    company_id: companyId,
+    created_by: record.created_by || extendedUser.id,
+    warehouse_id: (record.warehouse_id && UUID_REGEX.test(record.warehouse_id)) ? record.warehouse_id : null
+  }
 
- // Si tiene ID, realizamos una validación previa de aislamiento para evitar hackeo
- if (payload.id) {
- const { data: existing, error: checkError } = await supabase
- .from('wood_control')
- .select('id, company_id')
- .eq('id', payload.id)
- .single()
+  if (payload.id && UUID_REGEX.test(payload.id)) {
+    const { data: existing, error: checkError } = await supabase
+      .from('wood_control')
+      .select('id, company_id')
+      .eq('id', payload.id)
+      .single()
 
- if (checkError || !existing) {
- throw new Error('Registro no encontrado para modificar')
- }
- if (existing.company_id !== companyId) {
- throw new Error('No autorizado para modificar este registro')
- }
- }
+    if (checkError || !existing) {
+      throw new Error('Registro no encontrado para modificar')
+    }
+    if (existing.company_id !== companyId) {
+      throw new Error('No autorizado para modificar este registro')
+    }
+  } else {
+    delete payload.id
+  }
 
  const { data, error } = await supabase
  .from('wood_control')

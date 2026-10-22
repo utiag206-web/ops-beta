@@ -3,6 +3,7 @@ import { getUserSession } from '@/lib/auth'
 import { UserDropdown } from './user-dropdown'
 import { SidebarToggle } from './sidebar-toggle'
 import { ROLE_NAMES } from '@/lib/constants'
+import { INDUSTRIES_METADATA } from '@/lib/operating-profiles'
 
 export async function Header() {
   const { extendedUser } = await getUserSession()
@@ -27,6 +28,9 @@ export async function Header() {
   
   let companyName = extendedUser?.company_name || 'Empresa'
   let companyLogo = extendedUser?.company_logo || null
+  const industryKey = extendedUser?.company_industry
+  const industryMeta = industryKey && (INDUSTRIES_METADATA as any)[industryKey]
+  const industryLabel = industryMeta?.officialLabel || (extendedUser?.companies as any)?.industry || null
 
   return (
     <header className="h-11 sm:h-12 bg-white border-b border-slate-200 px-3 sm:px-4 lg:px-5 flex items-center justify-between sticky top-0 z-30">
@@ -42,10 +46,15 @@ export async function Header() {
               <Building2 size={15} className="text-white" />
             </div>
           )}
-          <div className="flex flex-col">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
             <h1 className="text-xs sm:text-sm font-bold text-slate-800 line-clamp-1 tracking-tight">
               {companyName}
             </h1>
+            {industryLabel && (
+              <span className="hidden sm:inline-flex items-center text-[10px] font-semibold text-indigo-700 bg-indigo-50 border border-indigo-100 px-2 py-0.5 rounded-full">
+                {industryLabel}
+              </span>
+            )}
           </div>
         </div>
       </div>

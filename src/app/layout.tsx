@@ -4,6 +4,7 @@ import "./globals.css";
 
 import { Toaster } from 'sonner';
 import UppercaseEnforcer from "@/components/UppercaseEnforcer";
+import { OfflineProvider } from "@/components/providers/offline-provider";
 
 const inter = Inter({
  variable: "--font-inter",
@@ -11,14 +12,27 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
- title: "InthalyOps",
- description: "Plataforma de Gestión de Trabajadores - Horizon Industries",
- manifest: "/manifest.json",
- icons: {
- icon: "/logo-ops.png",
- shortcut: "/logo-ops.png",
- apple: "/apple-touch-icon.png",
- }
+  metadataBase: new URL('https://sistemaops.inthaly.com'),
+  title: "INTHALY OPS",
+  description: "Sistema de Gestión Empresarial",
+  manifest: "/manifest.json",
+  icons: {
+    icon: "/logo-ops.png",
+    shortcut: "/logo-ops.png",
+    apple: "/apple-touch-icon.png",
+  },
+  openGraph: {
+    title: "INTHALY OPS",
+    description: "Sistema de Gestión Empresarial",
+    siteName: "INTHALY OPS",
+    url: "https://sistemaops.inthaly.com",
+    type: "website",
+  },
+  twitter: {
+    card: "summary",
+    title: "INTHALY OPS",
+    description: "Sistema de Gestión Empresarial",
+  },
 };
 
 export default function RootLayout({
@@ -32,7 +46,9 @@ export default function RootLayout({
  className={`${inter.variable} antialiased`}
  >
  <UppercaseEnforcer />
- {children}
+ <OfflineProvider>
+  {children}
+ </OfflineProvider>
  <Toaster richColors position="top-right" />
  </body>
  </html>

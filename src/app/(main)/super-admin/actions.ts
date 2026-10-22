@@ -4,6 +4,7 @@ import { createAdminClient } from '@/lib/supabase/server'
 import { getUserSession } from '@/lib/auth'
 import { revalidatePath } from 'next/cache'
 import { getMultiCompanySettings } from './settings/multiempresa/actions'
+import { getSiteUrl } from '@/lib/site-url'
 
 /**
  * Acciones exclusivas para el SUPER_ADMIN
@@ -173,6 +174,12 @@ export async function toggleCompanyStatus(companyId: string, currentStatus: stri
 
 export async function createCompany(payload: {
   name: string
+  taxId?: string
+  industry?: string
+  phone?: string
+  contactPosition?: string
+  estimatedWorkers?: string
+  notes?: string
   adminEmail: string
   adminName: string
   adminPassword?: string
@@ -195,13 +202,44 @@ export async function createCompany(payload: {
   const supabase = await createAdminClient()
   
   try {
-    // 1. Crear la Empresa con los valores predeterminados globales
+    const contactName = payload.adminName?.trim() || 'Administrador'
+    const contactPosition = payload.contactPosition?.trim() || 'Gerente de Operaciones'
+    const estimatedWorkers = payload.estimatedWorkers?.trim() || '16 a 50 trabajadores'
+    const industry = payload.industry?.trim() || 'Servicios Generales y Contratistas'
+    const phone = payload.phone?.trim() || ''
+    const taxId = payload.taxId?.trim() || null
+    const notes = payload.notes?.trim() || ''
+
+    const corporateMetadata = {
+      contact_name: contactName,
+      contact_position: contactPosition,
+      estimated_workers: estimatedWorkers,
+      notes: notes,
+      registered_by: 'super_admin',
+      registered_at: new Date().toISOString(),
+      demo_request: {
+        contact_name: contactName,
+        contact_position: contactPosition,
+        estimated_workers: estimatedWorkers,
+        notes: notes,
+        email: payload.adminEmail,
+        phone: phone,
+        tax_id: taxId
+      }
+    }
+
+    // 1. Crear la Empresa con los 9 datos completos del estándar corporativo
     const { data: company, error: companyError } = await supabase
       .from('companies')
       .insert([{ 
-        name: payload.name, 
+        name: payload.name.trim(), 
+        tax_id: taxId,
+        contact_email: payload.adminEmail.trim().toLowerCase(),
+        phone: phone,
+        industry: industry,
         status: initialStatus,
         timezone: initialTimezone,
+        working_hours: JSON.stringify(corporateMetadata),
         is_test: payload.is_test || false
       }])
       .select()
@@ -643,10 +681,58 @@ export async function getCompanyDetails(companyId: string) {
  getCountSafe('purchase_orders')
  ])
 
+    let leadDetails: any = null
+    if (company.working_hours) {
+      try {
+        const wh = JSON.parse(company.working_hours)
+        const sub = wh.lead_details || wh.demo_request || wh.registration_request || {}
+
+        // Prioridad consistente: si existe un Administrador en la tabla users, su identidad prevalece
+        const contactName = mainAdmin?.name || sub.contact_name || wh.contact_name || wh.registered_by_name || 'No especificado'
+        const contactPosition = sub.contact_position || wh.contact_position || (mainAdmin ? 'Administrador General' : 'Gerente de Operaciones')
+        const email = mainAdmin?.email || company.contact_email || sub.email || wh.email || ''
+        const phone = company.phone || sub.phone || wh.phone || ''
+        const taxId = company.tax_id || sub.tax_id || wh.tax_id || ''
+        const estimatedWorkers = sub.estimated_workers || wh.estimated_workers || '16 a 50 trabajadores'
+        const notes = sub.notes || wh.notes || ''
+
+        leadDetails = {
+          ...sub,
+          contact_name: contactName,
+          contact_position: contactPosition,
+          estimated_workers: estimatedWorkers,
+          notes: notes,
+          phone: phone,
+          email: email,
+          tax_id: taxId,
+          request_type: wh.request_type || (wh.demo_request ? 'demo' : (wh.registration_request ? 'register' : 'direct')),
+          approval_status: wh.approval_status || (company.status === 'active' ? 'approved' : null),
+          approved_at: wh.approved_at || null,
+          approved_by: wh.approved_by || null,
+          rejection_reason: wh.rejection_reason || null,
+        }
+      } catch (_) {}
+    }
+
+    if (!leadDetails) {
+      leadDetails = {
+        contact_name: mainAdmin?.name || 'Administrador',
+        contact_position: 'Administrador General',
+        estimated_workers: '16 a 50 trabajadores',
+        notes: '',
+        phone: company.phone || '',
+        email: company.contact_email || mainAdmin?.email || '',
+        tax_id: company.tax_id || '',
+        request_type: 'direct',
+        approval_status: company.status === 'active' ? 'approved' : null,
+      }
+    }
+
     return {
       success: true,
       data: {
         company,
+        leadDetails,
         users: mappedUsers,
         mainAdmin: mainAdmin || null,
         stats: {
@@ -660,6 +746,113 @@ export async function getCompanyDetails(companyId: string) {
   } catch (error: any) {
     console.error('[SUPER_ADMIN] Error in getCompanyDetails:', error.message)
     return { success: false, error: error.message }
+  }
+}
+
+/**
+ * Actualizar los 9 datos corporativos estándar de una empresa (Nueva o Antigua)
+ */
+export async function updateCompanyCorporateDetails(payload: {
+  companyId: string
+  name: string
+  taxId: string
+  contactEmail: string
+  phone: string
+  industry: string
+  contactName: string
+  contactPosition: string
+  estimatedWorkers: string
+  notes?: string
+}) {
+  try {
+    const { extendedUser } = await getUserSession()
+    const role = extendedUser?.role_id?.toLowerCase()
+    if (role !== 'super_admin' && role !== 'superadmin') throw new Error('Acceso Denegado')
+
+    const supabase = await createAdminClient()
+
+    // 1. Obtener la empresa actual para preservar configuraciones en working_hours
+    const { data: current, error: fetchErr } = await supabase
+      .from('companies')
+      .select('id, working_hours')
+      .eq('id', payload.companyId)
+      .single()
+
+    if (fetchErr) return { success: false, error: fetchErr.message }
+
+    let currentWh: any = {}
+    try {
+      currentWh = JSON.parse(current?.working_hours || '{}')
+    } catch (_) {}
+
+    // Actualizar metadatos corporativos preservando settings de RRHH / Asistencia
+    const updatedWh = {
+      ...currentWh,
+      contact_name: payload.contactName?.trim() || '',
+      contact_position: payload.contactPosition?.trim() || '',
+      estimated_workers: payload.estimatedWorkers?.trim() || '',
+      notes: payload.notes?.trim() || '',
+      lead_details: {
+        ...(currentWh.lead_details || {}),
+        contact_name: payload.contactName?.trim() || '',
+        contact_position: payload.contactPosition?.trim() || '',
+        estimated_workers: payload.estimatedWorkers?.trim() || '',
+        notes: payload.notes?.trim() || '',
+        email: payload.contactEmail?.trim().toLowerCase() || '',
+        phone: payload.phone?.trim() || '',
+        tax_id: payload.taxId?.trim() || '',
+        industry: payload.industry?.trim() || ''
+      },
+      demo_request: {
+        ...(currentWh.demo_request || {}),
+        contact_name: payload.contactName?.trim() || '',
+        contact_position: payload.contactPosition?.trim() || '',
+        estimated_workers: payload.estimatedWorkers?.trim() || '',
+        notes: payload.notes?.trim() || '',
+        email: payload.contactEmail?.trim().toLowerCase() || '',
+        phone: payload.phone?.trim() || '',
+        tax_id: payload.taxId?.trim() || ''
+      }
+    }
+
+    // 2. Actualizar tabla companies
+    const { error: updateErr } = await supabase
+      .from('companies')
+      .update({
+        name: payload.name.trim(),
+        tax_id: payload.taxId?.trim() || null,
+        contact_email: payload.contactEmail?.trim().toLowerCase() || null,
+        phone: payload.phone?.trim() || null,
+        industry: payload.industry?.trim() || 'Servicios Generales y Contratistas',
+        working_hours: JSON.stringify(updatedWh)
+      })
+      .eq('id', payload.companyId)
+
+    if (updateErr) return { success: false, error: updateErr.message }
+
+    // 3. Sincronizar el nombre del usuario administrador principal si existe
+    try {
+      const { data: mainAdmin } = await supabase
+        .from('users')
+        .select('id')
+        .eq('company_id', payload.companyId)
+        .in('role_id', ['admin', 'gerente'])
+        .maybeSingle()
+
+      if (mainAdmin && payload.contactName?.trim()) {
+        await supabase
+          .from('users')
+          .update({ name: payload.contactName.trim() })
+          .eq('id', mainAdmin.id)
+      }
+    } catch (_) {}
+
+    revalidatePath('/super-admin')
+    revalidatePath('/super-admin/settings')
+    return { success: true }
+  } catch (err: any) {
+    console.error('[SUPER_ADMIN] Error in updateCompanyCorporateDetails:', err.message)
+    return { success: false, error: err.message }
   }
 }
 
@@ -768,6 +961,7 @@ export async function approveCompanyRequest(companyId: string) {
 
     // 3. Obtener o aprovisionar usuario administrador y generar enlace seguro
     let actionLink: string | null = null
+    const siteUrl = await getSiteUrl()
     const { data: existingAdmin } = await supabase
       .from('users')
       .select('id, email, name')
@@ -778,9 +972,15 @@ export async function approveCompanyRequest(companyId: string) {
       try {
         const { data: linkData } = await supabase.auth.admin.generateLink({
           type: 'recovery',
-          email: existingAdmin.email
+          email: existingAdmin.email,
+          options: {
+            redirectTo: `${siteUrl}/reset-password`
+          }
         })
-        actionLink = linkData?.properties?.action_link || null
+        const hashedToken = linkData?.properties?.hashed_token
+        actionLink = hashedToken
+          ? `${siteUrl}/activar?t=${hashedToken}`
+          : linkData?.properties?.action_link || null
       } catch (linkErr: any) {
         console.warn('[SUPER_ADMIN] generateLink warning:', linkErr?.message)
       }
@@ -821,9 +1021,15 @@ export async function approveCompanyRequest(companyId: string) {
 
           const { data: linkData } = await supabase.auth.admin.generateLink({
             type: 'recovery',
-            email: company.contact_email
+            email: company.contact_email,
+            options: {
+              redirectTo: `${siteUrl}/reset-password`
+            }
           })
-          actionLink = linkData?.properties?.action_link || null
+          const hashedToken = linkData?.properties?.hashed_token
+          actionLink = hashedToken
+            ? `${siteUrl}/activar?t=${hashedToken}`
+            : linkData?.properties?.action_link || null
         }
       } catch (uErr: any) {
         console.warn('[SUPER_ADMIN] Error creating admin user for demo request:', uErr?.message)
@@ -947,3 +1153,138 @@ export async function rejectCompanyRequest(companyId: string, reason?: string) {
     return { success: false, error: error.message }
   }
 }
+
+/**
+ * Genera o regenera un enlace seguro de primer acceso o invitación para una empresa/cliente.
+ * Emite un token criptográfico de un solo uso en Supabase Auth y lo prepara para compartirlo.
+ */
+export async function generateClientAccessLink(companyId: string) {
+  try {
+    const { extendedUser } = await getUserSession()
+    const role = extendedUser?.role_id?.toLowerCase()
+    if (role !== 'super_admin' && role !== 'superadmin') throw new Error('Acceso Denegado')
+
+    const supabase = await createAdminClient()
+
+    const { data: company, error: compErr } = await supabase
+      .from('companies')
+      .select('id, name, contact_email, phone, working_hours, status')
+      .eq('id', companyId)
+      .single()
+
+    if (compErr || !company) {
+      return { success: false, error: 'Empresa no encontrada.' }
+    }
+
+    // Buscar el administrador de la empresa en public.users
+    const { data: adminUser } = await supabase
+      .from('users')
+      .select('id, email, name, role_id, status')
+      .eq('company_id', companyId)
+      .eq('role_id', 'admin')
+      .maybeSingle()
+
+    const targetEmail = adminUser?.email || company.contact_email
+    if (!targetEmail) {
+      return { success: false, error: 'La empresa no cuenta con un correo corporativo de contacto para generar el acceso.' }
+    }
+
+    // Extraer nombre de contacto y teléfono
+    let targetName = adminUser?.name || 'Administrador'
+    let rawPhone = company.phone || ''
+    if (company.working_hours) {
+      try {
+        const wh = JSON.parse(company.working_hours)
+        const lead = wh.lead_details || wh.demo_request || wh.registration_request
+        if (!adminUser?.name && lead?.contact_name) targetName = lead.contact_name
+        if (lead?.phone && !rawPhone) rawPhone = lead.phone
+      } catch (_) {}
+    }
+
+    // Asegurar que el usuario existe en auth.users
+    const { data: authUserList } = await supabase.auth.admin.listUsers()
+    const existingAuthUser = authUserList?.users?.find(u => u.email?.toLowerCase() === targetEmail.toLowerCase())
+
+    if (!existingAuthUser) {
+      const tempPass = Math.random().toString(36).slice(-8) + 'Aa1!' + Math.random().toString(36).slice(-4)
+      const { data: newAuth, error: createAuthErr } = await supabase.auth.admin.createUser({
+        email: targetEmail,
+        password: tempPass,
+        email_confirm: true,
+        user_metadata: { name: targetName }
+      })
+
+      if (createAuthErr || !newAuth.user) {
+        return { success: false, error: `Error al provisionar cuenta: ${createAuthErr?.message}` }
+      }
+
+      if (!adminUser) {
+        await supabase.from('users').insert({
+          id: newAuth.user.id,
+          name: targetName,
+          email: targetEmail,
+          company_id: companyId,
+          role_id: 'admin',
+          role: 'admin',
+          status: 'active',
+          area: 'Dirección'
+        })
+        await supabase.from('user_roles').upsert({
+          user_id: newAuth.user.id,
+          company_id: companyId,
+          role_id: 'admin'
+        }, { onConflict: 'user_id, company_id' })
+      }
+    }
+
+    const siteUrl = await getSiteUrl()
+    const { data: linkData, error: linkErr } = await supabase.auth.admin.generateLink({
+      type: 'recovery',
+      email: targetEmail,
+      options: {
+        redirectTo: `${siteUrl}/reset-password`
+      }
+    })
+
+    const hashedToken = linkData?.properties?.hashed_token
+    const actionLink = hashedToken
+      ? `${siteUrl}/activar?t=${hashedToken}`
+      : linkData?.properties?.action_link
+
+    if (linkErr || !actionLink) {
+      return { success: false, error: linkErr?.message || 'No se pudo generar el enlace seguro de Supabase Auth.' }
+    }
+
+    // Auditoría inmutable de seguridad
+    try {
+      const { logAuditEvent } = await import('@/lib/audit')
+      await logAuditEvent({
+        companyId,
+        userId: extendedUser.id,
+        userName: extendedUser.name,
+        action: 'CLIENT_ACCESS_LINK_GENERATED',
+        title: `Enlace de Primer Acceso Generado: ${company.name}`,
+        category: 'SECURITY_ACCESS',
+        details: {
+          company_id: companyId,
+          company_name: company.name,
+          target_email: targetEmail,
+          generated_by: extendedUser.email,
+        }
+      })
+    } catch (_) {}
+
+    return {
+      success: true,
+      actionLink,
+      targetEmail,
+      targetName,
+      companyName: company.name,
+      phone: rawPhone
+    }
+  } catch (err: any) {
+    console.error('[SUPER_ADMIN] Error in generateClientAccessLink:', err)
+    return { success: false, error: err.message }
+  }
+}
+

@@ -14,15 +14,17 @@ import {
 
 interface CtaFooterSectionProps {
   onOpenDemo: () => void
+  commercialWhatsApp?: string
 }
 
-export function CtaFooterSection({ onOpenDemo }: CtaFooterSectionProps) {
+export function CtaFooterSection({ onOpenDemo, commercialWhatsApp = '51923207309' }: CtaFooterSectionProps) {
   const currentYear = new Date().getFullYear()
 
+  const cleanWa = (commercialWhatsApp || '51923207309').replace(/\D/g, '')
   const whatsappMessage = encodeURIComponent(
     'Hola, me gustaría solicitar una demostración de INTHALY OPS para mi empresa.'
   )
-  const whatsappUrl = `https://wa.me/51999999999?text=${whatsappMessage}`
+  const whatsappUrl = `https://wa.me/${cleanWa}?text=${whatsappMessage}`
 
   return (
     <div className="bg-slate-950 text-white">

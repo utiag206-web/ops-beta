@@ -48,17 +48,17 @@ const SCREENS: ScreenSlide[] = [
   },
   {
     id: 'planta',
-    title: 'Control de Planta y Mineral',
-    category: 'Operaciones de Planta',
+    title: 'Operaciones y Procesos',
+    category: 'Operaciones y Planta',
     description:
-      'Pesaje digital en balanza electrónica, control de canchas de acopio, molienda y despacho de producción.',
-    route: 'inthaly-ops.com / operaciones / planta',
+      'Pesaje industrial en balanza, control de procesamiento continuo, rendimiento operativo y despacho.',
+    route: 'inthaly-ops.com / operaciones',
     image: '/images/screens/showcase-planta.png',
   },
   {
     id: 'mecanica',
-    title: 'Mecánica y Mantenimiento',
-    category: 'Mantenimiento de Activos',
+    title: 'Mantenimiento y Equipos',
+    category: 'Gestión de Activos',
     description:
       'Plan preventivo vehicular, horómetros de maquinaria, generadores, compresoras y checklists de campo.',
     route: 'inthaly-ops.com / mecanica / mantenimiento',
@@ -75,8 +75,8 @@ const SCREENS: ScreenSlide[] = [
   },
   {
     id: 'export-center',
-    title: 'Centro de Exportaciones',
-    category: 'Reportabilidad',
+    title: 'Reportes y Analítica',
+    category: 'Reportabilidad y BI',
     description:
       'Generación centralizada de informes gerenciales y operativos en formatos oficiales Excel y PDF.',
     route: 'inthaly-ops.com / reports / export-center',
@@ -136,18 +136,18 @@ export function SoftwareShowcase() {
   }, [])
 
   return (
-    <section id="software" className="relative py-10 sm:py-14 lg:py-16 bg-white border-t border-slate-200/70">
+    <section id="software" className="relative py-10 sm:py-12 lg:py-14 bg-white border-t border-slate-200/70">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         {/* SECTION HEADER */}
-        <div className="mx-auto max-w-3xl text-center mb-8 sm:mb-10">
-          <div className="inline-flex items-center gap-2 rounded-full border border-blue-200 bg-blue-50 px-3.5 py-1 text-xs font-bold uppercase tracking-wider text-blue-700 mb-2.5">
-            <Sparkles className="h-3.5 w-3.5" />
+        <div className="mx-auto max-w-3xl text-center mb-8">
+          <div className="inline-flex items-center gap-2 rounded-full border border-blue-200 bg-blue-50 px-3 py-0.5 text-[11px] font-bold uppercase tracking-wider text-blue-700 mb-2">
+            <Sparkles className="h-3 w-3" />
             <span>Vistas Reales de la Plataforma</span>
           </div>
-          <h2 className="text-2xl sm:text-3xl lg:text-[32px] font-black tracking-tight text-slate-900">
+          <h2 className="text-xl sm:text-2xl lg:text-[28px] font-black tracking-tight text-slate-900">
             El Software en Funcionamiento
           </h2>
-          <p className="mt-2.5 text-xs sm:text-sm text-slate-600 leading-relaxed">
+          <p className="mt-2 text-xs sm:text-sm text-slate-600 leading-relaxed max-w-2xl mx-auto">
             Una mirada transparente a la interfaz corporativa. Sin maquetas ficticias ni ilustraciones conceptuales: pantallas reales de INTHALY OPS.
           </p>
         </div>

@@ -1,6 +1,8 @@
 'use client'
 
 import React, { createContext, useContext, useMemo } from 'react'
+import { deserializeFromArray, can as engineCan, canModule as engineCanModule } from '@/lib/rbac/engine'
+import type { Module, Action, ResolvedPermissions } from '@/lib/rbac/types'
 
 interface RbacContextType {
  role_id: string | undefined;
@@ -9,6 +11,10 @@ interface RbacContextType {
  user: any;
  isImpersonating: boolean;
  hasAccess: (module: string) => boolean;
+ // RBAC Granular V1: can() para verificar acciones específicas
+ can: (module: Module, action: Action) => boolean;
+ // ResolvedPermissions para consultas avanzadas (opcional)
+ resolved: ResolvedPermissions | null;
 }
 
 const RbacContext = createContext<RbacContextType | undefined>(undefined)
@@ -29,17 +35,34 @@ export function RbacProvider({
  const currentPermissions = permissions || []
  const isAdmin = currentPermissions.includes('*') || currentRoleId === 'admin'
  
+ // Reconstruir ResolvedPermissions desde el array serializado en sesión
+ const resolved = currentPermissions.length > 0
+   ? deserializeFromArray(currentPermissions)
+   : null
+
  return {
  role_id: currentRoleId,
  permissions: currentPermissions,
  isAdmin,
  user,
  isImpersonating: !!user?.is_impersonating,
+ 
+ // hasAccess: compatibilidad con el sistema actual (por módulo)
  hasAccess: (module: string) => {
  if (!module || module === 'dashboard' || module === 'profile') return true
  if (!currentRoleId) return false
  return isAdmin || currentPermissions.includes(module)
- }
+ },
+ 
+ // can(): granular — verifica si el usuario puede realizar una acción en un módulo
+ can: (module: Module, action: Action): boolean => {
+   if (!currentRoleId) return false
+   if (isAdmin) return true
+   if (!resolved) return false
+   return engineCan(resolved, module, action)
+ },
+
+ resolved,
  }
  }, [role_id, permissions, user])
 
@@ -59,3 +82,6 @@ export function useRbac() {
 }
 
 export const useUserRole = useRbac
+
+// Re-export tipos para uso cómodo en componentes
+export type { Module, Action }

@@ -21,15 +21,16 @@ import { submitDemoRequest } from '@/app/(marketing)/actions'
 interface DemoModalProps {
   isOpen: boolean
   onClose: () => void
+  commercialWhatsApp?: string
 }
 
 const INDUSTRIES = [
-  'Minería y Metalurgia',
   'Construcción e Infraestructura',
+  'Agroindustria y Alimentos',
   'Transporte y Logística',
   'Manufactura e Industria',
   'Servicios Generales y Contratistas',
-  'Agroindustria y Alimentos',
+  'Minería y Metalurgia',
   'Seguridad y Vigilancia',
   'Otro Sector',
 ]
@@ -41,7 +42,7 @@ const WORKER_RANGES = [
   'Más de 200 trabajadores',
 ]
 
-export function DemoModal({ isOpen, onClose }: DemoModalProps) {
+export function DemoModal({ isOpen, onClose, commercialWhatsApp = '51923207309' }: DemoModalProps) {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitted, setSubmitted] = useState(false)
   const [errorMessage, setErrorMessage] = useState('')
@@ -53,7 +54,7 @@ export function DemoModal({ isOpen, onClose }: DemoModalProps) {
     phone: '',
     companyName: '',
     taxId: '',
-    industry: 'Minería y Metalurgia',
+    industry: 'Construcción e Infraestructura',
     contactPosition: '',
     estimatedWorkers: '16 a 50 trabajadores',
     message: '',
@@ -98,10 +99,11 @@ export function DemoModal({ isOpen, onClose }: DemoModalProps) {
     }
   }
 
+  const cleanWa = (commercialWhatsApp || '51923207309').replace(/\D/g, '')
   const whatsappMessage = encodeURIComponent(
     `Hola, me gustaría solicitar una demostración de INTHALY OPS para la empresa ${formData.companyName || '[Nombre Empresa]'}.`
   )
-  const whatsappUrl = `https://wa.me/51999999999?text=${whatsappMessage}`
+  const whatsappUrl = `https://wa.me/${cleanWa}?text=${whatsappMessage}`
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
@@ -306,7 +308,7 @@ export function DemoModal({ isOpen, onClose }: DemoModalProps) {
                   <input
                     type="text"
                     required
-                    placeholder="Ej. Minera o Constructora SAC"
+                    placeholder="Ej. Constructora, Agroindustria o Servicios SAC"
                     value={formData.companyName}
                     onChange={(e) => setFormData({ ...formData, companyName: e.target.value })}
                     className="w-full h-9 rounded-lg border border-slate-200 bg-slate-50/50 px-3 text-xs font-medium text-slate-800 placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/10 transition-all"

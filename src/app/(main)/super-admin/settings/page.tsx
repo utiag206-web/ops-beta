@@ -3,7 +3,7 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { 
   Settings, Shield, Building2, Bell, 
-  Plug, Server, Activity, Info, ChevronRight 
+  Plug, Server, Activity, Info, ChevronRight, Boxes 
 } from 'lucide-react'
 
 export const dynamic = 'force-dynamic'
@@ -23,6 +23,13 @@ export default async function SettingsHubPage() {
       href: '/super-admin/settings/general',
       icon: Settings,
       colorClass: 'bg-blue-50 text-blue-600',
+    },
+    {
+      title: 'Industrias y Capacidades',
+      description: 'Gestión de sectores, arquetipos, catálogo central de capacidades y perfiles operativos por empresa.',
+      href: '/super-admin/settings/capabilities',
+      icon: Boxes,
+      colorClass: 'bg-indigo-50 text-indigo-600',
     },
     {
       title: 'Seguridad',

@@ -6,13 +6,16 @@ import {
  MapPin, CheckCircle2, ChevronRight, X, 
  Loader2, Camera, Filter, Grid, List,
  ArrowRight, Info, AlertCircle, Activity,
- Calendar, Users, Pencil, Trash2
+ Calendar, Users, Pencil, Trash2, Clock
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { getHsecStops, createHsecStop, closeHsecStop, updateHsecStop, deleteHsecStop } from './actions'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { useRbac } from '@/components/providers/rbac-provider'
+import { useOffline } from '@/components/providers/offline-provider'
+import { addOperationToQueue } from '@/lib/offline-sync'
+import { v4 as uuidv4 } from 'uuid'
 
 const STOP_CATEGORIES = [
  { id: 'ppe', label: 'EPP / Ropa de Trabajo', icon: ShieldAlert },
@@ -24,8 +27,21 @@ const STOP_CATEGORIES = [
 ]
 
 export default function StopHsecPage() {
- const { role_id } = useRbac()
- const [stops, setStops] = useState<any[]>([])
+ const { role_id, user } = useRbac()
+ const { isOnline, triggerSync } = useOffline()
+ const companyId = user?.active_company_id || user?.company_id || ''
+ const [stops, setStops] = useState<any[]>(() => {
+    if (typeof window !== 'undefined') {
+      const cached = localStorage.getItem('hsec_stops_cache')
+      if (cached) {
+        try {
+          const parsed = JSON.parse(cached)
+          if (Array.isArray(parsed) && parsed.length > 0) return parsed
+        } catch (_) {}
+      }
+    }
+    return []
+  })
  const [loading, setLoading] = useState(true)
  const [isModalOpen, setIsModalOpen] = useState(false)
  const [editStop, setEditStop] = useState<any | null>(null)
@@ -37,6 +53,13 @@ export default function StopHsecPage() {
  const handleDeleteStop = async (id: string) => {
  if (!confirm('¿Estás seguro de que deseas eliminar este reporte HSEC/STOP? Esta acción no se puede deshacer.')) return
  try {
+  if (!isOnline) {
+    await addOperationToQueue({ id: uuidv4(), entity: 'hsec', action: 'delete_hsec_stop', payload: { id }, company_id: companyId })
+    toast.success('Reporte eliminado (offline)')
+    triggerSync()
+    loadStops()
+    return
+  }
  const res = await deleteHsecStop(id)
  if (res.error) throw new Error(res.error)
  toast.success('Reporte HSEC/STOP eliminado')
@@ -52,9 +75,74 @@ export default function StopHsecPage() {
 
  async function loadStops() {
  setLoading(true)
- const data = await getHsecStops()
- setStops(data)
- setLoading(false)
+ try {
+   let serverData: any[] | null = null
+   if (typeof navigator !== 'undefined' && navigator.onLine) {
+     try {
+       serverData = await getHsecStops()
+       if (Array.isArray(serverData)) {
+         try {
+           localStorage.setItem('hsec_stops_cache', JSON.stringify(serverData))
+         } catch (_) {}
+       }
+     } catch (netErr) {
+       console.warn('[HSEC] Error al consultar servidor:', netErr)
+     }
+   }
+
+   let baseStops = serverData
+   if (!baseStops || baseStops.length === 0) {
+     try {
+       const cached = localStorage.getItem('hsec_stops_cache')
+       if (cached) {
+         const parsed = JSON.parse(cached)
+         if (Array.isArray(parsed)) baseStops = parsed
+       }
+     } catch (_) {}
+   }
+
+   if (!baseStops) baseStops = []
+
+   // Combinar operaciones pendientes de la cola local de sincronización
+   try {
+     const { getPendingOperations } = await import('@/lib/offline-sync')
+     const pendingOps = await getPendingOperations()
+     const hsecOps = pendingOps.filter(op => op.entity === 'hsec')
+
+     if (hsecOps.length > 0) {
+       let merged = [...baseStops]
+       for (const op of hsecOps) {
+         if (op.action === 'create_hsec_stop' && op.payload) {
+           const exists = merged.some(s => s.id === op.payload.id)
+           if (!exists) {
+             merged.unshift({
+               ...op.payload,
+               created_at: op.created_at || new Date().toISOString(),
+               status: op.payload.status || 'abierta',
+               _is_pending: true,
+               sync_status: op.sync_status
+             })
+           }
+         } else if (op.action === 'delete_hsec_stop' && op.payload?.id) {
+           merged = merged.filter(s => s.id !== op.payload.id)
+         } else if (op.action === 'close_hsec_stop' && op.payload?.id) {
+           merged = merged.map(s => s.id === op.payload.id ? { ...s, status: 'cerrada', _is_pending: true } : s)
+         } else if (op.action === 'update_hsec_stop' && op.payload?.id) {
+           merged = merged.map(s => s.id === op.payload.id ? { ...s, ...op.payload.updates, _is_pending: true } : s)
+         }
+       }
+       baseStops = merged
+     }
+   } catch (queueErr) {
+     console.warn('[HSEC] Error al leer cola offline:', queueErr)
+   }
+
+   setStops(baseStops)
+ } catch (err) {
+   console.error('[HSEC] Error in loadStops:', err)
+ } finally {
+   setLoading(false)
+ }
  }
 
  const filteredStops = stops.filter(s => filter === 'all' || s.status === filter)
@@ -148,9 +236,17 @@ export default function StopHsecPage() {
  }`}>
  {stop.type === 'acto_inseguro' ? 'Acto' : 'Condición'}
  </span>
- <span className="text-[10px] font-bold text-slate-400 tracking-tight">
- {format(new Date(stop.created_at), 'dd MMM', { locale: es })}
- </span>
+ <div className="flex items-center gap-2">
+   {stop._is_pending && (
+     <span className="px-2 py-0.5 rounded-full text-[9px] font-black bg-amber-50 text-amber-700 border border-amber-200 flex items-center gap-1 shadow-xs">
+       <Clock size={10} className="animate-spin text-amber-600" />
+       Pendiente sinc.
+     </span>
+   )}
+   <span className="text-[10px] font-bold text-slate-400 tracking-tight">
+     {format(new Date(stop.created_at), 'dd MMM', { locale: es })}
+   </span>
+ </div>
  </div>
 
  <h3 className="text-xl font-black text-slate-800 tracking-tight line-clamp-2 min-h-[3.5rem] mb-4 group-hover:text-rose-600 transition-colors">
@@ -240,6 +336,13 @@ export default function StopHsecPage() {
 
  async function handleCloseStop(id: string) {
  if (!confirm('¿Deseas dar por cerrada esta observación?')) return
+ if (!isOnline) {
+   await addOperationToQueue({ id: uuidv4(), entity: 'hsec', action: 'close_hsec_stop', payload: { id }, company_id: companyId })
+   toast.success('STOP cerrada (offline)')
+   triggerSync()
+   loadStops()
+   return
+ }
  const res = await closeHsecStop(id)
  if (res.error) toast.error(res.error)
  else {
@@ -250,6 +353,9 @@ export default function StopHsecPage() {
 }
 
 function AddStopModal({ isOpen, onClose, onSuccess }: any) {
+ const { user } = useRbac()
+ const { isOnline, triggerSync } = useOffline()
+ const companyId = user?.active_company_id || user?.company_id || ''
  const [loading, setLoading] = useState(false)
  if (!isOpen) return null
  const [formData, setFormData] = useState({
@@ -264,6 +370,15 @@ function AddStopModal({ isOpen, onClose, onSuccess }: any) {
  if (!formData.category) return toast.warning('Selecciona una categoría')
  setLoading(true)
  try {
+  if (!isOnline) {
+    const tempId = `temp-${Date.now()}`
+    await addOperationToQueue({ id: uuidv4(), entity: 'hsec', action: 'create_hsec_stop', payload: { ...formData, id: tempId, company_id: companyId }, company_id: companyId })
+    toast.success('Reporte guardado (offline)')
+    triggerSync()
+    onSuccess()
+    onClose()
+    return
+  }
  const res = await createHsecStop(formData as any)
  if (res.error) throw new Error(res.error)
  toast.success('Reporte STOP guardado')
@@ -491,6 +606,9 @@ function ViewStopDetailsModal({ stop, onClose }: { stop: any; onClose: () => voi
 }
 
 function EditStopModal({ isOpen, onClose, stop, onSuccess }: any) {
+ const { user } = useRbac()
+ const { isOnline, triggerSync } = useOffline()
+ const companyId = user?.active_company_id || user?.company_id || ''
  const [loading, setLoading] = useState(false)
  const [formData, setFormData] = useState({
  type: stop?.type || 'acto_inseguro',
@@ -519,6 +637,14 @@ function EditStopModal({ isOpen, onClose, stop, onSuccess }: any) {
  if (!formData.category) return toast.warning('Selecciona una categoría')
  setLoading(true)
  try {
+  if (!isOnline) {
+    await addOperationToQueue({ id: uuidv4(), entity: 'hsec', action: 'update_hsec_stop', payload: { id: stop.id, updates: formData }, company_id: companyId })
+    toast.success('Reporte actualizado (offline)')
+    triggerSync()
+    onSuccess()
+    onClose()
+    return
+  }
  const res = await updateHsecStop(stop.id, formData as any)
  if (res.error) throw new Error(res.error)
  toast.success('Reporte preventivo actualizado')

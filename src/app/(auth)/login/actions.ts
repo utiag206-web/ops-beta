@@ -100,7 +100,6 @@ export async function login(prevState: any, formData: FormData) {
     }
   }
 
-  revalidatePath('/', 'layout')
 
   if (role === 'super_admin' || role === 'superadmin') {
     redirect('/super-admin')
@@ -117,7 +116,12 @@ export async function logout() {
  const workerSessionVal = cookieStore.get('worker_session')?.value
  if (workerSessionVal) {
  try {
- const parsed = JSON.parse(workerSessionVal)
+ let parsed: any = null
+ try {
+   parsed = JSON.parse(workerSessionVal)
+ } catch {
+   parsed = JSON.parse(decodeURIComponent(workerSessionVal))
+ }
  if (parsed?.companySlug) {
  redirectUrl = `/w/${parsed.companySlug}`
  }
