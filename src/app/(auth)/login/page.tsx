@@ -5,6 +5,7 @@ import { useActionState, useState, useEffect, Suspense } from 'react'
 import { login } from './actions'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
+import { InthalyIsotype } from '@/components/brand/InthalyLogo'
 
 function LoginForm() {
   const [state, formAction, isPending] = useActionState(login, { error: '' })
@@ -50,10 +51,8 @@ function LoginForm() {
     <div className="min-h-screen flex items-center justify-center bg-slate-50 p-4">
       <div className="w-full max-w-md bg-white rounded-2xl shadow-xl overflow-hidden">
         <div className="p-8 text-center bg-gradient-to-r from-blue-800 to-blue-600">
-          <div className="w-16 h-16 bg-white rounded-xl mx-auto flex items-center justify-center shadow-lg mb-4">
-            <span className="text-3xl font-bold text-blue-700">IO</span>
-          </div>
-          <h1 className="text-2xl font-bold text-white">InthalyOps</h1>
+          <div className="mx-auto flex justify-center mb-3"><InthalyIsotype size={60} /></div>
+          <h1 className="text-2xl font-black tracking-tight text-white">Inthaly<span className="text-sky-300">Ops</span></h1>
           <p className="text-blue-100 mt-2">Acceso a la plataforma</p>
         </div>
 

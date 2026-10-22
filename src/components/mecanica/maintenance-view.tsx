@@ -1,8 +1,9 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import Link from 'next/link'
 import { 
-  Wrench, Plus, Search, CheckCircle2, Clock, 
+  Wrench, Truck, Cpu, Activity, Hammer, Layers, Plus, Search, CheckCircle2, Clock, 
   DollarSign, X, Pencil, Trash2, Ban, ShieldAlert, Loader2
 } from 'lucide-react'
 import { toast } from 'sonner'
@@ -48,6 +49,7 @@ interface MaintenanceViewProps {
   companyId?: string | null
   initialItems?: MaintenanceItem[]
   persistToServer?: boolean
+  categoryCounts?: { vehiculo: number; equipo_mina: number; generador: number; compresora: number; all: number }
 }
 
 export function MaintenanceView({
@@ -59,7 +61,8 @@ export function MaintenanceView({
   storageKey,
   companyId = null,
   initialItems = [],
-  persistToServer = false
+  persistToServer = false,
+  categoryCounts
 }: MaintenanceViewProps) {
   const scopedKey = companyId ? `mecanica_${companyId}_${storageKey}` : `mecanica_${storageKey}`
 
@@ -88,7 +91,7 @@ export function MaintenanceView({
 
   // Sincronizar si cambian initialItems desde el servidor y reanudar pendientes
   useEffect(() => {
-    if (persistToServer && initialItems && initialItems.length > 0) {
+    if (persistToServer && initialItems) {
       setItems(initialItems)
       if (typeof window !== 'undefined') {
         localStorage.setItem(scopedKey, JSON.stringify(initialItems))
@@ -122,6 +125,7 @@ export function MaintenanceView({
     replayPending()
   }, [initialItems, persistToServer, scopedKey])
 
+  const [selectedCategory, setSelectedCategory] = useState<string>(equipmentType || 'all')
   const [searchTerm, setSearchTerm] = useState('')
   const [filterType, setFilterType] = useState('todos')
   const [isModalOpen, setIsModalOpen] = useState(false)
@@ -131,16 +135,18 @@ export function MaintenanceView({
   const [itemToDelete, setItemToDelete] = useState<MaintenanceItem | null>(null)
 
   const [form, setForm] = useState({
-    equipment_name: defaultEquipmentName || '',
-    equipment_code: defaultEquipmentCode || '',
-    maintenance_type: 'preventivo' as 'preventivo' | 'correctivo' | 'predictivo',
-    description: '',
+    equipment_name: '',
+    equipment_code: '',
     technician: '',
     date: new Date().toISOString().split('T')[0],
     hours_or_km: 0,
-    status: 'completado' as const as 'completado' | 'en_progreso' | 'programado' | 'anulado' | 'archivado',
+    maintenance_type: 'preventivo' as 'preventivo' | 'correctivo' | 'predictivo',
+    description: '',
+    status: 'programado' as 'programado' | 'en_progreso' | 'completado' | 'anulado' | 'archivado',
     cost: 0,
-    next_service: ''
+    next_service: '',
+    observations: '',
+    equipment_type: equipmentType && equipmentType !== 'all' ? equipmentType : 'vehiculo'
   })
 
   // Sincronizar persistencia local scoped por company_id (solo si no persiste en servidor para preservar datos)
@@ -154,16 +160,18 @@ export function MaintenanceView({
   const handleOpenCreate = () => {
     setEditingItem(null)
     setForm({
-      equipment_name: defaultEquipmentName || '',
-      equipment_code: defaultEquipmentCode || '',
-      maintenance_type: 'preventivo',
-      description: '',
+      equipment_name: '',
+      equipment_code: '',
       technician: '',
       date: new Date().toISOString().split('T')[0],
       hours_or_km: 0,
-      status: 'completado' as const,
+      maintenance_type: 'preventivo',
+      description: '',
+      status: 'programado',
       cost: 0,
-      next_service: ''
+      next_service: '',
+      observations: '',
+      equipment_type: equipmentType && equipmentType !== 'all' ? equipmentType : 'vehiculo'
     })
     setIsModalOpen(true)
   }
@@ -181,7 +189,9 @@ export function MaintenanceView({
       hours_or_km: item.hours_or_km || 0,
       status: item.status,
       cost: item.cost || 0,
-      next_service: item.next_service || ''
+      next_service: item.next_service || '',
+      observations: item.observations || '',
+      equipment_type: item.equipment_type || 'equipo_mina'
     })
     setIsModalOpen(true)
   }
@@ -228,7 +238,7 @@ export function MaintenanceView({
           const res = await updateMaintenanceRecord(editingItem.id, {
             equipment_name: form.equipment_name,
             equipment_code: form.equipment_code.toUpperCase(),
-            equipment_type: equipmentType,
+            equipment_type: (form as any).equipment_type || equipmentType || 'equipo_mina',
             maintenance_type: form.maintenance_type,
             description: form.description,
             technician: form.technician,
@@ -288,9 +298,9 @@ export function MaintenanceView({
           }
 
           const res = await createMaintenanceRecord({
-            equipment_name: form.equipment_name,
-            equipment_code: form.equipment_code.toUpperCase(),
-            equipment_type: equipmentType,
+          equipment_name: form.equipment_name,
+          equipment_code: form.equipment_code.toUpperCase(),
+          equipment_type: (form as any).equipment_type || (selectedCategory !== 'all' ? selectedCategory : 'equipo_mina'),
             maintenance_type: form.maintenance_type,
             description: form.description,
             technician: form.technician,
@@ -450,7 +460,16 @@ export function MaintenanceView({
         ? item.status === 'anulado'
         : item.maintenance_type === filterType && item.status !== 'anulado'
 
-    return matchSearch && matchType
+    const matchCategory = 
+      selectedCategory === 'all'
+        ? true
+        : selectedCategory === 'vehiculo'
+        ? ['vehiculo', 'vehiculo_liviano', 'vehiculo_pesado'].includes(item.equipment_type || '')
+        : selectedCategory === 'equipo_mina'
+        ? (item.equipment_type === 'equipo_mina' || (!item.equipment_type && !['vehiculo', 'compresora', 'generador'].includes(item.equipment_type || '')))
+        : item.equipment_type === selectedCategory
+
+    return matchSearch && matchType && matchCategory
   })
 
   // KPIs excluyendo registros anulados de los costos reales
@@ -530,6 +549,40 @@ export function MaintenanceView({
             <p className="text-lg sm:text-2xl font-black text-slate-800">S/ {totalCost.toFixed(2)}</p>
           </div>
         </div>
+      </div>
+
+      
+      {/* Category Navigation Tabs: Links directos a cada submódulo */}
+      <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
+        {[
+          { id: 'vehiculo', label: 'Vehículos y Transporte', icon: Truck, href: '/mecanica/mantenimiento-vehiculos', count: categoryCounts?.vehiculo ?? activeItems.filter(i => ['vehiculo', 'vehiculo_liviano', 'vehiculo_pesado'].includes(i.equipment_type || '')).length },
+          { id: 'equipo_mina', label: 'Maquinaria Pesada / Mina', icon: Hammer, href: '/mecanica/equipos-mina', count: categoryCounts?.equipo_mina ?? activeItems.filter(i => i.equipment_type === 'equipo_mina' || (!i.equipment_type && !['vehiculo', 'compresora', 'generador'].includes(i.equipment_type || ''))).length },
+          { id: 'generador', label: 'Generador Eléctrico', icon: Activity, href: '/mecanica/generador-mantenimiento', count: categoryCounts?.generador ?? activeItems.filter(i => i.equipment_type === 'generador').length },
+          { id: 'compresora', label: 'Compresora de Aire', icon: Cpu, href: '/mecanica/compresora-mantenimiento', count: categoryCounts?.compresora ?? activeItems.filter(i => i.equipment_type === 'compresora').length },
+        ].map((cat) => {
+          const Icon = cat.icon
+          const isActive = equipmentType === cat.id
+          return (
+            <Link
+              key={cat.id}
+              href={cat.href}
+              prefetch={false}
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs whitespace-nowrap transition-all cursor-pointer ${
+                isActive 
+                  ? 'bg-blue-600 text-white shadow-md shadow-blue-500/20' 
+                  : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200/70 hover:border-slate-300'
+              }`}
+            >
+              <Icon size={14} className={isActive ? 'text-white' : 'text-slate-400'} />
+              <span>{cat.label}</span>
+              <span className={`text-[10px] px-2 py-0.5 rounded-full font-black ${
+                isActive ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-600'
+              }`}>
+                {cat.count}
+              </span>
+            </Link>
+          )
+        })}
       </div>
 
       {/* Main Content Area */}
@@ -725,6 +778,22 @@ export function MaintenanceView({
             </div>
 
             <form onSubmit={handleSave} className="p-6 sm:p-8 space-y-4 overflow-y-auto flex-1 custom-scrollbar">
+              
+              <div className="space-y-1">
+                <label className="text-[10px] font-black text-slate-400 uppercase">Categoría de Equipo *</label>
+                <select
+                  className="w-full bg-slate-50 border border-slate-200 focus:border-blue-500 focus:bg-white rounded-xl p-2.5 text-xs font-bold outline-none"
+                  value={(form as any).equipment_type || 'equipo_mina'}
+                  onChange={e => setForm(prev => ({ ...prev, equipment_type: e.target.value } as any))}
+                >
+                  <option value="equipo_mina">🚜 Maquinaria Pesada / Equipos de Mina (Scooptram, Dumper, Perforadora)</option>
+                  <option value="vehiculo">🚗 Vehículos y Flota (Camioneta, Volquete, Furgón)</option>
+                  <option value="compresora">⚙️ Compresora de Aire</option>
+                  <option value="generador">⚡ Generador Eléctrico / Grupo Electrógeno</option>
+                  <option value="otro">🔧 Otro Equipo Operativo</option>
+                </select>
+              </div>
+
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1">
                   <label className="text-[10px] font-black text-slate-400 uppercase">Nombre de Equipo *</label>

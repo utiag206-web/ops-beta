@@ -122,6 +122,14 @@ export const getUserSession = cache(async function getUserSession() {
     }
   }
 
+  // RBAC Granular V1: resolver y serializar permisos planos (100% compatibles con RSC)
+ const resolvedRbac = resolvePermissions(
+   rbacRole,
+   (userData as any)?.area,
+   ((permissionsOverrideRes as any)?.data || []) as UserPermissionOverride[]
+ )
+ const serializedPerms = serializeToLegacyArray(resolvedRbac)
+
  const extendedUser = {
  id: user.id,
  email: userData.email || user.email || '',
@@ -132,7 +140,7 @@ export const getUserSession = cache(async function getUserSession() {
  native_company_id: (userData as any)?.company_id || null, 
  worker_id: activeWorkerId, // Dynamic worker context
  worker_status: activeWorkerStatus, // Dynamic worker status
- permissions: getPermissionsByRole(rbacRole, (userData as any)?.area),
+ permissions: serializedPerms,
  active_company_id: finalCompanyId,
  companies: companyData,
  company_name: companyObj?.name || 'Empresa',
@@ -144,15 +152,8 @@ export const getUserSession = cache(async function getUserSession() {
  display_name: '',
  display_email: '',
  is_view_only: false,
- // RBAC Granular V1: overrides + permisos resueltos
  permission_overrides: ((permissionsOverrideRes as any)?.data || []) as UserPermissionOverride[],
- resolved_permissions: resolvePermissions(
-   rbacRole,
-   (userData as any)?.area,
-   ((permissionsOverrideRes as any)?.data || []) as UserPermissionOverride[]
- ),
  }
-
 
  // Identity Masking for Super Admin (Display Only)
  if (impersonating) {

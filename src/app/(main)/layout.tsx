@@ -101,11 +101,7 @@ export default async function DashboardLayout({
       <GlobalSettingsProvider settings={globalSettings}>
       <RbacProvider 
         role_id={extendedUser?.role_id} 
-        permissions={
-          (extendedUser as any)?.resolved_permissions
-            ? serializeToLegacyArray((extendedUser as any).resolved_permissions)
-            : (extendedUser as any)?.permissions
-        }
+        permissions={extendedUser?.permissions}
         user={extendedUser}
       >
         <OperationalContextProvider

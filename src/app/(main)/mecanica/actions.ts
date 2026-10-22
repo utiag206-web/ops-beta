@@ -111,6 +111,47 @@ export async function getMecanicaOverview() {
 // MANTENIMIENTO: SERVER ACTIONS (Persistencia Real + RBAC + RLS)
 // ================================================================
 
+
+export async function getMaintenanceCounts() {
+  try {
+    const { extendedUser } = await getUserSession()
+    if (!extendedUser) return { vehiculo: 0, equipo_mina: 0, generador: 0, compresora: 0, all: 0 }
+
+    const companyId = await getStrictCompanyId()
+    const supabase = await createAdminClient()
+
+    const { data, error } = await applyIsolation(
+      supabase.from('mechanics_maintenance').select('equipment_type, status'),
+      companyId,
+      extendedUser.role_id
+    ).neq('status', 'anulado')
+
+    if (error) {
+      console.error('[MECANICA_ERROR] getMaintenanceCounts:', error)
+      return { vehiculo: 0, equipo_mina: 0, generador: 0, compresora: 0, all: 0 }
+    }
+
+    const counts = { vehiculo: 0, equipo_mina: 0, generador: 0, compresora: 0, all: data?.length || 0 }
+    data?.forEach((r: any) => {
+      const t = r.equipment_type
+      if (['vehiculo', 'vehiculo_liviano', 'vehiculo_pesado'].includes(t)) {
+        counts.vehiculo++
+      } else if (['equipo_mina', 'maquinaria_pesada', 'scooptram', 'dumper'].includes(t) || (!t && !['vehiculo', 'compresora', 'generador'].includes(t))) {
+        counts.equipo_mina++
+      } else if (t === 'generador') {
+        counts.generador++
+      } else if (t === 'compresora') {
+        counts.compresora++
+      }
+    })
+
+    return counts
+  } catch (error) {
+    console.error('[MECANICA_ERROR] getMaintenanceCounts exception:', error)
+    return { vehiculo: 0, equipo_mina: 0, generador: 0, compresora: 0, all: 0 }
+  }
+}
+
 export async function getMaintenanceRecords(equipmentType?: string) {
   try {
     const { extendedUser } = await getUserSession()
@@ -125,9 +166,11 @@ export async function getMaintenanceRecords(equipmentType?: string) {
       extendedUser.role_id
     )
 
-    if (equipmentType) {
+    if (equipmentType && equipmentType !== 'all') {
       if (equipmentType === 'vehiculo') {
         query = query.in('equipment_type', ['vehiculo', 'vehiculo_liviano', 'vehiculo_pesado'])
+      } else if (equipmentType === 'equipo_mina') {
+        query = query.in('equipment_type', ['equipo_mina', 'maquinaria_pesada', 'scooptram', 'dumper'])
       } else {
         query = query.eq('equipment_type', equipmentType)
       }

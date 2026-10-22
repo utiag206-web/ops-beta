@@ -19,6 +19,7 @@ import { useGlobalSettings } from '@/components/providers/global-settings-provid
 import { useOperationalContext, useTerminology } from '@/components/providers/operational-context-provider'
 import { CapabilityKey, SemanticToken } from '@/lib/operating-profiles/types'
 import { RoadmapModal } from './roadmap-modal'
+import { InthalyIsotype } from '@/components/brand/InthalyLogo'
 import { X } from 'lucide-react'
 
 interface NavItemDef {
@@ -78,14 +79,16 @@ const navGroups: NavGroupDef[] = [
   },
   {
     id: 'mecanica',
-    label: 'Maquinaria y Mantenimiento',
+    label: 'Área de Mecánica',
     token: 'maintenance.module_name',
     items: [
-      { name: 'Equipos y Maquinaria', token: 'asset.primary.plural', href: '/mecanica/equipos-mina', icon: Wrench, module: 'mecanica', capability: 'mecanica' },
-      { name: 'Mantenimiento', href: '/mecanica/mantenimiento-vehiculos', icon: Truck, module: 'mecanica', capability: 'mecanica_vehiculos' },
-      { name: 'Combustible', href: '/mecanica/generador-combustible', icon: Fuel, module: 'mecanica', capability: 'combustible' },
-      { name: 'Checklists', href: '/mecanica/checklists', icon: ClipboardCheck, module: 'mecanica', capability: 'checklists' },
+      { name: 'Mantenimiento de Vehículos', href: '/mecanica/mantenimiento-vehiculos', icon: Truck, module: 'mecanica', capability: 'mecanica' },
+      { name: 'Generador Eléctrico', href: '/mecanica/generador-mantenimiento', icon: Activity, module: 'mecanica', capability: 'mecanica' },
+      { name: 'Compresora de Aire', href: '/mecanica/compresora-mantenimiento', icon: Cpu, module: 'mecanica', capability: 'mecanica' },
+      { name: 'Equipos de Mina', href: '/mecanica/equipos-mina', icon: Wrench, module: 'mecanica', capability: 'mecanica' },
+      { name: 'Checklists Pre-Uso', href: '/mecanica/checklists', icon: ClipboardCheck, module: 'mecanica', capability: 'checklists' },
       { name: 'Control de Herramientas', href: '/mecanica/herramientas', icon: Hammer, module: 'mecanica', capability: 'herramientas' },
+      { name: 'Requerimientos de Taller', href: '/requerimientos', icon: FileText, module: 'requerimientos', capability: 'requerimientos' },
     ]
   },
   {
@@ -334,15 +337,6 @@ export function Sidebar() {
             }
           }
           if (g.id === 'mecanica') return g
-          if (g.id === 'operaciones') return { 
-            ...g, 
-            label: 'Gestión Auxiliar',
-            items: g.items.filter(i => ['requerimientos', 'caja-chica', 'assets'].includes(i.module)) 
-          }
-          if (g.id === 'soma') return {
-            ...g,
-            items: g.items.filter(i => ['soma-capacitaciones', 'soma-charlas'].includes(i.module))
-          }
           if (g.id === 'configuracion') return { ...g, items: g.items.filter(i => i.module === 'profile') }
           return { ...g, items: [] }
         })
@@ -539,11 +533,15 @@ export function Sidebar() {
     <div className="px-3 py-2.5 sm:px-3.5 sm:py-3 flex items-center justify-between nth-divider border-b">
       <div className="flex items-center gap-2.5 text-white">
         <div className="w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center rounded-lg nth-logo-box shrink-0">
-          <img 
-            src={settings?.ecosystem_logo || "/logo-ops.png"}
-            alt={settings?.ecosystem_name || "Inthaly OPS Logo"}
-            className="w-5 h-5 sm:w-6 sm:h-6 object-contain"
-          />
+          {settings?.ecosystem_logo ? (
+            <img 
+              src={settings.ecosystem_logo}
+              alt={settings?.ecosystem_name || "Inthaly OPS Logo"}
+              className="w-5 h-5 sm:w-6 sm:h-6 object-contain"
+            />
+          ) : (
+            <InthalyIsotype size={24} />
+          )}
         </div>
         <div className="flex flex-col">
           <span 
@@ -620,6 +618,7 @@ export function Sidebar() {
                       <Link
                         key={`${group.id}-${item.href}-${item.name}`}
                         href={item.href}
+                        prefetch={false}
                         onClick={(e) => {
                           if (isComingSoon) {
                             e.preventDefault()

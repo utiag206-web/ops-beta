@@ -8,7 +8,7 @@
 // ================================================================
 
 import { getUserSession } from '@/lib/auth'
-import { can } from '@/lib/rbac/engine'
+import { can, deserializeFromArray } from '@/lib/rbac/engine'
 import type { Module, Action } from '@/lib/rbac/types'
 
 /**
@@ -32,24 +32,26 @@ export async function requireAction(module: Module, action: Action) {
     throw new Error(`Acceso Denegado: sesión no encontrada.`)
   }
 
-  const resolved = (extendedUser as any)?.resolved_permissions
+  // Normalización de alias para compatibilidad total
+  const targetModule = (module === 'planta_mineral' ? 'planta' : module) as Module
+  const resolved = (extendedUser as any)?.resolved_permissions || (extendedUser.permissions?.length ? deserializeFromArray(extendedUser.permissions) : null)
 
   if (!resolved) {
     // Fallback: si por alguna razón no hay resolved_permissions,
     // verificamos con el sistema legacy (solo read-level)
     const { hasPermission } = await import('@/lib/permissions')
-    if (!hasPermission(extendedUser.role_id, module, extendedUser.area)) {
-      throw new Error(`Acceso Denegado a '${module}' (legacy fallback)`)
+    if (!hasPermission(extendedUser.role_id, targetModule, extendedUser.area)) {
+      throw new Error(`Acceso Denegado a '${targetModule}' (legacy fallback)`)
     }
     return extendedUser
   }
 
-  if (!can(resolved, module, action)) {
+  if (!can(resolved, targetModule, action)) {
     console.warn(
       `[RBAC_V1_DENY] User ${extendedUser.id} (${extendedUser.role_id}) ` +
-      `denied action '${action}' on module '${module}'`
+      `denied action '${action}' on module '${targetModule}'`
     )
-    throw new Error(`Acceso Denegado: no tienes permiso para '${action}' en '${module}'`)
+    throw new Error(`Acceso Denegado: no tienes permiso para '${action}' en '${targetModule}'`)
   }
 
   return extendedUser

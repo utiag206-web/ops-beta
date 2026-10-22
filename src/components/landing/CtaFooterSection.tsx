@@ -1,6 +1,7 @@
 'use client'
 
 import Image from 'next/image'
+import { InthalyIsotype } from '@/components/brand/InthalyLogo'
 import Link from 'next/link'
 import {
   ArrowRight,
@@ -103,15 +104,7 @@ export function CtaFooterSection({ onOpenDemo, commercialWhatsApp = '51923207309
             {/* Columna 1: Brand e Identidad (5 cols) */}
             <div className="lg:col-span-5">
               <div className="flex items-center gap-2.5 mb-3">
-                <div className="relative flex h-8 w-8 items-center justify-center overflow-hidden rounded-xl bg-blue-600 shadow-md">
-                  <Image
-                    src="/logo-ops.png"
-                    alt="INTHALY OPS Logo"
-                    width={32}
-                    height={32}
-                    className="h-full w-full object-cover"
-                  />
-                </div>
+                <InthalyIsotype size={32} />
                 <div>
                   <span className="text-lg font-black tracking-tight text-white leading-tight">
                     INTHALY <span className="text-blue-500">OPS</span>

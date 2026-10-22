@@ -74,6 +74,28 @@ export function InventoryMovementsList({
 
  const [searchTerm, setSearchTerm] = useState('')
  const [isModalOpen, setIsModalOpen] = useState(false)
+ const handleMovementSuccess = (newMovement?: any, newBalance?: number) => {
+   if (newMovement) {
+     const fullRecord: Movement = {
+       id: newMovement.id || `temp-${Date.now()}`,
+       product_id: newMovement.product_id,
+       type: newMovement.type || 'ingreso',
+       quantity: newMovement.quantity || 0,
+       location: newMovement.location || 'Almacén',
+       observation: newMovement.observation || '',
+       created_at: newMovement.created_at || new Date().toISOString(),
+       products: products.find(p => p.id === newMovement.product_id) || { name: 'Producto', code: 'PROD', unit: 'UND' },
+       warehouse_id: newMovement.warehouse_id,
+       document_type: newMovement.document_type,
+       document_number: newMovement.document_number,
+       responsible_name: newMovement.responsible_name,
+       reference: newMovement.reference
+     }
+     setMovements(prev => [fullRecord, ...prev])
+   }
+   router.refresh()
+ }
+
  const [selectedMovement, setSelectedMovement] = useState<Movement | null>(null)
 
  const filteredMovements = movements.filter(m => {
@@ -295,7 +317,7 @@ export function InventoryMovementsList({
  <MovementForm 
  isOpen={isModalOpen} 
  onClose={() => setIsModalOpen(false)} 
- onSuccess={() => router.refresh()}
+ onSuccess={handleMovementSuccess}
  products={products}
  />
 

@@ -2,7 +2,7 @@
 // Universal Offline Navigation, Static Asset Pre-caching & Sanitized Cache-API Match Architecture
 
 const CACHE_PREFIX = 'inthaly-ops'
-const CACHE_VERSION = 'v1.2.7'
+const CACHE_VERSION = 'v1.3.0'
 const STATIC_CACHE = `${CACHE_PREFIX}-static-${CACHE_VERSION}`
 const PAGES_CACHE = `${CACHE_PREFIX}-pages-${CACHE_VERSION}`
 const RSC_CACHE = `${CACHE_PREFIX}-rsc-${CACHE_VERSION}`
@@ -12,6 +12,8 @@ const CURRENT_CACHES = [STATIC_CACHE, PAGES_CACHE, RSC_CACHE, MEDIA_CACHE]
 
 const PRECACHE_ASSETS = [
   '/offline',
+  '/icon.svg',
+  '/logo-ops.svg',
   '/manifest.json',
   '/logo-ops.png',
   '/icon-192x192.png',
@@ -105,9 +107,15 @@ self.addEventListener('fetch', (event) => {
   if (url.pathname.startsWith('/_next/static/')) {
     event.respondWith(
       caches.open(STATIC_CACHE).then(async (cache) => {
-        const cached = (await cache.match(request, { ignoreSearch: true, ignoreVary: true })) ||
-                       (await cache.match(url.pathname, { ignoreSearch: true, ignoreVary: true }))
-        if (cached) return cached
+        const isLocalDev = url.hostname === 'localhost' || url.hostname === '127.0.0.1'
+
+        // En producción busca en caché primero. En desarrollo local, busca en red primero
+        // para garantizar que siempre se sirva el chunk de la compilación activa de Next.js
+        if (!isLocalDev) {
+          const cached = (await cache.match(request, { ignoreSearch: true, ignoreVary: true })) ||
+                         (await cache.match(url.pathname, { ignoreSearch: true, ignoreVary: true }))
+          if (cached) return cached
+        }
 
         try {
           const networkResponse = await fetch(request)
@@ -118,6 +126,8 @@ self.addEventListener('fetch', (event) => {
           }
           return networkResponse
         } catch (err) {
+          const cached = (await cache.match(request, { ignoreSearch: true, ignoreVary: true })) ||
+                         (await cache.match(url.pathname, { ignoreSearch: true, ignoreVary: true }))
           if (cached) return cached
           throw err
         }

@@ -176,20 +176,8 @@ export function OfflineProvider({ children }: { children: React.ReactNode }) {
 }
 
 function OfflineIndicator({ isOnline, pendingCount, isSyncing, onSync }: { isOnline: boolean, pendingCount: number, isSyncing: boolean, onSync?: () => Promise<void> }) {
-  const [showSynced, setShowSynced] = useState(false)
-  const prevPendingRef = useRef(pendingCount)
-
-  useEffect(() => {
-    if (isOnline && !isSyncing && prevPendingRef.current > 0 && pendingCount === 0) {
-      setShowSynced(true)
-      const t = setTimeout(() => setShowSynced(false), 3000)
-      prevPendingRef.current = 0
-      return () => clearTimeout(t)
-    }
-    prevPendingRef.current = pendingCount
-  }, [isOnline, pendingCount, isSyncing])
-
-  if (isOnline && pendingCount === 0 && !isSyncing && !showSynced) return null
+  // Silent background sync: only render when offline or when user has pending items to sync
+  if (isOnline && pendingCount === 0) return null
 
   return (
     <div className="fixed bottom-4 right-4 z-50 flex items-center gap-3 px-4 py-2.5 rounded-2xl shadow-xl font-bold text-xs animate-in slide-in-from-bottom-5 bg-white border border-slate-200 text-slate-700 pointer-events-auto">
@@ -198,14 +186,8 @@ function OfflineIndicator({ isOnline, pendingCount, isSyncing, onSync }: { isOnl
           <WifiOff size={16} /> Sin conexión — Modo Offline
         </span>
       )}
-      
-      {isOnline && isSyncing && (
-        <span className="flex items-center gap-2 text-blue-600">
-          <RefreshCw size={16} className="animate-spin" /> Sincronizando cambios...
-        </span>
-      )}
 
-      {isOnline && !isSyncing && pendingCount > 0 && (
+      {isOnline && pendingCount > 0 && (
         <button
           type="button"
           onClick={() => onSync && onSync()}
@@ -214,14 +196,8 @@ function OfflineIndicator({ isOnline, pendingCount, isSyncing, onSync }: { isOnl
         >
           <span className="bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full">{pendingCount}</span>
           Pendientes (Sincronizar)
-          <RefreshCw size={13} className="ml-1 opacity-70 hover:opacity-100" />
+          <RefreshCw size={13} className={`ml-1 opacity-70 hover:opacity-100 ${isSyncing ? 'animate-spin text-blue-600' : ''}`} />
         </button>
-      )}
-
-      {isOnline && !isSyncing && pendingCount === 0 && showSynced && (
-        <span className="flex items-center gap-2 text-emerald-600 animate-in fade-in">
-          <Wifi size={16} /> ✓ Todo sincronizado
-        </span>
       )}
     </div>
   )

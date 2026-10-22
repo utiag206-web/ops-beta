@@ -72,7 +72,7 @@ export const PERMISSIONS_MATRIX: Record<string, RoleMatrix> = {
   gerente: {
     modules: {
       dashboard:          ['read'],
-      workers:            ['read', 'export'],
+      workers:            ['read', 'create', 'update', 'export'],
       inventory:          ['read', 'export'],
       movements:          ['read', 'export'],
       requerimientos:     ['read', 'approve', 'export'],
@@ -94,9 +94,10 @@ export const PERMISSIONS_MATRIX: Record<string, RoleMatrix> = {
       soma:               ['read'],
       documents:          ['read', 'export'],
       company:            ['read'],
-      operaciones:        ['read', 'export'],
-      mecanica:           ['read', 'export'],
+      operaciones:        ['read', 'create', 'update', 'export'],
+      mecanica:           ['read', 'create', 'update', 'export'],
       mina:               ['read', 'export'],
+          planta:             ['read', 'create', 'update', 'export'],
     }
   },
 
@@ -121,11 +122,11 @@ export const PERMISSIONS_MATRIX: Record<string, RoleMatrix> = {
       'soma-charlas':     ['read', 'create'],
       soma:               ['read'],
       operaciones:        ['read', 'create', 'update', 'export'],
-      mecanica:           ['read'],
-      planta:             ['read'],
+      mecanica:           ['read', 'create', 'update', 'export'],
+      planta:             ['read', 'create', 'update', 'export'],
       reports:            ['read', 'export'],
       profile:            ['read', 'update'],
-    }
+        }
   },
 
   // ---------------------------------------------------------------

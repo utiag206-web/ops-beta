@@ -8,119 +8,136 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { getSomaTrainings, createSomaTraining, updateSomaTraining, deleteSomaTraining, completeTrainingParticipant } from '../actions'
-import { getWorkers } from '@/app/(main)/workers/actions'
+import { getWorkersShort } from '@/app/(main)/workers/actions'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { useRbac } from '@/components/providers/rbac-provider'
 
+// Safe date helper that never throws RangeError
+const formatDateSafe = (dateStr: string | null | undefined, fmt: string = 'dd MMM, yyyy') => {
+  if (!dateStr) return '--'
+  try {
+    const clean = String(dateStr).split('T')[0]
+    const parts = clean.split('-')
+    if (parts.length === 3) {
+      const d = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]))
+      if (!isNaN(d.getTime())) return format(d, fmt, { locale: es })
+    }
+    const d = new Date(dateStr)
+    if (!isNaN(d.getTime())) return format(d, fmt, { locale: es })
+    return String(dateStr)
+  } catch {
+    return String(dateStr)
+  }
+}
+
 export default function CapacitacionesSomaPage() {
  const { role_id, user: rbacUser } = useRbac()
- const [trainings, setTrainings] = useState<any[]>([])
- const [workers, setWorkers] = useState<any[]>([])
- const [loading, setLoading] = useState(true)
- const [isModalOpen, setIsModalOpen] = useState(false)
- const [searchTerm, setSearchTerm] = useState('')
- const [selectedTraining, setSelectedTraining] = useState<any | null>(null)
- const [editTraining, setEditTraining] = useState<any | null>(null)
+  const [trainings, setTrainings] = useState<any[]>([])
+  const [workers, setWorkers] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  const [workersLoaded, setWorkersLoaded] = useState(false)
+  const [loadingWorkers, setLoadingWorkers] = useState(false)
+  const [isModalOpen, setIsModalOpen] = useState(false)
+  const [searchTerm, setSearchTerm] = useState('')
+  const [selectedTraining, setSelectedTraining] = useState<any | null>(null)
+  const [editTraining, setEditTraining] = useState<any | null>(null)
 
- const isSomaRole = ['admin', 'soma', 'operaciones', 'jefe_area', 'super_admin', 'superadmin'].includes(role_id || '')
+  const isSomaRole = ['admin', 'soma', 'operaciones', 'jefe_area', 'super_admin', 'superadmin'].includes(role_id || '')
 
- const handleDelete = async (id: string) => {
- if (typeof navigator !== 'undefined' && !navigator.onLine) {
-   toast.error('Eliminar capacitaciones requiere conexión a Internet')
-   return
- }
- if (!confirm('¿Estás seguro de que deseas eliminar este registro de capacitación? Esta acción no se puede deshacer.')) return
- try {
- const res = await deleteSomaTraining(id)
- if (res.error) throw new Error(res.error)
- toast.success('Capacitación eliminada correctamente')
- loadData()
- } catch (err: any) {
- toast.error(err.message || 'Error al eliminar capacitación')
- }
- }
 
- useEffect(() => {
- loadData()
- }, [])
+  // Load workers on-demand (only needed for Add/Edit modals)
+  const ensureWorkers = async () => {
+    if (workersLoaded || loadingWorkers) return
+    setLoadingWorkers(true)
+    try {
+      const wData = await getWorkersShort()
+      setWorkers(wData || [])
+      setWorkersLoaded(true)
+    } catch (err) {
+      console.warn('[Capacitaciones] Error al cargar lista de trabajadores:', err)
+    } finally {
+      setLoadingWorkers(false)
+    }
+  }
 
- async function loadData() {
- setLoading(true)
- try {
-   let tData: any[] | null = null
-   let wData: any[] | null = null
+  const handleDelete = async (id: string) => {
+    if (typeof navigator !== 'undefined' && !navigator.onLine) {
+      toast.error('Eliminar capacitaciones requiere conexión a Internet')
+      return
+    }
+    if (!confirm('¿Estás seguro de que deseas eliminar este registro de capacitación? Esta acción no se puede deshacer.')) return
+    try {
+      const res = await deleteSomaTraining(id)
+      if (res.error) throw new Error(res.error)
+      toast.success('Capacitación eliminada correctamente')
+      loadData()
+    } catch (err: any) {
+      toast.error(err.message || 'Error al eliminar capacitación')
+    }
+  }
 
-   if (typeof navigator !== 'undefined' && navigator.onLine) {
-     try {
-       const [trainingsRes, workersRes] = await Promise.all([
-         getSomaTrainings(),
-         getWorkers('active')
-       ])
-       tData = trainingsRes || []
-       wData = workersRes || []
-       try {
-         if (typeof localStorage !== 'undefined') {
-           localStorage.setItem('soma_trainings_cache', JSON.stringify(tData))
-           localStorage.setItem('soma_workers_cache', JSON.stringify(wData))
-         }
-       } catch (_) {}
-     } catch (netErr) {
-       console.warn('[Capacitaciones] Error de red:', netErr)
-     }
-   }
+  // Fast load of trainings history (sub-second render)
+  async function loadData() {
+    setLoading(true)
+    try {
+      let tData: any[] | null = null
 
-   if (tData !== null && wData !== null) {
-     setTrainings(tData)
-     setWorkers(wData)
-     setSelectedTraining((prev: any) => {
-       if (!prev) return null
-       return tData?.find((t: any) => t.id === prev.id) || null
-     })
-   } else {
-     // Recuperación desde caché local
-     let recoveredTrainings: any[] = []
-     let recoveredWorkers: any[] = []
-     try {
-       if (typeof localStorage !== 'undefined') {
-         const rawT = localStorage.getItem('soma_trainings_cache')
-         const rawW = localStorage.getItem('soma_workers_cache')
-         if (rawT) {
-           const parsedT = JSON.parse(rawT)
-           if (Array.isArray(parsedT)) recoveredTrainings = parsedT
-         }
-         if (rawW) {
-           const parsedW = JSON.parse(rawW)
-           if (Array.isArray(parsedW)) recoveredWorkers = parsedW
-         }
-       }
-     } catch (_) {}
+      if (typeof navigator !== 'undefined' && navigator.onLine) {
+        try {
+          tData = await getSomaTrainings()
+          if (Array.isArray(tData)) {
+            try {
+              if (typeof localStorage !== 'undefined') {
+                localStorage.setItem('soma_trainings_cache', JSON.stringify(tData))
+              }
+            } catch (_) {}
+          }
+        } catch (netErr) {
+          console.warn('[Capacitaciones] Error de red:', netErr)
+        }
+      }
 
-     setTrainings(recoveredTrainings)
-     setWorkers(recoveredWorkers)
-     setSelectedTraining((prev: any) => {
-       if (!prev) return null
-       return recoveredTrainings.find((t: any) => t.id === prev.id) || null
-     })
+      if (tData === null || !Array.isArray(tData)) {
+        try {
+          if (typeof localStorage !== 'undefined') {
+            const rawT = localStorage.getItem('soma_trainings_cache')
+            if (rawT) {
+              const parsedT = JSON.parse(rawT)
+              if (Array.isArray(parsedT)) tData = parsedT
+            }
+          }
+        } catch (_) {}
+      }
 
-     // No mostrar toast de error agresivo si está offline
-     if (typeof navigator !== 'undefined' && navigator.onLine && recoveredTrainings.length === 0) {
-       toast.error('Error al cargar datos')
-     }
-   }
- } catch (error) {
-   console.error('[Capacitaciones] Error in loadData:', error)
- } finally {
-   setLoading(false)
- }
- }
+      const finalTrainings = tData || []
+      setTrainings(finalTrainings)
+      setSelectedTraining((prev: any) => {
+        if (!prev) return null
+        return finalTrainings.find((t: any) => t.id === prev.id) || null
+      })
+    } catch (error) {
+      console.error('[Capacitaciones] Error in loadData:', error)
+      toast.error('Error al cargar capacitaciones')
+    } finally {
+      setLoading(false)
+    }
+  }
 
- const filteredTrainings = trainings.filter(t => 
- t.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
- t.trainer?.toLowerCase().includes(searchTerm.toLowerCase())
- )
+  useEffect(() => {
+    loadData()
+    const timer = setTimeout(() => {
+      ensureWorkers()
+    }, 500)
+    return () => clearTimeout(timer)
+  }, [])
 
- const stats = {
+  const filteredTrainings = trainings.filter(t => 
+    (t.title || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (t.trainer || '').toLowerCase().includes(searchTerm.toLowerCase())
+  )
+
+  const stats = {
  total: trainings.length,
  vencidos: trainings.filter(t => t.expiry_date && new Date(t.expiry_date) < new Date()).length,
  proximos: trainings.filter(t => {
@@ -145,7 +162,7 @@ export default function CapacitacionesSomaPage() {
  </div>
  {['admin', 'soma', 'operaciones', 'jefe_area', 'super_admin', 'superadmin'].includes(role_id || '') && (
  <button 
- onClick={() => setIsModalOpen(true)}
+ onClick={() => { ensureWorkers(); setIsModalOpen(true); }}
  className="w-full md:w-auto flex items-center justify-center gap-3 px-8 py-4 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-2xl sm:rounded-[2rem] shadow-xl shadow-indigo-200 transition-all hover:scale-105 active:scale-95 text-xs sm:text-base"
  >
  <Plus size={20} />
@@ -207,19 +224,32 @@ export default function CapacitacionesSomaPage() {
  </tr>
  </thead>
  <tbody className="divide-y divide-slate-50">
- {loading ? (
- <tr>
- <td colSpan={6} className="px-10 py-20 text-center">
- <Loader2 className="w-10 h-10 animate-spin text-indigo-500 mx-auto" />
- </td>
- </tr>
- ) : filteredTrainings.length === 0 ? (
- <tr>
- <td colSpan={6} className="px-10 py-20 text-center text-slate-400 font-bold">
- No se encontraron registros de capacitación.
- </td>
- </tr>
- ) : filteredTrainings.map((t) => {
+        {loading ? (
+          [1, 2, 3, 4].map((i) => (
+            <tr key={i} className="animate-pulse">
+              <td className="px-10 py-6">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 bg-slate-100 rounded-xl shrink-0" />
+                  <div className="space-y-2">
+                    <div className="h-4 bg-slate-100 rounded w-44" />
+                    <div className="h-3 bg-slate-100 rounded w-28" />
+                  </div>
+                </div>
+              </td>
+              <td className="px-10 py-6"><div className="h-4 bg-slate-100 rounded w-28" /></td>
+              <td className="px-10 py-6"><div className="h-4 bg-slate-100 rounded w-24" /></td>
+              <td className="px-10 py-6"><div className="h-6 bg-slate-100 rounded-lg w-12" /></td>
+              <td className="px-10 py-6"><div className="h-6 bg-slate-100 rounded-xl w-20" /></td>
+              <td className="px-10 py-6 text-right"><div className="h-8 bg-slate-100 rounded-xl w-20 ml-auto" /></td>
+            </tr>
+          ))
+        ) : filteredTrainings.length === 0 ? (
+          <tr>
+            <td colSpan={6} className="px-10 py-20 text-center text-slate-400 font-bold">
+              No se encontraron registros de capacitación.
+            </td>
+          </tr>
+        ) : filteredTrainings.map((t) => {
  const isExpired = t.expiry_date && new Date(t.expiry_date) < new Date()
  const daysToExpiry = t.expiry_date ? Math.floor((new Date(t.expiry_date).getTime() - new Date().getTime()) / (1000 * 3600 * 24)) : null
  
@@ -254,11 +284,11 @@ export default function CapacitacionesSomaPage() {
  <div className="space-y-1">
  <div className="flex items-center gap-2 font-bold text-slate-700">
  <Calendar size={14} className="text-slate-400" />
- {format(new Date(t.date), 'dd MMM, yyyy', { locale: es })}
+ {formatDateSafe(t.date)}
  </div>
  {t.expiry_date && (
  <div className="text-[10px] font-bold text-slate-400 tracking-tight pl-5">
- EXP: {format(new Date(t.expiry_date), 'dd MMM, yyyy', { locale: es })}
+ EXP: {formatDateSafe(t.expiry_date)}
  </div>
  )}
  </div>
@@ -297,7 +327,7 @@ export default function CapacitacionesSomaPage() {
  {isSomaRole && (
  <>
  <button 
- onClick={() => setEditTraining(t)}
+ onClick={() => { ensureWorkers(); setEditTraining(t); }}
  className="p-3 bg-slate-50 hover:bg-slate-100 rounded-xl text-slate-500 hover:text-amber-600 transition-all shadow-sm"
  title="Editar"
  >
@@ -629,12 +659,12 @@ function ViewTrainingDetailsModal({ training, onClose, onUpdate }: { training: a
  <div className="grid grid-cols-2 gap-4 text-sm font-semibold text-slate-600">
  <div className="flex items-center gap-2">
  <Calendar size={16} className="text-slate-400" />
- <span>Fecha Realización: <span className="text-slate-800 font-bold">{format(new Date(training.date), 'dd/MM/yyyy')}</span></span>
+ <span>Fecha Realización: <span className="text-slate-800 font-bold">{formatDateSafe(training.date, 'dd/MM/yyyy')}</span></span>
  </div>
  {training.expiry_date && (
  <div className="flex items-center gap-2">
  <Clock size={16} className="text-slate-400" />
- <span>Vencimiento: <span className="text-slate-800 font-bold">{format(new Date(training.expiry_date), 'dd/MM/yyyy')}</span></span>
+ <span>Vencimiento: <span className="text-slate-800 font-bold">{formatDateSafe(training.expiry_date, 'dd/MM/yyyy')}</span></span>
  </div>
  )}
  <div className="flex items-center gap-2">

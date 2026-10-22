@@ -29,8 +29,7 @@ export default function ActivarClient({ token }: ActivarClientProps) {
               No se detectó un código de activación válido en la solicitud. Si ya estableciste tu contraseña, puedes iniciar sesión directamente.
             </p>
           </div>
-          <Link
-            href="/login"
+          <Link prefetch={false} href="/login"
             className="w-full inline-flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-xl text-xs transition-all shadow-md shadow-blue-200"
           >
             <LogIn size={14} />
@@ -77,16 +76,14 @@ export default function ActivarClient({ token }: ActivarClientProps) {
               </div>
 
               <div className="space-y-2 pt-2">
-                <Link
-                  href="/dashboard"
+                <Link prefetch={false} href="/dashboard"
                   className="w-full inline-flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3.5 px-4 rounded-xl text-xs sm:text-sm transition-all shadow-lg shadow-blue-500/25 hover:shadow-xl cursor-pointer"
                 >
                   <span>Ingresar a la Plataforma</span>
                   <ArrowRight size={16} />
                 </Link>
 
-                <Link
-                  href="/login"
+                <Link prefetch={false} href="/login"
                   className="w-full inline-flex items-center justify-center gap-2 text-slate-500 hover:text-slate-800 font-semibold py-2 px-4 text-xs transition-colors"
                 >
                   <span>Ir al Login tradicional</span>
@@ -114,8 +111,7 @@ export default function ActivarClient({ token }: ActivarClientProps) {
                   </div>
 
                   {state.isUsedOrExpired && (
-                    <Link
-                      href="/login"
+                    <Link prefetch={false} href="/login"
                       className="w-full inline-flex items-center justify-center gap-2 bg-rose-600 hover:bg-rose-700 text-white font-bold py-2 px-3 rounded-xl text-xs transition-all shadow-xs"
                     >
                       <LogIn size={13} />

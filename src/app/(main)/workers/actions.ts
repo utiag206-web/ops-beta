@@ -122,8 +122,8 @@ export async function createWorker(prevState: any, formData: FormData) {
  const { extendedUser } = await getUserSession()
  const companyId = await getStrictCompanyId()
 
- const allowedRoles = ['admin', 'operaciones', 'super_admin', 'superadmin']
- if (!extendedUser.role_id || !allowedRoles.includes(extendedUser.role_id)) {
+ const allowedRoles = ['admin', 'operaciones', 'gerente', 'administracion', 'super_admin', 'superadmin']
+ if (!extendedUser.role_id || (!allowedRoles.includes(extendedUser.role_id) && extendedUser.role !== 'admin')) {
  return { success: false, error: 'No tienes permisos para crear trabajadores.' }
  }
 
@@ -193,8 +193,8 @@ export async function updateWorker(prevState: any, formData: FormData) {
  try {
  const { extendedUser } = await getUserSession()
  const companyId = await getStrictCompanyId()
- const allowedRoles = ['admin', 'operaciones', 'super_admin', 'superadmin']
- if (!extendedUser.role_id || !allowedRoles.includes(extendedUser.role_id)) {
+ const allowedRoles = ['admin', 'operaciones', 'gerente', 'administracion', 'super_admin', 'superadmin']
+ if (!extendedUser.role_id || (!allowedRoles.includes(extendedUser.role_id) && extendedUser.role !== 'admin')) {
  return { success: false, error: 'No tienes permisos para editar trabajadores.' }
  }
 
@@ -286,8 +286,8 @@ export async function deleteWorker(id: string) {
  try {
  const { extendedUser } = await getUserSession()
  const companyId = await getStrictCompanyId()
- const allowedRoles = ['admin', 'operaciones', 'super_admin', 'superadmin']
- if (!extendedUser.role_id || !allowedRoles.includes(extendedUser.role_id)) {
+ const allowedRoles = ['admin', 'operaciones', 'gerente', 'administracion', 'super_admin', 'superadmin']
+ if (!extendedUser.role_id || (!allowedRoles.includes(extendedUser.role_id) && extendedUser.role !== 'admin')) {
  return { success: false, error: 'No tienes permisos.' }
  }
 
@@ -316,8 +316,8 @@ export async function reactivateWorker(id: string) {
  try {
  const { extendedUser } = await getUserSession()
  const companyId = await getStrictCompanyId()
- const allowedRoles = ['admin', 'operaciones', 'super_admin', 'superadmin']
- if (!extendedUser.role_id || !allowedRoles.includes(extendedUser.role_id)) {
+ const allowedRoles = ['admin', 'operaciones', 'gerente', 'administracion', 'super_admin', 'superadmin']
+ if (!extendedUser.role_id || (!allowedRoles.includes(extendedUser.role_id) && extendedUser.role !== 'admin')) {
  return { success: false, error: 'No tienes permisos.' }
  }
 
@@ -419,8 +419,8 @@ export async function uploadWorkerDocument(formData: FormData) {
 
  const companyId = await getStrictCompanyId()
 
- const allowedRoles = ['admin', 'operaciones', 'super_admin', 'superadmin']
- if (!extendedUser.role_id || !allowedRoles.includes(extendedUser.role_id)) {
+ const allowedRoles = ['admin', 'operaciones', 'gerente', 'administracion', 'super_admin', 'superadmin']
+ if (!extendedUser.role_id || (!allowedRoles.includes(extendedUser.role_id) && extendedUser.role !== 'admin')) {
  return { success: false, error: `Tu rol (${extendedUser.role_id}) no tiene permisos para subir documentos.` }
  }
 
@@ -487,8 +487,8 @@ export async function deleteWorkerDocument(id: string, workerId: string, filePat
  try {
  const { extendedUser } = await getUserSession()
  const companyId = await getStrictCompanyId()
- const allowedRoles = ['admin', 'operaciones', 'super_admin', 'superadmin']
- if (!extendedUser.role_id || !allowedRoles.includes(extendedUser.role_id)) {
+ const allowedRoles = ['admin', 'operaciones', 'gerente', 'administracion', 'super_admin', 'superadmin']
+ if (!extendedUser.role_id || (!allowedRoles.includes(extendedUser.role_id) && extendedUser.role !== 'admin')) {
  return { success: false, error: 'No tienes permisos.' }
  }
 
@@ -619,8 +619,8 @@ export async function updateWorkerFullProfile(id: string, payload: {
  try {
  const { extendedUser } = await getUserSession()
  const companyId = await getStrictCompanyId()
- const allowedRoles = ['admin', 'operaciones', 'super_admin', 'superadmin']
- if (!extendedUser.role_id || !allowedRoles.includes(extendedUser.role_id)) {
+ const allowedRoles = ['admin', 'operaciones', 'gerente', 'administracion', 'super_admin', 'superadmin']
+ if (!extendedUser.role_id || (!allowedRoles.includes(extendedUser.role_id) && extendedUser.role !== 'admin')) {
  return { success: false, error: 'No tienes permisos.' }
  }
 
@@ -731,8 +731,8 @@ export async function upsertWorkerChild(formData: FormData) {
  try {
  const { extendedUser } = await getUserSession()
  const companyId = await getStrictCompanyId()
- const allowedRoles = ['admin', 'operaciones', 'super_admin', 'superadmin']
- if (!extendedUser.role_id || !allowedRoles.includes(extendedUser.role_id)) {
+ const allowedRoles = ['admin', 'operaciones', 'gerente', 'administracion', 'super_admin', 'superadmin']
+ if (!extendedUser.role_id || (!allowedRoles.includes(extendedUser.role_id) && extendedUser.role !== 'admin')) {
  return { success: false, error: 'No tienes permisos para gestionar hijos.' }
  }
 
@@ -794,8 +794,8 @@ export async function deleteWorkerChild(id: string, workerId: string) {
  try {
  const { extendedUser } = await getUserSession()
  const companyId = await getStrictCompanyId()
- const allowedRoles = ['admin', 'operaciones', 'super_admin', 'superadmin']
- if (!extendedUser.role_id || !allowedRoles.includes(extendedUser.role_id)) {
+ const allowedRoles = ['admin', 'operaciones', 'gerente', 'administracion', 'super_admin', 'superadmin']
+ if (!extendedUser.role_id || (!allowedRoles.includes(extendedUser.role_id) && extendedUser.role !== 'admin')) {
  return { success: false, error: 'No tienes permisos para eliminar.' }
  }
 
@@ -823,8 +823,8 @@ export async function uploadWorkerPhoto(workerId: string, formData: FormData) {
  try {
  const { extendedUser } = await getUserSession()
  const companyId = await getStrictCompanyId()
- const allowedRoles = ['admin', 'operaciones', 'super_admin', 'superadmin']
- if (!extendedUser.role_id || !allowedRoles.includes(extendedUser.role_id)) {
+ const allowedRoles = ['admin', 'operaciones', 'gerente', 'administracion', 'super_admin', 'superadmin']
+ if (!extendedUser.role_id || (!allowedRoles.includes(extendedUser.role_id) && extendedUser.role !== 'admin')) {
  return { success: false, error: 'No tienes permisos para subir fotografías.' }
  }
 

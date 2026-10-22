@@ -8,11 +8,29 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { getSomaTalks, createSomaTalk, getCurrentUser, confirmSomaTalk, updateSomaTalk, deleteSomaTalk, completeTalkParticipant } from '../actions'
-import { getWorkers } from '@/app/(main)/workers/actions'
+import { getWorkersShort } from '@/app/(main)/workers/actions'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 
 import { useRbac } from '@/components/providers/rbac-provider'
+
+// Safe date helper that never throws RangeError
+const formatDateSafe = (dateStr: string | null | undefined, fmt: string = 'dd MMM, yyyy') => {
+  if (!dateStr) return '--'
+  try {
+    const clean = String(dateStr).split('T')[0]
+    const parts = clean.split('-')
+    if (parts.length === 3) {
+      const d = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]))
+      if (!isNaN(d.getTime())) return format(d, fmt, { locale: es })
+    }
+    const d = new Date(dateStr)
+    if (!isNaN(d.getTime())) return format(d, fmt, { locale: es })
+    return String(dateStr)
+  } catch {
+    return String(dateStr)
+  }
+}
 
 export default function CharlasSomaPage() {
  const { role_id, user: rbacUser } = useRbac()
@@ -39,37 +57,51 @@ export default function CharlasSomaPage() {
  const user = rbacUser
 
  useEffect(() => {
- loadData()
- }, [])
+    loadData()
+    const timer = setTimeout(() => {
+      ensureWorkers()
+    }, 500)
+    return () => clearTimeout(timer)
+  }, [])
 
- async function loadData() {
- setLoading(true)
- try {
- const [tData, wData] = await Promise.all([
- getSomaTalks().catch(err => {
- console.error("Error loading talks:", err)
- return []
- }),
- getWorkers('active').catch(err => {
- console.error("Error loading workers:", err)
- return []
- })
- ])
- setTalks(tData || [])
- setWorkers(wData || [])
- setSelectedTalk((prev: any) => {
- if (!prev) return null
- return (tData || []).find((t: any) => t.id === prev.id) || null
- })
- } catch (error) {
- console.error("Critical error in loadData:", error)
- toast.error('Error al cargar datos')
- } finally {
- setLoading(false)
- }
- }
+ const [workersLoaded, setWorkersLoaded] = useState(false)
+  const [loadingWorkers, setLoadingWorkers] = useState(false)
 
- const isSomaRole = ['admin', 'soma', 'operaciones', 'super_admin', 'superadmin', 'jefe_area'].includes(role_id || '')
+
+  // Load workers on-demand (only needed for Add/Edit modals)
+  const ensureWorkers = async () => {
+    if (workersLoaded || loadingWorkers) return
+    setLoadingWorkers(true)
+    try {
+      const wData = await getWorkersShort()
+      setWorkers(wData || [])
+      setWorkersLoaded(true)
+    } catch (err) {
+      console.warn('[Charlas] Error al cargar lista de trabajadores:', err)
+    } finally {
+      setLoadingWorkers(false)
+    }
+  }
+
+  // Fast load of talks history
+  async function loadData() {
+    setLoading(true)
+    try {
+      const tData = await getSomaTalks()
+      setTalks(tData || [])
+      setSelectedTalk((prev: any) => {
+        if (!prev) return null
+        return (tData || []).find((t: any) => t.id === prev.id) || null
+      })
+    } catch (error) {
+      console.error("Critical error in loadData:", error)
+      toast.error('Error al cargar charlas')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const isSomaRole = ['admin', 'soma', 'operaciones', 'super_admin', 'superadmin', 'jefe_area'].includes(role_id || '')
 
  const handleConfirm = async (talkId: string) => {
  try {
@@ -127,7 +159,7 @@ export default function CharlasSomaPage() {
  </div>
  {isSomaRole && (
  <button 
- onClick={() => setIsModalOpen(true)}
+ onClick={() => { ensureWorkers(); setIsModalOpen(true); }}
  className="w-full md:w-auto flex items-center justify-center gap-3 px-8 py-4 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-2xl sm:rounded-[2rem] shadow-xl shadow-emerald-200 transition-all hover:scale-105 active:scale-95 text-xs sm:text-base"
  >
  <Plus size={20} />
@@ -208,7 +240,7 @@ export default function CharlasSomaPage() {
  <div className="flex items-center justify-between mb-6">
  <div className="flex gap-2">
  <div className="px-4 py-2 bg-white rounded-xl text-[10px] font-bold text-slate-400 tracking-tight shadow-sm">
- {format(new Date(t.date), 'dd MMM, yyyy', { locale: es })}
+ {formatDateSafe(t.date)}
  </div>
  {t.target_area && (
  <div className="px-4 py-2 bg-emerald-50 text-emerald-600 rounded-xl text-[10px] font-bold tracking-tight shadow-sm">
@@ -602,7 +634,7 @@ function ViewTalkDetailsModal({ talk, onClose, onUpdate }: { talk: any; onClose:
  <div className="grid grid-cols-2 gap-4 text-sm font-semibold text-slate-600">
  <div className="flex items-center gap-2">
  <Calendar size={16} className="text-slate-400" />
- <span>Fecha: <span className="text-slate-800 font-bold">{format(new Date(talk.date), 'dd/MM/yyyy')}</span></span>
+ <span>Fecha: <span className="text-slate-800 font-bold">{formatDateSafe(talk.date, 'dd/MM/yyyy')}</span></span>
  </div>
  <div className="flex items-center gap-2">
  <MapPin size={16} className="text-slate-400" />

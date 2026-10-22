@@ -153,7 +153,7 @@ export function DashboardShell({ user, stats, localIp }: DashboardShellProps) {
  <h4 className="text-xs font-bold text-slate-300 tracking-normal">Requerimientos</h4>
  <p className="text-lg font-bold text-white">{stats.admin?.pendingRequirementsCount} Pendientes</p>
  </div>
- <Link href="/requerimientos" className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-[10px] font-bold rounded-xl tracking-tight transition-all">Ver</Link>
+ <Link prefetch={false} href="/requerimientos" className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-[10px] font-bold rounded-xl tracking-tight transition-all">Ver</Link>
  </div>
 
  <div className="p-4 bg-white/5 rounded-2xl border border-white/10 flex items-center justify-between">
@@ -161,7 +161,7 @@ export function DashboardShell({ user, stats, localIp }: DashboardShellProps) {
  <h4 className="text-xs font-bold text-slate-300 tracking-normal">Bonificaciones</h4>
  <p className="text-lg font-bold text-white">{stats.admin?.pendingBonusesCount} En Espera</p>
  </div>
- <Link href="/bonuses" className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-[10px] font-bold rounded-xl tracking-tight transition-all">Ver</Link>
+ <Link prefetch={false} href="/bonuses" className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-[10px] font-bold rounded-xl tracking-tight transition-all">Ver</Link>
  </div>
 
  <div className="p-4 bg-white/5 rounded-2xl border border-white/10 flex items-center justify-between">
@@ -169,7 +169,7 @@ export function DashboardShell({ user, stats, localIp }: DashboardShellProps) {
  <h4 className="text-xs font-bold text-slate-300 tracking-normal">Pasajes / Transportes</h4>
  <p className="text-lg font-bold text-white">{stats.admin?.pendingTransportCount} Pendientes</p>
  </div>
- <Link href="/bonuses" className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-[10px] font-bold rounded-xl tracking-tight transition-all">Ver</Link>
+ <Link prefetch={false} href="/bonuses" className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-[10px] font-bold rounded-xl tracking-tight transition-all">Ver</Link>
  </div>
  </div>
  </div>
@@ -281,28 +281,28 @@ export function DashboardShell({ user, stats, localIp }: DashboardShellProps) {
  <h3 className="text-base sm:text-lg font-bold text-white tracking-tight">Acciones Rápidas</h3>
  </div>
  <div className="space-y-2">
- <Link href="/workers" className="flex items-center justify-between p-2.5 bg-white/10 hover:bg-white/20 border border-white/10 rounded-xl transition-all group">
+ <Link prefetch={false} href="/workers" className="flex items-center justify-between p-2.5 bg-white/10 hover:bg-white/20 border border-white/10 rounded-xl transition-all group">
  <div className="flex items-center gap-2.5">
  <Users className="text-blue-300" size={16} />
  <span className="text-[11px] font-semibold text-white tracking-tight">Registrar Trabajador</span>
  </div>
  <Plus className="text-white/50 group-hover:rotate-90 transition-transform" size={14} />
  </Link>
- <Link href="/incidencias?category=soma" className="flex items-center justify-between p-2.5 bg-white/10 hover:bg-white/20 border border-white/10 rounded-xl transition-all group">
+ <Link prefetch={false} href="/incidencias?category=soma" className="flex items-center justify-between p-2.5 bg-white/10 hover:bg-white/20 border border-white/10 rounded-xl transition-all group">
  <div className="flex items-center gap-2.5">
  <ShieldAlert className="text-rose-300" size={16} />
  <span className="text-[11px] font-semibold text-white tracking-tight">Registrar Incidencia</span>
  </div>
  <Plus className="text-white/50 group-hover:rotate-90 transition-transform" size={14} />
  </Link>
- <Link href="/requerimientos" className="flex items-center justify-between p-2.5 bg-white/10 hover:bg-white/20 border border-white/10 rounded-xl transition-all group">
+ <Link prefetch={false} href="/requerimientos" className="flex items-center justify-between p-2.5 bg-white/10 hover:bg-white/20 border border-white/10 rounded-xl transition-all group">
  <div className="flex items-center gap-2.5">
  <FileText className="text-amber-300" size={16} />
  <span className="text-[11px] font-semibold text-white tracking-tight">Crear Requerimiento</span>
  </div>
  <Plus className="text-white/50 group-hover:rotate-90 transition-transform" size={14} />
  </Link>
- <Link href="/inventory/stock" className="flex items-center justify-between p-2.5 bg-white/10 hover:bg-white/20 border border-white/10 rounded-xl transition-all group">
+ <Link prefetch={false} href="/inventory/stock" className="flex items-center justify-between p-2.5 bg-white/10 hover:bg-white/20 border border-white/10 rounded-xl transition-all group">
  <div className="flex items-center gap-2.5">
  <Package className="text-emerald-300" size={16} />
  <span className="text-[11px] font-semibold text-white tracking-tight">Ingreso Inventario</span>
@@ -322,7 +322,7 @@ export function DashboardShell({ user, stats, localIp }: DashboardShellProps) {
  <span className="text-xs font-bold text-slate-800 tracking-tight">Productos con Bajo Stock</span>
  <span className="text-base font-black text-rose-600">{stats.admin?.criticalProductsCount}</span>
  </div>
- <Link href="/inventory/stock" className="block text-center text-[11px] font-bold text-blue-600 tracking-tight hover:underline">Ver Inventario Total</Link>
+ <Link prefetch={false} href="/inventory/stock" className="block text-center text-[11px] font-bold text-blue-600 tracking-tight hover:underline">Ver Inventario Total</Link>
  </div>
  </div>
  </div>
@@ -373,11 +373,11 @@ export function DashboardShell({ user, stats, localIp }: DashboardShellProps) {
  <div className="absolute -bottom-10 -right-10 w-40 h-40 bg-white/5 rounded-full blur-2xl group-hover:bg-white/10 transition-all" />
  <h3 className="text-xl font-bold mb-8">Gestión Financiera</h3>
  <div className="space-y-4">
- <Link href="/caja-chica" className="flex items-center justify-between p-4 bg-white/5 hover:bg-white/10 rounded-2xl border border-white/10 transition-all">
+ <Link prefetch={false} href="/caja-chica" className="flex items-center justify-between p-4 bg-white/5 hover:bg-white/10 rounded-2xl border border-white/10 transition-all">
  <span className="text-sm font-bold">Resumen de Caja</span>
  <ArrowRight size={16} />
  </Link>
- <Link href="/reports" className="flex items-center justify-between p-4 bg-white/5 hover:bg-white/10 rounded-2xl border border-white/10 transition-all">
+ <Link prefetch={false} href="/reports" className="flex items-center justify-between p-4 bg-white/5 hover:bg-white/10 rounded-2xl border border-white/10 transition-all">
  <span className="text-sm font-bold">Reportes Excel</span>
  <ArrowRight size={16} />
  </Link>
@@ -610,7 +610,7 @@ export function DashboardShell({ user, stats, localIp }: DashboardShellProps) {
               </div>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              <Link href="/mecanica/mantenimiento-vehiculos" className="p-4 rounded-2xl bg-slate-50 hover:bg-blue-50 border border-slate-100 hover:border-blue-200 transition-all flex items-center justify-between group">
+              <Link prefetch={false} href="/mecanica/mantenimiento-vehiculos" className="p-4 rounded-2xl bg-slate-50 hover:bg-blue-50 border border-slate-100 hover:border-blue-200 transition-all flex items-center justify-between group">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center font-bold">
                     <Truck size={20} />
@@ -622,7 +622,7 @@ export function DashboardShell({ user, stats, localIp }: DashboardShellProps) {
                 </div>
                 <ArrowRight size={16} className="text-slate-400 group-hover:text-blue-600 group-hover:translate-x-1 transition-all" />
               </Link>
-              <Link href="/mecanica/generador-combustible" className="p-4 rounded-2xl bg-slate-50 hover:bg-amber-50 border border-slate-100 hover:border-amber-200 transition-all flex items-center justify-between group">
+              <Link prefetch={false} href="/mecanica/generador-combustible" className="p-4 rounded-2xl bg-slate-50 hover:bg-amber-50 border border-slate-100 hover:border-amber-200 transition-all flex items-center justify-between group">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center font-bold">
                     <Fuel size={20} />
@@ -634,7 +634,7 @@ export function DashboardShell({ user, stats, localIp }: DashboardShellProps) {
                 </div>
                 <ArrowRight size={16} className="text-slate-400 group-hover:text-amber-600 group-hover:translate-x-1 transition-all" />
               </Link>
-              <Link href="/mecanica/compresora-combustible" className="p-4 rounded-2xl bg-slate-50 hover:bg-indigo-50 border border-slate-100 hover:border-indigo-200 transition-all flex items-center justify-between group">
+              <Link prefetch={false} href="/mecanica/compresora-combustible" className="p-4 rounded-2xl bg-slate-50 hover:bg-indigo-50 border border-slate-100 hover:border-indigo-200 transition-all flex items-center justify-between group">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-xl bg-indigo-100 text-indigo-600 flex items-center justify-center font-bold">
                     <Cpu size={20} />
@@ -646,7 +646,7 @@ export function DashboardShell({ user, stats, localIp }: DashboardShellProps) {
                 </div>
                 <ArrowRight size={16} className="text-slate-400 group-hover:text-indigo-600 group-hover:translate-x-1 transition-all" />
               </Link>
-              <Link href="/mecanica/checklists" className="p-4 rounded-2xl bg-slate-50 hover:bg-teal-50 border border-slate-100 hover:border-teal-200 transition-all flex items-center justify-between group">
+              <Link prefetch={false} href="/mecanica/checklists" className="p-4 rounded-2xl bg-slate-50 hover:bg-teal-50 border border-slate-100 hover:border-teal-200 transition-all flex items-center justify-between group">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-xl bg-teal-100 text-teal-600 flex items-center justify-center font-bold">
                     <ClipboardCheck size={20} />
@@ -658,7 +658,7 @@ export function DashboardShell({ user, stats, localIp }: DashboardShellProps) {
                 </div>
                 <ArrowRight size={16} className="text-slate-400 group-hover:text-teal-600 group-hover:translate-x-1 transition-all" />
               </Link>
-              <Link href="/mecanica/herramientas" className="p-4 rounded-2xl bg-slate-50 hover:bg-purple-50 border border-slate-100 hover:border-purple-200 transition-all flex items-center justify-between group">
+              <Link prefetch={false} href="/mecanica/herramientas" className="p-4 rounded-2xl bg-slate-50 hover:bg-purple-50 border border-slate-100 hover:border-purple-200 transition-all flex items-center justify-between group">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-xl bg-purple-100 text-purple-600 flex items-center justify-center font-bold">
                     <Hammer size={20} />
@@ -670,7 +670,7 @@ export function DashboardShell({ user, stats, localIp }: DashboardShellProps) {
                 </div>
                 <ArrowRight size={16} className="text-slate-400 group-hover:text-purple-600 group-hover:translate-x-1 transition-all" />
               </Link>
-              <Link href="/requerimientos" className="p-4 rounded-2xl bg-slate-50 hover:bg-rose-50 border border-slate-100 hover:border-rose-200 transition-all flex items-center justify-between group">
+              <Link prefetch={false} href="/requerimientos" className="p-4 rounded-2xl bg-slate-50 hover:bg-rose-50 border border-slate-100 hover:border-rose-200 transition-all flex items-center justify-between group">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-xl bg-rose-100 text-rose-600 flex items-center justify-center font-bold">
                     <FileText size={20} />
@@ -727,7 +727,7 @@ export function DashboardShell({ user, stats, localIp }: DashboardShellProps) {
               </div>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <Link href="/operaciones/produccion" className="p-4 rounded-2xl bg-slate-50 hover:bg-blue-50 border border-slate-100 hover:border-blue-200 transition-all flex items-center justify-between group">
+              <Link prefetch={false} href="/operaciones/produccion" className="p-4 rounded-2xl bg-slate-50 hover:bg-blue-50 border border-slate-100 hover:border-blue-200 transition-all flex items-center justify-between group">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center font-bold">
                     <Activity size={20} />
@@ -739,7 +739,7 @@ export function DashboardShell({ user, stats, localIp }: DashboardShellProps) {
                 </div>
                 <ArrowRight size={16} className="text-slate-400 group-hover:text-blue-600 group-hover:translate-x-1 transition-all" />
               </Link>
-              <Link href="/operaciones/maderas" className="p-4 rounded-2xl bg-slate-50 hover:bg-amber-50 border border-slate-100 hover:border-amber-200 transition-all flex items-center justify-between group">
+              <Link prefetch={false} href="/operaciones/maderas" className="p-4 rounded-2xl bg-slate-50 hover:bg-amber-50 border border-slate-100 hover:border-amber-200 transition-all flex items-center justify-between group">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center font-bold">
                     <TreePine size={20} />
@@ -751,7 +751,7 @@ export function DashboardShell({ user, stats, localIp }: DashboardShellProps) {
                 </div>
                 <ArrowRight size={16} className="text-slate-400 group-hover:text-amber-600 group-hover:translate-x-1 transition-all" />
               </Link>
-              <Link href="/requerimientos" className="p-4 rounded-2xl bg-slate-50 hover:bg-rose-50 border border-slate-100 hover:border-rose-200 transition-all flex items-center justify-between group">
+              <Link prefetch={false} href="/requerimientos" className="p-4 rounded-2xl bg-slate-50 hover:bg-rose-50 border border-slate-100 hover:border-rose-200 transition-all flex items-center justify-between group">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-xl bg-rose-100 text-rose-600 flex items-center justify-center font-bold">
                     <FileText size={20} />

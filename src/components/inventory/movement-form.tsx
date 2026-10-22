@@ -17,7 +17,7 @@ import { useRbac } from '@/components/providers/rbac-provider'
 interface MovementFormProps {
  isOpen: boolean
  onClose: () => void
- onSuccess?: () => void
+ onSuccess?: (newMovement?: any, newBalance?: number) => void
  products: any[]
 }
 

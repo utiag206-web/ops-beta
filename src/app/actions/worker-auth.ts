@@ -238,7 +238,7 @@ export async function loginWorker(companySlug: string, identifier: string, pin: 
   cookieStore.set('worker_session', JSON.stringify(sessionData), {
   path: '/',
   httpOnly: true,
-  secure: process.env.NODE_ENV === 'production',
+  secure: Boolean(process.env.NEXT_PUBLIC_APP_URL?.startsWith("https")),
   maxAge: 60 * 60 * 24 * 30, // 30 days session
   sameSite: 'lax'
   })
@@ -247,7 +247,7 @@ export async function loginWorker(companySlug: string, identifier: string, pin: 
     cookieStore.set('active_company_id', company.id, {
       path: '/',
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
+      secure: Boolean(process.env.NEXT_PUBLIC_APP_URL?.startsWith("https")),
       maxAge: 60 * 60 * 24 * 30, // 30 days session
       sameSite: 'lax'
     })
@@ -264,7 +264,7 @@ export async function loginWorker(companySlug: string, identifier: string, pin: 
     console.error('[WORKER_AUTH] Error updating last_login_at:', err)
   }
 
-  return { success: true, requirePinChange: Boolean(isFirstLoginPending) }
+  return { success: true, workerId: worker.id, requirePinChange: Boolean(isFirstLoginPending), session: sessionData }
   } catch (error: any) {
     console.error('[WORKER_AUTH] Unexpected error:', error)
     return { success: false, error: 'Ocurrió un error inesperado al iniciar sesión.' }
@@ -320,12 +320,17 @@ export async function updateWorkerPin(workerId: string, newPin: string) {
     const sessionValue = cookieStore.get('worker_session')?.value
     if (sessionValue) {
       try {
-        const sessionObj = JSON.parse(sessionValue)
+        let sessionObj: any = null
+        try {
+          sessionObj = JSON.parse(sessionValue)
+        } catch {
+          sessionObj = JSON.parse(decodeURIComponent(sessionValue))
+        }
         sessionObj.requirePinChange = false
         cookieStore.set('worker_session', JSON.stringify(sessionObj), {
           path: '/',
           httpOnly: true,
-          secure: process.env.NODE_ENV === 'production',
+          secure: Boolean(process.env.NEXT_PUBLIC_APP_URL?.startsWith("https")),
           maxAge: 60 * 60 * 24 * 30,
           sameSite: 'lax'
         })
@@ -346,7 +351,15 @@ export async function getWorkerSession() {
  const cookieStore = await cookies()
  const sessionValue = cookieStore.get('worker_session')?.value
  if (sessionValue) {
- return JSON.parse(sessionValue)
+   let raw = sessionValue
+   if (raw.startsWith('"') && raw.endsWith('"')) {
+     raw = raw.slice(1, -1)
+   }
+   try {
+     return JSON.parse(raw)
+   } catch {
+     return JSON.parse(decodeURIComponent(raw))
+   }
  }
 
  // Fallback: Si no hay session de trabajador pero hay una sesión activa de Supabase Auth
@@ -382,7 +395,7 @@ export async function getWorkerSession() {
  cookieStore.set('worker_session', JSON.stringify(sessionData), {
  path: '/',
  httpOnly: true,
- secure: process.env.NODE_ENV === 'production',
+ secure: Boolean(process.env.NEXT_PUBLIC_APP_URL?.startsWith("https")),
  maxAge: 60 * 60 * 24 * 30, // 30 days session
  sameSite: 'lax'
  })

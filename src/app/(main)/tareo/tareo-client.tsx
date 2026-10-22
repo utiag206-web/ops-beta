@@ -366,9 +366,10 @@ export default function TareoClient({ initialCycles, workers: propWorkers, userR
     try {
       if (isOnline) {
         const result = await upsertTareoRecord({ worker_id: workerId, date, status })
-        if (!result.success) {
-          setTareoRecords(oldRecords)
-        }
+          if (!result.success) {
+            setTareoRecords(oldRecords)
+            toast.error(result.error || 'No se pudo guardar la asistencia')
+          }
       } else {
         await addOperationToQueue({
           id: uuidv4(),

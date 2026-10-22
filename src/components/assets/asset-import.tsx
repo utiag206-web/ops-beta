@@ -25,6 +25,7 @@ export function AssetImport() {
  const [data, setData] = useState<AssetImportData[]>([])
  const [existingCodes, setExistingCodes] = useState<string[]>([])
  const [isPending, setIsPending] = useState(false)
+ const [importStatusMsg, setImportStatusMsg] = useState('Procesando...')
  const [error, setError] = useState<string | null>(null)
  const [fileName, setFileName] = useState<string | null>(null)
 
@@ -148,12 +149,17 @@ export function AssetImport() {
  const handleImport = async () => {
  if (data.length === 0) return
  setIsPending(true)
+ setImportStatusMsg('Validando registros y preparando lotes...')
  setError(null)
 
  try {
+ setImportStatusMsg('Guardando activos en el sistema...')
  const result = await importAssets(data)
  if (result.success) {
- toast.success(`Se importaron ${result.count} activos correctamente.`)
+ const details = (result.insertedCount !== undefined && result.updatedCount !== undefined)
+   ? ` (${result.insertedCount} nuevos, ${result.updatedCount} actualizados)`
+   : ''
+ toast.success(`Se importaron ${result.count} activos correctamente${details}.`)
  router.push('/assets')
  router.refresh()
  } else {
@@ -163,6 +169,7 @@ export function AssetImport() {
  setError('Ocurrió un error inesperado durante la importación.')
  } finally {
  setIsPending(false)
+ setImportStatusMsg('Procesando...')
  }
  }
 
@@ -251,7 +258,7 @@ export function AssetImport() {
  className="w-full sm:w-auto flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white px-8 py-2.5 rounded-xl text-xs font-black tracking-tight transition-all shadow-lg shadow-blue-100 active:scale-95"
  >
  {isPending ? <Loader2 className="animate-spin" size={16} /> : <Save size={16} />}
- {isPending ? 'Procesando...' : 'Confirmar Importación'}
+ {isPending ? importStatusMsg : 'Confirmar Importación'}
  </button>
  </div>
  </div>

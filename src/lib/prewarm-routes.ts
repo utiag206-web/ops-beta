@@ -74,6 +74,9 @@ export async function warmApplicationRoutes(force = false) {
   if (!navigator.onLine) return
   if (isPrewarmingRunning) return
   if (isPrewarmingComplete && !force) return
+  // En entorno local de desarrollo, Next.js compila bajo demanda (JIT).
+  // Precalentar 44 rutas simultáneas satura el servidor de desarrollo y provoca ChunkLoadError.
+  if (process.env.NODE_ENV === 'development') return
 
   const p = window.location.pathname
   if (p === '/login' || p.startsWith('/auth') || p === '/forgot-password' || p === '/reset-password' || p === '/offline') {

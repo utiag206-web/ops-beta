@@ -26,6 +26,24 @@ const STOP_CATEGORIES = [
  { id: 'others', label: 'Otros Riesgos', icon: Info },
 ]
 
+// Safe date helper that never throws RangeError
+const formatDateSafe = (dateStr: string | null | undefined, fmt: string = 'dd MMM') => {
+  if (!dateStr) return '--'
+  try {
+    const clean = String(dateStr).split('T')[0]
+    const parts = clean.split('-')
+    if (parts.length === 3) {
+      const d = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]))
+      if (!isNaN(d.getTime())) return format(d, fmt, { locale: es })
+    }
+    const d = new Date(dateStr)
+    if (!isNaN(d.getTime())) return format(d, fmt, { locale: es })
+    return String(dateStr)
+  } catch {
+    return String(dateStr)
+  }
+}
+
 export default function StopHsecPage() {
  const { role_id, user } = useRbac()
  const { isOnline, triggerSync } = useOffline()
@@ -244,7 +262,7 @@ export default function StopHsecPage() {
      </span>
    )}
    <span className="text-[10px] font-bold text-slate-400 tracking-tight">
-     {format(new Date(stop.created_at), 'dd MMM', { locale: es })}
+     {formatDateSafe(stop.created_at)}
    </span>
  </div>
  </div>

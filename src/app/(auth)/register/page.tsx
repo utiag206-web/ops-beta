@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { InthalyIsotype } from '@/components/brand/InthalyLogo'
 import { ShieldAlert, ArrowRight, ArrowLeft, Building2, CheckCircle2 } from 'lucide-react'
 
 export const metadata = {
@@ -10,8 +11,8 @@ export default function RegisterClosedPage() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-slate-50 p-4 sm:p-6">
       <div className="w-full max-w-lg bg-white rounded-2xl p-6 sm:p-8 border border-slate-200/80 shadow-xl text-center space-y-6 animate-in fade-in zoom-in-95 duration-300">
-        <div className="w-16 h-16 bg-blue-50 text-blue-700 rounded-2xl flex items-center justify-center mx-auto border border-blue-100 shadow-xs">
-          <Building2 size={32} />
+        <div className="mx-auto flex justify-center mb-2">
+          <InthalyIsotype size={56} />
         </div>
 
         <div className="space-y-2">

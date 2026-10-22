@@ -113,6 +113,7 @@ export function ChecklistView({
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingItem, setEditingItem] = useState<ChecklistItem | null>(null)
   const [selectedChecklist, setSelectedChecklist] = useState<ChecklistItem | null>(null)
+  const [newPointText, setNewPointText] = useState('')
 
   // Diálogo de confirmación de eliminación física
   const [itemToDelete, setItemToDelete] = useState<ChecklistItem | null>(null)
@@ -142,9 +143,36 @@ export function ChecklistView({
     })
   }
 
+  const handleAddCustomPoint = () => {
+    const trimmed = newPointText.trim()
+    if (!trimmed) {
+      toast.error('Ingresa una descripción para el punto adicional')
+      return
+    }
+    if (form.checks.some(c => c.name.toLowerCase() === trimmed.toLowerCase())) {
+      toast.warning('Este punto ya se encuentra en la lista de inspección')
+      return
+    }
+    setForm(prev => ({
+      ...prev,
+      checks: [...prev.checks, { name: trimmed, status: 'ok' }]
+    }))
+    setNewPointText('')
+    toast.success(`Punto "${trimmed}" añadido al checklist`)
+  }
+
+  const handleRemoveCheck = (index: number) => {
+    setForm(prev => ({
+      ...prev,
+      checks: prev.checks.filter((_, idx) => idx !== index)
+    }))
+  }
+
+
   // Abrir modal en modo creación
   const handleOpenCreate = () => {
     setEditingItem(null)
+    setNewPointText('')
     setForm({
       equipment_name: '',
       equipment_code: '',
@@ -160,6 +188,7 @@ export function ChecklistView({
   // Abrir modal en modo edición
   const handleOpenEdit = (item: ChecklistItem) => {
     setEditingItem(item)
+    setNewPointText('')
     setForm({
       equipment_name: item.equipment_name,
       equipment_code: item.equipment_code,
@@ -677,53 +706,112 @@ export function ChecklistView({
               </div>
 
               {/* Puntos de Inspección */}
-              <div className="space-y-2 bg-slate-50/70 p-4 rounded-2xl border border-slate-100">
-                <p className="text-xs font-black text-slate-700 uppercase tracking-wider">Puntos de Inspección (10 Puntos Críticos)</p>
-                <div className="space-y-1.5">
-                  {form.checks.map((check, idx) => (
-                    <div key={idx} className="flex items-center justify-between p-2.5 bg-white rounded-xl border border-slate-100 gap-3">
-                      <span className="text-xs font-bold text-slate-700">{idx + 1}. {check.name}</span>
-                      <div className="flex gap-1 shrink-0">
-                        <button
-                          type="button"
-                          onClick={() => handleCheckToggle(idx, 'ok')}
-                          className={`px-2.5 py-1 text-[10px] font-black rounded-lg transition-all cursor-pointer ${
-                            check.status === 'ok' 
-                              ? 'bg-emerald-500 text-white shadow-xs' 
-                              : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
-                          }`}
-                        >
-                          OK
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleCheckToggle(idx, 'fail')}
-                          className={`px-2.5 py-1 text-[10px] font-black rounded-lg transition-all cursor-pointer ${
-                            check.status === 'fail' 
-                              ? 'bg-rose-500 text-white shadow-xs' 
-                              : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
-                          }`}
-                        >
-                          FALLA
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleCheckToggle(idx, 'na')}
-                          className={`px-2.5 py-1 text-[10px] font-black rounded-lg transition-all cursor-pointer ${
-                            check.status === 'na' 
-                              ? 'bg-slate-500 text-white shadow-xs' 
-                              : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
-                          }`}
-                        >
-                          N/A
-                        </button>
-                      </div>
-                    </div>
-                  ))}
+              <div className="space-y-3 bg-slate-50/70 p-4 sm:p-5 rounded-2xl border border-slate-100">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+                  <div>
+                    <p className="text-xs font-black text-slate-800 uppercase tracking-wider flex items-center gap-2">
+                      <span>Puntos de Inspección</span>
+                      <span className="text-[10px] font-black bg-teal-100 text-teal-800 px-2 py-0.5 rounded-full">
+                        {form.checks.length} puntos
+                      </span>
+                    </p>
+                    <p className="text-[11px] text-slate-400 font-medium">
+                      10 puntos críticos base + opción de agregar puntos adicionales según la labor.
+                    </p>
+                  </div>
                 </div>
-              </div>
 
-              <div className="space-y-1">
+                <div className="space-y-1.5 max-h-72 overflow-y-auto pr-1 custom-scrollbar">
+                  {form.checks.map((check, idx) => {
+                    const isCustom = idx >= 10 || !DEFAULT_CHECKS.includes(check.name);
+                    return (
+                      <div key={idx} className="flex items-center justify-between p-2.5 bg-white rounded-xl border border-slate-100 gap-3 group hover:border-slate-200 transition-colors">
+                        <div className="flex items-center gap-2 min-w-0 flex-1">
+                          <span className="text-xs font-bold text-slate-500 shrink-0">{idx + 1}.</span>
+                          <span className="text-xs font-bold text-slate-700 truncate">{check.name}</span>
+                          {isCustom && (
+                            <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-blue-50 text-blue-600 shrink-0 border border-blue-100">
+                              Adicional
+                            </span>
+                          )}
+                        </div>
+
+                        <div className="flex items-center gap-1 shrink-0">
+                          <button
+                            type="button"
+                            onClick={() => handleCheckToggle(idx, 'ok')}
+                            className={`px-2.5 py-1 text-[10px] font-black rounded-lg transition-all cursor-pointer ${
+                              check.status === 'ok' 
+                                ? 'bg-emerald-500 text-white shadow-xs' 
+                                : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
+                            }`}
+                          >
+                            OK
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleCheckToggle(idx, 'fail')}
+                            className={`px-2.5 py-1 text-[10px] font-black rounded-lg transition-all cursor-pointer ${
+                              check.status === 'fail' 
+                                ? 'bg-rose-500 text-white shadow-xs' 
+                                : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
+                            }`}
+                          >
+                            FALLA
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleCheckToggle(idx, 'na')}
+                            className={`px-2.5 py-1 text-[10px] font-black rounded-lg transition-all cursor-pointer ${
+                              check.status === 'na' 
+                                ? 'bg-slate-700 text-white shadow-xs' 
+                                : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
+                            }`}
+                          >
+                            N/A
+                          </button>
+
+                          {isCustom && (
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveCheck(idx)}
+                              className="p-1 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded-lg transition-colors ml-1 cursor-pointer"
+                              title="Eliminar este punto adicional"
+                            >
+                              <Trash2 size={13} />
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Input para agregar punto adicional manualmente */}
+                <div className="pt-2 border-t border-slate-200/70 flex items-center gap-2">
+                  <input
+                    type="text"
+                    placeholder="+ Escribe un punto de inspección adicional (ej: Estado de plumillas, Fuga en mangueras...)"
+                    value={newPointText}
+                    onChange={e => setNewPointText(e.target.value)}
+                    onKeyDown={e => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleAddCustomPoint();
+                      }
+                    }}
+                    className="flex-1 bg-white border border-slate-200 focus:border-teal-500 rounded-xl px-3.5 py-2 text-xs font-bold outline-none placeholder:text-slate-400"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleAddCustomPoint}
+                    className="bg-teal-600 hover:bg-teal-700 text-white px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all shadow-xs cursor-pointer shrink-0 active:scale-95"
+                  >
+                    <Plus size={14} strokeWidth={2.5} />
+                    <span>Agregar Punto</span>
+                  </button>
+                </div>
+              </div><div className="space-y-1">
                 <label className="text-[10px] font-black text-slate-400 uppercase">Observaciones Adicionales</label>
                 <textarea
                   rows={2}
@@ -792,7 +880,10 @@ export function ChecklistView({
               </div>
 
               <div className="space-y-2">
-                <p className="text-xs font-black text-slate-700 uppercase">Resultado de Puntos Evaluados</p>
+                <p className="text-xs font-black text-slate-700 uppercase flex items-center justify-between">
+                  <span>Resultado de Puntos Evaluados</span>
+                  <span className="text-[10px] font-bold text-slate-400">({selectedChecklist.checks.length} puntos)</span>
+                </p>
                 <div className="space-y-1.5">
                   {selectedChecklist.checks.map((c, i) => (
                     <div key={i} className="flex justify-between items-center p-2.5 bg-slate-50 rounded-xl text-xs border border-slate-100">

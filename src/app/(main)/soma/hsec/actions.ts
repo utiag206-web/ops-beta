@@ -5,24 +5,40 @@ import { getUserSession, getStrictCompanyId, applyIsolation } from '@/lib/auth'
 import { revalidatePath } from 'next/cache'
 
 export async function getHsecStops() {
- const { extendedUser } = await getUserSession()
- const companyId = await getStrictCompanyId()
+  try {
+    const { extendedUser } = await getUserSession()
+    if (!extendedUser) return []
+    const companyId = await getStrictCompanyId()
+    if (!companyId) return []
 
- const supabase = await createAdminClient()
- const { data, error } = await applyIsolation(
- supabase.from('soma_hsec_stop').select(`
- *,
- observer:users!observer_id(name)
- `),
- companyId,
- extendedUser.role_id
- ).order('created_at', { ascending: false })
+    const supabase = await createAdminClient()
+    const { data, error } = await applyIsolation(
+      supabase.from('soma_hsec_stop').select(`
+        id,
+        company_id,
+        type,
+        category,
+        area_location,
+        description,
+        photo_url,
+        status,
+        created_at,
+        observer_id,
+        observer:users!observer_id(name)
+      `),
+      companyId,
+      extendedUser.role_id
+    ).order('created_at', { ascending: false })
 
- if (error) {
- console.error('Error fetching HSEC stops:', error)
- return []
- }
- return data || []
+    if (error) {
+      console.error('Error fetching HSEC stops:', error)
+      return []
+    }
+    return data || []
+  } catch (err) {
+    console.error('Unexpected error in getHsecStops:', err)
+    return []
+  }
 }
 
 export async function createHsecStop(payload: {
