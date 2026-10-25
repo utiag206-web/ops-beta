@@ -54,6 +54,9 @@
     </filter>
   </defs>
 
+  <rect width="512" height="512" rx="115" fill="url(#bgGrad)" />
+  <rect width="512" height="512" rx="115" fill="url(#centerGlow)" />
+
   <path
     d="M 195 175
        L 195 335
