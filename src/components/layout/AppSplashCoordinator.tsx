@@ -10,7 +10,7 @@ export function AppSplashCoordinator() {
       splash.style.opacity = '0'
       splash.style.pointerEvents = 'none'
       const timer = setTimeout(() => {
-        if (splash.parentNode) splash.parentNode.removeChild(splash)
+        splash.style.display = 'none'
       }, 250)
       return () => clearTimeout(timer)
     }
