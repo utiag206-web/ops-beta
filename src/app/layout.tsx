@@ -13,7 +13,7 @@ const inter = Inter({
 
 
 export const viewport: Viewport = {
-  themeColor: '#0f172a',
+  themeColor: '#06122e',
   colorScheme: 'dark light',
   width: 'device-width',
   initialScale: 1,
@@ -28,14 +28,14 @@ export const metadata: Metadata = {
   manifest: "/manifest.json",
   icons: {
     icon: [
-      { url: '/favicon.ico', sizes: '32x32' },
-      { url: '/icon.svg', type: 'image/svg+xml' },
-      { url: '/icon-192x192.png', sizes: '192x192', type: 'image/png' },
-      { url: '/icon-512x512.png', sizes: '512x512', type: 'image/png' },
+      { url: '/favicon.ico?v=1.3.1', sizes: '32x32' },
+      { url: '/icon.svg?v=1.3.1', type: 'image/svg+xml' },
+      { url: '/icon-192x192.png?v=1.3.1', sizes: '192x192', type: 'image/png' },
+      { url: '/icon-512x512.png?v=1.3.1', sizes: '512x512', type: 'image/png' },
     ],
     shortcut: '/favicon.ico',
     apple: [
-      { url: '/apple-touch-icon.png', sizes: '180x180', type: 'image/png' },
+      { url: '/apple-touch-icon.png?v=1.3.1', sizes: '180x180', type: 'image/png' },
     ],
   },
   openGraph: {
