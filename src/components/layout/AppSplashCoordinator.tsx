@@ -10,7 +10,8 @@ export function AppSplashCoordinator() {
       splash.style.opacity = '0'
       splash.style.pointerEvents = 'none'
       const timer = setTimeout(() => {
-        splash.style.display = 'none'
+        splash.style.visibility = 'hidden'
+        splash.style.zIndex = '-9999'
       }, 250)
       return () => clearTimeout(timer)
     }

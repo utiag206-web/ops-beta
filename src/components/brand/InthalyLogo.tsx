@@ -1,6 +1,6 @@
 'use client'
 
-import React from 'react'
+import React, { useId } from 'react'
 
 export interface InthalyIsotypeProps {
   size?: number | string
@@ -24,6 +24,8 @@ export function InthalyIsotype({
   className = '',
   variant = 'standalone',
 }: InthalyIsotypeProps) {
+  const reactId = useId().replace(/[^a-zA-Z0-9]/g, '_');
+  const p = 'iso_' + reactId + '_';
   const isAppIcon = variant === 'appIcon'
   const viewBox = isAppIcon ? '0 0 512 512' : '105 85 305 335'
   const computedHeight =
@@ -45,7 +47,7 @@ export function InthalyIsotype({
     >
       <defs>
         {/* Squircle Background Gradient */}
-        <linearGradient id="inthaly_bgGrad" x1="18%" y1="0%" x2="82%" y2="100%">
+        <linearGradient id={p + "bgGrad"} x1="18%" y1="0%" x2="82%" y2="100%">
           <stop offset="0%" stopColor="#4aa3ff" />
           <stop offset="25%" stopColor="#1f71fc" />
           <stop offset="65%" stopColor="#024fd8" />
@@ -53,14 +55,14 @@ export function InthalyIsotype({
         </linearGradient>
 
         {/* Ambient Center Glow for App Icon */}
-        <radialGradient id="inthaly_centerGlow" cx="45%" cy="40%" r="55%">
+        <radialGradient id={p + "centerGlow"} cx="45%" cy="40%" r="55%">
           <stop offset="0%" stopColor="#60a5fa" stopOpacity="0.32" />
           <stop offset="60%" stopColor="#2563eb" stopOpacity="0.1" />
           <stop offset="100%" stopColor="#012b94" stopOpacity="0" />
         </radialGradient>
 
         {/* Left Pillar Gradient: Pure white outer highlight into luminous cyan and blue */}
-        <linearGradient id="inthaly_leftPillarGrad" x1="0%" y1="20%" x2="100%" y2="80%">
+        <linearGradient id={p + "leftPillarGrad"} x1="0%" y1="20%" x2="100%" y2="80%">
           <stop offset="0%" stopColor="#ffffff" />
           <stop offset="28%" stopColor="#e0f2fe" />
           <stop offset="65%" stopColor="#7dd3fc" />
@@ -68,14 +70,14 @@ export function InthalyIsotype({
         </linearGradient>
 
         {/* Top-Left 3D Chamfer Facet */}
-        <linearGradient id="inthaly_facetGrad" x1="0%" y1="100%" x2="100%" y2="0%">
+        <linearGradient id={p + "facetGrad"} x1="0%" y1="100%" x2="100%" y2="0%">
           <stop offset="0%" stopColor="#0284c7" />
           <stop offset="45%" stopColor="#38bdf8" />
           <stop offset="100%" stopColor="#bae6fd" />
         </linearGradient>
 
         {/* Top Chamfer Roof Edge: Crisp pure white highlight */}
-        <linearGradient id="inthaly_topRoofGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+        <linearGradient id={p + "topRoofGrad"} x1="0%" y1="0%" x2="100%" y2="100%">
           <stop offset="0%" stopColor="#ffffff" />
           <stop offset="35%" stopColor="#f0f9ff" />
           <stop offset="75%" stopColor="#bae6fd" />
@@ -83,7 +85,7 @@ export function InthalyIsotype({
         </linearGradient>
 
         {/* Continuous Outer Ribbon Gradient: From white apex -> cyan -> sky blue -> ice-white cap */}
-        <linearGradient id="inthaly_ribbonGrad" x1="25%" y1="5%" x2="45%" y2="95%">
+        <linearGradient id={p + "ribbonGrad"} x1="25%" y1="5%" x2="45%" y2="95%">
           <stop offset="0%" stopColor="#ffffff" />
           <stop offset="20%" stopColor="#e0f2fe" />
           <stop offset="45%" stopColor="#38bdf8" />
@@ -93,22 +95,22 @@ export function InthalyIsotype({
         </linearGradient>
 
         {/* Hexagon Gradient: ice-blue to vibrant azure */}
-        <linearGradient id="inthaly_hexGrad" x1="10%" y1="0%" x2="90%" y2="100%">
+        <linearGradient id={p + "hexGrad"} x1="10%" y1="0%" x2="90%" y2="100%">
           <stop offset="0%" stopColor="#dbeafe" />
           <stop offset="45%" stopColor="#7dd3fc" />
           <stop offset="100%" stopColor="#0284c7" />
         </linearGradient>
 
         {/* Drop shadow under the capsule end overlapping the left pillar */}
-        <filter id="inthaly_pillShadow" x="-20%" y="-20%" width="150%" height="150%">
+        <filter id={p + "pillShadow"} x="-20%" y="-20%" width="150%" height="150%">
           <feDropShadow dx="-4" dy="-3" stdDeviation="5" floodColor="#012b7a" floodOpacity="0.32" />
         </filter>
       </defs>
 
       {isAppIcon && (
         <g>
-          <rect width="512" height="512" rx="115" fill="url(#inthaly_bgGrad)" />
-          <rect width="512" height="512" rx="115" fill="url(#inthaly_centerGlow)" />
+          <rect width="512" height="512" rx="115" fill={"url(#" + p + "bgGrad)"} />
+          <rect width="512" height="512" rx="115" fill={"url(#" + p + "centerGlow)"} />
         </g>
       )}
 
@@ -122,7 +124,7 @@ export function InthalyIsotype({
            L 132 185
            C 132 160 148 142 172 142
            L 195 175 Z"
-        fill="url(#inthaly_leftPillarGrad)"
+        fill={"url(#" + p + "leftPillarGrad)"}
       />
 
       {/* 2. Top-Left 3D Chamfer Facet */}
@@ -131,7 +133,7 @@ export function InthalyIsotype({
            L 220 106
            L 242 138
            L 195 175 Z"
-        fill="url(#inthaly_facetGrad)"
+        fill={"url(#" + p + "facetGrad)"}
       />
 
       {/* 3. The Continuous Outer Ribbon: Top Arm + Right Apex + Bottom Capsule Arm */}
@@ -147,8 +149,8 @@ export function InthalyIsotype({
            L 195 175
            L 242 138
            Z"
-        fill="url(#inthaly_ribbonGrad)"
-        filter="url(#inthaly_pillShadow)"
+        fill={"url(#" + p + "ribbonGrad)"}
+        filter={"url(#" + p + "pillShadow)"}
       />
 
       {/* 4. Top Arm Roof Chamfer (pure white top highlight strip) */}
@@ -160,7 +162,7 @@ export function InthalyIsotype({
            L 365 235
            L 255 142
            L 220 106 Z"
-        fill="url(#inthaly_topRoofGrad)"
+        fill={"url(#" + p + "topRoofGrad)"}
       />
 
       {/* 5. Floating Regular Hexagon in Cavity */}
@@ -173,7 +175,7 @@ export function InthalyIsotype({
           222, 272
           222, 240
         "
-        fill="url(#inthaly_hexGrad)"
+        fill={"url(#" + p + "hexGrad)"}
       />
     </svg>
   )
