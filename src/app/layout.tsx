@@ -29,14 +29,14 @@ export const metadata: Metadata = {
   manifest: "/manifest.json",
   icons: {
     icon: [
-      { url: '/favicon.ico?v=1.3.1', sizes: '32x32' },
-      { url: '/icon.svg?v=1.3.1', type: 'image/svg+xml' },
-      { url: '/icon-192x192.png?v=1.3.1', sizes: '192x192', type: 'image/png' },
-      { url: '/icon-512x512.png?v=1.3.1', sizes: '512x512', type: 'image/png' },
+      { url: '/favicon.ico?v=1.3.2', sizes: '32x32' },
+      { url: '/icon.svg?v=1.3.2', type: 'image/svg+xml' },
+      { url: '/icon-192x192.png?v=1.3.2', sizes: '192x192', type: 'image/png' },
+      { url: '/icon-512x512.png?v=1.3.2', sizes: '512x512', type: 'image/png' },
     ],
-    shortcut: '/favicon.ico?v=1.3.1',
+    shortcut: '/favicon.ico?v=1.3.2',
     apple: [
-      { url: '/apple-touch-icon.png?v=1.3.1', sizes: '180x180', type: 'image/png' },
+      { url: '/apple-touch-icon.png?v=1.3.2', sizes: '180x180', type: 'image/png' },
     ],
   },
   openGraph: {
@@ -96,22 +96,6 @@ export default function RootLayout({
 
         {/* Client-side Coordinator: safely dismisses initial splash once React has hydrated */}
         <AppSplashCoordinator />
-
-        {/* Safety Script: In the event of fatal unhandled network/JS failure, dismiss after 5s */}
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `
-              setTimeout(function() {
-                var el = document.getElementById('inthaly-initial-splash');
-                if (el) {
-                  el.style.transition = 'opacity 200ms ease';
-                  el.style.opacity = '0';
-                  setTimeout(function() { if (el && el.parentNode) el.parentNode.removeChild(el); }, 200);
-                }
-              }, 5000);
-            `,
-          }}
-        />
 
         <UppercaseEnforcer />
         <OfflineProvider>
