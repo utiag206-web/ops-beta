@@ -613,11 +613,13 @@ export function Sidebar() {
                     const isComingSoon = status === 'COMING_SOON'
                     const isPrototype = status === 'PROTOTYPE'
                     const isBeta = status === 'BETA'
+                    const isHeavyModule = item.href.startsWith('/reports/export-center') || item.href.startsWith('/configuracion') || item.href.startsWith('/super-admin')
 
                     return (
                       <Link
                         key={`${group.id}-${item.href}-${item.name}`}
                         href={item.href}
+                        prefetch={isHeavyModule ? false : undefined}
                         onClick={(e) => {
                           if (isComingSoon) {
                             e.preventDefault()
