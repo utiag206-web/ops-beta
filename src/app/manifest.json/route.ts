@@ -21,17 +21,17 @@ export async function GET(request: Request) {
  description: 'Sistema de Gestión Empresarial',
  start_url: startUrl,
  display: 'standalone',
- background_color: '#0f172a',
- theme_color: '#1e40af',
+ background_color: '#06122e',
+ theme_color: '#06122e',
  icons: [
  {
- src: '/icon-192x192.png',
+ src: '/icon-192x192.png?v=1.3.1',
  sizes: '192x192',
  type: 'image/png',
         purpose: 'any maskable'
  },
  {
-        src: '/icon-512x512.png',
+        src: '/icon-512x512.png?v=1.3.1',
         sizes: '512x512',
         type: 'image/png',
         purpose: 'any maskable'
@@ -40,7 +40,7 @@ export async function GET(request: Request) {
  }, {
  headers: {
  'Content-Type': 'application/json',
- 'Cache-Control': 'public, max-age=3600, s-maxage=3600'
+ 'Cache-Control': 'no-cache, no-store, must-revalidate'
  }
  })
 }

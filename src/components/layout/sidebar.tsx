@@ -618,7 +618,6 @@ export function Sidebar() {
                       <Link
                         key={`${group.id}-${item.href}-${item.name}`}
                         href={item.href}
-                        prefetch={false}
                         onClick={(e) => {
                           if (isComingSoon) {
                             e.preventDefault()
