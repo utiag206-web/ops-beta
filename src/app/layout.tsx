@@ -29,14 +29,14 @@ export const metadata: Metadata = {
   manifest: "/manifest.json",
   icons: {
     icon: [
-      { url: '/favicon.ico?v=1.3.2', sizes: '32x32' },
-      { url: '/icon.svg?v=1.3.2', type: 'image/svg+xml' },
-      { url: '/icon-192x192.png?v=1.3.2', sizes: '192x192', type: 'image/png' },
-      { url: '/icon-512x512.png?v=1.3.2', sizes: '512x512', type: 'image/png' },
+      { url: '/favicon.ico?v=1.3.3', sizes: '32x32' },
+      { url: '/icon.svg?v=1.3.3', type: 'image/svg+xml' },
+      { url: '/icon-192x192.png?v=1.3.3', sizes: '192x192', type: 'image/png' },
+      { url: '/icon-512x512.png?v=1.3.3', sizes: '512x512', type: 'image/png' },
     ],
-    shortcut: '/favicon.ico?v=1.3.2',
+    shortcut: '/favicon.ico?v=1.3.3',
     apple: [
-      { url: '/apple-touch-icon.png?v=1.3.2', sizes: '180x180', type: 'image/png' },
+      { url: '/apple-touch-icon.png?v=1.3.3', sizes: '180x180', type: 'image/png' },
     ],
   },
   openGraph: {
