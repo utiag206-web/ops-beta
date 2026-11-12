@@ -641,7 +641,7 @@ export function Sidebar() {
                             return
                           }
                         }}
-                        className={`flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg font-medium text-xs group/item nth-nav-item transition-all ${
+                        className={`flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg font-medium text-xs group/item nth-nav-item nth-btn-press transition-all ${
                           isActive ? 'nth-nav-item-active' : ''
                         } ${isComingSoon ? 'opacity-80 hover:opacity-100' : ''}`}
                       >

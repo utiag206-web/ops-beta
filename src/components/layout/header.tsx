@@ -46,7 +46,7 @@ export async function Header() {
               <Building2 size={15} className="text-white" />
             </div>
           )}
-          <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
+          <div className="nth-header-enter flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
             <h1 className="text-xs sm:text-sm font-bold text-slate-800 line-clamp-1 tracking-tight">
               {companyName}
             </h1>

@@ -39,7 +39,21 @@ export function OfflineProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     initializeSyncHandlers()
-    warmApplicationRoutes()
+    
+    // Planificación cortés de precalentamiento de rutas offline:
+    // Espera a que la aplicación inicial cargue e hidrate antes de iniciar el cacheo de fondo
+    let prewarmTimer: any = null
+    if (typeof window !== 'undefined') {
+      const schedulePrewarm = () => {
+        if ('requestIdleCallback' in window) {
+          ;(window as any).requestIdleCallback(() => warmApplicationRoutes(), { timeout: 6000 })
+        } else {
+          prewarmTimer = setTimeout(() => warmApplicationRoutes(), 3000)
+        }
+      }
+      prewarmTimer = setTimeout(schedulePrewarm, 2500)
+    }
+
     if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
       const registerSW = () => {
         navigator.serviceWorker
@@ -66,8 +80,11 @@ export function OfflineProvider({ children }: { children: React.ReactNode }) {
         registerSW()
       } else {
         window.addEventListener('load', registerSW)
-        return () => window.removeEventListener('load', registerSW)
       }
+    }
+
+    return () => {
+      if (prewarmTimer) clearTimeout(prewarmTimer)
     }
   }, [])
 

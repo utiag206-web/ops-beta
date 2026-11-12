@@ -1,11 +1,12 @@
-﻿import type { Metadata, Viewport } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 
 import { Toaster } from 'sonner';
+import { Suspense } from 'react';
 import UppercaseEnforcer from "@/components/UppercaseEnforcer";
 import { OfflineProvider } from "@/components/providers/offline-provider";
-import { AppSplashOverlay } from "@/components/brand/AppSplashOverlay";
+import { NavigationProgressBar } from "@/components/layout/navigation-progress-bar";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -60,7 +61,9 @@ export default function RootLayout({
   return (
     <html lang="es">
       <body className={`${inter.variable} antialiased`}>
-        <AppSplashOverlay />
+        <Suspense fallback={null}>
+          <NavigationProgressBar />
+        </Suspense>
         <UppercaseEnforcer />
         <OfflineProvider>
           {children}

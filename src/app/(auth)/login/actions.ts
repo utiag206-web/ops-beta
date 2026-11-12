@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
+import { clearUserSessionCache } from '@/lib/auth'
 
 export async function login(prevState: any, formData: FormData) {
  const email = formData.get('email') as string
@@ -154,6 +155,9 @@ export async function logout() {
  }
  }
 
+ if (user) {
+ clearUserSessionCache(user.id)
+ }
  await supabase.auth.signOut()
  cookieStore.delete('active_company_id')
  cookieStore.delete('worker_session')
