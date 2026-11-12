@@ -101,15 +101,12 @@ export async function warmApplicationRoutes(force = false) {
       headers: { 'RSC': '1', 'Accept': 'text/x-component' },
       cache: 'no-cache' 
     })
-    await fetch('/dashboard?_rsc=prewarm', { 
-      headers: { 'RSC': '1', 'Accept': 'text/x-component' },
-      cache: 'no-cache' 
-    })
   } catch (err) {
     console.warn('[PREWARM] /dashboard prime hiccup:', err)
   }
 
   // Step 2: Batch pre-warm all remaining routes (HTML, JS/CSS static assets, and RSC flight payloads)
+  // Utiliza un lote controlado y pausa de 600ms para evitar saturación de red mientras el usuario navega
   const remainingRoutes = APP_ROUTES.filter(r => r !== '/dashboard')
   const batchSize = 2
 
@@ -133,20 +130,16 @@ export async function warmApplicationRoutes(force = false) {
             await Promise.allSettled(chunkMatches.map(u => fetch(u, { cache: 'no-cache' })))
           }
 
-          // Pre-warm RSC flight streams
+          // Pre-warm canonical RSC flight stream (el Service Worker lo indexa por pathname y request)
           await fetch(route, { 
-            headers: { 'RSC': '1', 'Accept': 'text/x-component' },
-            cache: 'no-cache' 
-          })
-          await fetch(route + '?_rsc=prewarm', { 
             headers: { 'RSC': '1', 'Accept': 'text/x-component' },
             cache: 'no-cache' 
           })
         } catch (_) {}
       })
     )
-    // Small throttle between batches to ensure main thread stays 100% responsive
-    await new Promise(r => setTimeout(r, 150))
+    // Pausa optimizada para no colisionar con el uso interactivo del usuario
+    await new Promise(r => setTimeout(r, 600))
   }
 
   isPrewarmingRunning = false

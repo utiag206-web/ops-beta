@@ -1,7 +1,7 @@
 'use server'
 
 import { createAdminClient } from '@/lib/supabase/server'
-import { getUserSession } from '@/lib/auth'
+import { getUserSession, clearUserSessionCache } from '@/lib/auth'
 import { revalidatePath } from 'next/cache'
 import { getMultiCompanySettings } from './settings/multiempresa/actions'
 import { getSiteUrl } from '@/lib/site-url'
@@ -361,6 +361,7 @@ export async function stopImpersonation() {
  const cookieStore = await cookies()
  
  cookieStore.delete('active_company_id')
+ clearUserSessionCache()
  
  revalidatePath('/', 'layout')
  return { success: true }

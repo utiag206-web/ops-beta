@@ -392,3 +392,186 @@ div.fixed.inset-0.flex.items-center.justify-center > div {
     transform: perspective(1300px) rotateY(-10deg) rotateX(5deg) rotateZ(0deg) scale(0.97);
   }
 }
+
+/* ==========================================================================
+   INTHALY OPS — Enterprise Motion Design System
+   Hardware-accelerated, micro-interaction transitions & accessibility guards
+   ========================================================================== */
+
+/* 1. Keyframe Definitions (GPU-accelerated, natural spring ease) */
+@keyframes nth-fade-slide-up {
+  0% {
+    opacity: 0;
+    transform: translateY(28px);
+  }
+  100% {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes nth-subtle-fade {
+  0% {
+    opacity: 0;
+    transform: translateY(-12px);
+  }
+  100% {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes nth-card-enter {
+  0% {
+    opacity: 0;
+    transform: translateY(24px) scale(0.96);
+  }
+  100% {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes nth-modal-enter {
+  0% {
+    opacity: 0;
+    transform: scale(0.94) translateY(14px);
+  }
+  100% {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes nth-panel-enter {
+  0% {
+    opacity: 0;
+    transform: translateX(16px);
+  }
+  100% {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* 2. Motion Utility Classes */
+.nth-page-enter {
+  animation: nth-fade-slide-up 480ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  will-change: opacity, transform;
+}
+
+/* Instant dimming feedback on route exit / click */
+body[data-navigating="true"] .nth-page-enter {
+  opacity: 0.55;
+  transform: translateY(4px) scale(0.995);
+  transition: opacity 160ms ease-out, transform 160ms ease-out;
+  pointer-events: none;
+}
+
+/* Subtle entrance for module header banners */
+.nth-page-enter > div:first-child,
+.nth-header-enter {
+  animation: nth-subtle-fade 380ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* Automated Cascading Stagger for KPI cards and container cards */
+.grid > div.bg-white,
+.grid > a > div.bg-white,
+.nth-card-enter {
+  animation: nth-card-enter 460ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  transition: transform 260ms cubic-bezier(0.16, 1, 0.3, 1), box-shadow 260ms cubic-bezier(0.16, 1, 0.3, 1) !important;
+  will-change: opacity, transform;
+}
+
+/* Hover elevation float effect (TikTok Dashboard V2 motion language) */
+.grid > div.bg-white:hover,
+.grid > a > div.bg-white:hover,
+.nth-card-enter:hover {
+  transform: translateY(-6px) !important;
+  box-shadow: 0 16px 32px -6px rgba(15, 23, 42, 0.12), 0 4px 12px -2px rgba(15, 23, 42, 0.04) !important;
+}
+
+.grid > div.bg-white:nth-child(1),
+.grid > a:nth-child(1) > div.bg-white,
+.grid > *:nth-child(1) .nth-card-enter {
+  animation-delay: 60ms;
+}
+
+.grid > div.bg-white:nth-child(2),
+.grid > a:nth-child(2) > div.bg-white,
+.grid > *:nth-child(2) .nth-card-enter {
+  animation-delay: 130ms;
+}
+
+.grid > div.bg-white:nth-child(3),
+.grid > a:nth-child(3) > div.bg-white,
+.grid > *:nth-child(3) .nth-card-enter {
+  animation-delay: 200ms;
+}
+
+.grid > div.bg-white:nth-child(4),
+.grid > a:nth-child(4) > div.bg-white,
+.grid > *:nth-child(4) .nth-card-enter {
+  animation-delay: 270ms;
+}
+
+.grid > div.bg-white:nth-child(5),
+.grid > a:nth-child(5) > div.bg-white,
+.grid > *:nth-child(5) .nth-card-enter {
+  animation-delay: 340ms;
+}
+
+.grid > div.bg-white:nth-child(n+6),
+.grid > a:nth-child(n+6) > div.bg-white,
+.grid > *:nth-child(n+6) .nth-card-enter {
+  animation-delay: 410ms;
+}
+
+/* Global Smooth Modals & Dialogs */
+div.fixed.inset-0.flex.items-center.justify-center > div {
+  animation: nth-modal-enter 220ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  will-change: transform, opacity;
+}
+
+.nth-panel-enter {
+  animation: nth-panel-enter 220ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* Buttons and Controls: Distinct Tactile Feedback */
+button:active:not(:disabled),
+a[role="button"]:active,
+.nth-btn-press:active {
+  transform: scale(0.95) !important;
+  transition: transform 70ms cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+/* Heavy Content Guard (Preserves 60fps on large tables) */
+table,
+.overflow-x-auto,
+.data-table-container,
+.nth-heavy-content {
+  animation: none !important;
+  transform: none !important;
+}
+
+/* 3. Accessibility Guard: Soft Reduced Motion (Never kills UI) */
+@keyframes nth-fade-only {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nth-page-enter,
+  .nth-card-enter,
+  .nth-header-enter,
+  .grid > div.bg-white,
+  .grid > a > div.bg-white {
+    transform: none !important;
+    animation: nth-fade-only 160ms ease-out both !important;
+  }
+  button:active:not(:disabled),
+  a[role="button"]:active,
+  .nth-btn-press:active {
+    transform: none !important;
+  }
+}

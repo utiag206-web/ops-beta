@@ -7,6 +7,23 @@ import { cookies } from 'next/headers'
 import { resolvePermissions, serializeToLegacyArray } from '@/lib/rbac/engine'
 import type { UserPermissionOverride } from '@/lib/rbac/types'
 
+interface CachedExtendedUser {
+  data: any
+  timestamp: number
+}
+const SESSION_CACHE_TTL = 30 * 1000 // 30 segundos de memoria en servidor para transiciones rápidas
+const sessionMemoryCache = new Map<string, CachedExtendedUser>()
+
+export function clearUserSessionCache(userId?: string) {
+  if (userId) {
+    for (const key of sessionMemoryCache.keys()) {
+      if (key.startsWith(userId)) sessionMemoryCache.delete(key)
+    }
+  } else {
+    sessionMemoryCache.clear()
+  }
+}
+
 export const getUserSession = cache(async function getUserSession() {
  try {
  const cookieStore = await cookies()
@@ -17,6 +34,13 @@ export const getUserSession = cache(async function getUserSession() {
 
  if (authError || !user) {
  redirect('/login')
+ }
+
+ const cacheKey = `${user.id}:${activeCompanyId || 'none'}`
+ const now = Date.now()
+ const cached = sessionMemoryCache.get(cacheKey)
+ if (cached && (now - cached.timestamp) < SESSION_CACHE_TTL) {
+   return { user, extendedUser: cached.data }
  }
 
   const adminSupabase = await createAdminClient()
@@ -165,6 +189,7 @@ export const getUserSession = cache(async function getUserSession() {
  extendedUser.display_email = extendedUser.email
  }
 
+ sessionMemoryCache.set(cacheKey, { data: extendedUser, timestamp: now })
  return { user, extendedUser: extendedUser as any }
 
  } catch (error: any) {
