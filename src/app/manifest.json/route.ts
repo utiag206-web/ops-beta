@@ -25,13 +25,13 @@ export async function GET(request: Request) {
  theme_color: '#06122e',
  icons: [
  {
- src: '/icon-192x192.png?v=1.3.4',
+ src: '/icon-192x192.png?v=1.4.0',
  sizes: '192x192',
  type: 'image/png',
         purpose: 'any'
  },
  {
-        src: '/icon-512x512.png?v=1.3.4',
+        src: '/icon-512x512.png?v=1.4.0',
         sizes: '512x512',
         type: 'image/png',
         purpose: 'any'
