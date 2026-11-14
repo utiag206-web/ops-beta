@@ -1,5 +1,6 @@
 # ⚡ InthalyOps — Sistema Operativo Empresarial Multiempresa
 
+> **Versión Estable:** `v1.4.0` (Congelada y en Producción)  
 > **Plataforma Integral de Gestión y Operaciones para Minería, Agricultura, Forestal, Logística y Mantenimiento.**  
 > Arquitectura moderna con **Next.js 15 (App Router)**, **React 19**, **Supabase (PostgreSQL + RLS)** y motor híbrido **Offline-First**.
 
