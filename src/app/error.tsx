@@ -63,26 +63,28 @@ export default function GlobalError({
     window.location.replace('/dashboard')
   }
 
+  const isEffectiveOffline = isOffline || (typeof navigator !== 'undefined' && !navigator.onLine)
+
   return (
     <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4">
       <div className="max-w-md w-full bg-slate-800 border border-slate-700/80 rounded-3xl p-6 sm:p-8 text-center shadow-2xl space-y-6">
         <div className="w-16 h-16 mx-auto rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400">
-          {isOffline ? <WifiOff size={32} /> : isChunkError ? <Layers size={32} /> : <AlertCircle size={32} />}
+          {isEffectiveOffline ? <WifiOff size={32} /> : isChunkError ? <Layers size={32} /> : <AlertCircle size={32} />}
         </div>
 
         <div className="space-y-2">
           <h1 className="text-xl font-black text-white">
-            {isOffline 
+            {isEffectiveOffline 
               ? 'Modo sin conexión' 
               : isChunkError 
-              ? 'Recompilación de módulo' 
+              ? 'Actualización de versión' 
               : 'Recuperación del sistema'}
           </h1>
           <p className="text-xs text-slate-400 leading-relaxed">
-            {isOffline 
-              ? 'La aplicación se encuentra operando sin conexión a Internet. Puedes reintentar la carga o volver a la vista principal.'
+            {isEffectiveOffline 
+              ? 'El módulo solicitado no está precargado en la memoria local de tu dispositivo. Puedes volver al Dashboard para operar con los datos locales.'
               : isChunkError
-              ? 'El servidor de desarrollo recompiló o actualizó este módulo. Haz clic en «Recargar módulo» para cargar la versión actual.'
+              ? 'Se actualizó un módulo en el servidor. Haz clic en «Recargar módulo» para cargar la versión actual.'
               : 'Ocurrió un contratiempo temporal en la aplicación. Puedes recargar o volver a la vista principal.'}
           </p>
         </div>
@@ -111,20 +113,41 @@ export default function GlobalError({
         )}
 
         <div className="flex flex-col sm:flex-row gap-3 pt-2">
-          <button
-            type="button"
-            onClick={handleRetry}
-            className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs transition-colors shadow-lg shadow-blue-900/30"
-          >
-            <RefreshCw size={15} /> {isChunkError ? 'Recargar módulo' : 'Reintentar'}
-          </button>
-          <button
-            type="button"
-            onClick={handleGoHome}
-            className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-slate-700 hover:bg-slate-600 text-slate-200 font-bold text-xs transition-colors"
-          >
-            <Home size={15} /> Ir al Inicio
-          </button>
+          {isEffectiveOffline ? (
+            <>
+              <button
+                type="button"
+                onClick={handleGoHome}
+                className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs transition-colors shadow-lg shadow-blue-900/30"
+              >
+                <Home size={15} /> Ir al Dashboard
+              </button>
+              <button
+                type="button"
+                onClick={handleRetry}
+                className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-slate-700 hover:bg-slate-600 text-slate-200 font-bold text-xs transition-colors"
+              >
+                <RefreshCw size={15} /> Reintentar
+              </button>
+            </>
+          ) : (
+            <>
+              <button
+                type="button"
+                onClick={handleRetry}
+                className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs transition-colors shadow-lg shadow-blue-900/30"
+              >
+                <RefreshCw size={15} /> {isChunkError ? 'Recargar módulo' : 'Reintentar'}
+              </button>
+              <button
+                type="button"
+                onClick={handleGoHome}
+                className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-slate-700 hover:bg-slate-600 text-slate-200 font-bold text-xs transition-colors"
+              >
+                <Home size={15} /> Ir al Inicio
+              </button>
+            </>
+          )}
         </div>
       </div>
     </div>

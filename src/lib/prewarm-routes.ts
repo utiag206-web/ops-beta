@@ -2,59 +2,54 @@
 // Pre-caches HTML documents, RSC Flight streams, and all client-side JavaScript/CSS chunks.
 
 export const APP_ROUTES = [
-  // 1. Centro de Control
+  // 1. Centro de Control y Módulos Operativos Críticos (Prioridad 1)
   '/dashboard',
+  '/tareo',
+  '/attendance',
+  '/workers',
+  '/operaciones/produccion',
+  '/operaciones/planta',
+  '/mecanica',
+  '/caja-chica',
+  '/inventory/stock',
+  '/requerimientos',
+  '/offline',
   '/profile',
 
-  // 2. Control de Planta y Mineral (Offline-First Completo)
-  '/operaciones/planta',
-  '/operaciones/produccion',
-  '/operaciones/maderas',
-
-  // 3. Mecánica y Submódulos
-  '/mecanica',
+  // 2. Submódulos de Mecánica y Planta
   '/mecanica/checklists',
-  '/mecanica/compresora-combustible',
-  '/mecanica/compresora-mantenimiento',
   '/mecanica/equipos-mina',
-  '/mecanica/generador-combustible',
-  '/mecanica/generador-mantenimiento',
-  '/mecanica/herramientas',
   '/mecanica/mantenimiento-vehiculos',
+  '/mecanica/herramientas',
+  '/mecanica/generador-mantenimiento',
+  '/mecanica/compresora-mantenimiento',
+  '/mecanica/generador-combustible',
+  '/mecanica/compresora-combustible',
+  '/operaciones/maderas',
+  '/operaciones/campo',
 
-  // 4. Personal, Asistencia y Tareo
-  '/attendance',
-  '/tareo',
-  '/workers',
-  '/documents',
-  '/bonuses',
-
-  // 5. Logística, Almacén e Inventario
+  // 3. Logística, Inventario y Documentación
   '/movements',
-  '/inventory/stock',
   '/inventory/products',
   '/inventory/kardex',
   '/inventory/history',
   '/inventory/reports',
-  '/configuracion/warehouses',
-
-  // 6. SOMA / HSEC
-  '/soma/hsec',
-  '/soma/capacitaciones',
-  '/soma/charlas',
-
-  // 7. Operaciones Auxiliares y Gestión
-  '/requerimientos',
-  '/caja-chica',
+  '/documents',
+  '/bonuses',
   '/assets',
-  '/operaciones/campo',
-  '/reports/export-center',
-  '/company',
-  '/users',
   '/ppe',
   '/camp',
 
-  // 8. Super Admin / Centro Corporativo
+  // 4. Seguridad SOMA y Reportes
+  '/soma/hsec',
+  '/soma/capacitaciones',
+  '/soma/charlas',
+  '/reports/export-center',
+  '/configuracion/warehouses',
+  '/company',
+  '/users',
+
+  // 5. Centro Corporativo Super Admin
   '/super-admin',
   '/super-admin/companies',
   '/super-admin/users',

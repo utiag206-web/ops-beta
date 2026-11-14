@@ -4,6 +4,23 @@ Todas las modificaciones notables realizadas en este proyecto están documentada
 
 ---
 
+## [1.4.1] - 2026-11-14 — Hotfix de Resiliencia y Navegación Offline
+
+### Corregido
+- **Precacheo Profundo de `/offline` en Service Worker (`public/sw.js`):**
+  - Se implementó la descarga y extracción automática de los scripts JS (`page-*.js`) y estilos CSS de `/offline` en el evento `install` dentro de `STATIC_CACHE`.
+  - Elimina el error `ChunkLoadError: Loading chunk failed` al navegar desconectado a pantallas no sincronizadas.
+- **Erradicación de la Pantalla Blanca Plana:**
+  - Se sustituyó la respuesta HTML en texto plano por un **Fallback de Emergencia Corporativo Autocontenido** con diseño completo, fondo `#06122e`, logotipo de InthalyOps y botón de retorno al Dashboard sin dependencias externas de red.
+- **Autonomía Total de `src/app/offline/page.tsx`:**
+  - Se eliminó la dependencia de `lucide-react`, sustituyendo los iconos por gráficos vectoriales SVG en línea para garantizar que no dependa de paquetes externos en frío.
+- **Manejo Preciso de Errores Desconectados (`src/app/error.tsx`):**
+  - Detección reactiva de desconexión (`isEffectiveOffline`) que prioriza "Modo sin conexión" y ubica **"Ir al Dashboard"** como botón primario en lugar del mensaje de desarrollo de recompilación.
+- **Prioridad de Precalentamiento de Módulos Diarios (`src/lib/prewarm-routes.ts`):**
+  - Reorganizada la lista `APP_ROUTES` para descargar de forma inmediata en los primeros 2-3 segundos los módulos operativos críticos (Tareo, Asistencia, Personal, Producción, Planta, Mecánica, Caja Chica y la ruta `/offline`).
+
+---
+
 ## [1.4.0] - 2026-11-14 — Versión Estable Congelada (Evolución Integral)
 
 ### Resumen de Versión Estable
