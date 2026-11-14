@@ -4,25 +4,40 @@ import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { getUserSession, applyIsolation, getActiveViewMode } from '@/lib/auth'
 import { getCompanyTimezone, getCompanyLocalTime } from '@/lib/date-utils'
 
+// In-Memory Server Cache for Dashboard Stats (20s TTL)
+// Avoids 16 sequential round-trips to Supabase on every route visit or fast app reopen
+interface CachedDashboardStats {
+  data: any
+  timestamp: number
+}
+const dashboardStatsCache = new Map<string, CachedDashboardStats>()
+const DASHBOARD_STATS_TTL = 20 * 1000 // 20s
+
 export async function getDashboardStats() {
- try {
- const session = await getUserSession()
- const user = session?.extendedUser
- 
- if (!user) return null
+  try {
+    const session = await getUserSession()
+    const user = session?.extendedUser
+    
+    if (!user) return null
 
- // Usamos el ID activo (que puede ser el de impersonación) directamente de la sesión optimizada
- const companyId = user.active_company_id || user.company_id
- 
- if (!companyId && user.role_id !== 'super_admin' && user.role_id !== 'superadmin') {
- return null
- }
+    // Usamos el ID activo (que puede ser el de impersonación) directamente de la sesión optimizada
+    const companyId = user.active_company_id || user.company_id
+    
+    if (!companyId && user.role_id !== 'super_admin' && user.role_id !== 'superadmin') {
+      return null
+    }
 
- const supabase = await createAdminClient()
- const ianaTimezone = companyId ? await getCompanyTimezone(companyId) : 'America/Lima'
- const { date: today } = getCompanyLocalTime(ianaTimezone)
+    const viewMode = await getActiveViewMode()
+    const cacheKey = `${companyId || 'super'}:${user.id}:${viewMode}`
+    const now = Date.now()
+    const cached = dashboardStatsCache.get(cacheKey)
+    if (cached && (now - cached.timestamp) < DASHBOARD_STATS_TTL) {
+      return cached.data
+    }
 
- const viewMode = await getActiveViewMode()
+    const supabase = await createAdminClient()
+    const ianaTimezone = companyId ? await getCompanyTimezone(companyId) : 'America/Lima'
+    const { date: today } = getCompanyLocalTime(ianaTimezone)
  const isWorkerModeActive = viewMode === 'WORKER'
 
  let stats: any = {
@@ -381,6 +396,7 @@ export async function getDashboardStats() {
  stats.personalStats = { ppe: ppe.data || [], bonuses: bns.data || [], transport: trns.data || [], attendance: att.data || [] }
  }
 
+ dashboardStatsCache.set(cacheKey, { data: stats, timestamp: Date.now() })
  return stats
  } catch (err: any) {
  if (err.digest?.startsWith('NEXT_REDIRECT')) throw err

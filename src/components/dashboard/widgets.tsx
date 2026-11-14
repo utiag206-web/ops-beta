@@ -13,7 +13,7 @@ import {
 
 export function StatWidget({ title, value, icon: Icon, color, bg, href, trend, badge }: any) {
   const content = (
-    <div className="nth-card-enter bg-white p-2 sm:p-2.5 rounded-lg shadow-2xs border border-slate-100 flex flex-col justify-between gap-1.5 hover:shadow-xs hover:-translate-y-0.5 transition-all duration-200 group h-full relative overflow-hidden">
+    <div className="nth-card-enter bg-white p-2 sm:p-2.5 rounded-lg shadow-2xs border border-slate-100 flex flex-col justify-between gap-1.5 group h-full relative overflow-hidden cursor-pointer">
       <div className="absolute -right-4 -top-4 w-20 h-20 bg-slate-50 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-xl" />
       
       <div className="flex items-start justify-between relative z-10">
