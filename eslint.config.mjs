@@ -19,7 +19,15 @@ const eslintConfig = [
       "out/**",
       "build/**",
       "next-env.d.ts",
-      "scratch/**"
+      "scratch/**",
+      "deploy_prod/**",
+      "next-prod-boilerplate/**",
+      "maintenance/**",
+      "tmp/**",
+      "scripts/**",
+      "docs/**",
+      ".archive/**",
+      "server.js"
     ],
   },
 ];

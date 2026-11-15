@@ -3,6 +3,7 @@
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { getUserSession, getStrictCompanyId, applyIsolation } from '@/lib/auth'
 import { revalidatePath } from 'next/cache'
+import { tareoService } from '@/services'
 
 export async function getWorkCycles() {
  const { extendedUser } = await getUserSession()
@@ -92,22 +93,16 @@ export async function deleteWorkCycle(id: string) {
 }
 
 export async function getTareoRecords(startDate: string, endDate: string) {
- const { extendedUser } = await getUserSession()
- const companyId = await getStrictCompanyId()
- const supabase = await createAdminClient()
- const { data, error } = await applyIsolation(
- supabase.from('tareo_records').select('worker_id, date, status, is_manual'),
- companyId,
- extendedUser.role_id
- )
- .gte('date', startDate)
- .lte('date', endDate)
- 
- if (error) {
- console.error('[TAREO] Error fetching records:', error.message)
- return []
- }
- return data || []
+  const { extendedUser } = await getUserSession()
+  const companyId = await getStrictCompanyId()
+  const supabase = await createAdminClient()
+
+  return tareoService.getTareoRecords(supabase, {
+    startDate,
+    endDate,
+    companyId,
+    roleId: extendedUser.role_id
+  })
 }
 
 export async function upsertTareoRecord(payload: {

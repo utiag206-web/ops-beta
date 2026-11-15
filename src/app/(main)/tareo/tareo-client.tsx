@@ -22,15 +22,7 @@ import { useOffline } from '@/components/providers/offline-provider'
 import { addOperationToQueue } from '@/lib/offline-sync'
 import { v4 as uuidv4 } from 'uuid'
 import { toast } from 'sonner'
-
-interface Worker {
-  id: string
-  name: string
-  last_name?: string
-  position?: string
-  daily_rate?: number
-  monthly_salary?: number
-}
+import type { Worker } from '@/types/workers.types'
 
 interface TareoPageProps {
   initialCycles: any[]

@@ -2,6 +2,7 @@
 
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
+import { inventoryService } from '@/services'
 import { getUserSession, requirePermission, getStrictCompanyId, applyIsolation } from '@/lib/auth'
 
 export async function deleteProduct(id: string) {
@@ -29,25 +30,16 @@ export async function deleteProduct(id: string) {
 }
 
 export async function getWarehouses(allWarehouses?: boolean) {
- const companyId = await getStrictCompanyId()
- const { extendedUser } = await getUserSession()
- const supabase = await createAdminClient()
+  const companyId = await getStrictCompanyId()
+  const { extendedUser } = await getUserSession()
+  const supabase = await createAdminClient()
 
- let query = applyIsolation(
- supabase.from('warehouses').select('id, name, code, area, is_default'),
- companyId,
- extendedUser.role_id
- )
-
- // [BLINDAJE_AREA]
- if (extendedUser?.area === 'Cocina' && !allWarehouses) {
- query = query.or('area.eq.COCINA,name.ilike.%Cocina%')
- }
-
- const { data, error } = await query.order('name', { ascending: true })
-
- if (error) return { error: error.message }
- return { data: data || [] }
+  return inventoryService.getWarehouses(supabase, {
+    companyId,
+    roleId: extendedUser.role_id,
+    area: extendedUser?.area,
+    allWarehouses
+  })
 }
 
 export async function getMovementTypes() {

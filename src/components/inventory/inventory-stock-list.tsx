@@ -15,44 +15,8 @@ import { StockForm } from './stock-form'
 import * as XLSX from 'xlsx'
 import { getMovementTraceability } from '@/app/(main)/inventory/actions'
 import { toast } from 'sonner'
+import type { InventoryMovement as Movement, StockItem } from '@/types/inventory.types'
 
-interface Movement {
- id: string
- type: 'ingreso' | 'salida' | 'ajuste'
- quantity: number
- location: string
- observation: string
- product_id: string
- created_at: string
- users?: { name: string }
- warehouse_id: string
- warehouses?: { name: string }
- movement_types?: { name: string, effect: string, code: string }
- document_type?: string
- document_number?: string
- reference?: string
- responsible_name?: string
- products?: { name: string, code: string, unit: string }
-}
-
-interface StockItem {
- id: string
- product_id: string
- location: string
- quantity: number
- updated_at: string
- products: {
- name: string
- code: string
- unit: string
- category: string
- min_stock: number
- }
- warehouse_id: string
- warehouses?: {
- name: string
- }
-}
 
 export function InventoryStockList({ 
  initialStock, 

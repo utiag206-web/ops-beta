@@ -4,44 +4,20 @@ import { revalidatePath } from 'next/cache'
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { getUserSession, getStrictCompanyId, applyIsolation } from '@/lib/auth'
 import { generateAutomaticWorkerCodes } from '@/lib/company-hr-settings'
+import type { Worker } from '@/types/workers.types'
+import { workersService } from '@/services'
 
-export async function getWorkers(status?: string, isRecent?: boolean) {
- const { extendedUser } = await getUserSession()
- const companyId = await getStrictCompanyId()
+export async function getWorkers(status?: string, isRecent?: boolean): Promise<Worker[]> {
+  const { extendedUser } = await getUserSession()
+  const companyId = await getStrictCompanyId()
+  const supabase = await createAdminClient()
 
- const supabase = await createAdminClient()
-
- let query = supabase
- .from('workers')
- .select('id, name, last_name, dni, position, status, phone, hire_date, photo_url, created_at, company_id, worker_financial(daily_rate, monthly_salary)')
- 
- query = applyIsolation(query, companyId, extendedUser.role_id)
-
- if (status) {
- query = query.eq('status', status)
- }
-
- if (isRecent) {
- const thirtyDaysAgo = new Date()
- thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
- query = query.gte('created_at', thirtyDaysAgo.toISOString())
- }
-
- const { data: workers, error } = await query.order('created_at', { ascending: false })
-
- if (error) {
- console.error('Error fetching workers', error)
- return []
- }
-
- return (workers || []).map((w: any) => {
- const fin = Array.isArray(w.worker_financial) ? w.worker_financial[0] : w.worker_financial
- return {
- ...w,
- daily_rate: fin?.daily_rate || 0,
- monthly_salary: fin?.monthly_salary || 0
- }
- })
+  return workersService.getWorkersList(supabase, {
+    companyId,
+    roleId: extendedUser.role_id,
+    status,
+    isRecent
+  })
 }
 
 export async function exportWorkersAllData() {

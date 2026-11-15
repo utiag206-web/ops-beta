@@ -8,6 +8,7 @@ import {
  Calendar, Clock, User, MessageSquare, Package, Plus, MapPin, X
 } from 'lucide-react'
 import { MovementForm } from './movement-form'
+import type { InventoryMovement as Movement } from '@/types/inventory.types'
 
 const getTypeStyle = (type: string) => {
  switch (type) {
@@ -27,31 +28,6 @@ const getTypeIcon = (type: string) => {
  }
 }
 
-interface Movement {
- id: string
- product_id: string
- type: 'ingreso' | 'salida' | 'ajuste'
- quantity: number
- location: string
- observation: string
- created_at: string
- products: {
- name: string
- code: string
- unit: string
- }
- users?: {
- name: string
- }
- warehouse_id: string
- warehouses?: { name: string }
- movement_types?: { name: string, effect: string, code: string }
- document_type?: string
- document_number?: string
- reference?: string
- responsible_name?: string
- running_balance?: number
-}
 
 interface InventoryMovementsListProps {
  initialMovements: Movement[]

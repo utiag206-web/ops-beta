@@ -9,19 +9,9 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import * as XLSX from 'xlsx'
-import { useTerminology, useOperationalContext } from '@/components/providers/operational-context-provider'
+import { useTerminology, useOperationalContext } from '@/hooks'
+import type { Worker } from '@/types/workers.types'
 
-type Worker = {
- id: string
- name: string
- dni: string
- position: string
- status: string
- phone: string | null
- hire_date: string | null
- photo_url: string | null
- created_at: string
-}
 
 export function WorkersList({ workers, canManage = false }: { workers: Worker[], canManage?: boolean }) {
  const router = useRouter()

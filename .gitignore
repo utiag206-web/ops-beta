@@ -53,3 +53,5 @@ next-env.d.ts
 /audit.mjs
 /seed_ops.mjs
 /deploy_prod.zip
+/.archive/
+
