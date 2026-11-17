@@ -1,0 +1,77 @@
+# ==============================================================================
+# CONFIGURACIÓN DE PROXY INVERSO Y CERTIFICADOS TLS AUTOMÁTICOS: CADDY
+# Ecosistema Inthaly
+# ==============================================================================
+
+{
+    email admin@inthaly.com
+    admin off
+}
+
+# Subdominio: Inthaly ID (auth.inthaly.com)
+auth.inthaly.com {
+    header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "DENY"
+        X-XSS-Protection "1; mode=block"
+        Referrer-Policy "strict-origin-when-cross-origin"
+    }
+
+    # Proxy hacia el servidor de aplicación Node.js / Next.js
+    reverse_proxy app:3000 {
+        header_up Host {host}
+        header_up X-Real-IP {remote}
+        header_up X-Forwarded-For {remote}
+        header_up X-Forwarded-Proto {scheme}
+    }
+
+    encode gzip zstd
+    log {
+        output file /var/log/caddy/auth_access.log
+    }
+}
+
+# Subdominio: Comunidad Inthaly (comunidad.inthaly.com)
+comunidad.inthaly.com {
+    header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "SAMEORIGIN"
+        Referrer-Policy "strict-origin-when-cross-origin"
+    }
+
+    reverse_proxy app:3000 {
+        header_up Host {host}
+        header_up X-Real-IP {remote}
+        header_up X-Forwarded-For {remote}
+        header_up X-Forwarded-Proto {scheme}
+    }
+
+    encode gzip zstd
+    log {
+        output file /var/log/caddy/comunidad_access.log
+    }
+}
+
+# Subdominio: Consola Global (admin.inthaly.com)
+admin.inthaly.com {
+    header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "DENY"
+        Referrer-Policy "strict-origin-when-cross-origin"
+    }
+
+    reverse_proxy app:3000 {
+        header_up Host {host}
+        header_up X-Real-IP {remote}
+        header_up X-Forwarded-For {remote}
+        header_up X-Forwarded-Proto {scheme}
+    }
+
+    encode gzip zstd
+    log {
+        output file /var/log/caddy/admin_access.log
+    }
+}

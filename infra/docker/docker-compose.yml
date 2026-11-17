@@ -1,0 +1,159 @@
+# ==============================================================================
+# INFRAESTRUCTURA AUTOGESTIONADA: ECOSISTEMA INTHALY (PRODUCCIÓN / VPS)
+# ==============================================================================
+# Arquitectura modular autogestionada sin dependencia de proveedores SaaS externos.
+# Bases de datos separadas: inthaly_id e inthaly_community sobre PostgreSQL 16.
+# ==============================================================================
+
+version: '3.8'
+
+networks:
+  inthaly_internal:
+    driver: bridge
+    internal: true
+  inthaly_public:
+    driver: bridge
+
+volumes:
+  inthaly_pg_data:
+    name: inthaly_pg_data_vol
+    driver: local
+  inthaly_backup_data:
+    name: inthaly_backup_data_vol
+    driver: local
+  inthaly_redis_data:
+    name: inthaly_redis_data_vol
+    driver: local
+  inthaly_caddy_data:
+    name: inthaly_caddy_data_vol
+    driver: local
+  inthaly_caddy_config:
+    name: inthaly_caddy_config_vol
+    driver: local
+
+services:
+  # ----------------------------------------------------------------------------
+  # 1. MOTOR DE BASE DE DATOS DEDICADO: PostgreSQL 16
+  # ----------------------------------------------------------------------------
+  postgres:
+    image: postgres:16-alpine
+    container_name: inthaly_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_SUPERUSER:-inthaly_admin}
+      POSTGRES_PASSWORD: ${POSTGRES_SUPERUSER_PASSWORD:?Error: Contraseña de superusuario requerida}
+      PGDATA: /var/lib/postgresql/data/pgdata
+      INTHALY_ID_DB_NAME: ${INTHALY_ID_DB_NAME:-inthaly_id}
+      INTHALY_ID_DB_USER: ${INTHALY_ID_DB_USER:-inthaly_id_user}
+      INTHALY_ID_DB_PASSWORD: ${INTHALY_ID_DB_PASSWORD:?Error: Contraseña de inthaly_id requerida}
+      INTHALY_COMMUNITY_DB_NAME: ${INTHALY_COMMUNITY_DB_NAME:-inthaly_community}
+      INTHALY_COMMUNITY_DB_USER: ${INTHALY_COMMUNITY_DB_USER:-inthaly_community_user}
+      INTHALY_COMMUNITY_DB_PASSWORD: ${INTHALY_COMMUNITY_DB_PASSWORD:?Error: Contraseña de inthaly_community requerida}
+    volumes:
+      - inthaly_pg_data:/var/lib/postgresql/data
+      - ../postgres/init:/docker-entrypoint-initdb.d:ro
+      - ../postgres/conf/postgresql.conf:/etc/postgresql/postgresql.conf:ro
+      - ../postgres/conf/pg_hba.conf:/etc/postgresql/pg_hba.conf:ro
+    command: postgres -c config_file=/etc/postgresql/postgresql.conf
+    networks:
+      - inthaly_internal
+    ports:
+      # Exposición vinculada a localhost (127.0.0.1) para evitar exposición abierta a internet
+      - "127.0.0.1:5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_SUPERUSER:-inthaly_admin}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+  # ----------------------------------------------------------------------------
+  # 2. GESTOR DE CONEXIONES Y POOLER: PgBouncer
+  # ----------------------------------------------------------------------------
+  pgbouncer:
+    image: edoburu/pgbouncer:v1.22.0
+    container_name: inthaly_pgbouncer
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: ${POSTGRES_SUPERUSER:-inthaly_admin}
+      DB_PASSWORD: ${POSTGRES_SUPERUSER_PASSWORD}
+      POOL_MODE: transaction
+      MAX_CLIENT_CONN: 500
+      DEFAULT_POOL_SIZE: 25
+      RESERVE_POOL_SIZE: 10
+      AUTH_TYPE: scram-sha-256
+    networks:
+      - inthaly_internal
+    ports:
+      - "127.0.0.1:6432:6432"
+
+  # ----------------------------------------------------------------------------
+  # 3. CACHÉ DE SESIONES Y RATE LIMITING: Redis 7
+  # ----------------------------------------------------------------------------
+  redis:
+    image: redis:7-alpine
+    container_name: inthaly_redis
+    restart: unless-stopped
+    command: redis-server --requirepass ${REDIS_PASSWORD:?Error: Password de Redis requerido} --appendonly yes
+    volumes:
+      - inthaly_redis_data:/data
+    networks:
+      - inthaly_internal
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ----------------------------------------------------------------------------
+  # 4. SISTEMA DE RESPALDO AUTOMÁTICO (Cada 6 horas + Retención 30 días)
+  # ----------------------------------------------------------------------------
+  backup:
+    image: postgres:16-alpine
+    container_name: inthaly_backup
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_USER: ${POSTGRES_SUPERUSER:-inthaly_admin}
+      POSTGRES_PASSWORD: ${POSTGRES_SUPERUSER_PASSWORD}
+      BACKUP_DIR: /backups
+      RETENTION_DAYS: 30
+      INTHALY_ID_DB_NAME: ${INTHALY_ID_DB_NAME:-inthaly_id}
+      INTHALY_COMMUNITY_DB_NAME: ${INTHALY_COMMUNITY_DB_NAME:-inthaly_community}
+    volumes:
+      - inthaly_backup_data:/backups
+      - ../backup/backup.sh:/usr/local/bin/backup.sh:ro
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        chmod +x /usr/local/bin/backup.sh
+        echo "0 */6 * * * /usr/local/bin/backup.sh >> /var/log/backup.log 2>&1" > /etc/crontabs/root
+        crond -f -l 8
+    networks:
+      - inthaly_internal
+
+  # ----------------------------------------------------------------------------
+  # 5. PROXY INVERSO Y TERMINACIÓN TLS: Caddy Server
+  # ----------------------------------------------------------------------------
+  caddy:
+    image: caddy:2-alpine
+    container_name: inthaly_caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ../deploy/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - inthaly_caddy_data:/data
+      - inthaly_caddy_config:/config
+    networks:
+      - inthaly_public
+      - inthaly_internal

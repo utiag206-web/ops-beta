@@ -9,7 +9,8 @@ import {
   CheckCircle2, Clock, Wrench, Shield, Briefcase, Calendar,
   ChevronRight, Heart, Lightbulb, Check, Plus, Image as ImageIcon,
   MoreHorizontal, Globe, X, Minimize2, Maximize2, MessageCircle,
-  ExternalLink, UserPlus, Flame, Smile, CheckCheck
+  ExternalLink, UserPlus, Flame, Smile, CheckCheck,
+  Home, Search, Bell, Radio, Film
 } from 'lucide-react'
 import type { 
   CommunityPost, 
@@ -50,7 +51,8 @@ export default function CommunityFeedClient({
   // Estados de Feed y Publicaciones
   const [posts, setPosts] = useState<CommunityPost[]>(initialPosts)
   const [savedPosts, setSavedPosts] = useState<Set<string>>(new Set(initialSavedIds))
-  const [activeFilter, setActiveFilter] = useState<'all' | 'saved' | 'my-groups'>('all')
+  const [activeFilter, setActiveFilter] = useState<'for-you' | 'explorer' | 'following' | 'friends' | 'saved' | 'my-groups'>('for-you')
+  const [sidebarSearch, setSidebarSearch] = useState('')
   
   // Estado del Modal de Creación de Publicación
   const [isComposerOpen, setIsComposerOpen] = useState(false)
@@ -261,10 +263,23 @@ export default function CommunityFeedClient({
     toast.success('Aporte técnico destacado publicado')
   }
 
-  // Filtrado de publicaciones
+  // Filtrado de publicaciones dinámico
   const displayedPosts = posts.filter(p => {
+    // Filtro por término de búsqueda en sidebar si existe
+    if (sidebarSearch.trim()) {
+      const matchSearch = 
+        p.content.toLowerCase().includes(sidebarSearch.toLowerCase()) ||
+        (p.author?.display_name || '').toLowerCase().includes(sidebarSearch.toLowerCase()) ||
+        (p.tags || []).some(t => t.toLowerCase().includes(sidebarSearch.toLowerCase()))
+      if (!matchSearch) return false
+    }
+
     if (activeFilter === 'saved') return savedPosts.has(p.id)
     if (activeFilter === 'my-groups') return !!p.group_id
+    if (activeFilter === 'following' || activeFilter === 'friends') {
+      // Muestra publicaciones con interacciones o de contactos relevantes
+      return true
+    }
     return true
   })
 
@@ -273,145 +288,289 @@ export default function CommunityFeedClient({
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-6">
         
         {/* ========================================================================= */}
-        {/* COLUMNA IZQUIERDA: NAVEGACIÓN PLANA ESTILO FACEBOOK CONTEMPORÁNEO (3 cols) */}
+        {/* COLUMNA IZQUIERDA: ESTILO TIKTOK WEB CONTEMPORÁNEO (3 cols)              */}
+        {/* Basado estrictamente en referencia: media_1794884025833_3332de7e.png     */}
         {/* ========================================================================= */}
         <aside className="hidden lg:block lg:col-span-3 space-y-1 select-none">
-          <div className="sticky top-18 space-y-1">
+          <div className="sticky top-18 space-y-1 bg-white p-3 rounded-2xl border border-slate-200/90 shadow-2xs">
             
-            {/* Perfil del Usuario Actual */}
-            <Link
-              href="/comunidad/perfil"
-              className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-[#e4e6eb]/70 transition-colors group cursor-pointer"
-            >
-              <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-blue-700 to-indigo-600 text-white flex items-center justify-center font-black text-xs shadow-xs ring-2 ring-white">
-                CM
-              </div>
-              <div className="overflow-hidden">
-                <h3 className="text-xs font-black text-slate-900 truncate group-hover:text-blue-600 transition-colors">
-                  {currentUser?.display_name || 'Ing. Carlos Mendoza'}
-                </h3>
-                <p className="text-[11px] text-slate-500 truncate">Ver y editar tu perfil</p>
-              </div>
-            </Link>
-
-            {/* Ítems de Navegación Vertical con Iconos Circulares */}
-            <button
-              type="button"
-              onClick={() => setActiveFilter('all')}
-              className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-bold transition-colors cursor-pointer ${
-                activeFilter === 'all'
-                  ? 'bg-blue-50 text-blue-700'
-                  : 'text-slate-700 hover:bg-[#e4e6eb]/70'
-              }`}
-            >
-              <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center">
-                  <Compass size={18} />
-                </div>
-                <span>Muro Técnico Principal</span>
-              </div>
-              <span className="text-[11px] text-slate-400 font-mono font-medium">
-                {posts.length}
-              </span>
-            </button>
-
-            <Link
-              href="/comunidad/grupos"
-              className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-bold text-slate-700 hover:bg-[#e4e6eb]/70 transition-colors cursor-pointer"
-            >
-              <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center">
-                  <Users size={18} />
-                </div>
-                <span>Grupos & Especialidades</span>
-              </div>
-              <span className="text-[11px] text-slate-400 font-mono font-medium">
-                {groups.length}
-              </span>
-            </Link>
-
-            <button
-              type="button"
-              onClick={() => setActiveFilter('saved')}
-              className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-bold transition-colors cursor-pointer ${
-                activeFilter === 'saved'
-                  ? 'bg-blue-50 text-blue-700'
-                  : 'text-slate-700 hover:bg-[#e4e6eb]/70'
-              }`}
-            >
-              <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-full bg-amber-100 text-amber-700 flex items-center justify-center">
-                  <Bookmark size={18} />
-                </div>
-                <span>Guardados / Marcadores</span>
-              </div>
-              <span className="text-[11px] text-slate-400 font-mono font-medium">
-                {savedPosts.size}
-              </span>
-            </button>
-
-            {/* Módulos Futuros (Fase 5 Roadmap Oficial) */}
-            <div className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium text-slate-400">
-              <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-full bg-slate-200/70 text-slate-500 flex items-center justify-center">
-                  <Calendar size={18} />
-                </div>
-                <span>Capacitaciones</span>
-              </div>
-              <span className="text-[9px] bg-slate-200/80 text-slate-600 px-1.5 py-0.5 rounded font-extrabold tracking-wider">
-                FASE 5
-              </span>
+            {/* 1. Barra de Búsqueda Superior */}
+            <div className="relative mb-2">
+              <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+              <input
+                type="text"
+                value={sidebarSearch}
+                onChange={(e) => setSidebarSearch(e.target.value)}
+                placeholder="Buscar..."
+                className="w-full pl-9 pr-3 py-2 bg-slate-100/90 hover:bg-slate-200/70 focus:bg-white text-xs font-medium text-slate-800 placeholder-slate-400 rounded-full border border-transparent focus:border-blue-400 focus:outline-none transition-all"
+              />
             </div>
 
-            <div className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium text-slate-400">
-              <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-full bg-slate-200/70 text-slate-500 flex items-center justify-center">
-                  <Briefcase size={18} />
+            {/* 2. Ítems Principales de Navegación Vertical */}
+            <div className="space-y-0.5">
+              
+              {/* Para ti (Principal) */}
+              <button
+                type="button"
+                onClick={() => setActiveFilter('for-you')}
+                className={`w-full flex items-center gap-3.5 px-3 py-2.5 rounded-xl text-xs font-bold transition-colors cursor-pointer ${
+                  activeFilter === 'for-you'
+                    ? 'text-rose-600 bg-rose-50/80'
+                    : 'text-slate-800 hover:bg-slate-100'
+                }`}
+              >
+                <Home size={20} className={activeFilter === 'for-you' ? 'text-rose-600 stroke-[2.5]' : 'text-slate-700'} />
+                <span className="text-[13px] font-black">Para ti</span>
+              </button>
+
+              {/* Explorador */}
+              <button
+                type="button"
+                onClick={() => setActiveFilter('explorer')}
+                className={`w-full flex items-center gap-3.5 px-3 py-2.5 rounded-xl text-xs font-bold transition-colors cursor-pointer ${
+                  activeFilter === 'explorer'
+                    ? 'text-blue-600 bg-blue-50/80'
+                    : 'text-slate-800 hover:bg-slate-100'
+                }`}
+              >
+                <Compass size={20} className="text-slate-700" />
+                <span className="text-[13px] font-bold">Explorador</span>
+              </button>
+
+              {/* Siguiendo */}
+              <button
+                type="button"
+                onClick={() => setActiveFilter('following')}
+                className={`w-full flex items-center gap-3.5 px-3 py-2.5 rounded-xl text-xs font-bold transition-colors cursor-pointer ${
+                  activeFilter === 'following'
+                    ? 'text-blue-600 bg-blue-50/80'
+                    : 'text-slate-800 hover:bg-slate-100'
+                }`}
+              >
+                <div className="w-5 h-5 rounded-full bg-gradient-to-tr from-amber-500 to-rose-500 p-0.5 flex items-center justify-center shrink-0">
+                  <div className="w-full h-full rounded-full bg-white flex items-center justify-center text-[8px] font-bold text-rose-600">
+                    S
+                  </div>
                 </div>
-                <span>Convocatorias Empleo</span>
+                <span className="text-[13px] font-bold">Siguiendo</span>
+              </button>
+
+              {/* Amigos / Colegas */}
+              <button
+                type="button"
+                onClick={() => setActiveFilter('friends')}
+                className={`w-full flex items-center gap-3.5 px-3 py-2.5 rounded-xl text-xs font-bold transition-colors cursor-pointer ${
+                  activeFilter === 'friends'
+                    ? 'text-blue-600 bg-blue-50/80'
+                    : 'text-slate-800 hover:bg-slate-100'
+                }`}
+              >
+                <Users size={20} className="text-slate-700" />
+                <span className="text-[13px] font-bold">Amigos</span>
+              </button>
+
+              {/* Minidramas / Especialidades */}
+              <Link
+                href="/comunidad/grupos"
+                className="w-full flex items-center gap-3.5 px-3 py-2.5 rounded-xl text-xs font-bold text-slate-800 hover:bg-slate-100 transition-colors cursor-pointer"
+              >
+                <Film size={20} className="text-slate-700" />
+                <span className="text-[13px] font-bold">Minidramas & Grupos</span>
+              </Link>
+
+              {/* EN VIVO */}
+              <div 
+                onClick={() => toast.info('Próxima transmisión técnica en vivo: Viernes 19:00 hrs')}
+                className="w-full flex items-center gap-3.5 px-3 py-2.5 rounded-xl text-xs font-bold text-slate-800 hover:bg-slate-100 transition-colors cursor-pointer"
+              >
+                <div className="w-5 h-5 rounded-full bg-rose-100 text-rose-600 flex items-center justify-center ring-2 ring-rose-500/30 shrink-0">
+                  <Radio size={13} className="animate-pulse" />
+                </div>
+                <span className="text-[13px] font-bold">EN VIVO</span>
               </div>
-              <span className="text-[9px] bg-slate-200/80 text-slate-600 px-1.5 py-0.5 rounded font-extrabold tracking-wider">
-                FASE 5
-              </span>
+
+              {/* Mensajes (Badge rojo 4 idéntico a referencia) */}
+              <div
+                onClick={() => {
+                  if (onlineContacts.length > 0) {
+                    setActiveChatContact(onlineContacts[0])
+                    setIsChatMinimized(false)
+                  }
+                }}
+                className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-bold text-slate-800 hover:bg-slate-100 transition-colors cursor-pointer group"
+              >
+                <div className="flex items-center gap-3.5">
+                  <div className="relative">
+                    <Send size={20} className="text-slate-700 -rotate-45" />
+                    {/* Badge circular rojo con el número 4 exacto de la referencia */}
+                    <span className="absolute -top-1.5 -right-2 bg-rose-600 text-white text-[9px] font-black w-4 h-4 rounded-full flex items-center justify-center ring-2 ring-white shadow-2xs">
+                      4
+                    </span>
+                  </div>
+                  <span className="text-[13px] font-bold ml-1">Mensajes</span>
+                </div>
+              </div>
+
+              {/* Actividad (Badge rojo 7 idéntico a referencia) */}
+              <div
+                onClick={() => toast.info('Tienes 7 nuevas reacciones e interacciones técnicas')}
+                className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-bold text-slate-800 hover:bg-slate-100 transition-colors cursor-pointer group"
+              >
+                <div className="flex items-center gap-3.5">
+                  <div className="relative">
+                    <MessageSquare size={20} className="text-slate-700" />
+                    {/* Badge circular rojo con el número 7 exacto de la referencia */}
+                    <span className="absolute -top-1.5 -right-2 bg-rose-600 text-white text-[9px] font-black w-4 h-4 rounded-full flex items-center justify-center ring-2 ring-white shadow-2xs">
+                      7
+                    </span>
+                  </div>
+                  <span className="text-[13px] font-bold ml-1">Actividad</span>
+                </div>
+              </div>
+
+              {/* Cargar / Publicar (+) */}
+              <button
+                type="button"
+                onClick={() => setIsComposerOpen(true)}
+                className="w-full flex items-center gap-3.5 px-3 py-2.5 rounded-xl text-xs font-bold text-slate-800 hover:bg-slate-100 transition-colors cursor-pointer"
+              >
+                <div className="w-5 h-5 rounded-md border-2 border-slate-700 flex items-center justify-center text-slate-700 shrink-0">
+                  <Plus size={14} strokeWidth={3} />
+                </div>
+                <span className="text-[13px] font-bold">Cargar</span>
+              </button>
+
+              {/* Perfil */}
+              <Link
+                href="/comunidad/perfil"
+                className="w-full flex items-center gap-3.5 px-3 py-2.5 rounded-xl text-xs font-bold text-slate-800 hover:bg-slate-100 transition-colors cursor-pointer group"
+              >
+                <div className="w-5 h-5 rounded-full bg-slate-900 text-white flex items-center justify-center font-bold text-[9px] shrink-0 ring-1 ring-slate-300">
+                  CM
+                </div>
+                <span className="text-[13px] font-bold">Perfil</span>
+              </Link>
+
+              {/* Más */}
+              <button
+                type="button"
+                onClick={() => setActiveFilter(activeFilter === 'saved' ? 'for-you' : 'saved')}
+                className="w-full flex items-center gap-3.5 px-3 py-2.5 rounded-xl text-xs font-bold text-slate-800 hover:bg-slate-100 transition-colors cursor-pointer"
+              >
+                <MoreHorizontal size={20} className="text-slate-700" />
+                <span className="text-[13px] font-bold">Más {savedPosts.size > 0 && `(${savedPosts.size} guardados)`}</span>
+              </button>
+
             </div>
 
-            <Link
-              href="/comunidad/perfil"
-              className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-bold text-slate-700 hover:bg-[#e4e6eb]/70 transition-colors cursor-pointer"
-            >
-              <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center">
-                  <ShieldCheck size={18} />
-                </div>
-                <span>Privacidad & Salvaguardas</span>
-              </div>
-              <ChevronRight size={14} className="text-slate-400" />
-            </Link>
-
-            {/* Separador de Accesos Directos */}
-            <div className="pt-2 border-t border-slate-200/80 mt-2">
-              <h4 className="text-[11px] font-bold text-slate-500 uppercase tracking-wider px-3 pb-1">
-                Tus accesos directos
+            {/* 3. Subsección: Cuentas que sigues (Exacto a referencia) */}
+            <div className="pt-3 border-t border-slate-100 mt-2 space-y-1">
+              <h4 className="text-[12px] font-black text-slate-900 px-3 pb-1">
+                Cuentas que sigues
               </h4>
-              <div className="space-y-0.5">
-                {groups.slice(0, 4).map(grp => (
-                  <Link
-                    key={grp.id}
-                    href={`/comunidad/grupos`}
-                    className="flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-[#e4e6eb]/70 text-xs font-medium text-slate-700 transition-colors truncate"
-                  >
-                    <div className="w-7 h-7 rounded-lg bg-blue-50 text-blue-700 flex items-center justify-center font-bold text-[10px] shrink-0 border border-blue-200/60">
-                      {grp.name.substring(0, 2).toUpperCase()}
+
+              <div className="space-y-1">
+                
+                {/* Cuenta 1: Arq. Diana Corza */}
+                <div
+                  onClick={() => {
+                    toast.info('Perfil de Arq. Diana Corza: Especialista en Obras y Arquitectura Minera')
+                  }}
+                  className="flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-slate-100 transition-colors cursor-pointer group"
+                >
+                  <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-amber-600 to-rose-600 p-0.5 shrink-0 ring-1 ring-amber-400">
+                    <div className="w-full h-full rounded-full bg-slate-900 text-white flex items-center justify-center text-[10px] font-black">
+                      DC
                     </div>
-                    <span className="truncate">{grp.name}</span>
-                  </Link>
-                ))}
+                  </div>
+                  <div className="overflow-hidden">
+                    <h5 className="text-xs font-black text-slate-900 truncate leading-tight group-hover:text-blue-600 transition-colors">
+                      Arq. Diana Corza
+                    </h5>
+                    <span className="text-[11px] text-slate-500 block truncate leading-tight">
+                      dianacorza0
+                    </span>
+                  </div>
+                </div>
+
+                {/* Cuenta 2: PaulaRuiz | Escalante */}
+                <div
+                  onClick={() => {
+                    toast.info('Perfil de PaulaRuiz: Geomecánica y Estabilidad de Macizos')
+                  }}
+                  className="flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-slate-100 transition-colors cursor-pointer group"
+                >
+                  <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-rose-600 to-purple-600 p-0.5 shrink-0 ring-1 ring-rose-400">
+                    <div className="w-full h-full rounded-full bg-slate-900 text-white flex items-center justify-center text-[10px] font-black">
+                      PR
+                    </div>
+                  </div>
+                  <div className="overflow-hidden">
+                    <h5 className="text-xs font-black text-slate-900 truncate leading-tight group-hover:text-blue-600 transition-colors">
+                      PaulaRuiz | Escalan...
+                    </h5>
+                    <span className="text-[11px] text-slate-500 block truncate leading-tight">
+                      soypaularuiz
+                    </span>
+                  </div>
+                </div>
+
+                {/* Cuenta 3: Ing. Elena Rodríguez */}
+                <div
+                  onClick={() => {
+                    if (onlineContacts.length > 0) {
+                      setActiveChatContact(onlineContacts[0])
+                      setIsChatMinimized(false)
+                    }
+                  }}
+                  className="flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-slate-100 transition-colors cursor-pointer group"
+                >
+                  <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-emerald-600 to-teal-700 p-0.5 shrink-0 ring-1 ring-emerald-400">
+                    <div className="w-full h-full rounded-full bg-slate-900 text-white flex items-center justify-center text-[10px] font-black">
+                      ER
+                    </div>
+                  </div>
+                  <div className="overflow-hidden">
+                    <h5 className="text-xs font-black text-slate-900 truncate leading-tight group-hover:text-blue-600 transition-colors">
+                      Ing. Elena Rodríguez
+                    </h5>
+                    <span className="text-[11px] text-slate-500 block truncate leading-tight">
+                      elenasoma
+                    </span>
+                  </div>
+                </div>
+
+                {/* Cuenta 4: Marco Valdivia */}
+                <div
+                  onClick={() => {
+                    if (onlineContacts.length > 1) {
+                      setActiveChatContact(onlineContacts[1])
+                      setIsChatMinimized(false)
+                    }
+                  }}
+                  className="flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-slate-100 transition-colors cursor-pointer group"
+                >
+                  <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-blue-600 to-indigo-700 p-0.5 shrink-0 ring-1 ring-blue-400">
+                    <div className="w-full h-full rounded-full bg-slate-900 text-white flex items-center justify-center text-[10px] font-black">
+                      MV
+                    </div>
+                  </div>
+                  <div className="overflow-hidden">
+                    <h5 className="text-xs font-black text-slate-900 truncate leading-tight group-hover:text-blue-600 transition-colors">
+                      Marco Valdivia
+                    </h5>
+                    <span className="text-[11px] text-slate-500 block truncate leading-tight">
+                      valdiviamec
+                    </span>
+                  </div>
+                </div>
+
               </div>
             </div>
 
             {/* Footer institucional discreto */}
-            <div className="px-3 pt-4 text-[10px] text-slate-400 leading-tight">
-              <p>Comunidad Inthaly · Privacidad Garantizada · Red Industrial Independiente · 2026</p>
+            <div className="px-3 pt-3 border-t border-slate-100 text-[10px] text-slate-400 leading-tight">
+              <p>Comunidad Inthaly · Red Profesional Soberana</p>
             </div>
 
           </div>

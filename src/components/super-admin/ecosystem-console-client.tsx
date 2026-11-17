@@ -409,6 +409,52 @@ export default function EcosystemConsoleClient({
 
           </div>
 
+          {/* ======================================================================= */}
+          {/* MONITOR DE INFRAESTRUCTURA AUTOGESTIONADA DEL ECOSISTEMA               */}
+          {/* ======================================================================= */}
+          <div className="bg-white rounded-2xl border border-slate-200/90 p-5 shadow-2xs space-y-3">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-slate-100">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-slate-900 text-white flex items-center justify-center">
+                  <Server size={16} />
+                </div>
+                <div>
+                  <h3 className="text-xs font-black text-slate-900">Infraestructura Autogestionada Inthaly (Etapa 1)</h3>
+                  <span className="text-[11px] text-slate-500">PostgreSQL 16 Dedicado · PgBouncer · Redis · Caddy TLS · Backups SHA-256</span>
+                </div>
+              </div>
+              <span className="text-[10px] font-black uppercase text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200 self-start sm:self-auto">
+                100% Preparada en /infra
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
+              <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/80 space-y-1">
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Bases de Datos</span>
+                <span className="font-bold text-slate-900 block">inthaly_id & inthaly_community</span>
+                <span className="text-[10px] text-slate-500 block">Usuarios y credenciales independientes</span>
+              </div>
+
+              <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/80 space-y-1">
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Connection Pooler</span>
+                <span className="font-bold text-slate-900 block">PgBouncer 1.22 + Redis 7</span>
+                <span className="text-[10px] text-emerald-600 font-bold block">Protección contra sobrecargas</span>
+              </div>
+
+              <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/80 space-y-1">
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Backups & Disaster Recovery</span>
+                <span className="font-bold text-slate-900 block">pg_dump -F c + SHA-256</span>
+                <span className="text-[10px] text-slate-500 block">Rotación 30 días y verificación</span>
+              </div>
+
+              <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/80 space-y-1">
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Seguridad Perimetral</span>
+                <span className="font-bold text-slate-900 block">Caddy TLS + UFW + Fail2Ban</span>
+                <span className="text-[10px] text-emerald-600 font-bold block">SSL/TLS automatizado</span>
+              </div>
+            </div>
+          </div>
+
         </div>
       )}
 
