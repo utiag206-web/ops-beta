@@ -28,6 +28,7 @@ import {
   getDirectMessagesAction,
   sendDirectMessageAction
 } from '@/app/(community)/comunidad/actions'
+import CommunitySidebar from '@/components/community/community-sidebar'
 import { toast } from 'sonner'
 
 export interface TechnicalOpportunity {
@@ -359,178 +360,24 @@ export default function CommunityFeedClient({
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 lg:gap-8">
         
         {/* ========================================================================= */}
-        {/* COLUMNA 1: NAVEGACIÓN (3 cols)                                             */}
-        {/* Estructura recomendada: media_1794887984001_d6397a3c.png                  */}
+        {/* COLUMNA 1: NAVEGACIÓN PROFESIONAL INTHALY (3 cols)                        */}
         {/* ========================================================================= */}
-        <aside className="hidden lg:block lg:col-span-3 space-y-3 select-none">
-          <div className="sticky top-20 bg-white p-4 rounded-2xl border border-slate-200/90 shadow-2xs space-y-4">
-            
-            {/* Título de Sección */}
-            <div className="pb-2 border-b border-slate-100">
-              <h2 className="text-sm font-black text-slate-900 tracking-tight">
-                Navegación
-              </h2>
-            </div>
-
-            {/* Lista de Navegación Vertical Limpia y Sin Ruido */}
-            <nav className="space-y-1 text-xs font-bold">
-              
-              {/* Inicio */}
-              <button
-                type="button"
-                onClick={() => {
-                  setActiveNav('inicio')
-                  setSelectedTagFilter(null)
-                }}
-                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-colors cursor-pointer ${
-                  activeNav === 'inicio' && !selectedTagFilter
-                    ? 'bg-blue-50 text-blue-700 font-black'
-                    : 'text-slate-700 hover:bg-slate-100'
-                }`}
-              >
-                <Home size={18} className={activeNav === 'inicio' && !selectedTagFilter ? 'text-blue-700' : 'text-slate-500'} />
-                <span>Inicio</span>
-              </button>
-
-              {/* Explorar */}
-              <button
-                type="button"
-                onClick={() => {
-                  setActiveNav('explorar')
-                  setSelectedTagFilter(null)
-                }}
-                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-colors cursor-pointer ${
-                  activeNav === 'explorar'
-                    ? 'bg-blue-50 text-blue-700 font-black'
-                    : 'text-slate-700 hover:bg-slate-100'
-                }`}
-              >
-                <Compass size={18} className={activeNav === 'explorar' ? 'text-blue-700' : 'text-slate-500'} />
-                <span>Explorar</span>
-              </button>
-
-              {/* Mi red */}
-              <button
-                type="button"
-                onClick={() => {
-                  setActiveNav('red')
-                  setSelectedTagFilter(null)
-                }}
-                className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl transition-colors cursor-pointer ${
-                  activeNav === 'red'
-                    ? 'bg-blue-50 text-blue-700 font-black'
-                    : 'text-slate-700 hover:bg-slate-100'
-                }`}
-              >
-                <div className="flex items-center gap-3">
-                  <Users size={18} className={activeNav === 'red' ? 'text-blue-700' : 'text-slate-500'} />
-                  <span>Mi red</span>
-                </div>
-                <span className="text-[10px] font-mono text-slate-400">
-                  {recommendedProfiles.length}
-                </span>
-              </button>
-
-              {/* Grupos */}
-              <Link
-                href="/comunidad/grupos"
-                className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
-              >
-                <div className="flex items-center gap-3">
-                  <Building2 size={18} className="text-slate-500" />
-                  <span>Grupos</span>
-                </div>
-                <span className="text-[10px] font-mono text-slate-400">
-                  {groups.length}
-                </span>
-              </Link>
-
-              {/* Oportunidades */}
-              <button
-                type="button"
-                onClick={() => {
-                  setActiveNav('oportunidades')
-                  setSelectedTagFilter(null)
-                }}
-                className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl transition-colors cursor-pointer ${
-                  activeNav === 'oportunidades'
-                    ? 'bg-blue-50 text-blue-700 font-black'
-                    : 'text-slate-700 hover:bg-slate-100'
-                }`}
-              >
-                <div className="flex items-center gap-3">
-                  <Briefcase size={18} className={activeNav === 'oportunidades' ? 'text-blue-700' : 'text-slate-500'} />
-                  <span>Oportunidades</span>
-                </div>
-                <span className="text-[9px] font-extrabold uppercase bg-emerald-50 text-emerald-700 px-1.5 py-0.5 rounded border border-emerald-200">
-                  Bolsa
-                </span>
-              </button>
-
-              {/* Mensajes */}
-              <button
-                type="button"
-                onClick={() => {
-                  if (onlineContacts.length > 0) {
-                    setActiveChatContact(onlineContacts[0])
-                    setIsChatMinimized(false)
-                  }
-                }}
-                className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
-              >
-                <div className="flex items-center gap-3">
-                  <MessageSquare size={18} className="text-slate-500" />
-                  <span>Mensajes</span>
-                </div>
-                <span className="w-2 h-2 rounded-full bg-emerald-500" />
-              </button>
-
-              {/* Guardados */}
-              <button
-                type="button"
-                onClick={() => {
-                  setActiveNav('guardados')
-                  setSelectedTagFilter(null)
-                }}
-                className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl transition-colors cursor-pointer ${
-                  activeNav === 'guardados'
-                    ? 'bg-blue-50 text-blue-700 font-black'
-                    : 'text-slate-700 hover:bg-slate-100'
-                }`}
-              >
-                <div className="flex items-center gap-3">
-                  <Bookmark size={18} className={activeNav === 'guardados' ? 'text-blue-700' : 'text-slate-500'} />
-                  <span>Guardados</span>
-                </div>
-                <span className="text-[10px] font-mono text-slate-400">
-                  {savedPosts.size}
-                </span>
-              </button>
-
-              {/* Mi perfil */}
-              <Link
-                href="/comunidad/perfil"
-                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
-              >
-                <User size={18} className="text-slate-500" />
-                <span>Mi perfil</span>
-              </Link>
-
-            </nav>
-
-            {/* Caja de Privacidad Soberana */}
-            <div className="pt-3 border-t border-slate-100 text-[11px] text-slate-500 space-y-1">
-              <div className="flex items-center gap-1.5 font-bold text-slate-700">
-                <ShieldCheck size={14} className="text-blue-600" />
-                <span>Privacidad Garantizada</span>
-              </div>
-              <p className="leading-tight text-slate-400">
-                Tus consultas técnicas y mensajes comunitarios no son monitoreados por tu empleador.
-              </p>
-            </div>
-
-          </div>
-        </aside>
+        <CommunitySidebar
+          activeTab={activeNav}
+          onSelectTab={(tab) => {
+            setActiveNav(tab)
+            setSelectedTagFilter(null)
+          }}
+          groupsCount={groups.length}
+          savedCount={savedPosts.size}
+          networkCount={recommendedProfiles.length}
+          onOpenMessages={() => {
+            if (onlineContacts.length > 0) {
+              setActiveChatContact(onlineContacts[0])
+              setIsChatMinimized(false)
+            }
+          }}
+        />
 
         {/* ========================================================================= */}
         {/* COLUMNA 2: FEED CENTRAL PROFESIONAL (6 cols)                               */}

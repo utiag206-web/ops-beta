@@ -2,26 +2,20 @@
 
 import React, { useState, useRef, useEffect } from 'react'
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
 import { 
-  Search, Home, Users, UserCheck, Bookmark, 
-  Plus, MessageCircle, Bell, Grid, Shield, 
-  ArrowLeft, Settings, LogOut, ChevronDown, 
-  Sparkles, ExternalLink, ShieldCheck, Check
+  Search, Users, MessageSquare, Bell, 
+  ArrowLeft, LogOut, ChevronDown, 
+  ExternalLink, ShieldCheck, User
 } from 'lucide-react'
 
 export default function CommunityNavbar() {
-  const pathname = usePathname()
-  const [isSearchOpen, setIsSearchOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false)
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false)
-  const [isCreateMenuOpen, setIsCreateMenuOpen] = useState(false)
-  const [unreadNotifications, setUnreadNotifications] = useState(3)
+  const [unreadNotifications, setUnreadNotifications] = useState(2)
 
   const userMenuRef = useRef<HTMLDivElement>(null)
   const notifMenuRef = useRef<HTMLDivElement>(null)
-  const createMenuRef = useRef<HTMLDivElement>(null)
 
   // Cerrar menús al hacer click afuera
   useEffect(() => {
@@ -32,55 +26,33 @@ export default function CommunityNavbar() {
       if (notifMenuRef.current && !notifMenuRef.current.contains(event.target as Node)) {
         setIsNotificationsOpen(false)
       }
-      if (createMenuRef.current && !createMenuRef.current.contains(event.target as Node)) {
-        setIsCreateMenuOpen(false)
-      }
     }
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
-  const navTabs = [
-    {
-      id: 'feed',
-      label: 'Inicio',
-      href: '/comunidad',
-      icon: Home,
-      isActive: pathname === '/comunidad'
-    },
-    {
-      id: 'groups',
-      label: 'Grupos',
-      href: '/comunidad/grupos',
-      icon: Users,
-      isActive: pathname.startsWith('/comunidad/grupos')
-    },
-    {
-      id: 'profile',
-      label: 'Mi Perfil',
-      href: '/comunidad/perfil',
-      icon: Shield,
-      isActive: pathname.startsWith('/comunidad/perfil')
-    }
-  ]
-
   return (
-    <header className="sticky top-0 z-50 bg-white border-b border-slate-200/90 shadow-2xs">
-      <div className="w-full max-w-[1536px] mx-auto px-4 sm:px-6 h-14 flex items-center justify-between gap-4">
+    <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-slate-200/90 shadow-xs">
+      <div className="w-full max-w-[1536px] mx-auto px-4 sm:px-6 h-15 flex items-center justify-between gap-4">
         
         {/* ========================================================================= */}
-        {/* LADO IZQUIERDO: BRAND CORPORATIVO INTHALY                                 */}
+        {/* 1. LADO IZQUIERDO: LOGO E IDENTIDAD CORPORATIVA INTHALY                   */}
         {/* ========================================================================= */}
         <div className="flex items-center gap-3 shrink-0">
-          <Link href="/comunidad" className="flex items-center gap-2.5 group">
-            <div className="w-9 h-9 rounded-xl bg-blue-700 flex items-center justify-center font-black text-white text-base shadow-xs group-hover:bg-blue-800 transition-colors">
+          <Link href="/comunidad" className="flex items-center gap-3 group">
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-blue-700 to-indigo-700 flex items-center justify-center font-black text-white text-base shadow-sm ring-1 ring-blue-500/20 group-hover:scale-105 transition-transform">
               IN
             </div>
             <div className="flex flex-col">
-              <span className="font-black text-base tracking-tight text-slate-900 leading-none">
-                INTHALY <span className="text-blue-700 font-extrabold text-xs uppercase ml-1 px-1.5 py-0.5 rounded bg-blue-50 border border-blue-200/70">Comunidad</span>
-              </span>
-              <span className="text-[10px] text-slate-400 font-medium tracking-wide mt-0.5">
+              <div className="flex items-center gap-1.5">
+                <span className="font-black text-base tracking-tight text-slate-900 leading-none">
+                  INTHALY
+                </span>
+                <span className="text-[10px] font-black uppercase text-blue-700 bg-blue-50 px-2 py-0.5 rounded-md border border-blue-200/80 leading-none">
+                  Comunidad
+                </span>
+              </div>
+              <span className="text-[10px] text-slate-400 font-semibold tracking-wide mt-0.5">
                 Red Profesional & Industrial
               </span>
             </div>
@@ -88,41 +60,37 @@ export default function CommunityNavbar() {
         </div>
 
         {/* ========================================================================= */}
-        {/* LADO DERECHO: 4 ICONOS LIMPIOS [ 🔍 ] [ 🔔 ] [ 💬 ] [ 👤 ]               */}
-        {/* Estructura recomendada: media_1794887984001_d6397a3c.png                  */}
+        {/* 2. CENTRO: BARRA DE BÚSQUEDA PERMANENTE CON PROFUNDIDAD Y RELIEVE         */}
+        {/* ========================================================================= */}
+        <div className="flex-1 max-w-lg mx-2 hidden sm:block">
+          <div className="relative flex items-center">
+            <Search size={16} className="absolute left-3.5 text-slate-400 pointer-events-none" />
+            <input
+              type="text"
+              placeholder="Buscar colegas, conocimientos, foros o empresas..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 bg-slate-100/90 hover:bg-slate-100 focus:bg-white text-xs font-medium text-slate-800 placeholder-slate-400 rounded-full border border-slate-200/80 focus:border-blue-500 focus:ring-3 focus:ring-blue-100/70 shadow-inner transition-all outline-none"
+            />
+          </div>
+        </div>
+
+        {/* ========================================================================= */}
+        {/* 3. LADO DERECHO: ACCIONES LIMPIAS CON RELIEVE Y ESTILO CORPORATIVO        */}
         {/* ========================================================================= */}
         <div className="flex items-center gap-2 sm:gap-3">
           
-          {/* 1. Buscador Rápido (Lupa) */}
-          <div className="relative">
-            {isSearchOpen ? (
-              <div className="flex items-center bg-slate-100 rounded-full px-3 py-1.5 w-48 sm:w-64 border border-blue-400 animate-in fade-in duration-150">
-                <Search size={15} className="text-slate-500 shrink-0" />
-                <input
-                  type="text"
-                  placeholder="Buscar colegas, foros, temas..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  autoFocus
-                  onBlur={() => {
-                    if (!searchQuery) setIsSearchOpen(false)
-                  }}
-                  className="w-full bg-transparent text-xs text-slate-800 placeholder-slate-400 ml-2 focus:outline-none"
-                />
-              </div>
-            ) : (
-              <button
-                type="button"
-                onClick={() => setIsSearchOpen(true)}
-                className="w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 flex items-center justify-center transition-colors cursor-pointer"
-                title="Buscar en la red"
-              >
-                <Search size={17} />
-              </button>
-            )}
-          </div>
+          {/* Botón Volver a InthalyOps */}
+          <Link
+            href="/dashboard"
+            className="hidden lg:inline-flex items-center gap-1.5 text-xs font-bold text-slate-700 bg-slate-100 hover:bg-blue-50 hover:text-blue-700 px-3 py-1.5 rounded-xl border border-slate-200/80 transition-colors shadow-2xs"
+            title="Volver a Sistema Operativo InthalyOps"
+          >
+            <ArrowLeft size={13} />
+            <span>InthalyOps</span>
+          </Link>
 
-          {/* 2. Notificaciones (Campana) */}
+          {/* 1. Notificaciones (Campana con relieve) */}
           <div className="relative" ref={notifMenuRef}>
             <button
               type="button"
@@ -130,14 +98,16 @@ export default function CommunityNavbar() {
                 setIsNotificationsOpen(!isNotificationsOpen)
                 setUnreadNotifications(0)
               }}
-              className={`w-9 h-9 rounded-full flex items-center justify-center transition-colors relative cursor-pointer ${
-                isNotificationsOpen ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+              className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all relative cursor-pointer border ${
+                isNotificationsOpen 
+                  ? 'bg-blue-50 border-blue-200 text-blue-700 shadow-xs' 
+                  : 'bg-white hover:bg-slate-100 border-slate-200 text-slate-600 shadow-2xs'
               }`}
               title="Notificaciones profesionales"
             >
-              <Bell size={17} />
+              <Bell size={16} />
               {unreadNotifications > 0 && (
-                <span className="absolute -top-1 -right-1 bg-blue-600 text-white font-black text-[9px] w-4 h-4 rounded-full flex items-center justify-center ring-2 ring-white">
+                <span className="absolute -top-1 -right-1 bg-blue-600 text-white font-black text-[9px] w-4 h-4 rounded-full flex items-center justify-center ring-2 ring-white shadow-xs">
                   {unreadNotifications}
                 </span>
               )}
@@ -156,7 +126,7 @@ export default function CommunityNavbar() {
                     </div>
                     <div className="text-xs">
                       <p className="text-slate-800 leading-snug">
-                        <span className="font-bold">Elena Rodríguez</span> marcó como útil tu consulta sobre IPERC.
+                        <span className="font-bold">Elena Rodríguez</span> marcó como útil tu consulta sobre IPERC continuo.
                       </p>
                       <span className="text-[10px] text-slate-400 font-medium">Hace 2 horas</span>
                     </div>
@@ -177,26 +147,31 @@ export default function CommunityNavbar() {
             )}
           </div>
 
-          {/* 3. Mensajería Directa (Burbuja de Chat) */}
+          {/* 2. Mensajería Directa (Burbuja con relieve) */}
           <Link
             href="/comunidad"
-            className="w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 flex items-center justify-center transition-colors relative cursor-pointer"
+            className="w-9 h-9 rounded-xl bg-white hover:bg-slate-100 border border-slate-200 text-slate-600 flex items-center justify-center transition-all relative cursor-pointer shadow-2xs"
             title="Mensajes directos y consultas técnicas"
           >
-            <MessageCircle size={17} />
+            <MessageSquare size={16} />
+            <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-emerald-500 ring-2 ring-white" />
           </Link>
 
-          {/* 4. Perfil Profesional (Avatar) con Dropdown */}
+          {/* 3. Perfil Profesional Ejecutivo (Avatar + Nombre + Chevron) */}
           <div className="relative ml-1" ref={userMenuRef}>
             <button
               type="button"
               onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
-              className="flex items-center gap-1.5 p-0.5 rounded-full hover:ring-2 hover:ring-blue-500/50 transition-all cursor-pointer"
-              title="Mi perfil y opciones"
+              className="flex items-center gap-2 p-1 pl-1.5 pr-2 rounded-xl bg-white hover:bg-slate-100 border border-slate-200/90 transition-all cursor-pointer shadow-2xs"
+              title="Mi cuenta y opciones"
             >
-              <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-blue-700 to-indigo-600 text-white flex items-center justify-center font-black text-xs shadow-xs ring-2 ring-white">
+              <div className="w-7 h-7 rounded-lg bg-gradient-to-tr from-blue-700 to-indigo-700 text-white flex items-center justify-center font-black text-xs shadow-xs">
                 CM
               </div>
+              <span className="text-xs font-bold text-slate-800 hidden sm:inline max-w-[110px] truncate">
+                Carlos M.
+              </span>
+              <ChevronDown size={13} className="text-slate-400" />
             </button>
 
             {isUserMenuOpen && (
@@ -206,7 +181,7 @@ export default function CommunityNavbar() {
                   onClick={() => setIsUserMenuOpen(false)}
                   className="flex items-center gap-3 p-3 rounded-xl hover:bg-slate-100 transition-colors"
                 >
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-blue-700 to-indigo-600 text-white flex items-center justify-center font-black text-xs shadow-xs">
+                  <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-700 to-indigo-600 text-white flex items-center justify-center font-black text-sm shadow-xs">
                     CM
                   </div>
                   <div className="overflow-hidden">

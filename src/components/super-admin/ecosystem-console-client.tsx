@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react'
 import Link from 'next/link'
-import { 
+import {
   Building2, Users, Shield, ShieldOff,
   Activity, ArrowUpRight, BadgeCheck,
   Globe, Server, Database, Building,
@@ -55,14 +55,14 @@ export default function EcosystemConsoleClient({
   }
 
   // Filtrado de identidades de Inthaly ID
-  const filteredIdentities = identities.filter(id => 
+  const filteredIdentities = identities.filter(id =>
     id.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
     id.display_name.toLowerCase().includes(searchTerm.toLowerCase())
   )
 
   return (
     <div className="space-y-4 animate-in fade-in duration-300 min-h-screen pb-12">
-      
+
       {/* ========================================================================= */}
       {/* 1. CABECERA MAESTRA DEL ECOSISTEMA INTHALY                                */}
       {/* ========================================================================= */}
@@ -158,9 +158,8 @@ export default function EcosystemConsoleClient({
         <button
           type="button"
           onClick={() => setActiveTab('overview')}
-          className={`py-2 px-3.5 rounded-xl transition-colors cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
-            activeTab === 'overview' ? 'bg-blue-600 text-white shadow-xs' : 'text-slate-600 hover:bg-slate-100'
-          }`}
+          className={`py-2 px-3.5 rounded-xl transition-colors cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${activeTab === 'overview' ? 'bg-blue-600 text-white shadow-xs' : 'text-slate-600 hover:bg-slate-100'
+            }`}
         >
           <Layers size={14} />
           <span>Resumen Ecosistema</span>
@@ -169,9 +168,8 @@ export default function EcosystemConsoleClient({
         <button
           type="button"
           onClick={() => setActiveTab('inthaly-id')}
-          className={`py-2 px-3.5 rounded-xl transition-colors cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
-            activeTab === 'inthaly-id' ? 'bg-blue-600 text-white shadow-xs' : 'text-slate-600 hover:bg-slate-100'
-          }`}
+          className={`py-2 px-3.5 rounded-xl transition-colors cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${activeTab === 'inthaly-id' ? 'bg-blue-600 text-white shadow-xs' : 'text-slate-600 hover:bg-slate-100'
+            }`}
         >
           <KeyRound size={14} />
           <span>Inthaly ID ({ecosystemStats.totalIdentities})</span>
@@ -180,9 +178,8 @@ export default function EcosystemConsoleClient({
         <button
           type="button"
           onClick={() => setActiveTab('community')}
-          className={`py-2 px-3.5 rounded-xl transition-colors cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
-            activeTab === 'community' ? 'bg-blue-600 text-white shadow-xs' : 'text-slate-600 hover:bg-slate-100'
-          }`}
+          className={`py-2 px-3.5 rounded-xl transition-colors cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${activeTab === 'community' ? 'bg-blue-600 text-white shadow-xs' : 'text-slate-600 hover:bg-slate-100'
+            }`}
         >
           <Compass size={14} />
           <span>Comunidad</span>
@@ -191,9 +188,8 @@ export default function EcosystemConsoleClient({
         <button
           type="button"
           onClick={() => setActiveTab('inthaly-ops')}
-          className={`py-2 px-3.5 rounded-xl transition-colors cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
-            activeTab === 'inthaly-ops' ? 'bg-blue-600 text-white shadow-xs' : 'text-slate-600 hover:bg-slate-100'
-          }`}
+          className={`py-2 px-3.5 rounded-xl transition-colors cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${activeTab === 'inthaly-ops' ? 'bg-blue-600 text-white shadow-xs' : 'text-slate-600 hover:bg-slate-100'
+            }`}
         >
           <Building2 size={14} />
           <span>InthalyOps ({companies.length})</span>
@@ -202,9 +198,8 @@ export default function EcosystemConsoleClient({
         <button
           type="button"
           onClick={() => setActiveTab('academy')}
-          className={`py-2 px-3.5 rounded-xl transition-colors cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
-            activeTab === 'academy' ? 'bg-blue-600 text-white shadow-xs' : 'text-slate-600 hover:bg-slate-100'
-          }`}
+          className={`py-2 px-3.5 rounded-xl transition-colors cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${activeTab === 'academy' ? 'bg-blue-600 text-white shadow-xs' : 'text-slate-600 hover:bg-slate-100'
+            }`}
         >
           <GraduationCap size={14} />
           <span>Academia LMS</span>
@@ -213,9 +208,8 @@ export default function EcosystemConsoleClient({
         <button
           type="button"
           onClick={() => setActiveTab('integrations')}
-          className={`py-2 px-3.5 rounded-xl transition-colors cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
-            activeTab === 'integrations' ? 'bg-blue-600 text-white shadow-xs' : 'text-slate-600 hover:bg-slate-100'
-          }`}
+          className={`py-2 px-3.5 rounded-xl transition-colors cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${activeTab === 'integrations' ? 'bg-blue-600 text-white shadow-xs' : 'text-slate-600 hover:bg-slate-100'
+            }`}
         >
           <Globe size={14} />
           <span>Integraciones OIDC</span>
@@ -224,9 +218,8 @@ export default function EcosystemConsoleClient({
         <button
           type="button"
           onClick={() => setActiveTab('security')}
-          className={`py-2 px-3.5 rounded-xl transition-colors cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
-            activeTab === 'security' ? 'bg-blue-600 text-white shadow-xs' : 'text-slate-600 hover:bg-slate-100'
-          }`}
+          className={`py-2 px-3.5 rounded-xl transition-colors cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${activeTab === 'security' ? 'bg-blue-600 text-white shadow-xs' : 'text-slate-600 hover:bg-slate-100'
+            }`}
         >
           <ShieldCheck size={14} />
           <span>Auditoría & Seguridad</span>
@@ -238,7 +231,7 @@ export default function EcosystemConsoleClient({
       {/* ========================================================================= */}
       {activeTab === 'overview' && (
         <div className="space-y-4">
-          
+
           {/* Métricas Globales del Ecosistema */}
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5">
             <div className="bg-white p-3 rounded-2xl border border-slate-200/90 shadow-2xs space-y-1">
@@ -278,131 +271,135 @@ export default function EcosystemConsoleClient({
             </div>
           </div>
 
-          {/* Tarjetas de Producto y Capacidad Delegada */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            
-            <div className="bg-white rounded-2xl border border-slate-200/90 p-5 shadow-2xs space-y-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-700 flex items-center justify-center font-black">
+          {/* Tarjetas de Producto y Capacidad Delegada Alineadas y Compactas */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+
+            {/* 1. Inthaly ID */}
+            <div className="bg-white rounded-xl border border-slate-200/90 p-4 shadow-2xs flex flex-col justify-between space-y-3">
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-700 flex items-center justify-center font-black text-xs">
                     ID
                   </div>
-                  <div>
-                    <h3 className="text-sm font-black text-slate-900">Inthaly ID — Motor de Identidad</h3>
-                    <span className="text-[11px] text-slate-500">auth.inthaly.com</span>
-                  </div>
+                  <span className="text-[9px] font-black uppercase text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                    Operativo
+                  </span>
                 </div>
-                <span className="text-[10px] font-black uppercase text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
-                  Operativo
-                </span>
+                <div>
+                  <h4 className="text-xs font-black text-slate-900 leading-tight">Inthaly ID</h4>
+                  <span className="text-[10px] text-slate-400 font-mono">auth.inthaly.com</span>
+                </div>
+                <p className="text-[11px] text-slate-500 leading-snug">
+                  Motor central de identidad, sesiones y tokens OIDC para el ecosistema.
+                </p>
               </div>
-              <p className="text-xs text-slate-600 leading-relaxed">
-                Gestiona las identidades únicas de todas las personas del ecosistema. Provee tokens OIDC, sesiones y autenticación Scrypt sin depender de Supabase Auth.
-              </p>
               <div className="pt-2 border-t border-slate-100 flex items-center justify-between">
-                <Link href="/id/login" target="_blank" className="text-xs font-bold text-blue-600 hover:underline flex items-center gap-1">
-                  Probar portal de login <ExternalLink size={12} />
+                <Link href="/id/login" target="_blank" className="text-[11px] font-bold text-blue-600 hover:underline flex items-center gap-1">
+                  Login <ExternalLink size={10} />
                 </Link>
                 <button
                   type="button"
                   onClick={() => setActiveTab('inthaly-id')}
-                  className="text-xs font-bold text-slate-700 hover:text-slate-900"
+                  className="text-[11px] font-bold text-slate-700 hover:text-slate-900"
                 >
-                  Supervisar identidades →
+                  Gestionar →
                 </button>
               </div>
             </div>
 
-            <div className="bg-white rounded-2xl border border-slate-200/90 p-5 shadow-2xs space-y-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center font-black">
+            {/* 2. Comunidad Inthaly */}
+            <div className="bg-white rounded-xl border border-slate-200/90 p-4 shadow-2xs flex flex-col justify-between space-y-3">
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-700 flex items-center justify-center font-black text-xs">
                     CM
                   </div>
-                  <div>
-                    <h3 className="text-sm font-black text-slate-900">Comunidad Inthaly</h3>
-                    <span className="text-[11px] text-slate-500">comunidad.inthaly.com</span>
-                  </div>
+                  <span className="text-[9px] font-black uppercase text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                    Operativo
+                  </span>
                 </div>
-                <span className="text-[10px] font-black uppercase text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
-                  Operativo
-                </span>
+                <div>
+                  <h4 className="text-xs font-black text-slate-900 leading-tight">Comunidad</h4>
+                  <span className="text-[10px] text-slate-400 font-mono">comunidad.inthaly.com</span>
+                </div>
+                <p className="text-[11px] text-slate-500 leading-snug">
+                  Red profesional, foros técnicos y mensajería soberana de la industria.
+                </p>
               </div>
-              <p className="text-xs text-slate-600 leading-relaxed">
-                Red social profesional de minería e industria. Perfiles soberanos, muros técnicos, grupos dinámicos y mensajería directa entre colegas.
-              </p>
               <div className="pt-2 border-t border-slate-100 flex items-center justify-between">
-                <Link href="/comunidad" target="_blank" className="text-xs font-bold text-blue-600 hover:underline flex items-center gap-1">
-                  Abrir muro de comunidad <ExternalLink size={12} />
+                <Link href="/comunidad" target="_blank" className="text-[11px] font-bold text-blue-600 hover:underline flex items-center gap-1">
+                  Abrir Muro <ExternalLink size={10} />
                 </Link>
                 <button
                   type="button"
                   onClick={() => setActiveTab('community')}
-                  className="text-xs font-bold text-slate-700 hover:text-slate-900"
+                  className="text-[11px] font-bold text-slate-700 hover:text-slate-900"
                 >
-                  Supervisar foros →
+                  Supervisar →
                 </button>
               </div>
             </div>
 
-            <div className="bg-white rounded-2xl border border-slate-200/90 p-5 shadow-2xs space-y-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-700 flex items-center justify-center font-black">
+            {/* 3. InthalyOps */}
+            <div className="bg-white rounded-xl border border-slate-200/90 p-4 shadow-2xs flex flex-col justify-between space-y-3">
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-700 flex items-center justify-center font-black text-xs">
                     OPS
                   </div>
-                  <div>
-                    <h3 className="text-sm font-black text-slate-900">InthalyOps Multiempresa</h3>
-                    <span className="text-[11px] text-slate-500">sistemaops.inthaly.com</span>
-                  </div>
+                  <span className="text-[9px] font-black uppercase text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                    Operativo
+                  </span>
                 </div>
-                <span className="text-[10px] font-black uppercase text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
-                  Operativo
-                </span>
+                <div>
+                  <h4 className="text-xs font-black text-slate-900 leading-tight">InthalyOps</h4>
+                  <span className="text-[10px] text-slate-400 font-mono">sistemaops.inthaly.com</span>
+                </div>
+                <p className="text-[11px] text-slate-500 leading-snug">
+                  Tareo minero, horas extras, control de cuadrillas y RLS multiempresa.
+                </p>
               </div>
-              <p className="text-xs text-slate-600 leading-relaxed">
-                Módulos de tareo minero, cálculo de horas extras, inventario, cuadrillas y control de guardias con RLS y aislamiento estricto por empresa.
-              </p>
               <div className="pt-2 border-t border-slate-100 flex items-center justify-between">
-                <Link href="/dashboard" className="text-xs font-bold text-blue-600 hover:underline flex items-center gap-1">
-                  Ir al panel empresarial <ExternalLink size={12} />
+                <Link href="/dashboard" className="text-[11px] font-bold text-blue-600 hover:underline flex items-center gap-1">
+                  Panel <ExternalLink size={10} />
                 </Link>
                 <button
                   type="button"
                   onClick={() => setActiveTab('inthaly-ops')}
-                  className="text-xs font-bold text-slate-700 hover:text-slate-900"
+                  className="text-[11px] font-bold text-slate-700 hover:text-slate-900"
                 >
-                  Ver empresas ({companies.length}) →
+                  Empresas ({companies.length}) →
                 </button>
               </div>
             </div>
 
-            <div className="bg-white rounded-2xl border border-slate-200/90 p-5 shadow-2xs space-y-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-700 flex items-center justify-center font-black">
+            {/* 4. Academia LMS */}
+            <div className="bg-white rounded-xl border border-slate-200/90 p-4 shadow-2xs flex flex-col justify-between space-y-3">
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="w-8 h-8 rounded-lg bg-amber-50 text-amber-700 flex items-center justify-center font-black text-xs">
                     AC
                   </div>
-                  <div>
-                    <h3 className="text-sm font-black text-slate-900">Inthaly Academy (LMS)</h3>
-                    <span className="text-[11px] text-slate-500">app.inthaly.com</span>
-                  </div>
+                  <span className="text-[9px] font-black uppercase text-amber-800 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200">
+                    Satélite
+                  </span>
                 </div>
-                <span className="text-[10px] font-black uppercase text-amber-800 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200">
-                  Satélite Autónomo
-                </span>
+                <div>
+                  <h4 className="text-xs font-black text-slate-900 leading-tight">Inthaly Academy</h4>
+                  <span className="text-[10px] text-slate-400 font-mono">app.inthaly.com</span>
+                </div>
+                <p className="text-[11px] text-slate-500 leading-snug">
+                  Plataforma autónoma Laravel/MySQL de cursos y certificados SOMA con QR.
+                </p>
               </div>
-              <p className="text-xs text-slate-600 leading-relaxed">
-                Plataforma de cursos, lecciones interactivas y emisión de diplomas SOMA con QR. Arquitectura Laravel 12 / MySQL con contratos de integración OIDC preparados.
-              </p>
               <div className="pt-2 border-t border-slate-100 flex items-center justify-between">
-                <span className="text-xs font-semibold text-slate-400">Sin fusión de bases de datos</span>
+                <span className="text-[10px] font-medium text-slate-400">Sin fusión BD</span>
                 <button
                   type="button"
                   onClick={() => setActiveTab('academy')}
-                  className="text-xs font-bold text-slate-700 hover:text-slate-900"
+                  className="text-[11px] font-bold text-slate-700 hover:text-slate-900"
                 >
-                  Ver contratos OIDC →
+                  Contratos OIDC →
                 </button>
               </div>
             </div>
@@ -412,45 +409,36 @@ export default function EcosystemConsoleClient({
           {/* ======================================================================= */}
           {/* MONITOR DE INFRAESTRUCTURA AUTOGESTIONADA DEL ECOSISTEMA               */}
           {/* ======================================================================= */}
-          <div className="bg-white rounded-2xl border border-slate-200/90 p-5 shadow-2xs space-y-3">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-slate-100">
-              <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-xl bg-slate-900 text-white flex items-center justify-center">
-                  <Server size={16} />
-                </div>
-                <div>
-                  <h3 className="text-xs font-black text-slate-900">Infraestructura Autogestionada Inthaly (Etapa 1)</h3>
-                  <span className="text-[11px] text-slate-500">PostgreSQL 16 Dedicado · PgBouncer · Redis · Caddy TLS · Backups SHA-256</span>
-                </div>
+          <div className="bg-white rounded-xl border border-slate-200/90 p-4 shadow-2xs space-y-2.5">
+            <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+              <div className="flex items-center gap-2">
+                <Server size={14} className="text-slate-700" />
+                <h4 className="text-xs font-black text-slate-900">Infraestructura Autogestionada Inthaly (Etapa 1)</h4>
               </div>
-              <span className="text-[10px] font-black uppercase text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200 self-start sm:self-auto">
+              <span className="text-[9px] font-black uppercase text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
                 100% Preparada en /infra
               </span>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
-              <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/80 space-y-1">
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Bases de Datos</span>
-                <span className="font-bold text-slate-900 block">inthaly_id & inthaly_community</span>
-                <span className="text-[10px] text-slate-500 block">Usuarios y credenciales independientes</span>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+              <div className="p-2 rounded-lg bg-slate-50 border border-slate-100">
+                <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">Bases de Datos</span>
+                <span className="font-bold text-slate-900 text-[11px] block truncate">PostgreSQL 16 Aisladas</span>
               </div>
 
-              <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/80 space-y-1">
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Connection Pooler</span>
-                <span className="font-bold text-slate-900 block">PgBouncer 1.22 + Redis 7</span>
-                <span className="text-[10px] text-emerald-600 font-bold block">Protección contra sobrecargas</span>
+              <div className="p-2 rounded-lg bg-slate-50 border border-slate-100">
+                <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">Connection Pooler</span>
+                <span className="font-bold text-slate-900 text-[11px] block truncate">PgBouncer + Redis 7</span>
               </div>
 
-              <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/80 space-y-1">
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Backups & Disaster Recovery</span>
-                <span className="font-bold text-slate-900 block">pg_dump -F c + SHA-256</span>
-                <span className="text-[10px] text-slate-500 block">Rotación 30 días y verificación</span>
+              <div className="p-2 rounded-lg bg-slate-50 border border-slate-100">
+                <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">Backups & Disaster</span>
+                <span className="font-bold text-slate-900 text-[11px] block truncate">pg_dump -F c + SHA-256</span>
               </div>
 
-              <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/80 space-y-1">
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Seguridad Perimetral</span>
-                <span className="font-bold text-slate-900 block">Caddy TLS + UFW + Fail2Ban</span>
-                <span className="text-[10px] text-emerald-600 font-bold block">SSL/TLS automatizado</span>
+              <div className="p-2 rounded-lg bg-slate-50 border border-slate-100">
+                <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">Seguridad Perimetral</span>
+                <span className="font-bold text-slate-900 text-[11px] block truncate">Caddy TLS + UFW</span>
               </div>
             </div>
           </div>
@@ -532,7 +520,7 @@ export default function EcosystemConsoleClient({
                       )}
                     </td>
                     <td className="py-3 px-3 text-slate-500 text-[11px]">
-                      {id.last_login_at 
+                      {id.last_login_at
                         ? new Date(id.last_login_at).toLocaleString('es-PE', { hour: '2-digit', minute: '2-digit', day: 'numeric', month: 'short' })
                         : 'Nunca'
                       }

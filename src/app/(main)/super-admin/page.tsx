@@ -1,8 +1,8 @@
 import { getUserSession } from '@/lib/auth'
 import { redirect } from 'next/navigation'
-import { 
-  getAllCompanies, 
-  getAllUsers, 
+import {
+  getAllCompanies,
+  getAllUsers,
   getSystemStats,
   getEcosystemStatsAction,
   getAllIdentitiesAdminAction
@@ -21,13 +21,13 @@ export default async function SuperAdminPage() {
 
   let companies: any[] = []
   let users: any[] = []
-  let stats: any = { 
-    totalCompanies: 0, 
-    realCompanies: 0, 
-    testCompanies: 0, 
-    suspendedCompanies: 0, 
-    pendingCompanies: 0, 
-    totalUsers: 0 
+  let stats: any = {
+    totalCompanies: 0,
+    realCompanies: 0,
+    testCompanies: 0,
+    suspendedCompanies: 0,
+    pendingCompanies: 0,
+    totalUsers: 0
   }
   let ecosystemStats: any = {
     totalIdentities: 0,
@@ -63,7 +63,7 @@ export default async function SuperAdminPage() {
   }
 
   return (
-    <EcosystemConsoleClient 
+    <EcosystemConsoleClient
       companies={companies}
       users={users}
       stats={stats}

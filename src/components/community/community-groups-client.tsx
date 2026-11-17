@@ -9,6 +9,7 @@ import {
 } from 'lucide-react'
 import type { CommunityGroup } from '@/types/community.types'
 import { createGroupAction, joinGroupAction } from '@/app/(community)/comunidad/actions'
+import CommunitySidebar from '@/components/community/community-sidebar'
 import { toast } from 'sonner'
 
 export default function CommunityGroupsClient({
@@ -106,9 +107,16 @@ export default function CommunityGroupsClient({
   }
 
   return (
-    <div className="space-y-5 max-w-6xl mx-auto px-2 sm:px-4 py-2">
-      
-      {/* Banner Superior Estilo Facebook Groups */}
+    <div className="w-full max-w-[1536px] mx-auto px-3 sm:px-6 py-4 md:py-6">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 lg:gap-8">
+        
+        {/* Columna 1: Navegación Izquierda */}
+        <CommunitySidebar activeTab="grupos" groupsCount={groups.length} />
+
+        {/* Columna 2: Contenido Principal de Grupos */}
+        <main className="lg:col-span-9 space-y-5">
+          
+          {/* Banner Superior */}
       <div className="bg-white rounded-2xl border border-slate-200/90 p-5 sm:p-6 shadow-2xs flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 mb-1.5">
@@ -238,6 +246,9 @@ export default function CommunityGroupsClient({
           })
         )}
       </div>
+
+    </main>
+  </div>
 
       {/* Modal de Creación de Grupo */}
       {isModalOpen && (
