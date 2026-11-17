@@ -8,6 +8,31 @@ Todas las modificaciones notables realizadas en la plataforma están documentada
 
 ---
 
+## [1.6.0-infra-comunidad] - 2026-11-17 — Infraestructura Autogestionada, Inthaly ID y Evolución de Comunidad Profesional
+
+### Añadido
+- **Infraestructura Propia Autogestionada (`infra/`):**
+  - Orquestación Docker Compose (`infra/docker/docker-compose.yml`) con PostgreSQL 16 (SCRAM-SHA-256), PgBouncer 1.22 con pool de conexiones y métricas administrativas, Redis 7 Alpine para caché de tokens/sesiones, Caddy Server para TLS inverso automático y servicio de backup programado.
+  - DDLs y esquemas relacionales independientes: `inthaly_id` (`01_inthaly_id_schema.sql`) e `inthaly_community` (`02_inthaly_community_schema.sql`) con segregación estricta de privilegios de base de datos.
+  - Script automatizado de backups con hash SHA-256 y rotación de 30 días (`infra/backup/backup.sh`).
+  - Suite de verificación automatizada de infraestructura (`tests/infra/infra.test.js`) con 6 pruebas pasando al 100%.
+  - Documentación técnica completa de operaciones, guías de despliegue en VPS y planes de contingencia (`infra/docs/01_ARQUITECTURA_GENERAL.md` a `05_SEGURIDAD_HARDENING.md`).
+- **Navegación Superior Persistente en Comunidad (`CommunityNavbar`):**
+  - Accesos directos permanentes en cabecera: Feed Principal (Inicio), Grupos & Foros, y Mi Perfil con indicador activo en tiempo real (`usePathname`).
+  - Campo de búsqueda integrado y acceso rápido a InthalyOps.
+- **Modal de Información de Perfil Estilo Facebook Web (`CommunityProfileClient`):**
+  - Distribución en 2 columnas con navegación lateral: Detalles, Datos personales, Información de contacto, Enlaces & Colegiatura, Empleo & Experiencia, Formación académica, Fotos de perfil y portada, e Información de privacidad.
+  - Adición y eliminación dinámica de cargos y estudios con persistencia inmediata en almacenamiento local y sincronización con servidor.
+
+### Modificado y Corregido
+- **Rediseño Profesional de Comunidad Inthaly:**
+  - Erradicación de elementos estilo entretenimiento o TikTok; adopción de iconografía profesional propia (`Layers` para exploración industrial, `Home`, `Users`, `Building2`).
+  - Grupos y Foros en estructura estricta de 2 columnas (`CommunitySidebar` en columna izquierda y foros con filtros en columna derecha).
+  - Alineación de cabecera de perfil profesional sin superposiciones entre avatar y nombre.
+  - Consolidación simétrica de las tarjetas de productos en la Consola Global del Ecosistema (`/super-admin`).
+
+---
+
 ## [1.5.0-arch] - 2026-11-15 — Profesionalización Integral y Modularidad de Arquitectura
 
 ### Añadido
