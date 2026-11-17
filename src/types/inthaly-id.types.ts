@@ -13,6 +13,8 @@ export interface InthalyIdentity {
   salt: string
   is_verified: boolean
   verification_token?: string | null
+  verification_token_hash?: string | null
+  verification_token_expires_at?: number | null
   status: IdentityStatus
   mfa_enabled: boolean
   mfa_secret?: string | null
@@ -50,6 +52,8 @@ export type SecurityEventType =
   | 'mfa_disabled'
   | 'app_authorized'
   | 'app_revoked'
+  | 'delegated_ticket_rejected'
+  | 'open_redirect_blocked'
 
 export interface InthalySecurityEvent {
   id: string
@@ -61,12 +65,16 @@ export interface InthalySecurityEvent {
   created_at: string
 }
 
+export type OidcClientType = 'public' | 'confidential'
+
 export interface OidcClient {
   client_id: string
   client_name: string
-  client_secret_hash: string
+  client_type: OidcClientType
+  client_secret_hash?: string // Solo requerido para clientes confidenciales
   redirect_uris: string[]
   allowed_scopes: string[]
+  require_pkce: boolean
   icon_url?: string
   description?: string
   is_active: boolean
@@ -80,7 +88,10 @@ export interface OidcAuthorizationCode {
   redirect_uri: string
   scope: string
   code_challenge?: string
-  expires_at: number // timestamp
+  code_challenge_method?: 'S256' | 'plain'
+  nonce?: string
+  state?: string
+  expires_at: number // timestamp en ms
 }
 
 export interface ConnectedApp {
@@ -103,5 +114,9 @@ export interface EcosystemStats {
   connectedAppsCount: number
   communityUsersCount: number
   inthalyOpsCompaniesCount: number
-  academySyncStatus: 'satellite_autonomous' | 'oidc_ready' | 'pending'
+  academySyncStatus: 'satellite_autonomous' | 'oidc_ready' | 'pending' | 'prepared_contract'
+  communityStatus?: 'active' | 'unavailable' | 'disconnected'
+  inthalyOpsStatus?: 'active' | 'unavailable' | 'disconnected'
+  academyStatus?: 'prepared_contract' | 'disconnected'
+  identityPersistenceStatus?: 'in_memory_transitional' | 'postgresql_connected' | 'error'
 }

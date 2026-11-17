@@ -1300,19 +1300,40 @@ export async function getEcosystemStatsAction() {
     const role = extendedUser?.role_id?.toLowerCase()
     if (role !== 'super_admin' && role !== 'superadmin') throw new Error('Acceso Denegado')
 
+    const supabase = await createAdminClient()
+
+    // Conteos reales en base de datos PostgreSQL de Supabase
+    const [companiesQuery, communityProfilesQuery] = await Promise.all([
+      supabase.from('companies').select('*', { count: 'exact', head: true }),
+      supabase.from('community_profiles').select('*', { count: 'exact', head: true })
+    ])
+
     const { inthalyIdService } = await import('@/services')
-    return inthalyIdService.getEcosystemStats()
+    const baseStats = await inthalyIdService.getEcosystemStats()
+
+    return {
+      ...baseStats,
+      inthalyOpsCompaniesCount: companiesQuery.count ?? 0,
+      communityUsersCount: communityProfilesQuery.count ?? 0,
+      inthalyOpsStatus: companiesQuery.error ? 'unavailable' as const : 'active' as const,
+      communityStatus: communityProfilesQuery.error ? 'unavailable' as const : 'active' as const
+    }
   } catch (e: any) {
     console.error('[SUPER_ADMIN] Error getting ecosystem stats:', e)
+    // REGLA A7: En caso de error, reflejar ceros y estado no disponible. Cero números inventados.
     return {
-      totalIdentities: 3,
-      verifiedIdentities: 3,
-      activeSessions: 2,
-      totalSecurityEvents: 12,
-      connectedAppsCount: 3,
-      communityUsersCount: 4,
-      inthalyOpsCompaniesCount: 5,
-      academySyncStatus: 'satellite_autonomous' as const
+      totalIdentities: 0,
+      verifiedIdentities: 0,
+      activeSessions: 0,
+      totalSecurityEvents: 0,
+      connectedAppsCount: 0,
+      communityUsersCount: 0,
+      inthalyOpsCompaniesCount: 0,
+      academySyncStatus: 'prepared_contract' as const,
+      communityStatus: 'unavailable' as const,
+      inthalyOpsStatus: 'unavailable' as const,
+      academyStatus: 'prepared_contract' as const,
+      identityPersistenceStatus: 'in_memory_transitional' as const
     }
   }
 }

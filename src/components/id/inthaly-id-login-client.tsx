@@ -191,30 +191,32 @@ export default function InthalyIdLoginClient() {
           </button>
         </form>
 
-        {/* Cuentas de Demostración Rápida (Facilita validación al evaluador) */}
-        <div className="pt-2 border-t border-slate-100 space-y-2">
-          <div className="flex items-center justify-between text-[11px] text-slate-400 font-semibold">
-            <span>Cuentas de prueba rápida:</span>
+        {/* Cuentas de Demostración (Exclusivamente en entorno de desarrollo/test local - REGLA A2) */}
+        {process.env.NODE_ENV !== 'production' && (
+          <div className="pt-2 border-t border-slate-100 space-y-2">
+            <div className="flex items-center justify-between text-[11px] text-slate-400 font-semibold">
+              <span className="text-amber-700 bg-amber-50 px-2 py-0.5 rounded border border-amber-200">Solo Desarrollo Local</span>
+            </div>
+            <div className="grid grid-cols-2 gap-2 text-[10px]">
+              <button
+                type="button"
+                onClick={() => handleDemoLogin('carlos.mendoza@inthaly.com', 'Inthaly2026!')}
+                className="p-2 rounded-xl border border-slate-200 bg-slate-50 hover:bg-blue-50 hover:border-blue-300 text-left transition-colors cursor-pointer"
+              >
+                <span className="font-bold text-slate-800 block truncate">Ing. Carlos Mendoza</span>
+                <span className="text-slate-500 font-mono">carlos.mendoza@inthaly.com</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => handleDemoLogin('admin@inthaly.com', 'SuperAdmin2026!')}
+                className="p-2 rounded-xl border border-slate-200 bg-slate-50 hover:bg-blue-50 hover:border-blue-300 text-left transition-colors cursor-pointer"
+              >
+                <span className="font-bold text-slate-800 block truncate">Super Admin</span>
+                <span className="text-slate-500 font-mono">admin@inthaly.com</span>
+              </button>
+            </div>
           </div>
-          <div className="grid grid-cols-2 gap-2 text-[10px]">
-            <button
-              type="button"
-              onClick={() => handleDemoLogin('carlos.mendoza@inthaly.com', 'Inthaly2026!')}
-              className="p-2 rounded-xl border border-slate-200 bg-slate-50 hover:bg-blue-50 hover:border-blue-300 text-left transition-colors cursor-pointer"
-            >
-              <span className="font-bold text-slate-800 block truncate">Ing. Carlos Mendoza</span>
-              <span className="text-slate-500 font-mono">carlos.mendoza@inthaly.com</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => handleDemoLogin('admin@inthaly.com', 'SuperAdmin2026!')}
-              className="p-2 rounded-xl border border-slate-200 bg-slate-50 hover:bg-blue-50 hover:border-blue-300 text-left transition-colors cursor-pointer"
-            >
-              <span className="font-bold text-slate-800 block truncate">Super Admin</span>
-              <span className="text-slate-500 font-mono">admin@inthaly.com</span>
-            </button>
-          </div>
-        </div>
+        )}
 
         {/* Pie de Registro */}
         <div className="text-center pt-2">

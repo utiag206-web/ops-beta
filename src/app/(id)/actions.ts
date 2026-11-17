@@ -3,6 +3,7 @@
 import { cookies } from 'next/headers'
 import { revalidatePath } from 'next/cache'
 import { inthalyIdService } from '@/services'
+import { generatePkceVerifier, generatePkceChallenge, generateSecureToken } from '@/services/inthaly-id.crypto'
 import type { InthalyIdentity, InthalySession, ConnectedApp, InthalySecurityEvent } from '@/types/inthaly-id.types'
 import type { ActionResponse } from '@/types/common.types'
 
@@ -111,7 +112,6 @@ export async function logoutIdentityAction(): Promise<ActionResponse<boolean>> {
     if (sessionToken) {
       const identity = await inthalyIdService.validateSession(sessionToken)
       if (identity) {
-        // Encontrar sesión y revocar
         const sessions = await inthalyIdService.getActiveSessions(identity.id)
         const currentSess = sessions.find(s => s.session_token === sessionToken)
         if (currentSess) {
@@ -122,7 +122,7 @@ export async function logoutIdentityAction(): Promise<ActionResponse<boolean>> {
     }
 
     return { success: true, data: true }
-  } catch (err: any) {
+  } catch {
     return { success: false, error: 'Error al cerrar sesión' }
   }
 }
@@ -143,7 +143,7 @@ export async function getCurrentIdentityAction(): Promise<InthalyIdentity | null
 }
 
 /**
- * Obtiene las sesiones activas de la identidad
+ * Obtiene las sesiones activas de la identidad autenticada
  */
 export async function getActiveSessionsAction(): Promise<InthalySession[]> {
   const current = await getCurrentIdentityAction()
@@ -204,31 +204,55 @@ export async function getSecurityEventsAction(): Promise<InthalySecurityEvent[]>
 }
 
 /**
- * Solicita restablecimiento de contraseña
+ * Solicita restablecimiento de contraseña (SANEADO - REGLA A1)
+ * Nunca devuelve el token al cliente en la respuesta.
  */
-export async function requestPasswordResetAction(email: string): Promise<ActionResponse<{ resetToken: string }>> {
+export async function requestPasswordResetAction(email: string): Promise<ActionResponse<{ message: string }>> {
   return inthalyIdService.requestPasswordReset(email)
 }
 
 /**
- * Restablece la contraseña con token
+ * Restablece la contraseña con token recibido por correo
  */
 export async function resetPasswordWithTokenAction(token: string, newPass: string): Promise<ActionResponse<boolean>> {
   return inthalyIdService.resetPasswordWithToken(token, newPass)
 }
 
 /**
- * Inicia el flujo de autorización OIDC desde una app cliente (ej. Comunidad)
+ * Valida el correo electrónico con el token recibido
+ */
+export async function verifyEmailAction(token: string): Promise<ActionResponse<boolean>> {
+  return inthalyIdService.verifyEmailWithToken(token)
+}
+
+/**
+ * Inicia el flujo de autorización OIDC desde una app cliente con PKCE S256 y State anti-CSRF
+ * REGLA A5: PKCE para clientes públicos, sin secretos compartidos en el cliente.
  */
 export async function authorizeOidcFlowAction(params: {
   clientId: string
   redirectUri: string
   scope: string
 }): Promise<ActionResponse<{ redirectUrl: string }>> {
+  const cookieStore = await cookies()
   const current = await getCurrentIdentityAction()
+
+  // Generar PKCE verifier y challenge (RFC 7636)
+  const codeVerifier = generatePkceVerifier()
+  const codeChallenge = generatePkceChallenge(codeVerifier)
+  const state = generateSecureToken(16)
+
+  // Almacenar temporalmente verifier y state en cookie segura HttpOnly
+  cookieStore.set('inthaly_oidc_pkce', JSON.stringify({ codeVerifier, state }), {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    path: '/',
+    maxAge: 600 // 10 minutos
+  })
+
   if (!current) {
-    // Si no está autenticado, redirigir a login de Inthaly ID preservando parámetros OIDC
-    const loginUrl = `/id/login?client_id=${encodeURIComponent(params.clientId)}&redirect_uri=${encodeURIComponent(params.redirectUri)}&scope=${encodeURIComponent(params.scope)}`
+    const loginUrl = `/id/login?client_id=${encodeURIComponent(params.clientId)}&redirect_uri=${encodeURIComponent(params.redirectUri)}&scope=${encodeURIComponent(params.scope)}&code_challenge=${encodeURIComponent(codeChallenge)}&code_challenge_method=S256&state=${encodeURIComponent(state)}`
     return { success: true, data: { redirectUrl: loginUrl } }
   }
 
@@ -236,13 +260,16 @@ export async function authorizeOidcFlowAction(params: {
     client_id: params.clientId,
     redirect_uri: params.redirectUri,
     identity_id: current.id,
-    scope: params.scope
+    scope: params.scope,
+    code_challenge: codeChallenge,
+    code_challenge_method: 'S256',
+    state
   })
 
   if (!authRes.success || !authRes.data) {
     return { success: false, error: authRes.error || 'Error en autorización OIDC' }
   }
 
-  const callbackUrl = `${params.redirectUri}?code=${authRes.data.code}&state=auth_ok`
+  const callbackUrl = `${params.redirectUri}?code=${encodeURIComponent(authRes.data.code)}&state=${encodeURIComponent(state)}`
   return { success: true, data: { redirectUrl: callbackUrl } }
 }

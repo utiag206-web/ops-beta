@@ -30,14 +30,18 @@ export default async function SuperAdminPage() {
     totalUsers: 0 
   }
   let ecosystemStats: any = {
-    totalIdentities: 3,
-    verifiedIdentities: 3,
-    activeSessions: 2,
-    totalSecurityEvents: 12,
-    connectedAppsCount: 3,
-    communityUsersCount: 4,
-    inthalyOpsCompaniesCount: 5,
-    academySyncStatus: 'satellite_autonomous'
+    totalIdentities: 0,
+    verifiedIdentities: 0,
+    activeSessions: 0,
+    totalSecurityEvents: 0,
+    connectedAppsCount: 0,
+    communityUsersCount: 0,
+    inthalyOpsCompaniesCount: 0,
+    academySyncStatus: 'prepared_contract',
+    communityStatus: 'unavailable',
+    inthalyOpsStatus: 'unavailable',
+    academyStatus: 'prepared_contract',
+    identityPersistenceStatus: 'in_memory_transitional'
   }
   let identities: any[] = []
 

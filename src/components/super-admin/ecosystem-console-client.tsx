@@ -36,7 +36,7 @@ export default function EcosystemConsoleClient({
   const [searchTerm, setSearchTerm] = useState('')
   const [isGeneratingTicket, setIsGeneratingTicket] = useState(false)
 
-  // Manejador de Acceso Administrativo Delegado (Fase 4)
+  // Manejador de Acceso Administrativo Delegado (Fase 4 - Saneado según Regla A6)
   const handleOpenProduct = async (product: 'comunidad' | 'academia' | 'inthalyops') => {
     setIsGeneratingTicket(true)
     try {
@@ -45,10 +45,10 @@ export default function EcosystemConsoleClient({
         toast.success(`Acceso administrativo delegado autorizado para ${product.toUpperCase()}`)
         window.open(res.data.ticketUrl, '_blank')
       } else {
-        toast.error(res.error || 'Error al generar ticket delegado')
+        toast.info(res.error || 'Acceso delegado deshabilitado por política de seguridad')
       }
     } catch {
-      toast.error('Error al generar acceso delegado')
+      toast.error('Error al solicitar acceso delegado')
     } finally {
       setIsGeneratingTicket(false)
     }
