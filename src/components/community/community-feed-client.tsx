@@ -10,14 +10,13 @@ import {
   ChevronRight, Heart, Lightbulb, Check, Plus, Image as ImageIcon,
   MoreHorizontal, Globe, X, Minimize2, Maximize2, MessageCircle,
   ExternalLink, UserPlus, Flame, Smile, CheckCheck,
-  Home, Search, Bell, Radio, Film
+  Home, Search, Bell, Radio, Film, FileText, Building2, User
 } from 'lucide-react'
 import type { 
   CommunityPost, 
   RecommendationResult, 
   CommunityGroup, 
   ReactionType,
-  TechnicalStory,
   CommunityProfile,
   DirectMessage
 } from '@/types/community.types'
@@ -31,11 +30,22 @@ import {
 } from '@/app/(community)/comunidad/actions'
 import { toast } from 'sonner'
 
+export interface TechnicalOpportunity {
+  id: string
+  title: string
+  company: string
+  location: string
+  type: string
+  specialty: string
+  description: string
+  requirements: string[]
+  publishedAt: string
+}
+
 export default function CommunityFeedClient({
   initialPosts,
   recommendedProfiles,
   groups,
-  initialStories,
   onlineContacts,
   initialSavedIds,
   currentUser
@@ -43,59 +53,123 @@ export default function CommunityFeedClient({
   initialPosts: CommunityPost[]
   recommendedProfiles: RecommendationResult[]
   groups: CommunityGroup[]
-  initialStories: TechnicalStory[]
+  initialStories?: any[]
   onlineContacts: CommunityProfile[]
   initialSavedIds: string[]
   currentUser: CommunityProfile | null
 }) {
-  // Estados de Feed y Publicaciones
+  // =========================================================================
+  // ESTADOS PRINCIPALES DE NAVEGACIÓN Y FILTRADO
+  // =========================================================================
   const [posts, setPosts] = useState<CommunityPost[]>(initialPosts)
   const [savedPosts, setSavedPosts] = useState<Set<string>>(new Set(initialSavedIds))
-  const [activeFilter, setActiveFilter] = useState<'for-you' | 'explorer' | 'following' | 'friends' | 'saved' | 'my-groups'>('for-you')
-  const [sidebarSearch, setSidebarSearch] = useState('')
-  
-  // Estado del Modal de Creación de Publicación
+  const [activeNav, setActiveNav] = useState<'inicio' | 'explorar' | 'red' | 'oportunidades' | 'guardados'>('inicio')
+  const [selectedTagFilter, setSelectedTagFilter] = useState<string | null>(null)
+  const [feedSearchTerm, setFeedSearchTerm] = useState('')
+
+  // Estado de solicitudes de conexión enviadas
+  const [sentConnectionIds, setSentConnectionIds] = useState<Set<string>>(new Set())
+
+  // =========================================================================
+  // ESTADO DEL COMPOSITOR DE PUBLICACIÓN PROFESIONAL
+  // =========================================================================
   const [isComposerOpen, setIsComposerOpen] = useState(false)
+  const [composerMode, setComposerMode] = useState<'general' | 'image' | 'doc' | 'specialty'>('general')
   const [postContent, setPostContent] = useState('')
   const [postImageUrl, setPostImageUrl] = useState('')
   const [selectedTag, setSelectedTag] = useState('')
   const [selectedGroupId, setSelectedGroupId] = useState<string>('')
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  // Estado de Comentarios en Hilo
+  // =========================================================================
+  // ESTADO DE COMENTARIOS EN HILO
+  // =========================================================================
   const [activeCommentPostId, setActiveCommentPostId] = useState<string | null>(null)
   const [commentInputs, setCommentInputs] = useState<Record<string, string>>({})
   const [localComments, setLocalComments] = useState<Record<string, Array<{ id: string; author: string; content: string; time: string }>>>({})
 
-  // Estado de Historias / Stories Viewer
-  const [stories, setStories] = useState<TechnicalStory[]>(initialStories)
-  const [activeStory, setActiveStory] = useState<TechnicalStory | null>(null)
-  const [isCreateStoryOpen, setIsCreateStoryOpen] = useState(false)
-  const [newStoryTitle, setNewStoryTitle] = useState('')
-  const [newStoryTag, setNewStoryTag] = useState('#Seguridad')
-
-  // Estado de Contactos y Chat Flotante (Dock Messenger Style)
+  // =========================================================================
+  // ESTADO DE MENSAJERÍA DIRECTA FLOTANTE (DOCK MESSENGER SOBERANO)
+  // =========================================================================
   const [activeChatContact, setActiveChatContact] = useState<CommunityProfile | null>(null)
   const [chatMessages, setChatMessages] = useState<DirectMessage[]>([])
   const [chatInput, setChatInput] = useState('')
   const [isChatMinimized, setIsChatMinimized] = useState(false)
   const chatBottomRef = useRef<HTMLDivElement>(null)
 
-  // Estado de Menús contextuales de publicaciones (3 dots)
+  // =========================================================================
+  // ESTADO DEL MODAL DE OPORTUNIDADES PROFESIONALES
+  // =========================================================================
+  const [selectedOpportunity, setSelectedOpportunity] = useState<TechnicalOpportunity | null>(null)
+  const [appliedOpportunities, setAppliedOpportunities] = useState<Set<string>>(new Set())
+
+  // =========================================================================
+  // MENÚS CONTEXTUALES DE PUBLICACIÓN (3 PUNTOS)
+  // =========================================================================
   const [activePostMenuId, setActivePostMenuId] = useState<string | null>(null)
 
+  // Catálogo de etiquetas técnicas
   const availableTags = [
-    '#Seguridad', 
-    '#Mantenimiento', 
-    '#Perforación', 
-    '#LíneaAmarilla', 
-    '#Operaciones', 
-    '#Geología',
-    '#SOMA',
-    '#Geomecánica'
+    '#SeguridadMinera', 
+    '#MantenimientoPesado', 
+    '#PerforaciónYVoladura', 
+    '#SOMA', 
+    '#Geomecánica', 
+    '#LíneaAmarilla',
+    '#OperacionesPlanta',
+    '#GestiónAmbiental'
   ]
 
-  // Cargar mensajes cuando se abre un chat
+  // Catálogo de oportunidades técnicas de la industria
+  const industrialOpportunities: TechnicalOpportunity[] = [
+    {
+      id: 'opp-1',
+      title: 'Ingeniero Residente de Mina Subterránea',
+      company: 'Minera San Gabriel S.A.',
+      location: 'Arequipa, Perú (Régimen 14x7)',
+      type: 'Tiempo Completo',
+      specialty: 'Operaciones Mineras',
+      description: 'Liderar las operaciones de perforación, voladura y sostenimiento garantizando el cumplimiento de los estándares de seguridad y productividad.',
+      requirements: [
+        'Colegiado en Ingeniería de Minas con más de 5 años de experiencia en mina subterránea.',
+        'Dominio de normativas D.S. 024-2016-EM y sus modificatorias.',
+        'Experiencia comprobada en optimización de ciclos de minado.'
+      ],
+      publishedAt: 'Hace 2 días'
+    },
+    {
+      id: 'opp-2',
+      title: 'Supervisor Senior SOMA / Seguridad y Salud Ocupacional',
+      company: 'Consorcio Minero Andino',
+      location: 'Moquegua, Perú (Régimen 20x10)',
+      type: 'Tiempo Completo',
+      specialty: 'SOMA & Seguridad Industrial',
+      description: 'Supervisión integral de estándares de seguridad, IPERC continuo, investigación de incidentes y auditorías internas en planta concentradora.',
+      requirements: [
+        'Ingeniero de Minas, Metalúrgico, Químico o Higiene y Seguridad Colegiado.',
+        'Mínimo 4 años en supervisión de seguridad en gran minería.',
+        'Certificación en sistemas integrados de gestión ISO 45001 e ISO 14001.'
+      ],
+      publishedAt: 'Hace 3 días'
+    },
+    {
+      id: 'opp-3',
+      title: 'Jefe de Mantenimiento de Flota Pesada (CAT / Komatsu)',
+      company: 'Operaciones Mineras del Sur',
+      location: 'Cusco, Perú (Presencial)',
+      type: 'Contrato por Proyecto',
+      specialty: 'Mantenimiento Mecánico',
+      description: 'Gestión del mantenimiento preventivo, predictivo y correctivo de camiones mineros 797F, palas hidráulicas y perforadoras rotativas.',
+      requirements: [
+        'Ingeniero Mecánico o Mecatrónico titulado.',
+        'Experiencia sólida en análisis de fallas en motores C175 y transmisiones de alta potencia.',
+        'Manejo avanzado de SIS CAT y Komatsu VIMS.'
+      ],
+      publishedAt: 'Hace 5 días'
+    }
+  ]
+
+  // Cargar mensajes cuando se abre el chat directo
   useEffect(() => {
     if (activeChatContact) {
       getDirectMessagesAction(activeChatContact.id).then((msgs) => {
@@ -112,13 +186,13 @@ export default function CommunityFeedClient({
   }, [chatMessages, activeChatContact, isChatMinimized])
 
   // =========================================================================
-  // HANDLERS DE INTERACCIÓN
+  // HANDLERS FUNCIONALES
   // =========================================================================
 
   const handleCreatePost = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!postContent.trim()) {
-      toast.error('Por favor escribe el contenido de tu publicación')
+      toast.error('Por favor escribe el contenido de tu publicación técnica')
       return
     }
 
@@ -127,7 +201,6 @@ export default function CommunityFeedClient({
       const tags = selectedTag ? [selectedTag] : []
       const res = await createPostAction(postContent, selectedGroupId || undefined, tags)
       if (res.success && res.data) {
-        // Asignar imagen si fue ingresada
         const newPost = {
           ...res.data,
           media_urls: postImageUrl ? [postImageUrl] : []
@@ -138,11 +211,11 @@ export default function CommunityFeedClient({
         setSelectedTag('')
         setSelectedGroupId('')
         setIsComposerOpen(false)
-        toast.success('Publicación técnica compartida en la comunidad')
+        toast.success('Publicación profesional compartida en la red')
       } else {
         toast.error(res.error || 'Error al publicar')
       }
-    } catch (err: any) {
+    } catch {
       toast.error('Error al enviar publicación')
     } finally {
       setIsSubmitting(false)
@@ -164,8 +237,9 @@ export default function CommunityFeedClient({
 
     try {
       await toggleReactionAction(postId, reaction)
-    } catch (e) {
-      // rollback si falla
+      toast.success('Aporte marcado como útil')
+    } catch {
+      // rollback silencioso
     }
   }
 
@@ -178,7 +252,7 @@ export default function CommunityFeedClient({
         toast.info('Publicación removida de tus marcadores')
       } else {
         next.add(postId)
-        toast.success('Publicación guardada en tus marcadores técnicos')
+        toast.success('Publicación guardada para consulta técnica')
       }
       return next
     })
@@ -186,7 +260,7 @@ export default function CommunityFeedClient({
 
     try {
       await toggleSavePostAction(postId)
-    } catch (e) {
+    } catch {
       // ignore
     }
   }
@@ -209,11 +283,11 @@ export default function CommunityFeedClient({
 
     setCommentInputs(prev => ({ ...prev, [postId]: '' }))
     setPosts(prev => prev.map(p => p.id === postId ? { ...p, comments_count: p.comments_count + 1 } : p))
-    toast.success('Comentario añadido')
+    toast.success('Comentario técnico publicado')
 
     try {
       await addCommentAction(postId, text)
-    } catch (e) {
+    } catch {
       // ignore
     }
   }
@@ -237,756 +311,373 @@ export default function CommunityFeedClient({
 
     try {
       await sendDirectMessageAction(activeChatContact.id, currentMsgText)
-    } catch (e) {
-      toast.error('Error al enviar mensaje')
+    } catch {
+      toast.error('Error al enviar mensaje directo')
     }
   }
 
-  const handleCreateStory = (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!newStoryTitle.trim()) return
-
-    const newStory: TechnicalStory = {
-      id: `story-${Date.now()}`,
-      author_id: currentUser?.id || 'user-carlos-mendoza',
-      author_name: currentUser?.display_name || 'Ing. Carlos Mendoza',
-      author_specialty: 'Ingeniería de Minas',
-      title: newStoryTitle.trim(),
-      gradient: 'from-blue-700 via-indigo-800 to-slate-900',
-      tag: newStoryTag,
-      created_at: new Date().toISOString()
-    }
-
-    setStories([newStory, ...stories])
-    setIsCreateStoryOpen(false)
-    setNewStoryTitle('')
-    toast.success('Aporte técnico destacado publicado')
+  const handleSendConnection = (profileId: string, name: string) => {
+    setSentConnectionIds(prev => new Set(prev).add(profileId))
+    toast.success(`Solicitud de conexión enviada a ${name}`)
   }
 
-  // Filtrado de publicaciones dinámico
+  const handleApplyOpportunity = (oppId: string, title: string) => {
+    setAppliedOpportunities(prev => new Set(prev).add(oppId))
+    setSelectedOpportunity(null)
+    toast.success(`Postulación enviada a "${title}" con tu Perfil Inthaly`)
+  }
+
+  // =========================================================================
+  // FILTRADO DE PUBLICACIONES
+  // =========================================================================
   const displayedPosts = posts.filter(p => {
-    // Filtro por término de búsqueda en sidebar si existe
-    if (sidebarSearch.trim()) {
-      const matchSearch = 
-        p.content.toLowerCase().includes(sidebarSearch.toLowerCase()) ||
-        (p.author?.display_name || '').toLowerCase().includes(sidebarSearch.toLowerCase()) ||
-        (p.tags || []).some(t => t.toLowerCase().includes(sidebarSearch.toLowerCase()))
-      if (!matchSearch) return false
+    if (feedSearchTerm.trim()) {
+      const q = feedSearchTerm.toLowerCase()
+      const matchText = p.content.toLowerCase().includes(q)
+      const matchAuthor = (p.author?.display_name || '').toLowerCase().includes(q)
+      const matchTag = (p.tags || []).some(t => t.toLowerCase().includes(q))
+      if (!matchText && !matchAuthor && !matchTag) return false
     }
 
-    if (activeFilter === 'saved') return savedPosts.has(p.id)
-    if (activeFilter === 'my-groups') return !!p.group_id
-    if (activeFilter === 'following' || activeFilter === 'friends') {
-      // Muestra publicaciones con interacciones o de contactos relevantes
-      return true
+    if (selectedTagFilter) {
+      if (!(p.tags || []).includes(selectedTagFilter)) return false
     }
+
+    if (activeNav === 'guardados') {
+      return savedPosts.has(p.id)
+    }
+
+    if (activeNav === 'explorar') {
+      return p.likes_count >= 1 || (p.tags && p.tags.length > 0)
+    }
+
     return true
   })
 
   return (
-    <div className="w-full max-w-[1536px] mx-auto px-2 sm:px-4 py-3 md:py-4">
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-6">
+    <div className="w-full max-w-[1536px] mx-auto px-3 sm:px-6 py-4 md:py-6">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 lg:gap-8">
         
         {/* ========================================================================= */}
-        {/* COLUMNA IZQUIERDA: ESTILO TIKTOK WEB CONTEMPORÁNEO (3 cols)              */}
-        {/* Basado estrictamente en referencia: media_1794884025833_3332de7e.png     */}
+        {/* COLUMNA 1: NAVEGACIÓN (3 cols)                                             */}
+        {/* Estructura recomendada: media_1794887984001_d6397a3c.png                  */}
         {/* ========================================================================= */}
-        <aside className="hidden lg:block lg:col-span-3 space-y-1 select-none">
-          <div className="sticky top-18 space-y-1 bg-white p-3 rounded-2xl border border-slate-200/90 shadow-2xs">
+        <aside className="hidden lg:block lg:col-span-3 space-y-3 select-none">
+          <div className="sticky top-20 bg-white p-4 rounded-2xl border border-slate-200/90 shadow-2xs space-y-4">
             
-            {/* 1. Barra de Búsqueda Superior */}
-            <div className="relative mb-2">
-              <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
-              <input
-                type="text"
-                value={sidebarSearch}
-                onChange={(e) => setSidebarSearch(e.target.value)}
-                placeholder="Buscar..."
-                className="w-full pl-9 pr-3 py-2 bg-slate-100/90 hover:bg-slate-200/70 focus:bg-white text-xs font-medium text-slate-800 placeholder-slate-400 rounded-full border border-transparent focus:border-blue-400 focus:outline-none transition-all"
-              />
+            {/* Título de Sección */}
+            <div className="pb-2 border-b border-slate-100">
+              <h2 className="text-sm font-black text-slate-900 tracking-tight">
+                Navegación
+              </h2>
             </div>
 
-            {/* 2. Ítems Principales de Navegación Vertical */}
-            <div className="space-y-0.5">
+            {/* Lista de Navegación Vertical Limpia y Sin Ruido */}
+            <nav className="space-y-1 text-xs font-bold">
               
-              {/* Para ti (Principal) */}
+              {/* Inicio */}
               <button
                 type="button"
-                onClick={() => setActiveFilter('for-you')}
-                className={`w-full flex items-center gap-3.5 px-3 py-2.5 rounded-xl text-xs font-bold transition-colors cursor-pointer ${
-                  activeFilter === 'for-you'
-                    ? 'text-rose-600 bg-rose-50/80'
-                    : 'text-slate-800 hover:bg-slate-100'
+                onClick={() => {
+                  setActiveNav('inicio')
+                  setSelectedTagFilter(null)
+                }}
+                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-colors cursor-pointer ${
+                  activeNav === 'inicio' && !selectedTagFilter
+                    ? 'bg-blue-50 text-blue-700 font-black'
+                    : 'text-slate-700 hover:bg-slate-100'
                 }`}
               >
-                <Home size={20} className={activeFilter === 'for-you' ? 'text-rose-600 stroke-[2.5]' : 'text-slate-700'} />
-                <span className="text-[13px] font-black">Para ti</span>
+                <Home size={18} className={activeNav === 'inicio' && !selectedTagFilter ? 'text-blue-700' : 'text-slate-500'} />
+                <span>Inicio</span>
               </button>
 
-              {/* Explorador */}
+              {/* Explorar */}
               <button
                 type="button"
-                onClick={() => setActiveFilter('explorer')}
-                className={`w-full flex items-center gap-3.5 px-3 py-2.5 rounded-xl text-xs font-bold transition-colors cursor-pointer ${
-                  activeFilter === 'explorer'
-                    ? 'text-blue-600 bg-blue-50/80'
-                    : 'text-slate-800 hover:bg-slate-100'
+                onClick={() => {
+                  setActiveNav('explorar')
+                  setSelectedTagFilter(null)
+                }}
+                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-colors cursor-pointer ${
+                  activeNav === 'explorar'
+                    ? 'bg-blue-50 text-blue-700 font-black'
+                    : 'text-slate-700 hover:bg-slate-100'
                 }`}
               >
-                <Compass size={20} className="text-slate-700" />
-                <span className="text-[13px] font-bold">Explorador</span>
+                <Compass size={18} className={activeNav === 'explorar' ? 'text-blue-700' : 'text-slate-500'} />
+                <span>Explorar</span>
               </button>
 
-              {/* Siguiendo */}
+              {/* Mi red */}
               <button
                 type="button"
-                onClick={() => setActiveFilter('following')}
-                className={`w-full flex items-center gap-3.5 px-3 py-2.5 rounded-xl text-xs font-bold transition-colors cursor-pointer ${
-                  activeFilter === 'following'
-                    ? 'text-blue-600 bg-blue-50/80'
-                    : 'text-slate-800 hover:bg-slate-100'
+                onClick={() => {
+                  setActiveNav('red')
+                  setSelectedTagFilter(null)
+                }}
+                className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl transition-colors cursor-pointer ${
+                  activeNav === 'red'
+                    ? 'bg-blue-50 text-blue-700 font-black'
+                    : 'text-slate-700 hover:bg-slate-100'
                 }`}
               >
-                <div className="w-5 h-5 rounded-full bg-gradient-to-tr from-amber-500 to-rose-500 p-0.5 flex items-center justify-center shrink-0">
-                  <div className="w-full h-full rounded-full bg-white flex items-center justify-center text-[8px] font-bold text-rose-600">
-                    S
-                  </div>
+                <div className="flex items-center gap-3">
+                  <Users size={18} className={activeNav === 'red' ? 'text-blue-700' : 'text-slate-500'} />
+                  <span>Mi red</span>
                 </div>
-                <span className="text-[13px] font-bold">Siguiendo</span>
+                <span className="text-[10px] font-mono text-slate-400">
+                  {recommendedProfiles.length}
+                </span>
               </button>
 
-              {/* Amigos / Colegas */}
-              <button
-                type="button"
-                onClick={() => setActiveFilter('friends')}
-                className={`w-full flex items-center gap-3.5 px-3 py-2.5 rounded-xl text-xs font-bold transition-colors cursor-pointer ${
-                  activeFilter === 'friends'
-                    ? 'text-blue-600 bg-blue-50/80'
-                    : 'text-slate-800 hover:bg-slate-100'
-                }`}
-              >
-                <Users size={20} className="text-slate-700" />
-                <span className="text-[13px] font-bold">Amigos</span>
-              </button>
-
-              {/* Minidramas / Especialidades */}
+              {/* Grupos */}
               <Link
                 href="/comunidad/grupos"
-                className="w-full flex items-center gap-3.5 px-3 py-2.5 rounded-xl text-xs font-bold text-slate-800 hover:bg-slate-100 transition-colors cursor-pointer"
+                className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
               >
-                <Film size={20} className="text-slate-700" />
-                <span className="text-[13px] font-bold">Minidramas & Grupos</span>
+                <div className="flex items-center gap-3">
+                  <Building2 size={18} className="text-slate-500" />
+                  <span>Grupos</span>
+                </div>
+                <span className="text-[10px] font-mono text-slate-400">
+                  {groups.length}
+                </span>
               </Link>
 
-              {/* EN VIVO */}
-              <div 
-                onClick={() => toast.info('Próxima transmisión técnica en vivo: Viernes 19:00 hrs')}
-                className="w-full flex items-center gap-3.5 px-3 py-2.5 rounded-xl text-xs font-bold text-slate-800 hover:bg-slate-100 transition-colors cursor-pointer"
+              {/* Oportunidades */}
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveNav('oportunidades')
+                  setSelectedTagFilter(null)
+                }}
+                className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl transition-colors cursor-pointer ${
+                  activeNav === 'oportunidades'
+                    ? 'bg-blue-50 text-blue-700 font-black'
+                    : 'text-slate-700 hover:bg-slate-100'
+                }`}
               >
-                <div className="w-5 h-5 rounded-full bg-rose-100 text-rose-600 flex items-center justify-center ring-2 ring-rose-500/30 shrink-0">
-                  <Radio size={13} className="animate-pulse" />
+                <div className="flex items-center gap-3">
+                  <Briefcase size={18} className={activeNav === 'oportunidades' ? 'text-blue-700' : 'text-slate-500'} />
+                  <span>Oportunidades</span>
                 </div>
-                <span className="text-[13px] font-bold">EN VIVO</span>
-              </div>
+                <span className="text-[9px] font-extrabold uppercase bg-emerald-50 text-emerald-700 px-1.5 py-0.5 rounded border border-emerald-200">
+                  Bolsa
+                </span>
+              </button>
 
-              {/* Mensajes (Badge rojo 4 idéntico a referencia) */}
-              <div
+              {/* Mensajes */}
+              <button
+                type="button"
                 onClick={() => {
                   if (onlineContacts.length > 0) {
                     setActiveChatContact(onlineContacts[0])
                     setIsChatMinimized(false)
                   }
                 }}
-                className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-bold text-slate-800 hover:bg-slate-100 transition-colors cursor-pointer group"
+                className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
               >
-                <div className="flex items-center gap-3.5">
-                  <div className="relative">
-                    <Send size={20} className="text-slate-700 -rotate-45" />
-                    {/* Badge circular rojo con el número 4 exacto de la referencia */}
-                    <span className="absolute -top-1.5 -right-2 bg-rose-600 text-white text-[9px] font-black w-4 h-4 rounded-full flex items-center justify-center ring-2 ring-white shadow-2xs">
-                      4
-                    </span>
-                  </div>
-                  <span className="text-[13px] font-bold ml-1">Mensajes</span>
+                <div className="flex items-center gap-3">
+                  <MessageSquare size={18} className="text-slate-500" />
+                  <span>Mensajes</span>
                 </div>
-              </div>
-
-              {/* Actividad (Badge rojo 7 idéntico a referencia) */}
-              <div
-                onClick={() => toast.info('Tienes 7 nuevas reacciones e interacciones técnicas')}
-                className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-bold text-slate-800 hover:bg-slate-100 transition-colors cursor-pointer group"
-              >
-                <div className="flex items-center gap-3.5">
-                  <div className="relative">
-                    <MessageSquare size={20} className="text-slate-700" />
-                    {/* Badge circular rojo con el número 7 exacto de la referencia */}
-                    <span className="absolute -top-1.5 -right-2 bg-rose-600 text-white text-[9px] font-black w-4 h-4 rounded-full flex items-center justify-center ring-2 ring-white shadow-2xs">
-                      7
-                    </span>
-                  </div>
-                  <span className="text-[13px] font-bold ml-1">Actividad</span>
-                </div>
-              </div>
-
-              {/* Cargar / Publicar (+) */}
-              <button
-                type="button"
-                onClick={() => setIsComposerOpen(true)}
-                className="w-full flex items-center gap-3.5 px-3 py-2.5 rounded-xl text-xs font-bold text-slate-800 hover:bg-slate-100 transition-colors cursor-pointer"
-              >
-                <div className="w-5 h-5 rounded-md border-2 border-slate-700 flex items-center justify-center text-slate-700 shrink-0">
-                  <Plus size={14} strokeWidth={3} />
-                </div>
-                <span className="text-[13px] font-bold">Cargar</span>
+                <span className="w-2 h-2 rounded-full bg-emerald-500" />
               </button>
 
-              {/* Perfil */}
+              {/* Guardados */}
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveNav('guardados')
+                  setSelectedTagFilter(null)
+                }}
+                className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl transition-colors cursor-pointer ${
+                  activeNav === 'guardados'
+                    ? 'bg-blue-50 text-blue-700 font-black'
+                    : 'text-slate-700 hover:bg-slate-100'
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <Bookmark size={18} className={activeNav === 'guardados' ? 'text-blue-700' : 'text-slate-500'} />
+                  <span>Guardados</span>
+                </div>
+                <span className="text-[10px] font-mono text-slate-400">
+                  {savedPosts.size}
+                </span>
+              </button>
+
+              {/* Mi perfil */}
               <Link
                 href="/comunidad/perfil"
-                className="w-full flex items-center gap-3.5 px-3 py-2.5 rounded-xl text-xs font-bold text-slate-800 hover:bg-slate-100 transition-colors cursor-pointer group"
+                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
               >
-                <div className="w-5 h-5 rounded-full bg-slate-900 text-white flex items-center justify-center font-bold text-[9px] shrink-0 ring-1 ring-slate-300">
-                  CM
-                </div>
-                <span className="text-[13px] font-bold">Perfil</span>
+                <User size={18} className="text-slate-500" />
+                <span>Mi perfil</span>
               </Link>
 
-              {/* Más */}
-              <button
-                type="button"
-                onClick={() => setActiveFilter(activeFilter === 'saved' ? 'for-you' : 'saved')}
-                className="w-full flex items-center gap-3.5 px-3 py-2.5 rounded-xl text-xs font-bold text-slate-800 hover:bg-slate-100 transition-colors cursor-pointer"
-              >
-                <MoreHorizontal size={20} className="text-slate-700" />
-                <span className="text-[13px] font-bold">Más {savedPosts.size > 0 && `(${savedPosts.size} guardados)`}</span>
-              </button>
+            </nav>
 
-            </div>
-
-            {/* 3. Subsección: Cuentas que sigues (Exacto a referencia) */}
-            <div className="pt-3 border-t border-slate-100 mt-2 space-y-1">
-              <h4 className="text-[12px] font-black text-slate-900 px-3 pb-1">
-                Cuentas que sigues
-              </h4>
-
-              <div className="space-y-1">
-                
-                {/* Cuenta 1: Arq. Diana Corza */}
-                <div
-                  onClick={() => {
-                    toast.info('Perfil de Arq. Diana Corza: Especialista en Obras y Arquitectura Minera')
-                  }}
-                  className="flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-slate-100 transition-colors cursor-pointer group"
-                >
-                  <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-amber-600 to-rose-600 p-0.5 shrink-0 ring-1 ring-amber-400">
-                    <div className="w-full h-full rounded-full bg-slate-900 text-white flex items-center justify-center text-[10px] font-black">
-                      DC
-                    </div>
-                  </div>
-                  <div className="overflow-hidden">
-                    <h5 className="text-xs font-black text-slate-900 truncate leading-tight group-hover:text-blue-600 transition-colors">
-                      Arq. Diana Corza
-                    </h5>
-                    <span className="text-[11px] text-slate-500 block truncate leading-tight">
-                      dianacorza0
-                    </span>
-                  </div>
-                </div>
-
-                {/* Cuenta 2: PaulaRuiz | Escalante */}
-                <div
-                  onClick={() => {
-                    toast.info('Perfil de PaulaRuiz: Geomecánica y Estabilidad de Macizos')
-                  }}
-                  className="flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-slate-100 transition-colors cursor-pointer group"
-                >
-                  <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-rose-600 to-purple-600 p-0.5 shrink-0 ring-1 ring-rose-400">
-                    <div className="w-full h-full rounded-full bg-slate-900 text-white flex items-center justify-center text-[10px] font-black">
-                      PR
-                    </div>
-                  </div>
-                  <div className="overflow-hidden">
-                    <h5 className="text-xs font-black text-slate-900 truncate leading-tight group-hover:text-blue-600 transition-colors">
-                      PaulaRuiz | Escalan...
-                    </h5>
-                    <span className="text-[11px] text-slate-500 block truncate leading-tight">
-                      soypaularuiz
-                    </span>
-                  </div>
-                </div>
-
-                {/* Cuenta 3: Ing. Elena Rodríguez */}
-                <div
-                  onClick={() => {
-                    if (onlineContacts.length > 0) {
-                      setActiveChatContact(onlineContacts[0])
-                      setIsChatMinimized(false)
-                    }
-                  }}
-                  className="flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-slate-100 transition-colors cursor-pointer group"
-                >
-                  <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-emerald-600 to-teal-700 p-0.5 shrink-0 ring-1 ring-emerald-400">
-                    <div className="w-full h-full rounded-full bg-slate-900 text-white flex items-center justify-center text-[10px] font-black">
-                      ER
-                    </div>
-                  </div>
-                  <div className="overflow-hidden">
-                    <h5 className="text-xs font-black text-slate-900 truncate leading-tight group-hover:text-blue-600 transition-colors">
-                      Ing. Elena Rodríguez
-                    </h5>
-                    <span className="text-[11px] text-slate-500 block truncate leading-tight">
-                      elenasoma
-                    </span>
-                  </div>
-                </div>
-
-                {/* Cuenta 4: Marco Valdivia */}
-                <div
-                  onClick={() => {
-                    if (onlineContacts.length > 1) {
-                      setActiveChatContact(onlineContacts[1])
-                      setIsChatMinimized(false)
-                    }
-                  }}
-                  className="flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-slate-100 transition-colors cursor-pointer group"
-                >
-                  <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-blue-600 to-indigo-700 p-0.5 shrink-0 ring-1 ring-blue-400">
-                    <div className="w-full h-full rounded-full bg-slate-900 text-white flex items-center justify-center text-[10px] font-black">
-                      MV
-                    </div>
-                  </div>
-                  <div className="overflow-hidden">
-                    <h5 className="text-xs font-black text-slate-900 truncate leading-tight group-hover:text-blue-600 transition-colors">
-                      Marco Valdivia
-                    </h5>
-                    <span className="text-[11px] text-slate-500 block truncate leading-tight">
-                      valdiviamec
-                    </span>
-                  </div>
-                </div>
-
+            {/* Caja de Privacidad Soberana */}
+            <div className="pt-3 border-t border-slate-100 text-[11px] text-slate-500 space-y-1">
+              <div className="flex items-center gap-1.5 font-bold text-slate-700">
+                <ShieldCheck size={14} className="text-blue-600" />
+                <span>Privacidad Garantizada</span>
               </div>
-            </div>
-
-            {/* Footer institucional discreto */}
-            <div className="px-3 pt-3 border-t border-slate-100 text-[10px] text-slate-400 leading-tight">
-              <p>Comunidad Inthaly · Red Profesional Soberana</p>
+              <p className="leading-tight text-slate-400">
+                Tus consultas técnicas y mensajes comunitarios no son monitoreados por tu empleador.
+              </p>
             </div>
 
           </div>
         </aside>
 
         {/* ========================================================================= */}
-        {/* COLUMNA CENTRAL: FEED PRINCIPAL + STORIES + COMPOSITOR (6 cols)            */}
+        {/* COLUMNA 2: FEED CENTRAL PROFESIONAL (6 cols)                               */}
+        {/* Estructura recomendada: media_1794887984001_d6397a3c.png                  */}
         {/* ========================================================================= */}
         <main className="lg:col-span-6 space-y-4">
           
           {/* ======================================================================= */}
-          {/* 1. CARRUSEL DE HISTORIAS / DESTACADOS TÉCNICOS (FACEBOOK STORIES BAR)    */}
+          {/* 1. CAJA DE PUBLICACIÓN PROFESIONAL                                      */}
           {/* ======================================================================= */}
-          <section className="overflow-x-auto pb-1 no-scrollbar select-none">
-            <div className="flex gap-2.5 min-w-max">
-              
-              {/* Tarjeta 1: Crear Historia Técnica / Aporte */}
-              <div 
-                onClick={() => setIsCreateStoryOpen(true)}
-                className="w-28 sm:w-32 h-48 bg-white rounded-2xl overflow-hidden border border-slate-200/80 shadow-xs relative flex flex-col justify-between cursor-pointer group hover:scale-[1.02] transition-transform"
-              >
-                <div className="h-32 bg-slate-100 flex items-center justify-center overflow-hidden relative">
-                  <div className="w-12 h-12 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-black text-sm">
-                    CM
-                  </div>
-                </div>
-                <div className="h-16 bg-white relative flex flex-col items-center justify-center px-1">
-                  <div className="w-9 h-9 rounded-full bg-blue-600 text-white flex items-center justify-center absolute -top-4.5 border-4 border-white shadow-xs group-hover:bg-blue-700 transition-colors">
-                    <Plus size={18} strokeWidth={3} />
-                  </div>
-                  <span className="text-[11px] font-black text-slate-900 mt-3 text-center leading-tight">
-                    Crear historia
-                  </span>
-                </div>
-              </div>
-
-              {/* Tarjetas 2 a N: Historias de Colegas */}
-              {stories.map(st => (
-                <div
-                  key={st.id}
-                  onClick={() => setActiveStory(st)}
-                  className={`w-28 sm:w-32 h-48 rounded-2xl p-2.5 flex flex-col justify-between relative overflow-hidden cursor-pointer shadow-xs hover:scale-[1.02] transition-transform bg-gradient-to-b ${st.gradient || 'from-blue-700 to-slate-900'}`}
-                >
-                  {/* Avatar con anillo azul en esquina superior */}
-                  <div className="w-9 h-9 rounded-full bg-white/20 p-0.5 border-2 border-blue-400 z-10 shrink-0">
-                    <div className="w-full h-full rounded-full bg-blue-800 text-white flex items-center justify-center text-[10px] font-bold">
-                      {st.author_name.substring(0, 2).toUpperCase()}
-                    </div>
-                  </div>
-
-                  {/* Texto inferior de la historia */}
-                  <div className="z-10">
-                    <span className="text-[9px] font-extrabold text-blue-200 uppercase tracking-wider block">
-                      {st.tag || '#Técnico'}
-                    </span>
-                    <p className="text-white text-[11px] font-bold leading-tight line-clamp-3 drop-shadow-sm mt-0.5">
-                      {st.title}
-                    </p>
-                    <span className="text-white/80 text-[10px] font-medium block truncate mt-1">
-                      {st.author_name}
-                    </span>
-                  </div>
-
-                  {/* Overlay gradiente oscuro */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/25 to-black/10" />
-                </div>
-              ))}
-
-            </div>
-          </section>
-
-          {/* ======================================================================= */}
-          {/* 2. COMPOSITOR DE PUBLICACIONES TIPO CÁPSULA (FACEBOOK POST COMPOSER)     */}
-          {/* ======================================================================= */}
-          <div className="bg-white rounded-2xl p-3.5 sm:p-4 border border-slate-200/90 shadow-2xs space-y-3">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-blue-700 to-indigo-600 text-white flex items-center justify-center font-black text-xs shrink-0 shadow-2xs">
-                CM
-              </div>
-              {/* Cápsula interactiva tipo Facebook */}
-              <button
-                type="button"
-                onClick={() => setIsComposerOpen(true)}
-                className="w-full bg-[#f0f2f5] hover:bg-[#e4e6eb] text-left text-slate-500 hover:text-slate-700 text-xs sm:text-sm font-medium px-4 py-2.5 rounded-full transition-colors cursor-pointer border border-transparent"
-              >
-                ¿Qué desafío operativo o aporte técnico tienes hoy, Carlos?
-              </button>
-            </div>
-
-            <div className="pt-2 border-t border-slate-100 flex items-center justify-around text-xs font-bold text-slate-600">
-              <button
-                type="button"
-                onClick={() => setIsComposerOpen(true)}
-                className="flex items-center gap-2 py-1.5 px-3 rounded-xl hover:bg-slate-100 transition-colors text-emerald-600 cursor-pointer"
-              >
-                <ImageIcon size={18} />
-                <span className="text-slate-700 hidden sm:inline">Foto / Evidencia</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setIsComposerOpen(true)}
-                className="flex items-center gap-2 py-1.5 px-3 rounded-xl hover:bg-slate-100 transition-colors text-blue-600 cursor-pointer"
-              >
-                <Tag size={18} />
-                <span className="text-slate-700 hidden sm:inline">Especialidad</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setIsComposerOpen(true)}
-                className="flex items-center gap-2 py-1.5 px-3 rounded-xl hover:bg-slate-100 transition-colors text-purple-600 cursor-pointer"
-              >
-                <Users size={18} />
-                <span className="text-slate-700 hidden sm:inline">Grupo de destino</span>
-              </button>
-            </div>
-          </div>
-
-          {/* ======================================================================= */}
-          {/* 3. FEED DE PUBLICACIONES (FACEBOOK POST CARDS CONTEMPORÁNEAS)            */}
-          {/* ======================================================================= */}
-          <div className="space-y-4">
-            {displayedPosts.length === 0 ? (
-              <div className="bg-white rounded-2xl p-8 border border-slate-200/90 text-center space-y-2">
-                <Bookmark size={32} className="mx-auto text-slate-300" />
-                <h3 className="text-sm font-bold text-slate-700">No hay publicaciones para este filtro</h3>
-                <p className="text-xs text-slate-400">Selecciona "Muro Técnico Principal" para ver toda la actividad.</p>
-              </div>
-            ) : (
-              displayedPosts.map((post) => {
-                const author = post.author || currentUser || { display_name: 'Colega Inthaly', headline: 'Profesional Industrial' }
-                const isSaved = savedPosts.has(post.id)
-                const hasReacted = !!post.user_reaction
-                const postCommentsList = localComments[post.id] || []
-
-                return (
-                  <article 
-                    key={post.id}
-                    className="bg-white rounded-2xl border border-slate-200/90 shadow-2xs overflow-hidden transition-all"
-                  >
-                    {/* Header de la Publicación */}
-                    <div className="p-4 pb-2 flex items-start justify-between gap-3">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-blue-700 to-indigo-600 text-white flex items-center justify-center font-black text-xs shrink-0 shadow-2xs">
-                          {author.display_name.substring(0, 2).toUpperCase()}
-                        </div>
-                        <div>
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <span className="font-black text-xs sm:text-sm text-slate-900 leading-tight">
-                              {author.display_name}
-                            </span>
-                            {post.group && (
-                              <>
-                                <span className="text-[11px] text-slate-400">en</span>
-                                <Link 
-                                  href={`/comunidad/grupos`}
-                                  className="text-[11px] font-bold text-blue-700 hover:underline"
-                                >
-                                  {post.group.name}
-                                </Link>
-                              </>
-                            )}
-                          </div>
-                          
-                          <div className="flex items-center gap-1.5 text-[11px] text-slate-500 mt-0.5">
-                            <span>{new Date(post.created_at).toLocaleDateString('es-PE', { day: 'numeric', month: 'short' })}</span>
-                            <span>·</span>
-                            <span className="flex items-center gap-1" title="Público en Comunidad Inthaly">
-                              <Globe size={11} className="text-slate-400" /> Público
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Botón de 3 puntos (Opciones) */}
-                      <div className="relative">
-                        <button
-                          type="button"
-                          onClick={() => setActivePostMenuId(activePostMenuId === post.id ? null : post.id)}
-                          className="w-8 h-8 rounded-full hover:bg-slate-100 flex items-center justify-center text-slate-500 transition-colors cursor-pointer"
-                        >
-                          <MoreHorizontal size={18} />
-                        </button>
-
-                        {activePostMenuId === post.id && (
-                          <div className="absolute right-0 mt-1 w-56 bg-white rounded-2xl shadow-xl border border-slate-200/90 py-1.5 z-40 animate-in fade-in duration-100">
-                            <button
-                              type="button"
-                              onClick={() => handleToggleSave(post.id)}
-                              className="w-full flex items-center gap-2.5 px-4 py-2.5 text-xs font-bold text-slate-700 hover:bg-slate-50 transition-colors text-left"
-                            >
-                              <Bookmark size={15} className={isSaved ? 'text-amber-500 fill-amber-500' : 'text-slate-500'} />
-                              <span>{isSaved ? 'Remover de guardados' : 'Guardar publicación'}</span>
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                navigator.clipboard.writeText(window.location.href)
-                                toast.success('Enlace de la publicación copiado')
-                                setActivePostMenuId(null)
-                              }}
-                              className="w-full flex items-center gap-2.5 px-4 py-2.5 text-xs font-bold text-slate-700 hover:bg-slate-50 transition-colors text-left"
-                            >
-                              <Share2 size={15} className="text-slate-500" />
-                              <span>Copiar enlace al portapapeles</span>
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Contenido Textual del Post */}
-                    <div className="px-4 py-2">
-                      <p className="text-xs sm:text-sm text-slate-900 leading-relaxed whitespace-pre-line font-normal">
-                        {post.content}
-                      </p>
-
-                      {/* Etiquetas de especialidad */}
-                      {post.tags && post.tags.length > 0 && (
-                        <div className="flex flex-wrap gap-1.5 mt-3">
-                          {post.tags.map(t => (
-                            <span 
-                              key={t}
-                              className="text-[11px] font-bold text-blue-600 bg-blue-50/80 px-2.5 py-0.5 rounded-full border border-blue-100"
-                            >
-                              {t}
-                            </span>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Imagen / Evidencia multimedia si existe */}
-                    {post.media_urls && post.media_urls.length > 0 && (
-                      <div className="mt-2 w-full max-h-96 bg-slate-900 overflow-hidden flex items-center justify-center">
-                        <img 
-                          src={post.media_urls[0]} 
-                          alt="Evidencia técnica" 
-                          className="w-full h-auto object-cover max-h-96"
-                        />
-                      </div>
-                    )}
-
-                    {/* Barra de Estadísticas (Contadores) */}
-                    <div className="px-4 py-2 flex items-center justify-between text-[11px] text-slate-500 border-b border-slate-100">
-                      <div className="flex items-center gap-1.5">
-                        <span className="w-4.5 h-4.5 rounded-full bg-blue-600 text-white flex items-center justify-center text-[9px]">
-                          👍
-                        </span>
-                        <span className="font-semibold text-slate-700">{post.likes_count}</span>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <span>{post.comments_count + postCommentsList.length} comentarios</span>
-                        <span>{post.shares_count || 1} veces compartido</span>
-                      </div>
-                    </div>
-
-                    {/* Barra de Acciones Estilo Facebook Web (Me sirve / Comentar / Compartir / Guardar) */}
-                    <div className="px-2 py-1 flex items-center justify-between">
-                      <button
-                        type="button"
-                        onClick={() => handleToggleReaction(post.id, 'helpful')}
-                        className={`flex-1 py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-colors cursor-pointer ${
-                          hasReacted 
-                            ? 'text-blue-600 bg-blue-50/70 font-black' 
-                            : 'text-slate-600 hover:bg-[#f0f2f5]'
-                        }`}
-                      >
-                        <ThumbsUp size={16} className={hasReacted ? 'fill-blue-600' : ''} />
-                        <span>Me sirve</span>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => setActiveCommentPostId(activeCommentPostId === post.id ? null : post.id)}
-                        className="flex-1 py-2 rounded-xl text-xs font-bold text-slate-600 hover:bg-[#f0f2f5] flex items-center justify-center gap-2 transition-colors cursor-pointer"
-                      >
-                        <MessageSquare size={16} />
-                        <span>Comentar</span>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => {
-                          toast.success('Publicación compartida en tu red')
-                        }}
-                        className="flex-1 py-2 rounded-xl text-xs font-bold text-slate-600 hover:bg-[#f0f2f5] flex items-center justify-center gap-2 transition-colors cursor-pointer"
-                      >
-                        <Share2 size={16} />
-                        <span>Compartir</span>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => handleToggleSave(post.id)}
-                        className={`flex-1 py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-colors cursor-pointer ${
-                          isSaved 
-                            ? 'text-amber-600 bg-amber-50/70 font-black' 
-                            : 'text-slate-600 hover:bg-[#f0f2f5]'
-                        }`}
-                      >
-                        <Bookmark size={16} className={isSaved ? 'fill-amber-600' : ''} />
-                        <span>{isSaved ? 'Guardado' : 'Guardar'}</span>
-                      </button>
-                    </div>
-
-                    {/* Hilo de Comentarios Desplegable */}
-                    {(activeCommentPostId === post.id || postCommentsList.length > 0) && (
-                      <div className="px-4 pt-2 pb-4 bg-slate-50/50 border-t border-slate-100 space-y-3">
-                        
-                        {/* Lista de comentarios existentes */}
-                        {postCommentsList.map(comm => (
-                          <div key={comm.id} className="flex items-start gap-2.5">
-                            <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-bold text-xs shrink-0">
-                              {comm.author.substring(0, 2).toUpperCase()}
-                            </div>
-                            <div className="bg-[#f0f2f5] rounded-2xl px-3.5 py-2 max-w-[85%]">
-                              <span className="text-xs font-black text-slate-900 block">{comm.author}</span>
-                              <p className="text-xs text-slate-800 mt-0.5">{comm.content}</p>
-                              <span className="text-[10px] text-slate-400 mt-1 block">{comm.time}</span>
-                            </div>
-                          </div>
-                        ))}
-
-                        {/* Input de respuesta rápida */}
-                        <div className="flex items-center gap-2 pt-1">
-                          <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-blue-700 to-indigo-600 text-white flex items-center justify-center font-black text-[10px] shrink-0">
-                            CM
-                          </div>
-                          <div className="flex-1 flex items-center bg-[#f0f2f5] rounded-full px-3 py-1.5 focus-within:ring-2 focus-within:ring-blue-500">
-                            <input
-                              type="text"
-                              placeholder="Escribe un comentario técnico o recomendación..."
-                              value={commentInputs[post.id] || ''}
-                              onChange={(e) => setCommentInputs({ ...commentInputs, [post.id]: e.target.value })}
-                              onKeyDown={(e) => {
-                                if (e.key === 'Enter') {
-                                  e.preventDefault()
-                                  handleAddComment(post.id)
-                                }
-                              }}
-                              className="w-full bg-transparent text-xs text-slate-800 placeholder-slate-400 focus:outline-none"
-                            />
-                            <button
-                              type="button"
-                              onClick={() => handleAddComment(post.id)}
-                              className="text-blue-600 hover:text-blue-800 p-1 cursor-pointer"
-                              title="Publicar comentario"
-                            >
-                              <Send size={14} />
-                            </button>
-                          </div>
-                        </div>
-
-                      </div>
-                    )}
-
-                  </article>
-                )
-              })
-            )}
-          </div>
-        </main>
-
-        {/* ========================================================================= */}
-        {/* COLUMNA DERECHA: CONEXIONES SUGERIDAS + GRUPOS + CONTACTOS EN LÍNEA (3)   */}
-        {/* ========================================================================= */}
-        <aside className="hidden lg:block lg:col-span-3 space-y-4 select-none">
-          <div className="sticky top-18 space-y-4">
+          <div className="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200/90 shadow-2xs space-y-3">
+            <h3 className="text-sm font-black text-slate-900 leading-snug">
+              ¿Qué conocimiento, experiencia u oportunidad quieres compartir?
+            </h3>
             
-            {/* Widget: Colegas Sugeridos (Estilo "Personas que quizás conozcas / Solicitudes" de Facebook) */}
-            <div className="bg-white rounded-2xl p-4 border border-slate-200/90 shadow-2xs space-y-3">
-              <div className="flex items-center justify-between pb-1 border-b border-slate-100">
-                <h4 className="text-xs font-black text-slate-900 uppercase tracking-wider">
-                  Colegas sugeridos
-                </h4>
-                <span className="text-[10px] font-bold text-blue-600">Especialidad Común</span>
+            <div 
+              onClick={() => {
+                setComposerMode('general')
+                setIsComposerOpen(true)
+              }}
+              className="w-full bg-slate-50 hover:bg-slate-100/80 border border-slate-200/80 rounded-xl p-3 text-xs text-slate-500 cursor-pointer transition-colors"
+            >
+              Escribe un aporte técnico, consulta operativa sobre minería o comparte una buena práctica industrial...
+            </div>
+
+            {/* Opciones directas: Publicación profesional · Imagen · Documento · Especialidad */}
+            <div className="pt-2 border-t border-slate-100 flex items-center justify-between flex-wrap gap-2 text-xs font-bold text-slate-600">
+              <button
+                type="button"
+                onClick={() => {
+                  setComposerMode('general')
+                  setIsComposerOpen(true)
+                }}
+                className="inline-flex items-center gap-1.5 py-1.5 px-2.5 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer text-blue-700"
+              >
+                <FileText size={15} />
+                <span>Publicación profesional</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setComposerMode('image')
+                  setIsComposerOpen(true)
+                }}
+                className="inline-flex items-center gap-1.5 py-1.5 px-2.5 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer text-slate-700"
+              >
+                <ImageIcon size={15} className="text-emerald-600" />
+                <span>Imagen</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setComposerMode('doc')
+                  setIsComposerOpen(true)
+                }}
+                className="inline-flex items-center gap-1.5 py-1.5 px-2.5 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer text-slate-700"
+              >
+                <Award size={15} className="text-amber-600" />
+                <span>Documento</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setComposerMode('specialty')
+                  setIsComposerOpen(true)
+                }}
+                className="inline-flex items-center gap-1.5 py-1.5 px-2.5 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer text-slate-700"
+              >
+                <Tag size={15} className="text-indigo-600" />
+                <span>Especialidad</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Banner de filtro activo (si aplica) */}
+          {selectedTagFilter && (
+            <div className="bg-blue-50 border border-blue-200 text-blue-800 px-4 py-2 rounded-xl text-xs flex items-center justify-between">
+              <span>Filtrando por tema: <strong>{selectedTagFilter}</strong></span>
+              <button 
+                type="button" 
+                onClick={() => setSelectedTagFilter(null)}
+                className="text-xs font-bold underline hover:text-blue-950 cursor-pointer"
+              >
+                Quitar filtro
+              </button>
+            </div>
+          )}
+
+          {/* ======================================================================= */}
+          {/* 2. VISTA ESPECÍFICA: MI RED PROFESIONAL                                 */}
+          {/* ======================================================================= */}
+          {activeNav === 'red' && (
+            <div className="bg-white rounded-2xl border border-slate-200/90 p-5 shadow-2xs space-y-4">
+              <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+                <div>
+                  <h3 className="text-sm font-black text-slate-900">Tu Red Profesional Industrial</h3>
+                  <p className="text-xs text-slate-500">Conecta con especialistas con especialidad y región afín.</p>
+                </div>
+                <span className="text-xs font-bold text-blue-600 font-mono">
+                  {recommendedProfiles.length} sugerencias
+                </span>
               </div>
 
-              <div className="space-y-3">
-                {recommendedProfiles.slice(0, 2).map((rec) => {
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {recommendedProfiles.map(rec => {
                   const prof = rec.candidateProfile
+                  const isSent = sentConnectionIds.has(prof.id)
                   return (
-                    <div key={prof.id} className="p-2.5 rounded-xl bg-slate-50/80 border border-slate-100 space-y-2">
-                      <div className="flex items-start gap-2.5">
-                        <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-blue-600 to-indigo-600 text-white flex items-center justify-center font-bold text-xs shrink-0">
+                    <div key={prof.id} className="p-3.5 rounded-xl border border-slate-200/80 bg-slate-50/60 space-y-2.5">
+                      <div className="flex items-start gap-3">
+                        <div className="w-10 h-10 rounded-full bg-blue-700 text-white flex items-center justify-center font-black text-xs shrink-0">
                           {prof.display_name.substring(0, 2).toUpperCase()}
                         </div>
                         <div className="overflow-hidden">
-                          <h5 className="text-xs font-black text-slate-900 truncate">{prof.display_name}</h5>
+                          <h4 className="text-xs font-black text-slate-900 truncate">{prof.display_name}</h4>
                           <p className="text-[11px] text-slate-500 truncate">{prof.headline}</p>
-                          <span className="text-[10px] text-emerald-700 font-bold bg-emerald-50 px-1.5 py-0.5 rounded mt-1 inline-block">
-                            Coincidencia en {prof.specialties[0] || 'Minería e Industria'}
+                          <span className="text-[10px] text-blue-700 font-bold bg-blue-50 px-1.5 py-0.5 rounded mt-1 inline-block">
+                            {prof.specialties[0] || 'Minería'}
                           </span>
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-2 pt-1">
+                      <div className="pt-1 flex items-center gap-2">
                         <button
                           type="button"
-                          onClick={() => {
-                            toast.success(`Solicitud de conexión enviada a ${prof.display_name}`)
-                          }}
-                          className="flex-1 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-lg transition-colors cursor-pointer text-center"
+                          onClick={() => handleSendConnection(prof.id, prof.display_name)}
+                          disabled={isSent}
+                          className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-colors cursor-pointer text-center ${
+                            isSent 
+                              ? 'bg-slate-200 text-slate-500 cursor-default'
+                              : 'bg-blue-600 hover:bg-blue-700 text-white'
+                          }`}
                         >
-                          Conectar
+                          {isSent ? 'Solicitud enviada' : 'Conectar'}
                         </button>
                         <button
                           type="button"
                           onClick={() => {
-                            toast.info('Sugerencia descartada')
+                            setActiveChatContact(prof)
+                            setIsChatMinimized(false)
                           }}
-                          className="py-1.5 px-3 bg-[#e4e6eb] hover:bg-[#d8dadf] text-slate-700 text-xs font-bold rounded-lg transition-colors cursor-pointer"
+                          className="py-1.5 px-3 bg-white border border-slate-200 text-slate-700 hover:bg-slate-100 text-xs font-bold rounded-lg transition-colors cursor-pointer"
                         >
-                          Descartar
+                          Mensaje
                         </button>
                       </div>
                     </div>
@@ -994,14 +685,390 @@ export default function CommunityFeedClient({
                 })}
               </div>
             </div>
+          )}
 
-            {/* Widget: Grupos Populares */}
-            <div className="bg-white rounded-2xl p-4 border border-slate-200/90 shadow-2xs space-y-2.5">
-              <div className="flex items-center justify-between pb-1 border-b border-slate-100">
-                <h4 className="text-xs font-black text-slate-900 uppercase tracking-wider">
-                  Grupos de interés
-                </h4>
-                <Link href="/comunidad/grupos" className="text-[11px] font-bold text-blue-600 hover:underline">
+          {/* ======================================================================= */}
+          {/* 3. VISTA ESPECÍFICA: TABLERO DE OPORTUNIDADES PROFESIONALES              */}
+          {/* ======================================================================= */}
+          {activeNav === 'oportunidades' && (
+            <div className="space-y-3">
+              <div className="bg-white rounded-2xl border border-slate-200/90 p-5 shadow-2xs space-y-2">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-sm font-black text-slate-900">Oportunidades y Convocatorias Laborales</h3>
+                    <p className="text-xs text-slate-500">
+                      Requerimientos técnicos reales de empresas contratistas y mineras en el ecosistema Inthaly.
+                    </p>
+                  </div>
+                  <span className="text-[10px] font-extrabold uppercase bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full border border-blue-200">
+                    Fase 4 Activa
+                  </span>
+                </div>
+              </div>
+
+              {industrialOpportunities.map(opp => {
+                const isApplied = appliedOpportunities.has(opp.id)
+                return (
+                  <div key={opp.id} className="bg-white rounded-2xl border border-slate-200/90 p-5 shadow-2xs space-y-3">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <span className="text-[10px] font-black uppercase text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-100">
+                          {opp.specialty}
+                        </span>
+                        <h4 className="text-sm font-black text-slate-900 mt-1">{opp.title}</h4>
+                        <div className="flex items-center gap-2 text-xs text-slate-500 mt-0.5">
+                          <span className="font-bold text-slate-700">{opp.company}</span>
+                          <span>·</span>
+                          <span className="flex items-center gap-1"><MapPin size={11} /> {opp.location}</span>
+                        </div>
+                      </div>
+                      <span className="text-[11px] font-bold text-slate-400 shrink-0">{opp.publishedAt}</span>
+                    </div>
+
+                    <p className="text-xs text-slate-700 leading-relaxed">
+                      {opp.description}
+                    </p>
+
+                    <div className="pt-2 border-t border-slate-100 flex items-center justify-between">
+                      <span className="text-xs font-semibold text-slate-500">Modalidad: {opp.type}</span>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedOpportunity(opp)}
+                        className={`px-4 py-1.5 text-xs font-bold rounded-xl transition-colors cursor-pointer ${
+                          isApplied 
+                            ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 font-extrabold'
+                            : 'bg-blue-600 hover:bg-blue-700 text-white shadow-xs'
+                        }`}
+                      >
+                        {isApplied ? 'Postulado ✓' : 'Ver requisitos y postular'}
+                      </button>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+
+          {/* ======================================================================= */}
+          {/* 4. FEED DE PUBLICACIONES PROFESIONALES                                  */}
+          {/* Estructura recomendada: media_1794887984001_d6397a3c.png                  */}
+          {/* ======================================================================= */}
+          {(activeNav === 'inicio' || activeNav === 'explorar' || activeNav === 'guardados') && (
+            <div className="space-y-4">
+              {displayedPosts.length === 0 ? (
+                <div className="bg-white rounded-2xl p-8 border border-slate-200/90 text-center space-y-2">
+                  <Bookmark size={32} className="mx-auto text-slate-300" />
+                  <h3 className="text-sm font-bold text-slate-700">No hay publicaciones para este criterio</h3>
+                  <p className="text-xs text-slate-400">Selecciona "Inicio" para ver toda la actividad técnica.</p>
+                </div>
+              ) : (
+                displayedPosts.map((post) => {
+                  const author = post.author || currentUser || { display_name: 'Colega Inthaly', headline: 'Profesional Industrial' }
+                  const isSaved = savedPosts.has(post.id)
+                  const hasReacted = !!post.user_reaction
+                  const postCommentsList = localComments[post.id] || []
+
+                  return (
+                    <article 
+                      key={post.id}
+                      className="bg-white rounded-2xl border border-slate-200/90 shadow-2xs overflow-hidden transition-all"
+                    >
+                      {/* Cabecera Estructurada: Publicación Profesional */}
+                      <div className="p-4 sm:p-5 pb-2">
+                        
+                        {/* Tag de Categoría Profesional */}
+                        <div className="flex items-center justify-between pb-2">
+                          <span className="text-[10px] font-black uppercase text-blue-700 bg-blue-50/80 px-2.5 py-0.5 rounded-md border border-blue-200/60 tracking-wider">
+                            Publicación profesional
+                          </span>
+                          
+                          {/* Menú de Opciones (3 puntos) */}
+                          <div className="relative">
+                            <button
+                              type="button"
+                              onClick={() => setActivePostMenuId(activePostMenuId === post.id ? null : post.id)}
+                              className="w-7 h-7 rounded-full hover:bg-slate-100 flex items-center justify-center text-slate-400 transition-colors cursor-pointer"
+                            >
+                              <MoreHorizontal size={16} />
+                            </button>
+
+                            {activePostMenuId === post.id && (
+                              <div className="absolute right-0 mt-1 w-52 bg-white rounded-xl shadow-xl border border-slate-200/90 py-1.5 z-40">
+                                <button
+                                  type="button"
+                                  onClick={() => handleToggleSave(post.id)}
+                                  className="w-full flex items-center gap-2 px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 transition-colors text-left"
+                                >
+                                  <Bookmark size={14} className={isSaved ? 'text-blue-600 fill-blue-600' : 'text-slate-400'} />
+                                  <span>{isSaved ? 'Remover de guardados' : 'Guardar publicación'}</span>
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    navigator.clipboard.writeText(window.location.href)
+                                    toast.success('Enlace de la publicación copiado')
+                                    setActivePostMenuId(null)
+                                  }}
+                                  className="w-full flex items-center gap-2 px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 transition-colors text-left"
+                                >
+                                  <Share2 size={14} className="text-slate-400" />
+                                  <span>Copiar enlace</span>
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Metadatos: Autor · Especialidad · Empresa o Grupo */}
+                        <div className="flex items-start gap-3 mt-1">
+                          <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-blue-700 to-indigo-600 text-white flex items-center justify-center font-black text-xs shrink-0 shadow-2xs">
+                            {author.display_name.substring(0, 2).toUpperCase()}
+                          </div>
+                          <div className="overflow-hidden">
+                            <h4 className="font-black text-xs sm:text-sm text-slate-900 leading-tight">
+                              {author.display_name}
+                            </h4>
+                            <p className="text-[11px] text-slate-500 mt-0.5 truncate">
+                              <span>{author.headline || 'Especialista en Minería e Industria'}</span>
+                              {post.group && (
+                                <>
+                                  <span className="mx-1">·</span>
+                                  <span className="text-blue-700 font-bold">{post.group.name}</span>
+                                </>
+                              )}
+                            </p>
+                            <span className="text-[10px] text-slate-400 block mt-0.5">
+                              {new Date(post.created_at).toLocaleDateString('es-PE', { day: 'numeric', month: 'short' })} · Comunidad Inthaly
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Contenido Técnico */}
+                      <div className="px-4 sm:px-5 py-2">
+                        <p className="text-xs sm:text-sm text-slate-800 leading-relaxed whitespace-pre-line font-normal">
+                          {post.content}
+                        </p>
+
+                        {/* Etiquetas Técnicas */}
+                        {post.tags && post.tags.length > 0 && (
+                          <div className="flex flex-wrap gap-1.5 mt-3">
+                            {post.tags.map(t => (
+                              <button 
+                                key={t}
+                                type="button"
+                                onClick={() => setSelectedTagFilter(t)}
+                                className="text-[11px] font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-md hover:bg-blue-100 transition-colors cursor-pointer"
+                              >
+                                {t}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Evidencia Multimedia si Existe */}
+                      {post.media_urls && post.media_urls.length > 0 && (
+                        <div className="mt-2 w-full max-h-96 bg-slate-900 overflow-hidden flex items-center justify-center">
+                          <img 
+                            src={post.media_urls[0]} 
+                            alt="Esquema técnico" 
+                            className="w-full h-auto object-cover max-h-96"
+                          />
+                        </div>
+                      )}
+
+                      {/* Estadísticas de Interacción Profesional */}
+                      <div className="px-4 sm:px-5 py-2 flex items-center justify-between text-[11px] text-slate-500 border-b border-slate-100">
+                        <div className="flex items-center gap-1.5">
+                          <span className="w-4 h-4 rounded-full bg-blue-600 text-white flex items-center justify-center text-[8px] font-bold">
+                            ✓
+                          </span>
+                          <span className="font-semibold text-slate-700">
+                            {post.likes_count} especialistas encontraron esto útil
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <span>{post.comments_count + postCommentsList.length} comentarios</span>
+                          <span>{post.shares_count || 1} compartidos</span>
+                        </div>
+                      </div>
+
+                      {/* Acciones Obligatorias: Me sirve · Comentar · Compartir · Guardar */}
+                      <div className="px-3 py-1 flex items-center justify-between text-xs font-bold">
+                        <button
+                          type="button"
+                          onClick={() => handleToggleReaction(post.id, 'helpful')}
+                          className={`flex-1 py-2 rounded-xl flex items-center justify-center gap-1.5 transition-colors cursor-pointer ${
+                            hasReacted 
+                              ? 'text-blue-700 bg-blue-50/80 font-black' 
+                              : 'text-slate-600 hover:bg-slate-100'
+                          }`}
+                        >
+                          <ThumbsUp size={15} className={hasReacted ? 'fill-blue-700' : ''} />
+                          <span>Me sirve</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => setActiveCommentPostId(activeCommentPostId === post.id ? null : post.id)}
+                          className="flex-1 py-2 rounded-xl text-slate-600 hover:bg-slate-100 flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                        >
+                          <MessageSquare size={15} />
+                          <span>Comentar</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            navigator.clipboard.writeText(window.location.href)
+                            toast.success('Publicación copiada al portapapeles para compartir')
+                          }}
+                          className="flex-1 py-2 rounded-xl text-slate-600 hover:bg-slate-100 flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                        >
+                          <Share2 size={15} />
+                          <span>Compartir</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => handleToggleSave(post.id)}
+                          className={`flex-1 py-2 rounded-xl flex items-center justify-center gap-1.5 transition-colors cursor-pointer ${
+                            isSaved 
+                              ? 'text-blue-700 bg-blue-50/80 font-black' 
+                              : 'text-slate-600 hover:bg-slate-100'
+                          }`}
+                        >
+                          <Bookmark size={15} className={isSaved ? 'fill-blue-700' : ''} />
+                          <span>{isSaved ? 'Guardado' : 'Guardar'}</span>
+                        </button>
+                      </div>
+
+                      {/* Hilo de Comentarios Técnico */}
+                      {(activeCommentPostId === post.id || postCommentsList.length > 0) && (
+                        <div className="px-4 sm:px-5 pt-3 pb-4 bg-slate-50/60 border-t border-slate-100 space-y-3">
+                          
+                          {/* Lista de comentarios */}
+                          {postCommentsList.map(comm => (
+                            <div key={comm.id} className="flex items-start gap-2.5">
+                              <div className="w-7 h-7 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-bold text-[10px] shrink-0">
+                                {comm.author.substring(0, 2).toUpperCase()}
+                              </div>
+                              <div className="bg-white rounded-xl p-2.5 border border-slate-200/80 max-w-[90%] shadow-2xs">
+                                <span className="text-xs font-black text-slate-900 block">{comm.author}</span>
+                                <p className="text-xs text-slate-700 mt-0.5">{comm.content}</p>
+                                <span className="text-[10px] text-slate-400 mt-1 block">{comm.time}</span>
+                              </div>
+                            </div>
+                          ))}
+
+                          {/* Input de respuesta */}
+                          <div className="flex items-center gap-2 pt-1">
+                            <div className="w-7 h-7 rounded-full bg-blue-700 text-white flex items-center justify-center font-bold text-[9px] shrink-0">
+                              CM
+                            </div>
+                            <div className="flex-1 flex items-center bg-white border border-slate-200 rounded-xl px-3 py-1.5 focus-within:ring-2 focus-within:ring-blue-500">
+                              <input
+                                type="text"
+                                placeholder="Escribe tu consulta o aporte técnico profesional..."
+                                value={commentInputs[post.id] || ''}
+                                onChange={(e) => setCommentInputs({ ...commentInputs, [post.id]: e.target.value })}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') {
+                                    e.preventDefault()
+                                    handleAddComment(post.id)
+                                  }
+                                }}
+                                className="w-full bg-transparent text-xs text-slate-800 placeholder-slate-400 focus:outline-none"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => handleAddComment(post.id)}
+                                className="text-blue-600 hover:text-blue-800 p-1 cursor-pointer"
+                                title="Publicar comentario"
+                              >
+                                <Send size={13} />
+                              </button>
+                            </div>
+                          </div>
+
+                        </div>
+                      )}
+
+                    </article>
+                  )
+                })
+              )}
+            </div>
+          )}
+
+        </main>
+
+        {/* ========================================================================= */}
+        {/* COLUMNA 3: DESCUBRE (3 cols)                                               */}
+        {/* Estructura recomendada: media_1794887984001_d6397a3c.png                  */}
+        {/* ========================================================================= */}
+        <aside className="hidden lg:block lg:col-span-3 space-y-4 select-none">
+          <div className="sticky top-20 bg-white p-4 rounded-2xl border border-slate-200/90 shadow-2xs space-y-4">
+            
+            {/* Título de Sección */}
+            <div className="pb-2 border-b border-slate-100 flex items-center justify-between">
+              <h2 className="text-sm font-black text-slate-900 tracking-tight">
+                Descubre
+              </h2>
+              <span className="text-[10px] text-blue-600 font-bold">Industrial</span>
+            </div>
+
+            {/* 1. Personas recomendadas */}
+            <div className="space-y-2.5">
+              <h3 className="text-xs font-black text-slate-800 uppercase tracking-wider">
+                Personas recomendadas
+              </h3>
+
+              <div className="space-y-2">
+                {recommendedProfiles.slice(0, 2).map(rec => {
+                  const prof = rec.candidateProfile
+                  const isSent = sentConnectionIds.has(prof.id)
+                  return (
+                    <div key={prof.id} className="p-2.5 rounded-xl bg-slate-50 border border-slate-100 space-y-2">
+                      <div className="flex items-start gap-2.5">
+                        <div className="w-8 h-8 rounded-full bg-blue-700 text-white flex items-center justify-center font-bold text-xs shrink-0">
+                          {prof.display_name.substring(0, 2).toUpperCase()}
+                        </div>
+                        <div className="overflow-hidden">
+                          <h4 className="text-xs font-bold text-slate-900 truncate">{prof.display_name}</h4>
+                          <span className="text-[11px] text-slate-500 block truncate">{prof.headline}</span>
+                          <span className="text-[9px] font-bold text-emerald-700 bg-emerald-50 px-1 py-0.2 rounded mt-0.5 inline-block">
+                            {prof.specialties[0]}
+                          </span>
+                        </div>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => handleSendConnection(prof.id, prof.display_name)}
+                        disabled={isSent}
+                        className={`w-full py-1 text-xs font-bold rounded-lg transition-colors cursor-pointer text-center ${
+                          isSent
+                            ? 'bg-slate-200 text-slate-500 cursor-default'
+                            : 'bg-blue-600 hover:bg-blue-700 text-white'
+                        }`}
+                      >
+                        {isSent ? 'Solicitud enviada' : 'Conectar'}
+                      </button>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+
+            {/* 2. Grupos relevantes */}
+            <div className="pt-3 border-t border-slate-100 space-y-2.5">
+              <div className="flex items-center justify-between">
+                <h3 className="text-xs font-black text-slate-800 uppercase tracking-wider">
+                  Grupos relevantes
+                </h3>
+                <Link href="/comunidad/grupos" className="text-[10px] font-bold text-blue-600 hover:underline">
                   Ver todos
                 </Link>
               </div>
@@ -1010,14 +1077,14 @@ export default function CommunityFeedClient({
                 {groups.slice(0, 3).map(grp => (
                   <div key={grp.id} className="flex items-center justify-between gap-2 py-1">
                     <div className="overflow-hidden">
-                      <h5 className="text-xs font-bold text-slate-800 truncate">{grp.name}</h5>
+                      <h4 className="text-xs font-bold text-slate-800 truncate">{grp.name}</h4>
                       <span className="text-[10px] text-slate-400 font-medium">
                         {grp.members_count} especialistas
                       </span>
                     </div>
                     <Link
                       href="/comunidad/grupos"
-                      className="px-2.5 py-1 text-[11px] font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors shrink-0"
+                      className="px-2 py-0.5 text-[10px] font-bold text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-md transition-colors shrink-0"
                     >
                       Unirse
                     </Link>
@@ -1026,13 +1093,72 @@ export default function CommunityFeedClient({
               </div>
             </div>
 
-            {/* Widget: Contactos en Línea (Messenger Style) */}
-            <div className="bg-white rounded-2xl p-4 border border-slate-200/90 shadow-2xs space-y-2">
-              <div className="flex items-center justify-between pb-1 border-b border-slate-100">
-                <h4 className="text-xs font-black text-slate-900 uppercase tracking-wider">
+            {/* 3. Oportunidades destacadas */}
+            <div className="pt-3 border-t border-slate-100 space-y-2.5">
+              <div className="flex items-center justify-between">
+                <h3 className="text-xs font-black text-slate-800 uppercase tracking-wider">
+                  Oportunidades
+                </h3>
+                <button
+                  type="button"
+                  onClick={() => setActiveNav('oportunidades')}
+                  className="text-[10px] font-bold text-blue-600 hover:underline cursor-pointer"
+                >
+                  Ver bolsa
+                </button>
+              </div>
+
+              <div className="space-y-2">
+                {industrialOpportunities.slice(0, 2).map(opp => (
+                  <div 
+                    key={opp.id} 
+                    onClick={() => setSelectedOpportunity(opp)}
+                    className="p-2 rounded-xl bg-slate-50 hover:bg-blue-50/60 border border-slate-100 cursor-pointer transition-colors space-y-1"
+                  >
+                    <h5 className="text-xs font-bold text-slate-900 line-clamp-1">{opp.title}</h5>
+                    <div className="flex items-center justify-between text-[10px] text-slate-500">
+                      <span className="font-medium truncate">{opp.company}</span>
+                      <span className="text-blue-600 font-bold">Postular →</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* 4. Temas de interés */}
+            <div className="pt-3 border-t border-slate-100 space-y-2">
+              <h3 className="text-xs font-black text-slate-800 uppercase tracking-wider">
+                Temas de interés
+              </h3>
+
+              <div className="flex flex-wrap gap-1.5">
+                {availableTags.map(tag => (
+                  <button
+                    key={tag}
+                    type="button"
+                    onClick={() => {
+                      setSelectedTagFilter(selectedTagFilter === tag ? null : tag)
+                      setActiveNav('inicio')
+                    }}
+                    className={`text-[10px] font-bold px-2.5 py-1 rounded-full transition-colors cursor-pointer ${
+                      selectedTagFilter === tag
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                    }`}
+                  >
+                    {tag}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Contactos Activos en Línea */}
+            <div className="pt-3 border-t border-slate-100 space-y-2">
+              <div className="flex items-center justify-between">
+                <h3 className="text-xs font-black text-slate-800 uppercase tracking-wider">
                   Contactos activos
-                </h4>
-                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                </h3>
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
               </div>
 
               <div className="space-y-1">
@@ -1043,22 +1169,15 @@ export default function CommunityFeedClient({
                       setActiveChatContact(c)
                       setIsChatMinimized(false)
                     }}
-                    className="flex items-center gap-3 p-2 rounded-xl hover:bg-[#f0f2f5] transition-colors cursor-pointer group"
+                    className="flex items-center gap-2 p-1.5 rounded-xl hover:bg-slate-100 transition-colors cursor-pointer"
                   >
                     <div className="relative">
-                      <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-slate-700 to-slate-900 text-white flex items-center justify-center font-bold text-xs">
+                      <div className="w-6 h-6 rounded-full bg-slate-800 text-white flex items-center justify-center font-bold text-[9px]">
                         {c.display_name.substring(0, 2).toUpperCase()}
                       </div>
-                      <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-emerald-500 ring-2 ring-white"></span>
+                      <span className="absolute bottom-0 right-0 w-1.5 h-1.5 rounded-full bg-emerald-500 ring-1 ring-white" />
                     </div>
-                    <div className="overflow-hidden">
-                      <span className="text-xs font-bold text-slate-800 group-hover:text-blue-600 transition-colors block truncate">
-                        {c.display_name}
-                      </span>
-                      <span className="text-[10px] text-slate-400 block truncate">
-                        {c.headline}
-                      </span>
-                    </div>
+                    <span className="text-xs font-semibold text-slate-800 truncate">{c.display_name}</span>
                   </div>
                 ))}
               </div>
@@ -1070,90 +1189,81 @@ export default function CommunityFeedClient({
       </div>
 
       {/* ========================================================================= */}
-      {/* MODAL 1: COMPOSITOR COMPLETO DE PUBLICACIÓN TÉCNICA                        */}
+      {/* MODAL 1: COMPOSITOR DE PUBLICACIÓN PROFESIONAL                             */}
       {/* ========================================================================= */}
       {isComposerOpen && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 animate-in fade-in duration-150">
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-3 animate-in fade-in duration-150">
           <div className="bg-white rounded-2xl max-w-lg w-full border border-slate-200 shadow-2xl overflow-hidden animate-in zoom-in-95 duration-150">
             
-            {/* Modal Header */}
             <div className="px-5 py-3.5 border-b border-slate-100 flex items-center justify-between">
-              <h3 className="text-sm font-black text-slate-900 text-center flex-1">
-                Crear publicación técnica
+              <h3 className="text-sm font-black text-slate-900">
+                {composerMode === 'image' ? 'Adjuntar Imagen o Esquema Técnico' : 
+                 composerMode === 'doc' ? 'Compartir Documento o Ficha' : 
+                 'Crear publicación profesional'}
               </h3>
               <button
                 type="button"
                 onClick={() => setIsComposerOpen(false)}
-                className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-500 transition-colors cursor-pointer"
+                className="w-7 h-7 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-500 transition-colors cursor-pointer"
               >
-                <X size={18} />
+                <X size={16} />
               </button>
             </div>
 
-            {/* Modal Body */}
             <form onSubmit={handleCreatePost} className="p-5 space-y-4">
               
-              {/* Usuario e indicador de visibilidad */}
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-blue-700 to-indigo-600 text-white flex items-center justify-center font-black text-xs">
+                <div className="w-9 h-9 rounded-full bg-blue-700 text-white flex items-center justify-center font-black text-xs">
                   CM
                 </div>
                 <div>
                   <h4 className="text-xs font-black text-slate-900">
                     {currentUser?.display_name || 'Ing. Carlos Mendoza'}
                   </h4>
-                  <div className="flex items-center gap-1.5 mt-0.5">
-                    <span className="text-[10px] font-bold bg-slate-100 text-slate-600 px-2 py-0.5 rounded-md flex items-center gap-1">
-                      <Globe size={10} /> Comunidad Inthaly
-                    </span>
-                  </div>
+                  <span className="text-[10px] text-slate-500">Publicando en Red Profesional Inthaly</span>
                 </div>
               </div>
 
-              {/* Textarea amplia */}
               <textarea
                 rows={4}
                 value={postContent}
                 onChange={(e) => setPostContent(e.target.value)}
-                placeholder="¿Qué desafío operativo resolviste hoy? ¿Dudas sobre molienda, IPERC o motores diésel?"
+                placeholder="¿Qué conocimiento, experiencia u oportunidad quieres compartir?"
                 className="w-full bg-transparent text-sm text-slate-900 placeholder-slate-400 focus:outline-none resize-none leading-relaxed"
                 autoFocus
               />
 
-              {/* Input opcional de imagen/evidencia */}
               <div className="space-y-1">
                 <label className="text-[11px] font-bold text-slate-500 flex items-center gap-1">
-                  <ImageIcon size={13} /> Adjuntar URL de fotografía técnica o esquema (opcional)
+                  <ImageIcon size={13} /> URL de fotografía técnica o esquema (opcional)
                 </label>
                 <input
                   type="url"
-                  placeholder="https://ejemplo.com/foto-operacion.jpg"
+                  placeholder="https://ejemplo.com/esquema-operativo.jpg"
                   value={postImageUrl}
                   onChange={(e) => setPostImageUrl(e.target.value)}
                   className="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-800 placeholder-slate-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
 
-              {/* Selector de Grupo */}
               <div className="space-y-1">
                 <label className="text-[11px] font-bold text-slate-500 flex items-center gap-1">
-                  <Users size={13} /> Publicar en un grupo específico (opcional)
+                  <Building2 size={13} /> Publicar en un grupo de especialidad (opcional)
                 </label>
                 <select
                   value={selectedGroupId}
                   onChange={(e) => setSelectedGroupId(e.target.value)}
-                  className="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-800 focus:bg-white focus:outline-none"
                 >
-                  <option value="">Muro general de Comunidad Inthaly</option>
+                  <option value="">Muro principal de la comunidad</option>
                   {groups.map(g => (
                     <option key={g.id} value={g.id}>{g.name}</option>
                   ))}
                 </select>
               </div>
 
-              {/* Etiquetas Rápidas */}
               <div className="space-y-1.5">
-                <span className="text-[11px] font-bold text-slate-500">Etiqueta de especialidad</span>
+                <span className="text-[11px] font-bold text-slate-500">Especialidad</span>
                 <div className="flex flex-wrap gap-1.5">
                   {availableTags.map(tag => (
                     <button
@@ -1172,13 +1282,12 @@ export default function CommunityFeedClient({
                 </div>
               </div>
 
-              {/* Botón de Submit */}
               <button
                 type="submit"
                 disabled={isSubmitting || !postContent.trim()}
                 className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-bold text-xs rounded-xl shadow-xs transition-colors flex items-center justify-center gap-2 cursor-pointer"
               >
-                {isSubmitting ? 'Publicando...' : 'Publicar en Comunidad'}
+                {isSubmitting ? 'Publicando...' : 'Publicar Aporte Técnico'}
               </button>
 
             </form>
@@ -1188,143 +1297,86 @@ export default function CommunityFeedClient({
       )}
 
       {/* ========================================================================= */}
-      {/* MODAL 2: VISOR DE HISTORIA TÉCNICA (STORY VIEWER)                         */}
+      {/* MODAL 2: DETALLE DE OPORTUNIDAD LABORAL Y POSTULACIÓN                      */}
       {/* ========================================================================= */}
-      {activeStory && (
-        <div className="fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex items-center justify-center p-3 animate-in fade-in duration-150">
-          <div className="max-w-md w-full h-[620px] rounded-3xl overflow-hidden relative shadow-2xl flex flex-col justify-between p-5 text-white">
-            
-            {/* Background gradient */}
-            <div className={`absolute inset-0 bg-gradient-to-b ${activeStory.gradient || 'from-blue-800 to-slate-950'} -z-10`} />
-
-            {/* Top Bar: Barra de progreso + Autor */}
-            <div className="space-y-3">
-              <div className="w-full h-1 bg-white/30 rounded-full overflow-hidden">
-                <div className="h-full bg-white rounded-full animate-[progress_5s_linear]" />
+      {selectedOpportunity && (
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-3 animate-in fade-in duration-150">
+          <div className="bg-white rounded-2xl max-w-lg w-full border border-slate-200 shadow-2xl p-6 space-y-4">
+            <div className="flex items-start justify-between pb-3 border-b border-slate-100">
+              <div>
+                <span className="text-[10px] font-black uppercase text-blue-700 bg-blue-50 px-2.5 py-0.5 rounded border border-blue-200">
+                  {selectedOpportunity.specialty}
+                </span>
+                <h3 className="text-base font-black text-slate-900 mt-1">{selectedOpportunity.title}</h3>
+                <p className="text-xs text-slate-600 font-bold mt-0.5">
+                  {selectedOpportunity.company} · {selectedOpportunity.location}
+                </p>
               </div>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-9 h-9 rounded-full bg-white text-blue-800 flex items-center justify-center font-bold text-xs">
-                    {activeStory.author_name.substring(0, 2).toUpperCase()}
-                  </div>
-                  <div>
-                    <h4 className="text-xs font-bold leading-tight">{activeStory.author_name}</h4>
-                    <span className="text-[10px] text-white/70">{activeStory.author_specialty}</span>
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setActiveStory(null)}
-                  className="w-8 h-8 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center transition-colors cursor-pointer"
-                >
-                  <X size={18} />
-                </button>
-              </div>
-            </div>
-
-            {/* Center Content */}
-            <div className="my-auto text-center px-4 space-y-3">
-              <span className="text-xs font-extrabold uppercase tracking-widest text-blue-300 bg-white/10 px-3 py-1 rounded-full inline-block">
-                {activeStory.tag}
-              </span>
-              <h2 className="text-xl sm:text-2xl font-black leading-snug drop-shadow-md">
-                "{activeStory.title}"
-              </h2>
-            </div>
-
-            {/* Bottom: Respuesta rápida */}
-            <div className="flex items-center gap-2">
-              <input
-                type="text"
-                placeholder={`Responder a ${activeStory.author_name}...`}
-                className="flex-1 bg-white/20 placeholder-white/60 text-xs px-4 py-2.5 rounded-full border border-white/30 focus:outline-none focus:bg-white/30"
-              />
               <button
                 type="button"
-                onClick={() => {
-                  toast.success(`Respuesta enviada a ${activeStory.author_name}`)
-                  setActiveStory(null)
-                }}
-                className="w-10 h-10 rounded-full bg-blue-600 hover:bg-blue-700 flex items-center justify-center text-white transition-colors cursor-pointer shrink-0"
-              >
-                <Send size={16} />
-              </button>
-            </div>
-
-          </div>
-        </div>
-      )}
-
-      {/* ========================================================================= */}
-      {/* MODAL 3: CREAR NUEVA HISTORIA TÉCNICA                                     */}
-      {/* ========================================================================= */}
-      {isCreateStoryOpen && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 animate-in fade-in duration-150">
-          <div className="bg-white rounded-2xl max-w-md w-full border border-slate-200 shadow-2xl p-5 space-y-4">
-            <div className="flex items-center justify-between pb-2 border-b border-slate-100">
-              <h3 className="text-sm font-black text-slate-900">Crear Historia / Destacado Técnico</h3>
-              <button
-                type="button"
-                onClick={() => setIsCreateStoryOpen(false)}
+                onClick={() => setSelectedOpportunity(null)}
                 className="w-7 h-7 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-500 cursor-pointer"
               >
                 <X size={16} />
               </button>
             </div>
 
-            <form onSubmit={handleCreateStory} className="space-y-3">
-              <div className="space-y-1">
-                <label className="text-xs font-bold text-slate-700">Título o Aporte del Día</label>
-                <textarea
-                  rows={3}
-                  value={newStoryTitle}
-                  onChange={(e) => setNewStoryTitle(e.target.value)}
-                  placeholder="Ej: Calibración de presiones en bomba de lodos o hallazgo en talud..."
-                  className="w-full text-xs p-3 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  required
-                />
+            <div className="space-y-3 text-xs text-slate-700">
+              <div>
+                <h4 className="font-bold text-slate-900">Descripción de la posición:</h4>
+                <p className="mt-1 leading-relaxed">{selectedOpportunity.description}</p>
               </div>
 
-              <div className="space-y-1">
-                <label className="text-xs font-bold text-slate-700">Etiqueta</label>
-                <select
-                  value={newStoryTag}
-                  onChange={(e) => setNewStoryTag(e.target.value)}
-                  className="w-full text-xs p-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none"
-                >
-                  <option value="#Seguridad">#Seguridad</option>
-                  <option value="#Mecánica">#Mecánica</option>
-                  <option value="#Geología">#Geología</option>
-                  <option value="#Voladura">#Voladura</option>
-                  <option value="#Operaciones">#Operaciones</option>
-                </select>
+              <div>
+                <h4 className="font-bold text-slate-900">Requisitos indispensables:</h4>
+                <ul className="list-disc list-inside mt-1 space-y-1 text-slate-600">
+                  {selectedOpportunity.requirements.map((req, i) => (
+                    <li key={i}>{req}</li>
+                  ))}
+                </ul>
               </div>
 
+              <div className="p-3 rounded-xl bg-blue-50 border border-blue-100 text-blue-900 space-y-1">
+                <span className="font-bold block">Postulación Soberana con Inthaly ID:</span>
+                <p className="text-[11px] leading-snug">
+                  Se compartirá tu Perfil Profesional (CV estructurado, experiencias y estudios) directamente con el equipo de RRHH de la empresa contratante.
+                </p>
+              </div>
+            </div>
+
+            <div className="pt-2 flex items-center justify-end gap-2">
               <button
-                type="submit"
-                className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-xs transition-colors cursor-pointer"
+                type="button"
+                onClick={() => setSelectedOpportunity(null)}
+                className="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl"
               >
-                Publicar Historia Destacada
+                Cancelar
               </button>
-            </form>
+              <button
+                type="button"
+                onClick={() => handleApplyOpportunity(selectedOpportunity.id, selectedOpportunity.title)}
+                className="px-5 py-2 text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-xs cursor-pointer"
+              >
+                Confirmar Postulación
+              </button>
+            </div>
           </div>
         </div>
       )}
 
       {/* ========================================================================= */}
-      {/* 4. DOCK FLOTANTE DE CHAT (MESSENGER CHAT BOX EN ESQUINA INFERIOR DERECHA)   */}
+      {/* 4. DOCK FLOTANTE DE MENSAJERÍA DIRECTA SOBERANA                           */}
       {/* ========================================================================= */}
       {activeChatContact && (
         <div className="fixed bottom-0 right-4 sm:right-8 z-50 w-72 sm:w-80 bg-white rounded-t-2xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col transition-all">
           
-          {/* Header del Chat */}
           <div className="px-3.5 py-2.5 bg-white border-b border-slate-100 flex items-center justify-between shadow-2xs">
             <div className="flex items-center gap-2 cursor-pointer" onClick={() => setIsChatMinimized(!isChatMinimized)}>
               <div className="relative">
-                <div className="w-7 h-7 rounded-full bg-gradient-to-tr from-blue-700 to-indigo-600 text-white flex items-center justify-center font-bold text-[10px]">
+                <div className="w-7 h-7 rounded-full bg-blue-700 text-white flex items-center justify-center font-bold text-[10px]">
                   {activeChatContact.display_name.substring(0, 2).toUpperCase()}
                 </div>
-                <span className="absolute bottom-0 right-0 w-2 h-2 rounded-full bg-emerald-500 ring-1 ring-white"></span>
+                <span className="absolute bottom-0 right-0 w-2 h-2 rounded-full bg-emerald-500 ring-1 ring-white" />
               </div>
               <div className="overflow-hidden">
                 <h4 className="text-xs font-black text-slate-900 truncate leading-tight">
@@ -1339,7 +1391,6 @@ export default function CommunityFeedClient({
                 type="button"
                 onClick={() => setIsChatMinimized(!isChatMinimized)}
                 className="w-6 h-6 rounded-md hover:bg-slate-100 flex items-center justify-center text-slate-500 cursor-pointer"
-                title={isChatMinimized ? "Maximizar" : "Minimizar"}
               >
                 <Minimize2 size={13} />
               </button>
@@ -1347,24 +1398,22 @@ export default function CommunityFeedClient({
                 type="button"
                 onClick={() => setActiveChatContact(null)}
                 className="w-6 h-6 rounded-md hover:bg-slate-100 flex items-center justify-center text-slate-500 cursor-pointer"
-                title="Cerrar chat"
               >
                 <X size={15} />
               </button>
             </div>
           </div>
 
-          {/* Cuerpo del Chat (Mensajes) */}
           {!isChatMinimized && (
             <>
               <div className="h-64 p-3 overflow-y-auto bg-slate-50/70 space-y-2.5 text-xs">
                 <div className="text-center text-[10px] text-slate-400 py-1">
-                  Conversación cifrada y soberana · Ecosistema Inthaly
+                  Mensajería técnica soberana · Inthaly
                 </div>
 
                 {chatMessages.length === 0 ? (
                   <div className="text-center text-slate-400 py-8">
-                    Inicia la conversación técnica con {activeChatContact.display_name}
+                    Inicia la consulta técnica con {activeChatContact.display_name}
                   </div>
                 ) : (
                   chatMessages.map(msg => {
@@ -1393,11 +1442,10 @@ export default function CommunityFeedClient({
                 <div ref={chatBottomRef} />
               </div>
 
-              {/* Input de Mensaje */}
               <form onSubmit={handleSendMessage} className="p-2 bg-white border-t border-slate-100 flex items-center gap-1.5">
                 <input
                   type="text"
-                  placeholder="Escribe un mensaje..."
+                  placeholder="Escribe tu mensaje..."
                   value={chatInput}
                   onChange={(e) => setChatInput(e.target.value)}
                   className="flex-1 text-xs bg-slate-100 focus:bg-white rounded-full px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-blue-500 text-slate-800"

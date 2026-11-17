@@ -2,9 +2,9 @@
 
 import React, { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { 
-  User, Briefcase, MapPin, Tag, ShieldCheck, 
-  ArrowRight, Sparkles, CheckCircle2 
+import {
+  User, Briefcase, MapPin, Tag, ShieldCheck,
+  ArrowRight, Sparkles, CheckCircle2
 } from 'lucide-react'
 import { updateCommunityProfileAction } from '@/app/(community)/comunidad/actions'
 import { toast } from 'sonner'
@@ -64,7 +64,7 @@ export default function CommunityOnboardingClient() {
   return (
     <div className="w-full max-w-xl mx-auto px-4 py-8 sm:py-12">
       <div className="bg-white rounded-3xl border border-slate-200/90 shadow-xl p-6 sm:p-8 space-y-6">
-        
+
         {/* Cabecera */}
         <div className="text-center space-y-2">
           <div className="w-12 h-12 rounded-2xl bg-blue-50 text-blue-700 flex items-center justify-center font-black text-xl mx-auto border border-blue-200">
@@ -79,7 +79,7 @@ export default function CommunityOnboardingClient() {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          
+
           {/* Paso 1: Nombre profesional */}
           <div className="space-y-1">
             <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
