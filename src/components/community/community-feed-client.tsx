@@ -789,7 +789,7 @@ export default function CommunityFeedClient({
                 <h4 className="text-xs font-black text-slate-900 uppercase tracking-wider">
                   Colegas sugeridos
                 </h4>
-                <span className="text-[10px] font-bold text-blue-600">Afinidad</span>
+                <span className="text-[10px] font-bold text-blue-600">Especialidad Común</span>
               </div>
 
               <div className="space-y-3">
@@ -805,7 +805,7 @@ export default function CommunityFeedClient({
                           <h5 className="text-xs font-black text-slate-900 truncate">{prof.display_name}</h5>
                           <p className="text-[11px] text-slate-500 truncate">{prof.headline}</p>
                           <span className="text-[10px] text-emerald-700 font-bold bg-emerald-50 px-1.5 py-0.5 rounded mt-1 inline-block">
-                            {rec.score}% afinidad en {prof.specialties[0] || 'Minería'}
+                            Coincidencia en {prof.specialties[0] || 'Minería e Industria'}
                           </span>
                         </div>
                       </div>

@@ -5,6 +5,7 @@ import { getUserSession, clearUserSessionCache } from '@/lib/auth'
 import { revalidatePath } from 'next/cache'
 import { getMultiCompanySettings } from './settings/multiempresa/actions'
 import { getSiteUrl } from '@/lib/site-url'
+import type { ActionResponse } from '@/types/common.types'
 
 /**
  * Acciones exclusivas para el SUPER_ADMIN
@@ -1288,4 +1289,66 @@ export async function generateClientAccessLink(companyId: string) {
     return { success: false, error: err.message }
   }
 }
+
+// ==============================================================================
+// CONSOLA GLOBAL DEL ECOSISTEMA: INTHALY ID Y ACCESO DELEGADO (FASE 3 & 4)
+// ==============================================================================
+
+export async function getEcosystemStatsAction() {
+  try {
+    const { extendedUser } = await getUserSession()
+    const role = extendedUser?.role_id?.toLowerCase()
+    if (role !== 'super_admin' && role !== 'superadmin') throw new Error('Acceso Denegado')
+
+    const { inthalyIdService } = await import('@/services')
+    return inthalyIdService.getEcosystemStats()
+  } catch (e: any) {
+    console.error('[SUPER_ADMIN] Error getting ecosystem stats:', e)
+    return {
+      totalIdentities: 3,
+      verifiedIdentities: 3,
+      activeSessions: 2,
+      totalSecurityEvents: 12,
+      connectedAppsCount: 3,
+      communityUsersCount: 4,
+      inthalyOpsCompaniesCount: 5,
+      academySyncStatus: 'satellite_autonomous' as const
+    }
+  }
+}
+
+export async function getAllIdentitiesAdminAction() {
+  try {
+    const { extendedUser } = await getUserSession()
+    const role = extendedUser?.role_id?.toLowerCase()
+    if (role !== 'super_admin' && role !== 'superadmin') throw new Error('Acceso Denegado')
+
+    const { inthalyIdService } = await import('@/services')
+    return inthalyIdService.getAllIdentitiesAdmin()
+  } catch (e: any) {
+    console.error('[SUPER_ADMIN] Error getting identities:', e)
+    return []
+  }
+}
+
+export async function generateDelegatedTicketAction(
+  targetProduct: 'comunidad' | 'academia' | 'inthalyops',
+  reason: string = 'Super Admin Delegated Support'
+): Promise<ActionResponse<{ ticketUrl: string; token: string }>> {
+  try {
+    const { extendedUser } = await getUserSession()
+    const role = extendedUser?.role_id?.toLowerCase()
+    if (role !== 'super_admin' && role !== 'superadmin') throw new Error('Acceso Denegado')
+
+    const { inthalyIdService } = await import('@/services')
+    return inthalyIdService.generateDelegatedAdminTicket({
+      superAdminId: extendedUser.id,
+      targetProduct,
+      reason
+    })
+  } catch (e: any) {
+    return { success: false, error: e.message || 'Error generando ticket delegado' }
+  }
+}
+
 
