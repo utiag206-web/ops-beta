@@ -2,9 +2,9 @@
 
 import React, { useState, useRef, useEffect } from 'react'
 import Link from 'next/link'
-import { 
-  Send, ThumbsUp, MessageSquare, Share2, Sparkles, 
-  MapPin, Tag, ShieldCheck, HelpCircle, Users, 
+import {
+  Send, ThumbsUp, MessageSquare, Share2, Sparkles,
+  MapPin, Tag, ShieldCheck, HelpCircle, Users,
   Compass, ArrowUpRight, Award, Bookmark, Filter,
   CheckCircle2, Clock, Wrench, Shield, Briefcase, Calendar,
   ChevronRight, Heart, Lightbulb, Check, Plus, Image as ImageIcon,
@@ -12,17 +12,17 @@ import {
   ExternalLink, UserPlus, Flame, Smile, CheckCheck,
   Home, Search, Bell, Radio, Film, FileText, Building2, User
 } from 'lucide-react'
-import type { 
-  CommunityPost, 
-  RecommendationResult, 
-  CommunityGroup, 
+import type {
+  CommunityPost,
+  RecommendationResult,
+  CommunityGroup,
   ReactionType,
   CommunityProfile,
   DirectMessage
 } from '@/types/community.types'
-import { 
-  createPostAction, 
-  toggleReactionAction, 
+import {
+  createPostAction,
+  toggleReactionAction,
   addCommentAction,
   toggleSavePostAction,
   getDirectMessagesAction,
@@ -111,11 +111,11 @@ export default function CommunityFeedClient({
 
   // Catálogo de etiquetas técnicas
   const availableTags = [
-    '#SeguridadMinera', 
-    '#MantenimientoPesado', 
-    '#PerforaciónYVoladura', 
-    '#SOMA', 
-    '#Geomecánica', 
+    '#SeguridadMinera',
+    '#MantenimientoPesado',
+    '#PerforaciónYVoladura',
+    '#SOMA',
+    '#Geomecánica',
     '#LíneaAmarilla',
     '#OperacionesPlanta',
     '#GestiónAmbiental'
@@ -358,7 +358,7 @@ export default function CommunityFeedClient({
   return (
     <div className="w-full max-w-[1536px] mx-auto px-3 sm:px-6 py-4 md:py-6">
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 lg:gap-8">
-        
+
         {/* ========================================================================= */}
         {/* COLUMNA 1: NAVEGACIÓN PROFESIONAL INTHALY (3 cols)                        */}
         {/* ========================================================================= */}
@@ -384,7 +384,7 @@ export default function CommunityFeedClient({
         {/* Estructura recomendada: media_1794887984001_d6397a3c.png                  */}
         {/* ========================================================================= */}
         <main className="lg:col-span-6 space-y-4">
-          
+
           {/* ======================================================================= */}
           {/* 1. CAJA DE PUBLICACIÓN PROFESIONAL                                      */}
           {/* ======================================================================= */}
@@ -392,8 +392,8 @@ export default function CommunityFeedClient({
             <h3 className="text-sm font-black text-slate-900 leading-snug">
               ¿Qué conocimiento, experiencia u oportunidad quieres compartir?
             </h3>
-            
-            <div 
+
+            <div
               onClick={() => {
                 setComposerMode('general')
                 setIsComposerOpen(true)
@@ -459,8 +459,8 @@ export default function CommunityFeedClient({
           {selectedTagFilter && (
             <div className="bg-blue-50 border border-blue-200 text-blue-800 px-4 py-2 rounded-xl text-xs flex items-center justify-between">
               <span>Filtrando por tema: <strong>{selectedTagFilter}</strong></span>
-              <button 
-                type="button" 
+              <button
+                type="button"
                 onClick={() => setSelectedTagFilter(null)}
                 className="text-xs font-bold underline hover:text-blue-950 cursor-pointer"
               >
@@ -508,11 +508,10 @@ export default function CommunityFeedClient({
                           type="button"
                           onClick={() => handleSendConnection(prof.id, prof.display_name)}
                           disabled={isSent}
-                          className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-colors cursor-pointer text-center ${
-                            isSent 
+                          className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-colors cursor-pointer text-center ${isSent
                               ? 'bg-slate-200 text-slate-500 cursor-default'
                               : 'bg-blue-600 hover:bg-blue-700 text-white'
-                          }`}
+                            }`}
                         >
                           {isSent ? 'Solicitud enviada' : 'Conectar'}
                         </button>
@@ -581,11 +580,10 @@ export default function CommunityFeedClient({
                       <button
                         type="button"
                         onClick={() => setSelectedOpportunity(opp)}
-                        className={`px-4 py-1.5 text-xs font-bold rounded-xl transition-colors cursor-pointer ${
-                          isApplied 
+                        className={`px-4 py-1.5 text-xs font-bold rounded-xl transition-colors cursor-pointer ${isApplied
                             ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 font-extrabold'
                             : 'bg-blue-600 hover:bg-blue-700 text-white shadow-xs'
-                        }`}
+                          }`}
                       >
                         {isApplied ? 'Postulado ✓' : 'Ver requisitos y postular'}
                       </button>
@@ -616,19 +614,19 @@ export default function CommunityFeedClient({
                   const postCommentsList = localComments[post.id] || []
 
                   return (
-                    <article 
+                    <article
                       key={post.id}
                       className="bg-white rounded-2xl border border-slate-200/90 shadow-2xs overflow-hidden transition-all"
                     >
                       {/* Cabecera Estructurada: Publicación Profesional */}
                       <div className="p-4 sm:p-5 pb-2">
-                        
+
                         {/* Tag de Categoría Profesional */}
                         <div className="flex items-center justify-between pb-2">
                           <span className="text-[10px] font-black uppercase text-blue-700 bg-blue-50/80 px-2.5 py-0.5 rounded-md border border-blue-200/60 tracking-wider">
                             Publicación profesional
                           </span>
-                          
+
                           {/* Menú de Opciones (3 puntos) */}
                           <div className="relative">
                             <button
@@ -701,7 +699,7 @@ export default function CommunityFeedClient({
                         {post.tags && post.tags.length > 0 && (
                           <div className="flex flex-wrap gap-1.5 mt-3">
                             {post.tags.map(t => (
-                              <button 
+                              <button
                                 key={t}
                                 type="button"
                                 onClick={() => setSelectedTagFilter(t)}
@@ -717,9 +715,9 @@ export default function CommunityFeedClient({
                       {/* Evidencia Multimedia si Existe */}
                       {post.media_urls && post.media_urls.length > 0 && (
                         <div className="mt-2 w-full max-h-96 bg-slate-900 overflow-hidden flex items-center justify-center">
-                          <img 
-                            src={post.media_urls[0]} 
-                            alt="Esquema técnico" 
+                          <img
+                            src={post.media_urls[0]}
+                            alt="Esquema técnico"
                             className="w-full h-auto object-cover max-h-96"
                           />
                         </div>
@@ -746,11 +744,10 @@ export default function CommunityFeedClient({
                         <button
                           type="button"
                           onClick={() => handleToggleReaction(post.id, 'helpful')}
-                          className={`flex-1 py-2 rounded-xl flex items-center justify-center gap-1.5 transition-colors cursor-pointer ${
-                            hasReacted 
-                              ? 'text-blue-700 bg-blue-50/80 font-black' 
+                          className={`flex-1 py-2 rounded-xl flex items-center justify-center gap-1.5 transition-colors cursor-pointer ${hasReacted
+                              ? 'text-blue-700 bg-blue-50/80 font-black'
                               : 'text-slate-600 hover:bg-slate-100'
-                          }`}
+                            }`}
                         >
                           <ThumbsUp size={15} className={hasReacted ? 'fill-blue-700' : ''} />
                           <span>Me sirve</span>
@@ -780,11 +777,10 @@ export default function CommunityFeedClient({
                         <button
                           type="button"
                           onClick={() => handleToggleSave(post.id)}
-                          className={`flex-1 py-2 rounded-xl flex items-center justify-center gap-1.5 transition-colors cursor-pointer ${
-                            isSaved 
-                              ? 'text-blue-700 bg-blue-50/80 font-black' 
+                          className={`flex-1 py-2 rounded-xl flex items-center justify-center gap-1.5 transition-colors cursor-pointer ${isSaved
+                              ? 'text-blue-700 bg-blue-50/80 font-black'
                               : 'text-slate-600 hover:bg-slate-100'
-                          }`}
+                            }`}
                         >
                           <Bookmark size={15} className={isSaved ? 'fill-blue-700' : ''} />
                           <span>{isSaved ? 'Guardado' : 'Guardar'}</span>
@@ -794,7 +790,7 @@ export default function CommunityFeedClient({
                       {/* Hilo de Comentarios Técnico */}
                       {(activeCommentPostId === post.id || postCommentsList.length > 0) && (
                         <div className="px-4 sm:px-5 pt-3 pb-4 bg-slate-50/60 border-t border-slate-100 space-y-3">
-                          
+
                           {/* Lista de comentarios */}
                           {postCommentsList.map(comm => (
                             <div key={comm.id} className="flex items-start gap-2.5">
@@ -857,7 +853,7 @@ export default function CommunityFeedClient({
         {/* ========================================================================= */}
         <aside className="hidden lg:block lg:col-span-3 space-y-4 select-none">
           <div className="sticky top-20 bg-white p-4 rounded-2xl border border-slate-200/90 shadow-2xs space-y-4">
-            
+
             {/* Título de Sección */}
             <div className="pb-2 border-b border-slate-100 flex items-center justify-between">
               <h2 className="text-sm font-black text-slate-900 tracking-tight">
@@ -895,11 +891,10 @@ export default function CommunityFeedClient({
                         type="button"
                         onClick={() => handleSendConnection(prof.id, prof.display_name)}
                         disabled={isSent}
-                        className={`w-full py-1 text-xs font-bold rounded-lg transition-colors cursor-pointer text-center ${
-                          isSent
+                        className={`w-full py-1 text-xs font-bold rounded-lg transition-colors cursor-pointer text-center ${isSent
                             ? 'bg-slate-200 text-slate-500 cursor-default'
                             : 'bg-blue-600 hover:bg-blue-700 text-white'
-                        }`}
+                          }`}
                       >
                         {isSent ? 'Solicitud enviada' : 'Conectar'}
                       </button>
@@ -957,8 +952,8 @@ export default function CommunityFeedClient({
 
               <div className="space-y-2">
                 {industrialOpportunities.slice(0, 2).map(opp => (
-                  <div 
-                    key={opp.id} 
+                  <div
+                    key={opp.id}
                     onClick={() => setSelectedOpportunity(opp)}
                     className="p-2 rounded-xl bg-slate-50 hover:bg-blue-50/60 border border-slate-100 cursor-pointer transition-colors space-y-1"
                   >
@@ -987,11 +982,10 @@ export default function CommunityFeedClient({
                       setSelectedTagFilter(selectedTagFilter === tag ? null : tag)
                       setActiveNav('inicio')
                     }}
-                    className={`text-[10px] font-bold px-2.5 py-1 rounded-full transition-colors cursor-pointer ${
-                      selectedTagFilter === tag
+                    className={`text-[10px] font-bold px-2.5 py-1 rounded-full transition-colors cursor-pointer ${selectedTagFilter === tag
                         ? 'bg-blue-600 text-white'
                         : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-                    }`}
+                      }`}
                   >
                     {tag}
                   </button>
@@ -1041,12 +1035,12 @@ export default function CommunityFeedClient({
       {isComposerOpen && (
         <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-3 animate-in fade-in duration-150">
           <div className="bg-white rounded-2xl max-w-lg w-full border border-slate-200 shadow-2xl overflow-hidden animate-in zoom-in-95 duration-150">
-            
+
             <div className="px-5 py-3.5 border-b border-slate-100 flex items-center justify-between">
               <h3 className="text-sm font-black text-slate-900">
-                {composerMode === 'image' ? 'Adjuntar Imagen o Esquema Técnico' : 
-                 composerMode === 'doc' ? 'Compartir Documento o Ficha' : 
-                 'Crear publicación profesional'}
+                {composerMode === 'image' ? 'Adjuntar Imagen o Esquema Técnico' :
+                  composerMode === 'doc' ? 'Compartir Documento o Ficha' :
+                    'Crear publicación profesional'}
               </h3>
               <button
                 type="button"
@@ -1058,7 +1052,7 @@ export default function CommunityFeedClient({
             </div>
 
             <form onSubmit={handleCreatePost} className="p-5 space-y-4">
-              
+
               <div className="flex items-center gap-3">
                 <div className="w-9 h-9 rounded-full bg-blue-700 text-white flex items-center justify-center font-black text-xs">
                   CM
@@ -1117,11 +1111,10 @@ export default function CommunityFeedClient({
                       key={tag}
                       type="button"
                       onClick={() => setSelectedTag(selectedTag === tag ? '' : tag)}
-                      className={`text-xs px-2.5 py-1 rounded-full font-bold transition-all cursor-pointer ${
-                        selectedTag === tag
+                      className={`text-xs px-2.5 py-1 rounded-full font-bold transition-all cursor-pointer ${selectedTag === tag
                           ? 'bg-blue-600 text-white shadow-xs'
                           : 'bg-slate-100 hover:bg-slate-200 text-slate-600'
-                      }`}
+                        }`}
                     >
                       {tag}
                     </button>
@@ -1216,7 +1209,7 @@ export default function CommunityFeedClient({
       {/* ========================================================================= */}
       {activeChatContact && (
         <div className="fixed bottom-0 right-4 sm:right-8 z-50 w-72 sm:w-80 bg-white rounded-t-2xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col transition-all">
-          
+
           <div className="px-3.5 py-2.5 bg-white border-b border-slate-100 flex items-center justify-between shadow-2xs">
             <div className="flex items-center gap-2 cursor-pointer" onClick={() => setIsChatMinimized(!isChatMinimized)}>
               <div className="relative">
@@ -1266,16 +1259,15 @@ export default function CommunityFeedClient({
                   chatMessages.map(msg => {
                     const isMe = msg.sender_id === (currentUser?.id || 'user-carlos-mendoza')
                     return (
-                      <div 
+                      <div
                         key={msg.id}
                         className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}
                       >
-                        <div 
-                          className={`max-w-[80%] rounded-2xl px-3 py-1.5 leading-relaxed ${
-                            isMe 
-                              ? 'bg-blue-600 text-white rounded-br-xs' 
+                        <div
+                          className={`max-w-[80%] rounded-2xl px-3 py-1.5 leading-relaxed ${isMe
+                              ? 'bg-blue-600 text-white rounded-br-xs'
                               : 'bg-white border border-slate-200 text-slate-900 rounded-bl-xs shadow-2xs'
-                          }`}
+                            }`}
                         >
                           <p>{msg.content}</p>
                           <span className={`text-[9px] block text-right mt-0.5 ${isMe ? 'text-blue-100' : 'text-slate-400'}`}>

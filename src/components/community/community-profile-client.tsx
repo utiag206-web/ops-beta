@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useRef } from 'react'
+import React, { useState, useRef, useEffect } from 'react'
 import Link from 'next/link'
 import { 
   Shield, User, MapPin, Tag, Lock, AlertTriangle, 
@@ -8,7 +8,7 @@ import {
   ShieldCheck, ArrowLeft, ChevronRight, Camera, Edit3, Briefcase,
   GraduationCap, Globe, Users, Bookmark, MessageSquare, Check, Sparkles,
   Mail, Phone, FileText, Award, Lightbulb, ChevronDown, Plus, ExternalLink,
-  Upload, Link as LinkIcon
+  Upload, Link as LinkIcon, X
 } from 'lucide-react'
 import type { CommunityProfile, UnlinkLevel } from '@/types/community.types'
 import { updateCommunityProfileAction, unlinkCommunityAction } from '@/app/(community)/comunidad/actions'
@@ -30,7 +30,6 @@ export default function CommunityProfileClient({
   const [displayName, setDisplayName] = useState(initialProfile?.display_name || 'Ing. Carlos Mendoza')
   const [headline, setHeadline] = useState(initialProfile?.headline || 'Ingeniero de Minas Residente | Especialista en Subterránea')
   const [bio, setBio] = useState(initialProfile?.bio || 'Profesional adaptable a cualquier entorno laboral, proactivo, con más de 14 años liderando operaciones mineras subterráneas en el sur del Perú. Especialista en mallas de perforación, seguridad de socavón y gestión de guardias.')
-  const [locationRegion, setLocationRegion] = useState(initialProfile?.location_region || 'Arequipa, Perú')
   const [city, setCity] = useState('Arequipa')
   const [country, setCountry] = useState('Perú')
   const [phone, setPhone] = useState('+51 987 654 321')
@@ -44,62 +43,6 @@ export default function CommunityProfileClient({
   // Imágenes de perfil y portada
   const [coverUrl, setCoverUrl] = useState<string | null>(null)
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
-
-  const [isEditingInfo, setIsEditingInfo] = useState(false)
-  const [editModalTab, setEditModalTab] = useState<'detalles' | 'personales' | 'contacto' | 'enlaces' | 'empleo' | 'formacion' | 'fotos' | 'privacidad'>('detalles')
-  const [isSaving, setIsSaving] = useState(false)
-
-  // Estados para añadir experiencia laboral dinámica
-  const [newExpRole, setNewExpRole] = useState('')
-  const [newExpCompany, setNewExpCompany] = useState('')
-  const [newExpDates, setNewExpDates] = useState('')
-  const [newExpLocation, setNewExpLocation] = useState('')
-  const [newExpDesc, setNewExpDesc] = useState('')
-  const [isAddingExp, setIsAddingExp] = useState(false)
-
-  // Estados para añadir estudios dinámicos
-  const [newEduDegree, setNewEduDegree] = useState('')
-  const [newEduInstitution, setNewEduInstitution] = useState('')
-  const [newEduDates, setNewEduDates] = useState('')
-  const [isAddingEdu, setIsAddingEdu] = useState(false)
-
-  const handleAddExperience = (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!newExpRole || !newExpCompany) return
-    const newEntry = {
-      id: `exp-${Date.now()}`,
-      role: newExpRole,
-      company: newExpCompany,
-      dates: newExpDates || '2024 - Actualidad',
-      location: newExpLocation || `${city}, ${country}`,
-      description: newExpDesc || 'Supervisión y operaciones especializadas.'
-    }
-    setExperiences([newEntry, ...experiences])
-    setNewExpRole('')
-    setNewExpCompany('')
-    setNewExpDates('')
-    setNewExpLocation('')
-    setNewExpDesc('')
-    setIsAddingExp(false)
-    toast.success('Nueva experiencia añadida al perfil')
-  }
-
-  const handleAddStudy = (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!newEduDegree || !newEduInstitution) return
-    const newEntry = {
-      id: `edu-${Date.now()}`,
-      degree: newEduDegree,
-      institution: newEduInstitution,
-      dates: newEduDates || '2024'
-    }
-    setStudies([...studies, newEntry])
-    setNewEduDegree('')
-    setNewEduInstitution('')
-    setNewEduDates('')
-    setIsAddingEdu(false)
-    toast.success('Nuevo estudio académico añadido')
-  }
 
   // Experiencias Profesionales (Estructura de la Referencia Visual)
   const [experiences, setExperiences] = useState([
@@ -146,7 +89,7 @@ export default function CommunityProfileClient({
   ])
 
   // Idiomas
-  const [languages, setLanguages] = useState([
+  const [languages] = useState([
     { id: 'lang-1', name: 'Español', level: 'Nativo' },
     { id: 'lang-2', name: 'Inglés', level: 'Intermedio Técnico' }
   ])
@@ -154,41 +97,155 @@ export default function CommunityProfileClient({
   // Estado de banners informativos (omitibles)
   const [showBioTip, setShowBioTip] = useState(true)
   const [showStudiesTip, setShowStudiesTip] = useState(true)
-  const [showTestTip, setShowTestTip] = useState(true)
 
   // Desvinculación y estado
   const [isPaused, setIsPaused] = useState(initialProfile ? !initialProfile.is_active : false)
   const [isDeleted, setIsDeleted] = useState(false)
 
+  // Modal de Edición Estilo Facebook ("Información")
+  const [isEditingInfo, setIsEditingInfo] = useState(false)
+  const [editModalTab, setEditModalTab] = useState<'detalles' | 'personales' | 'contacto' | 'enlaces' | 'empleo' | 'formacion' | 'fotos' | 'privacidad'>('detalles')
+  const [isSaving, setIsSaving] = useState(false)
+
+  // Campos para añadir experiencia laboral dinámica
+  const [newExpRole, setNewExpRole] = useState('')
+  const [newExpCompany, setNewExpCompany] = useState('')
+  const [newExpDates, setNewExpDates] = useState('')
+  const [newExpLocation, setNewExpLocation] = useState('')
+  const [newExpDesc, setNewExpDesc] = useState('')
+  const [isAddingExp, setIsAddingExp] = useState(false)
+
+  // Campos para añadir estudios dinámicos
+  const [newEduDegree, setNewEduDegree] = useState('')
+  const [newEduInstitution, setNewEduInstitution] = useState('')
+  const [newEduDates, setNewEduDates] = useState('')
+  const [isAddingEdu, setIsAddingEdu] = useState(false)
+
+  // =========================================================================
+  // PERSISTENCIA LOCAL: Recuperar información al cargar
+  // =========================================================================
+  useEffect(() => {
+    try {
+      const savedData = localStorage.getItem('inthaly_community_profile_data')
+      if (savedData) {
+        const parsed = JSON.parse(savedData)
+        if (parsed.displayName) setDisplayName(parsed.displayName)
+        if (parsed.headline) setHeadline(parsed.headline)
+        if (parsed.bio) setBio(parsed.bio)
+        if (parsed.city) setCity(parsed.city)
+        if (parsed.country) setCountry(parsed.country)
+        if (parsed.phone) setPhone(parsed.phone)
+        if (parsed.email) setEmail(parsed.email)
+        if (parsed.linkedin) setLinkedin(parsed.linkedin)
+        if (parsed.website) setWebsite(parsed.website)
+        if (parsed.cipNumber) setCipNumber(parsed.cipNumber)
+        if (parsed.avatarUrl) setAvatarUrl(parsed.avatarUrl)
+        if (parsed.coverUrl) setCoverUrl(parsed.coverUrl)
+        if (parsed.experiences && Array.isArray(parsed.experiences)) setExperiences(parsed.experiences)
+        if (parsed.studies && Array.isArray(parsed.studies)) setStudies(parsed.studies)
+        if (parsed.specialtiesInput) setSpecialtiesInput(parsed.specialtiesInput)
+      }
+    } catch {
+      // ignore
+    }
+  }, [])
+
+  // Subida de Portada
   const handleCoverUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (file) {
       const reader = new FileReader()
       reader.onload = () => {
-        setCoverUrl(reader.result as string)
+        const resUrl = reader.result as string
+        setCoverUrl(resUrl)
+        try {
+          const prev = JSON.parse(localStorage.getItem('inthaly_community_profile_data') || '{}')
+          localStorage.setItem('inthaly_community_profile_data', JSON.stringify({ ...prev, coverUrl: resUrl }))
+        } catch {
+          // ignore
+        }
         toast.success('Fotografía de portada actualizada con éxito')
       }
       reader.readAsDataURL(file)
     }
   }
 
+  // Subida de Avatar
   const handleAvatarUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (file) {
       const reader = new FileReader()
       reader.onload = () => {
-        setAvatarUrl(reader.result as string)
+        const resUrl = reader.result as string
+        setAvatarUrl(resUrl)
+        try {
+          const prev = JSON.parse(localStorage.getItem('inthaly_community_profile_data') || '{}')
+          localStorage.setItem('inthaly_community_profile_data', JSON.stringify({ ...prev, avatarUrl: resUrl }))
+        } catch {
+          // ignore
+        }
         toast.success('Fotografía de perfil actualizada con éxito')
       }
       reader.readAsDataURL(file)
     }
   }
 
+  // Añadir Experiencia
+  const handleAddExperience = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!newExpRole || !newExpCompany) {
+      toast.error('Cargo y Empresa son obligatorios')
+      return
+    }
+    const newEntry = {
+      id: `exp-${Date.now()}`,
+      role: newExpRole,
+      company: newExpCompany,
+      dates: newExpDates || '2024 - Actualidad',
+      location: newExpLocation || `${city}, ${country}`,
+      description: newExpDesc || 'Supervisión y operaciones técnicas en faena.'
+    }
+    const updated = [newEntry, ...experiences]
+    setExperiences(updated)
+    setNewExpRole('')
+    setNewExpCompany('')
+    setNewExpDates('')
+    setNewExpLocation('')
+    setNewExpDesc('')
+    setIsAddingExp(false)
+    toast.success('Nueva experiencia añadida al perfil')
+  }
+
+  // Añadir Estudio
+  const handleAddStudy = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!newEduDegree || !newEduInstitution) {
+      toast.error('Título e Institución son obligatorios')
+      return
+    }
+    const newEntry = {
+      id: `edu-${Date.now()}`,
+      degree: newEduDegree,
+      institution: newEduInstitution,
+      dates: newEduDates || '2024'
+    }
+    const updated = [...studies, newEntry]
+    setStudies(updated)
+    setNewEduDegree('')
+    setNewEduInstitution('')
+    setNewEduDates('')
+    setIsAddingEdu(false)
+    toast.success('Nuevo estudio académico añadido')
+  }
+
+  // Guardar Cambios del Perfil (Servidor + Local)
   const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsSaving(true)
     try {
       const specialties = specialtiesInput.split(',').map(s => s.trim()).filter(Boolean)
+
+      // 1. Guardar en servidor
       const res = await updateCommunityProfileAction({
         display_name: displayName,
         headline,
@@ -200,19 +257,39 @@ export default function CommunityProfileClient({
 
       if (res.success && res.data) {
         setProfile(res.data)
-        setLocationRegion(`${city}, ${country}`)
-        setIsEditingInfo(false)
-        toast.success('Información profesional y de contacto guardada con éxito')
-      } else {
-        toast.error('Error al actualizar perfil')
       }
+
+      // 2. Guardar en persistencia local para asegurar persistencia de todos los campos extendidos
+      const payload = {
+        displayName,
+        headline,
+        bio,
+        city,
+        country,
+        phone,
+        email,
+        linkedin,
+        website,
+        cipNumber,
+        avatarUrl,
+        coverUrl,
+        experiences,
+        studies,
+        specialtiesInput,
+        allowEmployerMatching
+      }
+      localStorage.setItem('inthaly_community_profile_data', JSON.stringify(payload))
+
+      setIsEditingInfo(false)
+      toast.success('Información profesional y de contacto guardada con éxito')
     } catch {
-      toast.error('Error en el servidor')
+      toast.error('Error al guardar información')
     } finally {
       setIsSaving(false)
     }
   }
 
+  // Desvinculación
   const handleUnlink = async (level: UnlinkLevel) => {
     const confirmationMessages: Record<UnlinkLevel, string> = {
       pause_profile: '¿Deseas pausar tu perfil comunitario? Ocultará tus posts y perfil del feed público temporalmente.',
@@ -232,6 +309,7 @@ export default function CommunityProfileClient({
         if (level === 'delete_community_presence') {
           setIsDeleted(true)
           setProfile(null)
+          localStorage.removeItem('inthaly_community_profile_data')
         }
       }
     } catch {
@@ -273,25 +351,25 @@ export default function CommunityProfileClient({
   }
 
   return (
-    <div className="w-full max-w-5xl mx-auto space-y-4 pb-12">
-      
+    <div className="w-full max-w-6xl mx-auto px-3 sm:px-6 py-4 md:py-6 space-y-6">
+
       {/* ========================================================================= */}
       {/* 1. CABECERA: PORTADA PANORÁMICA Y FOTOGRAFÍA (ALINEACIÓN PROFESIONAL)      */}
       {/* ========================================================================= */}
       <div className="bg-white rounded-3xl border border-slate-200/90 shadow-2xs overflow-hidden">
-        
+
         {/* Foto de Portada Panorámica con Selector Real de Archivo */}
-        <div className="h-44 sm:h-56 bg-slate-900 relative flex items-end justify-end p-4 overflow-hidden group">
+        <div className="h-44 sm:h-60 bg-slate-900 relative flex items-end justify-end p-4 overflow-hidden group">
           {coverUrl ? (
             <img src={coverUrl} alt="Portada" className="absolute inset-0 w-full h-full object-cover" />
           ) : (
             <div className="absolute inset-0 bg-gradient-to-r from-blue-900 via-indigo-950 to-slate-900" />
           )}
-          
-          <input 
-            type="file" 
-            ref={coverInputRef} 
-            className="hidden" 
+
+          <input
+            type="file"
+            ref={coverInputRef}
+            className="hidden"
             accept="image/*"
             onChange={handleCoverUpload}
           />
@@ -307,24 +385,24 @@ export default function CommunityProfileClient({
 
         {/* Fila de Avatar e Identidad: Estructura Limpia Sin Invasión de Portada */}
         <div className="px-6 sm:px-8 pb-5 pt-0">
-          
+
           {/* Fila Superior: Avatar + Acciones Rápidas */}
-          <div className="flex flex-col sm:flex-row items-center sm:items-end justify-between gap-4 -mt-14 sm:-mt-16 mb-3">
-            
-            {/* Avatar Circular con Botón Azul '+' y Carga de Archivo */}
+          <div className="flex flex-col sm:flex-row items-center sm:items-end justify-between gap-4 -mt-16 sm:-mt-20 mb-3">
+
+            {/* Avatar Circular con Botón Azul de Cámara */}
             <div className="relative shrink-0">
-              <input 
-                type="file" 
-                ref={avatarInputRef} 
-                className="hidden" 
+              <input
+                type="file"
+                ref={avatarInputRef}
+                className="hidden"
                 accept="image/*"
                 onChange={handleAvatarUpload}
               />
-              <div className="w-28 h-28 sm:w-32 sm:h-32 rounded-full bg-slate-900 text-white flex items-center justify-center font-black text-2xl sm:text-3xl ring-4 ring-white shadow-sm overflow-hidden bg-cover bg-center">
+              <div className="w-32 h-32 sm:w-36 sm:h-36 rounded-full bg-slate-900 text-white flex items-center justify-center font-black text-3xl sm:text-4xl ring-4 ring-white shadow-md overflow-hidden bg-cover bg-center">
                 {avatarUrl ? (
                   <img src={avatarUrl} alt={displayName} className="w-full h-full object-cover" />
                 ) : (
-                  <div className="w-full h-full bg-gradient-to-tr from-blue-800 to-indigo-900 flex items-center justify-center text-white font-black text-2xl sm:text-3xl">
+                  <div className="w-full h-full bg-gradient-to-tr from-blue-800 to-indigo-900 flex items-center justify-center text-white font-black text-3xl sm:text-4xl">
                     CM
                   </div>
                 )}
@@ -332,25 +410,25 @@ export default function CommunityProfileClient({
               <button
                 type="button"
                 onClick={() => avatarInputRef.current?.click()}
-                className="absolute bottom-1 right-1 w-8 h-8 rounded-full bg-blue-600 hover:bg-blue-700 text-white flex items-center justify-center shadow-sm cursor-pointer border-2 border-white transition-colors"
+                className="absolute bottom-1 right-1 w-9 h-9 rounded-full bg-blue-600 hover:bg-blue-700 text-white flex items-center justify-center shadow-md cursor-pointer border-2 border-white transition-colors"
                 title="Cambiar foto de perfil"
               >
-                <Camera size={15} />
+                <Camera size={16} />
               </button>
             </div>
 
-            {/* Acciones Rápidas */}
-            <div className="flex items-center gap-2 mt-2 sm:mt-0">
+            {/* Acciones Rápidas Principales */}
+            <div className="flex items-center gap-2.5 mt-2 sm:mt-0">
               <button
                 type="button"
                 onClick={() => setIsEditingInfo(true)}
-                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer"
+                className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl flex items-center gap-2 shadow-xs transition-colors cursor-pointer"
               >
-                <Edit3 size={13} /> Editar perfil
+                <Edit3 size={14} /> Editar perfil
               </button>
               <Link
                 href="/comunidad"
-                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl flex items-center gap-1.5 transition-colors"
+                className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl flex items-center gap-1.5 transition-colors"
               >
                 Ver muro
               </Link>
@@ -360,20 +438,10 @@ export default function CommunityProfileClient({
 
           {/* Datos de Contacto y Nombre: Exclusivamente dentro de la tarjeta blanca */}
           <div className="space-y-1.5 text-center sm:text-left">
-            <div className="flex items-center justify-center sm:justify-start gap-2">
-              <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
-                {displayName}
-              </h1>
-              <button 
-                type="button" 
-                onClick={() => setIsEditingInfo(true)}
-                className="text-slate-400 hover:text-blue-600 p-1"
-                title="Editar información personal"
-              >
-                <Edit3 size={15} />
-              </button>
-            </div>
-            
+            <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
+              {displayName}
+            </h1>
+
             <p className="text-xs text-slate-600 font-semibold flex items-center justify-center sm:justify-start gap-1">
               <MapPin size={13} className="text-blue-600" /> {city}, {country}
             </p>
@@ -389,7 +457,7 @@ export default function CommunityProfileClient({
               {cipNumber && (
                 <>
                   <span className="text-slate-300">·</span>
-                  <span className="flex items-center gap-1 text-slate-700 font-bold text-[11px] bg-slate-100 px-2 py-0.5 rounded">
+                  <span className="flex items-center gap-1 text-slate-700 font-bold text-[11px] bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
                     <Award size={13} className="text-amber-600" /> {cipNumber}
                   </span>
                 </>
@@ -397,7 +465,7 @@ export default function CommunityProfileClient({
               {linkedin && (
                 <>
                   <span className="text-slate-300">·</span>
-                  <a href={linkedin} target="_blank" rel="noreferrer" className="flex items-center gap-1 text-blue-600 hover:underline text-[11px]">
+                  <a href={linkedin} target="_blank" rel="noreferrer" className="flex items-center gap-1 text-blue-600 hover:underline text-[11px] font-bold">
                     <ExternalLink size={12} /> LinkedIn
                   </a>
                 </>
@@ -405,12 +473,12 @@ export default function CommunityProfileClient({
             </div>
           </div>
 
-          {/* Navegación por Pestañas */}
-          <div className="mt-5 border-t border-slate-100 flex items-center gap-2 pt-1 overflow-x-auto no-scrollbar">
+          {/* Navegación de Pestañas del Perfil */}
+          <div className="flex items-center gap-1 border-t border-slate-100 pt-3 mt-4 overflow-x-auto no-scrollbar">
             <button
               type="button"
               onClick={() => setActiveTab('cv')}
-              className={`py-2 px-3.5 text-xs font-bold rounded-xl transition-all cursor-pointer ${
+              className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
                 activeTab === 'cv' ? 'bg-blue-50 text-blue-700' : 'text-slate-600 hover:bg-slate-50'
               }`}
             >
@@ -419,7 +487,7 @@ export default function CommunityProfileClient({
             <button
               type="button"
               onClick={() => setActiveTab('posts')}
-              className={`py-2 px-3.5 text-xs font-bold rounded-xl transition-all cursor-pointer ${
+              className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
                 activeTab === 'posts' ? 'bg-blue-50 text-blue-700' : 'text-slate-600 hover:bg-slate-50'
               }`}
             >
@@ -428,7 +496,7 @@ export default function CommunityProfileClient({
             <button
               type="button"
               onClick={() => setActiveTab('groups')}
-              className={`py-2 px-3.5 text-xs font-bold rounded-xl transition-all cursor-pointer ${
+              className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
                 activeTab === 'groups' ? 'bg-blue-50 text-blue-700' : 'text-slate-600 hover:bg-slate-50'
               }`}
             >
@@ -437,7 +505,7 @@ export default function CommunityProfileClient({
             <button
               type="button"
               onClick={() => setActiveTab('privacy')}
-              className={`py-2 px-3.5 text-xs font-bold rounded-xl transition-all cursor-pointer ${
+              className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
                 activeTab === 'privacy' ? 'bg-blue-50 text-blue-700' : 'text-slate-600 hover:bg-slate-50'
               }`}
             >
@@ -449,36 +517,461 @@ export default function CommunityProfileClient({
       </div>
 
       {/* ========================================================================= */}
+      {/* 2. PESTAÑA PRINCIPAL: CURRÍCULUM Y TRAYECTORIA (REFERENCIA EXACTA)        */}
+      {/* ========================================================================= */}
+      {activeTab === 'cv' && (
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+
+          {/* COLUMNA IZQUIERDA: CV Y TRAYECTORIA (8 COLS) */}
+          <div className="lg:col-span-8 space-y-4">
+
+            {/* Tarjeta de Titular y Resumen */}
+            <div className="bg-white rounded-3xl border border-slate-200/90 p-5 sm:p-6 shadow-2xs space-y-3">
+              <div className="flex items-center justify-between">
+                <h2 className="text-base sm:text-lg font-black text-slate-900 tracking-tight">
+                  {headline}
+                </h2>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEditModalTab('detalles')
+                    setIsEditingInfo(true)
+                  }}
+                  className="text-blue-600 hover:text-blue-800 p-1 cursor-pointer"
+                  title="Editar titular y bio"
+                >
+                  <Edit3 size={15} />
+                </button>
+              </div>
+
+              <p className="text-xs text-slate-600 leading-relaxed">
+                {bio}
+              </p>
+
+              {/* Banner de Sugerencia / Tip */}
+              {showBioTip && (
+                <div className="bg-blue-50/70 border border-blue-100 rounded-2xl p-3.5 flex items-start justify-between gap-3 text-xs">
+                  <div className="flex items-start gap-2.5">
+                    <Lightbulb size={16} className="text-blue-600 shrink-0 mt-0.5" />
+                    <p className="text-[11px] text-blue-900 leading-tight">
+                      Una descripción bien detallada y extensa de tu perfil profesional te ayudará a destacar entre otros candidatos del sector minero e industrial.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setShowBioTip(false)}
+                    className="text-[11px] font-bold text-blue-700 hover:underline shrink-0 cursor-pointer"
+                  >
+                    Omitir
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* Tarjeta: Mis Experiencias Profesionales */}
+            <div className="bg-white rounded-3xl border border-slate-200/90 p-5 sm:p-6 shadow-2xs space-y-4">
+              <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+                <h3 className="text-sm font-black text-slate-900">
+                  Mis experiencias profesionales
+                </h3>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEditModalTab('empleo')
+                    setIsEditingInfo(true)
+                  }}
+                  className="text-blue-600 hover:text-blue-800 p-1 cursor-pointer"
+                  title="Editar experiencias"
+                >
+                  <Edit3 size={15} />
+                </button>
+              </div>
+
+              {/* Línea de Tiempo de Experiencias con Viñetas Azules */}
+              <div className="space-y-4">
+                {experiences.map((exp) => (
+                  <div key={exp.id} className="relative pl-5 border-l-2 border-blue-600 space-y-1 group">
+                    <div className="absolute -left-[5px] top-1 w-2 h-2 rounded-full bg-blue-600 ring-2 ring-white" />
+
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <h4 className="text-xs font-bold text-slate-900">{exp.role}</h4>
+                        <span className="text-[11px] font-bold text-slate-700 uppercase">{exp.company}</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setEditModalTab('empleo')
+                          setIsEditingInfo(true)
+                        }}
+                        className="text-slate-300 group-hover:text-blue-600 transition-colors cursor-pointer"
+                        title="Modificar en formulario"
+                      >
+                        <Edit3 size={13} />
+                      </button>
+                    </div>
+
+                    <p className="text-[10px] text-slate-400 font-semibold">{exp.dates}</p>
+                    <p className="text-xs text-slate-600 leading-relaxed pt-0.5">
+                      {exp.description}
+                    </p>
+                  </div>
+                ))}
+              </div>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setEditModalTab('empleo')
+                  setIsAddingExp(true)
+                  setIsEditingInfo(true)
+                }}
+                className="text-xs font-bold text-blue-600 hover:underline flex items-center gap-1.5 pt-2 cursor-pointer"
+              >
+                <Plus size={14} /> Añadir nueva experiencia
+              </button>
+            </div>
+
+            {/* Tarjeta: Mis Estudios */}
+            <div className="bg-white rounded-3xl border border-slate-200/90 p-5 sm:p-6 shadow-2xs space-y-4">
+              <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+                <h3 className="text-sm font-black text-slate-900">
+                  Mis estudios
+                </h3>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEditModalTab('formacion')
+                    setIsEditingInfo(true)
+                  }}
+                  className="text-blue-600 hover:text-blue-800 p-1 cursor-pointer"
+                  title="Editar estudios"
+                >
+                  <Edit3 size={15} />
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                {studies.map((edu) => (
+                  <div key={edu.id} className="relative pl-5 border-l-2 border-blue-600 space-y-0.5 group">
+                    <div className="absolute -left-[5px] top-1 w-2 h-2 rounded-full bg-blue-600 ring-2 ring-white" />
+
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <h4 className="text-xs font-bold text-slate-900">{edu.degree}</h4>
+                        <span className="text-[11px] text-slate-600">{edu.institution}</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setEditModalTab('formacion')
+                          setIsEditingInfo(true)
+                        }}
+                        className="text-slate-300 group-hover:text-blue-600 transition-colors cursor-pointer"
+                        title="Modificar en formulario"
+                      >
+                        <Edit3 size={13} />
+                      </button>
+                    </div>
+                    <p className="text-[10px] text-slate-400 font-semibold">{edu.dates}</p>
+                  </div>
+                ))}
+              </div>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setEditModalTab('formacion')
+                  setIsAddingEdu(true)
+                  setIsEditingInfo(true)
+                }}
+                className="text-xs font-bold text-blue-600 hover:underline flex items-center gap-1.5 pt-1 cursor-pointer"
+              >
+                <Plus size={14} /> Añadir más estudios
+              </button>
+
+              {/* Banner de Estudios Tip */}
+              {showStudiesTip && (
+                <div className="bg-blue-50/70 border border-blue-100 rounded-2xl p-3.5 flex items-start justify-between gap-3 text-xs mt-3">
+                  <div className="flex items-start gap-2.5">
+                    <Lightbulb size={16} className="text-blue-600 shrink-0 mt-0.5" />
+                    <p className="text-[11px] text-blue-900 leading-tight">
+                      Tus últimos estudios terminaron hace tiempo. Añade uno nuevo si te has formado desde entonces.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setShowStudiesTip(false)}
+                    className="text-[11px] font-bold text-blue-700 hover:underline shrink-0 cursor-pointer"
+                  >
+                    Omitir
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* Tarjeta: Idiomas */}
+            <div className="bg-white rounded-3xl border border-slate-200/90 p-5 sm:p-6 shadow-2xs space-y-3">
+              <h3 className="text-sm font-black text-slate-900">Idiomas</h3>
+              <div className="flex flex-wrap items-center gap-2">
+                {languages.map((l) => (
+                  <span key={l.id} className="text-xs font-bold text-slate-700 bg-slate-100 border border-slate-200/80 px-3 py-1.5 rounded-xl">
+                    {l.name} - <span className="text-slate-500 font-medium">{l.level}</span>
+                  </span>
+                ))}
+              </div>
+            </div>
+
+          </div>
+
+          {/* COLUMNA DERECHA: HERRAMIENTAS DE CV (4 COLS) */}
+          <div className="lg:col-span-4 space-y-4">
+
+            {/* Tarjeta 1: Plantillas de CV */}
+            <div className="bg-white rounded-3xl border border-slate-200/90 p-5 sm:p-6 shadow-2xs space-y-3">
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-black text-slate-900">Plantillas de CV</h3>
+                <span className="text-[10px] font-extrabold uppercase text-amber-800 bg-amber-100 px-2 py-0.5 rounded-full">
+                  Nuevo
+                </span>
+              </div>
+              <p className="text-xs text-slate-500 leading-relaxed">
+                Tienes disponibles formatos oficiales para descargar o imprimir tu currículum de manera cómoda y profesional para postulaciones mineras.
+              </p>
+              <button
+                type="button"
+                onClick={() => toast.success('Generador de CV en formato PDF oficial preparado.')}
+                className="w-full py-2.5 bg-[#173a74] hover:bg-[#112d5b] text-white text-xs font-bold rounded-xl shadow-xs transition-colors cursor-pointer"
+              >
+                Diseña tu CV
+              </button>
+            </div>
+
+            {/* Tarjeta 2: Cartas de Presentación */}
+            <div className="bg-white rounded-3xl border border-slate-200/90 p-5 sm:p-6 shadow-2xs space-y-3">
+              <h3 className="text-sm font-black text-slate-900">Cartas de presentación</h3>
+              <p className="text-xs text-slate-500 leading-relaxed">
+                Crea o edita tus cartas de presentación y adjúntalas a tus postulaciones a contratistas. Las empresas valoran positivamente candidatos que explican su experiencia en campo.
+              </p>
+              <button
+                type="button"
+                onClick={() => toast.info('Redactor de carta de presentación industrial abierto.')}
+                className="w-full py-2.5 bg-[#173a74] hover:bg-[#112d5b] text-white text-xs font-bold rounded-xl shadow-xs transition-colors cursor-pointer"
+              >
+                Crear carta
+              </button>
+            </div>
+
+            {/* Tarjeta 3: Cómo Mejorar mi CV */}
+            <div className="bg-white rounded-3xl border border-slate-200/90 p-5 sm:p-6 shadow-2xs space-y-3">
+              <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+                <div className="flex items-center gap-1.5 font-black text-xs text-slate-900">
+                  <Sparkles size={14} className="text-amber-500" />
+                  <span>Cómo mejorar mi CV</span>
+                </div>
+                <span className="w-8 h-8 rounded-full border-2 border-emerald-500 text-emerald-700 font-extrabold text-[11px] flex items-center justify-center">
+                  94%
+                </span>
+              </div>
+
+              <div className="divide-y divide-slate-100 text-xs">
+                <button
+                  type="button"
+                  onClick={() => toast.info('Adjunta tu CV en PDF o Word para autocompletar.')}
+                  className="w-full py-2.5 flex items-center justify-between text-left hover:bg-slate-50 px-2 rounded-xl transition-colors cursor-pointer group"
+                >
+                  <div>
+                    <h5 className="font-bold text-slate-800 group-hover:text-blue-600 transition-colors">Sube tu CV</h5>
+                    <p className="text-[10px] text-slate-400">Inserta tu archivo en word o pdf y adjúntalo en tus postulaciones</p>
+                  </div>
+                  <ChevronRight size={14} className="text-slate-400 shrink-0" />
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => toast.info('Test de competencias operativas disponible.')}
+                  className="w-full py-2.5 flex items-center justify-between text-left hover:bg-slate-50 px-2 rounded-xl transition-colors cursor-pointer group"
+                >
+                  <div>
+                    <h5 className="font-bold text-slate-800 group-hover:text-blue-600 transition-colors">Identifica tu potencial profesional</h5>
+                    <p className="text-[10px] text-slate-400">Descubre gratis tus competencias laborales para el sector industrial</p>
+                  </div>
+                  <ChevronRight size={14} className="text-slate-400 shrink-0" />
+                </button>
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* 3. PESTAÑA: PUBLICACIONES TÉCNICAS                                        */}
+      {/* ========================================================================= */}
+      {activeTab === 'posts' && (
+        <div className="bg-white rounded-3xl border border-slate-200/90 p-8 shadow-2xs space-y-4">
+          <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+            <div>
+              <h3 className="text-base font-black text-slate-900">Publicaciones Técnicas y Buenas Prácticas</h3>
+              <p className="text-xs text-slate-500">Tus aportes compartidos en el muro general y en foros especializados.</p>
+            </div>
+            <Link
+              href="/comunidad"
+              className="px-4 py-2 bg-blue-600 text-white font-bold text-xs rounded-xl shadow-xs"
+            >
+              Nueva Publicación
+            </Link>
+          </div>
+
+          <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-blue-700">#Perforación #Campamento #Mantenimiento</span>
+              <span className="text-[10px] text-slate-400">18 Nov</span>
+            </div>
+            <p className="text-xs text-slate-700 leading-relaxed">
+              Colegas, ante las bajas temperaturas (-8°C) en campamento sobre los 4,300 msnm, estamos reforzando la purga de condensado en líneas de aire para evitar congelamiento de válvulas en martillos perforadores...
+            </p>
+            <div className="pt-2 flex items-center gap-4 text-xs text-slate-500 font-bold">
+              <span>👍 14 Me sirve</span>
+              <span>💬 3 comentarios</span>
+              <span>🔄 2 compartidos</span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* 4. PESTAÑA: GRUPOS Y FOROS                                                */}
+      {/* ========================================================================= */}
+      {activeTab === 'groups' && (
+        <div className="bg-white rounded-3xl border border-slate-200/90 p-8 shadow-2xs space-y-4">
+          <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+            <div>
+              <h3 className="text-base font-black text-slate-900">Mis Comunidades y Foros de Práctica</h3>
+              <p className="text-xs text-slate-500">Espacios técnicos donde participas activamente.</p>
+            </div>
+            <Link
+              href="/comunidad/grupos"
+              className="px-4 py-2 bg-blue-600 text-white font-bold text-xs rounded-xl shadow-xs"
+            >
+              Explorar más grupos
+            </Link>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl space-y-2">
+              <span className="text-[10px] font-extrabold uppercase text-blue-700 bg-blue-100 px-2 py-0.5 rounded">Seguridad y Salud</span>
+              <h4 className="text-sm font-black text-slate-900">SOMA & Seguridad en Operaciones Mineras</h4>
+              <p className="text-xs text-slate-600">Espacio de intercambio de protocolos, análisis de incidentes de alto potencial e IPERC.</p>
+              <div className="pt-2 flex items-center justify-between">
+                <span className="text-xs font-semibold text-slate-500">124 miembros</span>
+                <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-md">Miembro Activo</span>
+              </div>
+            </div>
+
+            <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl space-y-2">
+              <span className="text-[10px] font-extrabold uppercase text-blue-700 bg-blue-100 px-2 py-0.5 rounded">Mantenimiento Mecánico</span>
+              <h4 className="text-sm font-black text-slate-900">Mecánica Pesada y Mantenimiento de Flotas</h4>
+              <p className="text-xs text-slate-600">Comunidad técnica para mecánicos, electricistas y supervisores de línea amarilla y volquetes.</p>
+              <div className="pt-2 flex items-center justify-between">
+                <span className="text-xs font-semibold text-slate-500">89 miembros</span>
+                <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-md">Miembro Activo</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* 5. PESTAÑA: PRIVACIDAD & DESCONEXIÓN                                      */}
+      {/* ========================================================================= */}
+      {activeTab === 'privacy' && (
+        <div className="bg-white rounded-3xl border border-slate-200/90 p-6 sm:p-8 shadow-2xs space-y-6">
+          <div className="border-b border-slate-100 pb-4">
+            <h3 className="text-base font-black text-slate-900">Garantías de Privacidad & Derecho a la Desconexión</h3>
+            <p className="text-xs text-slate-500 mt-1">
+              En Inthaly, tu perfil en Comunidad pertenece a tu identidad soberana (Inthaly ID) y no a la empresa donde laboras.
+            </p>
+          </div>
+
+          <div className="bg-emerald-50/70 border border-emerald-200 rounded-2xl p-4 text-xs space-y-2">
+            <div className="font-bold text-emerald-900 flex items-center gap-1.5">
+              <ShieldCheck size={16} className="text-emerald-700" />
+              Blindaje Laboral Garantizado (ADR-014)
+            </div>
+            <p className="text-emerald-800 leading-relaxed text-[11px]">
+              Tu empleador en InthalyOps no tiene visibilidad sobre tus consultas técnicas privadas, participaciones en grupos cerrados ni búsquedas de oportunidades.
+            </p>
+          </div>
+
+          <div className="pt-3 border-t border-slate-100 space-y-3">
+            <h4 className="text-xs font-black uppercase tracking-wider text-slate-400">Opciones de Desconexión</h4>
+
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-4 bg-slate-50 rounded-2xl border border-slate-200">
+              <div>
+                <span className="text-xs font-bold text-slate-800 block">Pausar presencia comunitaria</span>
+                <p className="text-[11px] text-slate-500">Oculta temporalmente tu perfil y aportes del muro general.</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => handleUnlink(isPaused ? 'resume_profile' : 'pause_profile')}
+                className={`px-4 py-2 text-xs font-bold rounded-xl transition-colors cursor-pointer shrink-0 ${
+                  isPaused ? 'bg-emerald-600 hover:bg-emerald-700 text-white' : 'bg-amber-600 hover:bg-amber-700 text-white'
+                }`}
+              >
+                {isPaused ? 'Reanudar perfil' : 'Pausar perfil'}
+              </button>
+            </div>
+
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-4 bg-rose-50/50 rounded-2xl border border-rose-200">
+              <div>
+                <span className="text-xs font-bold text-rose-950 block">Eliminar presencia comunitaria definitivamente</span>
+                <p className="text-[11px] text-rose-800">Borra todos tus datos de Comunidad. Tus tareos y boletas en InthalyOps permanecen intactos.</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => handleUnlink('delete_community_presence')}
+                className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold rounded-xl transition-colors cursor-pointer shrink-0"
+              >
+                Eliminar definitivamente
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
       {/* MODAL DE INFORMACIÓN ESTILO FACEBOOK WEB (REFERENCIA IMAGEN INFORMACIÓN) */}
       {/* ========================================================================= */}
       {isEditingInfo && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 animate-in fade-in duration-150">
           <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-4xl w-full overflow-hidden flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-150">
-            
+
             {/* Header del Modal */}
             <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between shrink-0 bg-white">
               <div>
                 <h3 className="text-base font-black text-slate-900 tracking-tight">Editar Información Profesional</h3>
                 <p className="text-[11px] text-slate-500">Configura tus datos personales, trayectoria laboral, colegiatura y privacidad.</p>
               </div>
-              <button 
-                type="button" 
-                onClick={() => setIsEditingInfo(false)} 
+              <button
+                type="button"
+                onClick={() => setIsEditingInfo(false)}
                 className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-500 font-bold transition-colors cursor-pointer"
               >
-                ✕
+                <X size={16} />
               </button>
             </div>
 
             {/* Cuerpo del Modal: Distribución en 2 Columnas (Referencia Facebook Información) */}
-            <div className="flex-1 flex flex-col md:flex-row overflow-hidden min-h-[480px]">
-              
+            <div className="flex-1 flex flex-col md:flex-row overflow-hidden min-h-[460px]">
+
               {/* Columna Izquierda: Menú de Navegación "Información" */}
               <div className="w-full md:w-60 bg-slate-50/90 border-r border-slate-200/80 p-3 space-y-1 shrink-0 overflow-y-auto">
                 <div className="text-[11px] font-black uppercase tracking-wider text-slate-400 px-3 py-2">
                   Información
                 </div>
-                
+
                 <nav className="space-y-0.5 text-xs font-bold">
                   <button
                     type="button"
@@ -592,7 +1085,7 @@ export default function CommunityProfileClient({
 
               {/* Columna Derecha: Contenido y Campos Editables */}
               <div className="flex-1 p-6 overflow-y-auto space-y-4 bg-white">
-                
+
                 {/* 1. DETALLES */}
                 {editModalTab === 'detalles' && (
                   <div className="space-y-4 animate-in fade-in duration-100">
@@ -851,14 +1344,14 @@ export default function CommunityProfileClient({
                           <button
                             type="button"
                             onClick={() => setIsAddingExp(false)}
-                            className="px-3 py-1 bg-slate-200 hover:bg-slate-300 text-slate-700 text-xs font-bold rounded-lg"
+                            className="px-3 py-1 bg-slate-200 hover:bg-slate-300 text-slate-700 text-xs font-bold rounded-lg cursor-pointer"
                           >
                             Cancelar
                           </button>
                           <button
                             type="button"
                             onClick={handleAddExperience}
-                            className="px-4 py-1 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-lg"
+                            className="px-4 py-1 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-lg cursor-pointer"
                           >
                             Guardar Cargo
                           </button>
@@ -878,10 +1371,11 @@ export default function CommunityProfileClient({
                           <button
                             type="button"
                             onClick={() => {
-                              setExperiences(experiences.filter(x => x.id !== exp.id))
+                              const updated = experiences.filter(x => x.id !== exp.id)
+                              setExperiences(updated)
                               toast.info('Experiencia eliminada')
                             }}
-                            className="text-slate-400 hover:text-rose-600 p-1"
+                            className="text-slate-400 hover:text-rose-600 p-1 cursor-pointer"
                             title="Eliminar experiencia"
                           >
                             <Trash2 size={14} />
@@ -951,14 +1445,14 @@ export default function CommunityProfileClient({
                           <button
                             type="button"
                             onClick={() => setIsAddingEdu(false)}
-                            className="px-3 py-1 bg-slate-200 hover:bg-slate-300 text-slate-700 text-xs font-bold rounded-lg"
+                            className="px-3 py-1 bg-slate-200 hover:bg-slate-300 text-slate-700 text-xs font-bold rounded-lg cursor-pointer"
                           >
                             Cancelar
                           </button>
                           <button
                             type="button"
                             onClick={handleAddStudy}
-                            className="px-4 py-1 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-lg"
+                            className="px-4 py-1 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-lg cursor-pointer"
                           >
                             Guardar Estudio
                           </button>
@@ -977,10 +1471,11 @@ export default function CommunityProfileClient({
                           <button
                             type="button"
                             onClick={() => {
-                              setStudies(studies.filter(x => x.id !== edu.id))
+                              const updated = studies.filter(x => x.id !== edu.id)
+                              setStudies(updated)
                               toast.info('Estudio eliminado')
                             }}
-                            className="text-slate-400 hover:text-rose-600 p-1"
+                            className="text-slate-400 hover:text-rose-600 p-1 cursor-pointer"
                             title="Eliminar estudio"
                           >
                             <Trash2 size={14} />
@@ -1104,424 +1599,6 @@ export default function CommunityProfileClient({
               </div>
             </div>
 
-          </div>
-        </div>
-      )}
-
-      {/* ========================================================================= */}
-      {/* 2. PESTAÑA PRINCIPAL: CURRÍCULUM Y TRAYECTORIA (REFERENCIA EXACTA)        */}
-      {/* ========================================================================= */}
-      {activeTab === 'cv' && (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-          
-          {/* COLUMNA IZQUIERDA: CV TRAYECTORIA (8 COLS) */}
-          <div className="lg:col-span-8 space-y-4">
-            
-            {/* Tarjeta de Titular y Resumen */}
-            <div className="bg-white rounded-3xl border border-slate-200/90 p-5 sm:p-6 shadow-2xs space-y-3">
-              <div className="flex items-center justify-between">
-                <h2 className="text-base sm:text-lg font-black text-slate-900 tracking-tight">
-                  {headline}
-                </h2>
-                <button 
-                  type="button"
-                  onClick={() => setIsEditingInfo(true)}
-                  className="text-blue-600 hover:text-blue-800"
-                >
-                  <Edit3 size={15} />
-                </button>
-              </div>
-
-              <p className="text-xs text-slate-600 leading-relaxed">
-                {bio}
-              </p>
-
-              {/* Banner de Sugerencia / Tip */}
-              {showBioTip && (
-                <div className="bg-blue-50/70 border border-blue-100 rounded-2xl p-3.5 flex items-start justify-between gap-3 text-xs">
-                  <div className="flex items-start gap-2.5">
-                    <Lightbulb size={16} className="text-blue-600 shrink-0 mt-0.5" />
-                    <p className="text-[11px] text-blue-900 leading-tight">
-                      Una descripción bien detallada y extensa de tu perfil profesional te ayudará a destacar entre otros candidatos del sector minero e industrial.
-                    </p>
-                  </div>
-                  <button 
-                    type="button"
-                    onClick={() => setShowBioTip(false)}
-                    className="text-[11px] font-bold text-blue-700 hover:underline shrink-0"
-                  >
-                    Omitir
-                  </button>
-                </div>
-              )}
-            </div>
-
-            {/* Tarjeta: Mis Experiencias Profesionales */}
-            <div className="bg-white rounded-3xl border border-slate-200/90 p-5 sm:p-6 shadow-2xs space-y-4">
-              <div className="flex items-center justify-between pb-2 border-b border-slate-100">
-                <h3 className="text-sm font-black text-slate-900">
-                  Mis experiencias profesionales
-                </h3>
-                <button 
-                  type="button"
-                  onClick={() => {
-                    setEditModalTab('empleo')
-                    setIsEditingInfo(true)
-                  }}
-                  className="text-blue-600 hover:text-blue-800"
-                  title="Editar experiencias"
-                >
-                  <Edit3 size={15} />
-                </button>
-              </div>
-
-              {/* Línea de Tiempo de Experiencias con Viñetas Azules */}
-              <div className="space-y-4">
-                {experiences.map((exp) => (
-                  <div key={exp.id} className="relative pl-5 border-l-2 border-blue-600 space-y-1 group">
-                    <div className="absolute -left-[5px] top-1 w-2 h-2 rounded-full bg-blue-600 ring-2 ring-white" />
-                    
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <h4 className="text-xs font-bold text-slate-900">{exp.role}</h4>
-                        <span className="text-[11px] font-bold text-slate-700 uppercase">{exp.company}</span>
-                      </div>
-                      <button 
-                        type="button" 
-                        onClick={() => {
-                          setEditModalTab('empleo')
-                          setIsEditingInfo(true)
-                        }}
-                        className="text-slate-300 group-hover:text-blue-600 transition-colors"
-                      >
-                        <Edit3 size={13} />
-                      </button>
-                    </div>
-
-                    <p className="text-[10px] text-slate-400 font-semibold">{exp.dates}</p>
-                    <p className="text-xs text-slate-600 leading-relaxed pt-0.5">
-                      {exp.description}
-                    </p>
-                  </div>
-                ))}
-              </div>
-
-              <button
-                type="button"
-                onClick={() => {
-                  setEditModalTab('empleo')
-                  setIsAddingExp(true)
-                  setIsEditingInfo(true)
-                }}
-                className="text-xs font-bold text-blue-600 hover:underline flex items-center gap-1.5 pt-2 cursor-pointer"
-              >
-                <Plus size={14} /> Añadir nueva experiencia
-              </button>
-            </div>
-
-            {/* Tarjeta: Mis Estudios */}
-            <div className="bg-white rounded-3xl border border-slate-200/90 p-5 sm:p-6 shadow-2xs space-y-4">
-              <div className="flex items-center justify-between pb-2 border-b border-slate-100">
-                <h3 className="text-sm font-black text-slate-900">
-                  Mis estudios
-                </h3>
-                <button 
-                  type="button" 
-                  onClick={() => {
-                    setEditModalTab('formacion')
-                    setIsEditingInfo(true)
-                  }}
-                  className="text-blue-600 hover:text-blue-800"
-                  title="Editar formación"
-                >
-                  <Edit3 size={15} />
-                </button>
-              </div>
-
-              <div className="space-y-4">
-                {studies.map((edu) => (
-                  <div key={edu.id} className="relative pl-5 border-l-2 border-blue-600 space-y-0.5 group">
-                    <div className="absolute -left-[5px] top-1 w-2 h-2 rounded-full bg-blue-600 ring-2 ring-white" />
-                    
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <h4 className="text-xs font-bold text-slate-900">{edu.degree}</h4>
-                        <span className="text-[11px] text-slate-600">{edu.institution}</span>
-                      </div>
-                      <button 
-                        type="button" 
-                        onClick={() => {
-                          setEditModalTab('formacion')
-                          setIsEditingInfo(true)
-                        }}
-                        className="text-slate-300 group-hover:text-blue-600 transition-colors"
-                      >
-                        <Edit3 size={13} />
-                      </button>
-                    </div>
-                    <p className="text-[10px] text-slate-400 font-semibold">{edu.dates}</p>
-                  </div>
-                ))}
-              </div>
-
-              <button
-                type="button"
-                onClick={() => {
-                  setEditModalTab('formacion')
-                  setIsAddingEdu(true)
-                  setIsEditingInfo(true)
-                }}
-                className="text-xs font-bold text-blue-600 hover:underline flex items-center gap-1.5 pt-1 cursor-pointer"
-              >
-                <Plus size={14} /> Añadir más estudios
-              </button>
-
-              {/* Banner de Estudios Tip */}
-              {showStudiesTip && (
-                <div className="bg-blue-50/70 border border-blue-100 rounded-2xl p-3.5 flex items-start justify-between gap-3 text-xs">
-                  <div className="flex items-start gap-2.5">
-                    <Lightbulb size={16} className="text-blue-600 shrink-0 mt-0.5" />
-                    <p className="text-[11px] text-blue-900 leading-tight">
-                      Tus últimos estudios registrados culminaron hace tiempo. Añade certificaciones o capacitaciones recientes si te has formado desde entonces.
-                    </p>
-                  </div>
-                  <button 
-                    type="button"
-                    onClick={() => setShowStudiesTip(false)}
-                    className="text-[11px] font-bold text-blue-700 hover:underline shrink-0"
-                  >
-                    Omitir
-                  </button>
-                </div>
-              )}
-            </div>
-
-            {/* Tarjeta: Idiomas y Test */}
-            <div className="bg-white rounded-3xl border border-slate-200/90 p-5 sm:p-6 shadow-2xs space-y-4">
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-sm font-black text-slate-900">Idiomas</h3>
-                  <button type="button" className="text-xs font-bold text-blue-600 hover:underline">
-                    Añadir
-                  </button>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  {languages.map(l => (
-                    <span key={l.id} className="text-xs font-bold px-3 py-1.5 bg-slate-100 text-slate-800 rounded-xl border border-slate-200">
-                      {l.name} - {l.level}
-                    </span>
-                  ))}
-                </div>
-              </div>
-
-              <div className="pt-3 border-t border-slate-100 space-y-2">
-                <div className="flex items-center gap-2">
-                  <h4 className="text-xs font-bold text-slate-800">Test de idioma</h4>
-                  <span className="text-[9px] font-extrabold uppercase bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full">
-                    Nuevo
-                  </span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <select className="text-xs p-2 bg-slate-50 border border-slate-200 rounded-xl font-medium">
-                    <option>Inglés Técnico Minero</option>
-                    <option>Portugués</option>
-                  </select>
-                  <button
-                    type="button"
-                    onClick={() => toast.info('Iniciando test de idioma')}
-                    className="px-4 py-2 bg-white border border-slate-300 hover:bg-slate-50 text-slate-800 text-xs font-bold rounded-xl transition-colors cursor-pointer"
-                  >
-                    Realizar test
-                  </button>
-                </div>
-              </div>
-
-              {/* Banner Test Tip */}
-              {showTestTip && (
-                <div className="bg-blue-50/70 border border-blue-100 rounded-2xl p-3 flex items-center justify-between text-xs">
-                  <p className="text-[11px] text-blue-900">
-                    Realiza cualquiera de los test de idioma, certifica tu nivel y añade los resultados automáticamente a tu perfil.
-                  </p>
-                  <button 
-                    type="button"
-                    onClick={() => setShowTestTip(false)}
-                    className="text-[11px] font-bold text-blue-700 hover:underline ml-2 shrink-0"
-                  >
-                    Omitir
-                  </button>
-                </div>
-              )}
-            </div>
-
-          </div>
-
-          {/* COLUMNA DERECHA: RECURSOS Y MEJORA DE CV (4 COLS) */}
-          <div className="lg:col-span-4 space-y-4">
-            
-            {/* Tarjeta 1: Plantillas de CV */}
-            <div className="bg-white rounded-3xl border border-slate-200/90 p-5 shadow-2xs space-y-3">
-              <div className="flex items-center justify-between">
-                <h3 className="text-xs font-black text-slate-900">Plantillas de CV</h3>
-                <span className="text-[9px] font-extrabold uppercase bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full">
-                  Nuevo
-                </span>
-              </div>
-              <p className="text-[11px] text-slate-500 leading-relaxed">
-                Tienes disponibles formatos oficiales para descargar o imprimir tu currículum de manera cómoda y profesional para postulaciones mineras.
-              </p>
-              <button
-                type="button"
-                onClick={() => toast.info('Generador de plantilla de CV en desarrollo')}
-                className="w-full py-2.5 bg-[#0a3672] hover:bg-[#072550] text-white text-xs font-bold rounded-xl shadow-xs transition-colors cursor-pointer"
-              >
-                Diseña tu CV
-              </button>
-            </div>
-
-            {/* Tarjeta 2: Cartas de Presentación */}
-            <div className="bg-white rounded-3xl border border-slate-200/90 p-5 shadow-2xs space-y-3">
-              <h3 className="text-xs font-black text-slate-900">Cartas de presentación</h3>
-              <p className="text-[11px] text-slate-500 leading-relaxed">
-                Crea o edita tus cartas de presentación y adjúntalas a tus postulaciones a contratistas. Las empresas valoran positivamente candidatos que explican su experiencia en campo.
-              </p>
-              <button
-                type="button"
-                onClick={() => toast.info('Editor de cartas de presentación')}
-                className="w-full py-2.5 bg-[#0a3672] hover:bg-[#072550] text-white text-xs font-bold rounded-xl shadow-xs transition-colors cursor-pointer"
-              >
-                Crear carta
-              </button>
-            </div>
-
-            {/* Tarjeta 3: Cómo Mejorar mi CV */}
-            <div className="bg-white rounded-3xl border border-slate-200/90 p-5 shadow-2xs space-y-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-1.5">
-                  <Lightbulb size={14} className="text-amber-500" />
-                  <h3 className="text-xs font-black text-slate-900">Cómo mejorar mi CV</h3>
-                </div>
-                <div className="w-8 h-8 rounded-full border-2 border-emerald-500 flex items-center justify-center font-bold text-[10px] text-emerald-700">
-                  94%
-                </div>
-              </div>
-
-              <div className="divide-y divide-slate-100 text-xs">
-                <button
-                  type="button"
-                  onClick={() => toast.info('Módulo de carga de CV adjunto')}
-                  className="w-full py-2.5 text-left flex items-center justify-between hover:text-blue-600 group"
-                >
-                  <div>
-                    <span className="font-bold text-slate-800 block group-hover:text-blue-600">Sube tu CV</span>
-                    <span className="text-[10px] text-slate-400 block">Inserta tu archivo en Word o PDF</span>
-                  </div>
-                  <ChevronRight size={14} className="text-slate-400" />
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => toast.info('Evaluación de competencias')}
-                  className="w-full py-2.5 text-left flex items-center justify-between hover:text-blue-600 group"
-                >
-                  <div>
-                    <span className="font-bold text-slate-800 block group-hover:text-blue-600">Identifica tu potencial</span>
-                    <span className="text-[10px] text-slate-400 block">Descubre gratis tus competencias en campo</span>
-                  </div>
-                  <ChevronRight size={14} className="text-slate-400" />
-                </button>
-              </div>
-            </div>
-
-          </div>
-
-        </div>
-      )}
-
-      {/* ========================================================================= */}
-      {/* 3. PESTAÑA: PUBLICACIONES TÉCNICAS (CONSERVADA)                            */}
-      {/* ========================================================================= */}
-      {activeTab === 'posts' && (
-        <div className="bg-white rounded-3xl border border-slate-200/90 p-6 shadow-2xs text-center space-y-3">
-          <div className="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center mx-auto">
-            <MessageSquare size={22} />
-          </div>
-          <h3 className="text-sm font-black text-slate-900">Aportes y Publicaciones en la Red</h3>
-          <p className="text-xs text-slate-500 max-w-sm mx-auto">
-            Tus consultas operativas, procedimientos SOMA y soluciones técnicas compartidas con colegas.
-          </p>
-          <Link
-            href="/comunidad"
-            className="inline-flex items-center gap-1.5 px-4 py-2 bg-blue-600 text-white text-xs font-bold rounded-xl hover:bg-blue-700"
-          >
-            Ir al muro principal a publicar
-          </Link>
-        </div>
-      )}
-
-      {/* ========================================================================= */}
-      {/* 4. PESTAÑA: GRUPOS Y FOROS (CONSERVADA)                                   */}
-      {/* ========================================================================= */}
-      {activeTab === 'groups' && (
-        <div className="bg-white rounded-3xl border border-slate-200/90 p-6 shadow-2xs text-center space-y-3">
-          <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center mx-auto">
-            <Users size={22} />
-          </div>
-          <h3 className="text-sm font-black text-slate-900">Comunidades de Especialidad</h3>
-          <p className="text-xs text-slate-500 max-w-sm mx-auto">
-            Participas en foros técnicos de SOMA, Mecánica Pesada y Geología.
-          </p>
-          <Link
-            href="/comunidad/grupos"
-            className="inline-flex items-center gap-1.5 px-4 py-2 bg-slate-900 text-white text-xs font-bold rounded-xl hover:bg-slate-800"
-          >
-            Explorar catálogo de grupos
-          </Link>
-        </div>
-      )}
-
-      {/* ========================================================================= */}
-      {/* 5. PESTAÑA: PRIVACIDAD Y DESCONEXIÓN SOBERANA (CONSERVADA)                */}
-      {/* ========================================================================= */}
-      {activeTab === 'privacy' && (
-        <div className="bg-white rounded-3xl border border-slate-200/90 p-6 shadow-2xs space-y-5">
-          <div className="space-y-1">
-            <h3 className="text-sm font-black text-slate-900 flex items-center gap-2">
-              <ShieldCheck size={18} className="text-blue-600" />
-              Gobernanza y Privacidad Soberana
-            </h3>
-            <p className="text-xs text-slate-500">
-              Controla tu visibilidad comunitaria sin alterar tu historial laboral en InthalyOps.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
-            <div className="p-4 rounded-2xl border border-slate-200 bg-slate-50/50 space-y-2">
-              <span className="font-bold text-xs text-slate-900 block">Pausar Perfil Temporalmente</span>
-              <p className="text-[11px] text-slate-500 leading-tight">
-                Oculta tu perfil y publicaciones de los resultados de búsqueda sin eliminar tus datos.
-              </p>
-              <button
-                type="button"
-                onClick={() => handleUnlink('pause_profile')}
-                className="px-3 py-1.5 bg-white border border-slate-300 text-slate-700 text-xs font-bold rounded-xl hover:bg-slate-100"
-              >
-                {isPaused ? 'Reactivar visibilidad' : 'Pausar perfil'}
-              </button>
-            </div>
-
-            <div className="p-4 rounded-2xl border border-rose-200 bg-rose-50/40 space-y-2">
-              <span className="font-bold text-xs text-rose-900 block">Derecho al Olvido Comunitario</span>
-              <p className="text-[11px] text-rose-700/80 leading-tight">
-                Elimina permanentemente tu perfil y aportes sociales. Tu empleo formal en InthalyOps permanece protegido.
-              </p>
-              <button
-                type="button"
-                onClick={() => handleUnlink('delete_community_presence')}
-                className="px-3 py-1.5 bg-rose-600 text-white text-xs font-bold rounded-xl hover:bg-rose-700"
-              >
-                Eliminar presencia social
-              </button>
-            </div>
           </div>
         </div>
       )}
