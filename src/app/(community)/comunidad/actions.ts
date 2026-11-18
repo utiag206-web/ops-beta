@@ -221,3 +221,25 @@ export async function getSavedPostIdsAction() {
     return []
   }
 }
+
+export async function uploadCommunityMediaAction(formData: FormData) {
+  const profileId = await getAuthenticatedUserId()
+  const file = formData.get('file') as File | null
+  const type = (formData.get('type') as 'avatar' | 'cover' | 'document') || 'avatar'
+
+  if (!file) {
+    return { success: false, error: 'No se ha proporcionado ningún archivo.' }
+  }
+
+  const arrayBuffer = await file.arrayBuffer()
+  const buffer = Buffer.from(arrayBuffer)
+
+  return communityService.uploadCommunityMedia({
+    profileId,
+    fileBuffer: buffer,
+    mimeType: file.type,
+    fileSizeBytes: file.size,
+    type,
+    originalFilename: file.name
+  })
+}

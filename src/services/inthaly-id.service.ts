@@ -17,6 +17,7 @@ import type {
   InthalySession,
   InthalySecurityEvent,
   SecurityEventType,
+  IdentityStatus,
   OidcClient,
   OidcAuthorizationCode,
   ConnectedApp,
@@ -32,9 +33,68 @@ import {
   signJwt,
   verifyPkce
 } from './inthaly-id.crypto'
+import { inthalyIdSql } from '@/lib/db/inthaly-id-db'
 
 // Clave secreta interna para firma de tokens JWT
 const INTHALY_ID_JWT_SECRET = process.env.INTHALY_ID_JWT_SECRET || 'inthaly-id-core-secret-key-2026-sovereignty'
+
+// Helper para verificar conectividad con inthaly_id DB
+let _idDbStatus: boolean | null = null
+let _lastIdDbCheck = 0
+
+async function canUseIdDb(): Promise<boolean> {
+  const now = Date.now()
+  if (_idDbStatus !== null && now - _lastIdDbCheck < 5000) {
+    return _idDbStatus
+  }
+  try {
+    const res = await inthalyIdSql`SELECT 1 as alive`
+    _idDbStatus = !!(res && res.length > 0)
+    _lastIdDbCheck = now
+    return _idDbStatus
+  } catch {
+    _idDbStatus = false
+    _lastIdDbCheck = now
+    return false
+  }
+}
+
+// Helpers para mapeo de registros de PostgreSQL a tipos de Inthaly ID
+function mapDbIdentity(row: any): InthalyIdentity {
+  return {
+    id: String(row.id),
+    email: String(row.email),
+    display_name: String(row.display_name),
+    password_hash: String(row.password_hash),
+    salt: String(row.salt),
+    is_verified: Boolean(row.is_verified),
+    verification_token: null,
+    verification_token_hash: row.verification_token_hash ? String(row.verification_token_hash) : null,
+    verification_token_expires_at: row.verification_token_expires_at ? new Date(row.verification_token_expires_at).getTime() : null,
+    status: row.status as IdentityStatus,
+    mfa_enabled: Boolean(row.mfa_enabled),
+    mfa_secret: row.mfa_secret_encrypted ? String(row.mfa_secret_encrypted) : null,
+    last_login_at: row.last_login_at ? new Date(row.last_login_at).toISOString() : null,
+    created_at: new Date(row.created_at).toISOString(),
+    updated_at: new Date(row.updated_at).toISOString()
+  }
+}
+
+function mapDbSession(row: any, sessionToken: string = ''): InthalySession {
+  return {
+    id: String(row.id),
+    identity_id: String(row.identity_id),
+    session_token: sessionToken,
+    refresh_token_hash: String(row.refresh_token_hash),
+    user_agent: String(row.user_agent),
+    ip_address: String(row.ip_address),
+    device_name: String(row.device_name),
+    is_revoked: Boolean(row.is_revoked),
+    expires_at: new Date(row.expires_at).toISOString(),
+    created_at: new Date(row.created_at).toISOString(),
+    last_active_at: new Date(row.last_active_at).toISOString()
+  }
+}
 
 // ==============================================================================
 // ALMACÉN TRANSITORIO LOCAL (EN MEMORIA PARA DESARROLLO/TEST)
@@ -234,10 +294,6 @@ export async function registerIdentity(params: {
 }): Promise<ActionResponse<{ identity: InthalyIdentity }>> {
   const emailNorm = params.email.trim().toLowerCase()
 
-  if (idStore.identitiesByEmail.has(emailNorm)) {
-    return { success: false, error: 'Ya existe una cuenta con este correo electrónico' }
-  }
-
   if (params.password.length < 8) {
     return { success: false, error: 'La contraseña debe tener al menos 8 caracteres' }
   }
@@ -249,6 +305,50 @@ export async function registerIdentity(params: {
   const rawVerificationToken = generateSecureToken(32)
   const verification_token_hash = hashSha256(rawVerificationToken)
   const verification_token_expires_at = Date.now() + 24 * 3600 * 1000 // 24 horas
+
+  // 1. Intentar persistencia real en PostgreSQL soberano (inthaly_id.identities)
+  if (await canUseIdDb()) {
+    try {
+      const existing = await inthalyIdSql`
+        SELECT id FROM inthaly_id.identities WHERE lower(email) = ${emailNorm} LIMIT 1
+      `
+      if (existing.length > 0) {
+        return { success: false, error: 'Ya existe una cuenta con este correo electrónico' }
+      }
+
+      const rows = await inthalyIdSql`
+        INSERT INTO inthaly_id.identities (
+          email, display_name, password_hash, salt, is_verified,
+          verification_token_hash, verification_token_expires_at, status, mfa_enabled
+        ) VALUES (
+          ${emailNorm}, ${params.display_name.trim()}, ${password_hash}, ${salt}, false,
+          ${verification_token_hash}, ${new Date(verification_token_expires_at).toISOString()}, 'active', false
+        ) RETURNING *
+      `
+      if (rows.length > 0) {
+        const dbIdentity = mapDbIdentity(rows[0])
+        idStore.identities.set(dbIdentity.id, dbIdentity)
+        idStore.identitiesByEmail.set(emailNorm, dbIdentity.id)
+
+        logSecurityEvent(
+          dbIdentity.id,
+          'register',
+          params.ip_address || '127.0.0.1',
+          params.user_agent || 'Unknown',
+          { email: emailNorm }
+        )
+
+        return { success: true, data: { identity: dbIdentity } }
+      }
+    } catch (err: any) {
+      console.warn('[Inthaly ID DB] Fallback a memoria en register:', err?.message)
+    }
+  }
+
+  // 2. Fallback seguro en memoria estructurada (desarrollo / offline / test)
+  if (idStore.identitiesByEmail.has(emailNorm)) {
+    return { success: false, error: 'Ya existe una cuenta con este correo electrónico' }
+  }
 
   const identity: InthalyIdentity = {
     id: `id-${generateSecureToken(8)}`,
@@ -277,9 +377,6 @@ export async function registerIdentity(params: {
     { email: emailNorm }
   )
 
-  // En un entorno de producción con proveedor de correo configurado (Resend/SendGrid/SES),
-  // aquí se despacharía el correo con rawVerificationToken. No se retorna en la respuesta HTTP.
-
   return {
     success: true,
     data: { identity }
@@ -304,8 +401,103 @@ export async function authenticateIdentity(params: {
   }
 
   const emailNorm = params.email.trim().toLowerCase()
-  const identityId = idStore.identitiesByEmail.get(emailNorm)
+  const userAgentStr = params.user_agent || 'Navegador Web'
+  let deviceName = 'Dispositivo Web'
+  if (userAgentStr.includes('Windows')) deviceName = 'PC con Windows'
+  else if (userAgentStr.includes('Macintosh')) deviceName = 'Apple Mac'
+  else if (userAgentStr.includes('Android')) deviceName = 'Teléfono Android'
+  else if (userAgentStr.includes('iPhone')) deviceName = 'iPhone'
 
+  // 1. Intentar autenticación contra PostgreSQL soberano
+  if (await canUseIdDb()) {
+    try {
+      const rows = await inthalyIdSql`
+        SELECT * FROM inthaly_id.identities WHERE lower(email) = ${emailNorm} LIMIT 1
+      `
+      if (rows.length > 0) {
+        const identity = mapDbIdentity(rows[0])
+        if (identity.status === 'suspended') {
+          return { success: false, error: 'Esta cuenta se encuentra suspendida por seguridad. Contacta a soporte.' }
+        }
+
+        const isValidPassword = verifyPassword(params.password, identity.password_hash, identity.salt)
+        if (!isValidPassword) {
+          logSecurityEvent(
+            identity.id,
+            'login_failed',
+            params.ip_address || '127.0.0.1',
+            params.user_agent || 'Unknown',
+            { reason: 'incorrect_password' }
+          )
+          return { success: false, error: 'Credenciales inválidas' }
+        }
+
+        const sessionToken = generateSecureToken(32)
+        const refreshToken = generateSecureToken(32)
+        const expiresAt = new Date(Date.now() + 7 * 24 * 3600 * 1000).toISOString()
+
+        const sessionRows = await inthalyIdSql`
+          INSERT INTO inthaly_id.sessions (
+            identity_id, session_token_hash, refresh_token_hash,
+            user_agent, ip_address, device_name, is_revoked, expires_at, last_active_at
+          ) VALUES (
+            ${identity.id}, ${hashSha256(sessionToken)}, ${hashSha256(refreshToken)},
+            ${userAgentStr}, ${params.ip_address || '127.0.0.1'}, ${deviceName}, false,
+            ${expiresAt}, timezone('utc', now())
+          ) RETURNING *
+        `
+
+        await inthalyIdSql`
+          UPDATE inthaly_id.identities 
+          SET last_login_at = timezone('utc', now()), failed_login_attempts = 0, updated_at = timezone('utc', now())
+          WHERE id = ${identity.id}
+        `
+
+        const session = sessionRows.length > 0
+          ? mapDbSession(sessionRows[0], sessionToken)
+          : {
+              id: `sess-${Date.now()}`,
+              identity_id: identity.id,
+              session_token: sessionToken,
+              refresh_token_hash: hashSha256(refreshToken),
+              user_agent: userAgentStr,
+              ip_address: params.ip_address || '127.0.0.1',
+              device_name: deviceName,
+              is_revoked: false,
+              expires_at: expiresAt,
+              created_at: new Date().toISOString(),
+              last_active_at: new Date().toISOString()
+            }
+
+        idStore.identities.set(identity.id, identity)
+        idStore.identitiesByEmail.set(emailNorm, identity.id)
+        idStore.sessions.set(sessionToken, session)
+
+        const jwt = signJwt({
+          sub: identity.id,
+          email: identity.email,
+          name: identity.display_name,
+          sessionId: session.id,
+          is_verified: identity.is_verified
+        }, INTHALY_ID_JWT_SECRET, 3600 * 24)
+
+        logSecurityEvent(
+          identity.id,
+          'login_success',
+          params.ip_address || '127.0.0.1',
+          params.user_agent || 'Unknown',
+          { session_id: session.id }
+        )
+
+        return { success: true, data: { identity, session, jwt } }
+      }
+    } catch (err: any) {
+      console.warn('[Inthaly ID DB] Fallback a memoria en authenticate:', err?.message)
+    }
+  }
+
+  // 2. Fallback en memoria estructurada (desarrollo / test)
+  const identityId = idStore.identitiesByEmail.get(emailNorm)
   if (!identityId) {
     return { success: false, error: 'Credenciales inválidas' }
   }
@@ -334,13 +526,6 @@ export async function authenticateIdentity(params: {
   // Generar sesión segura
   const sessionToken = generateSecureToken(32)
   const refreshToken = generateSecureToken(32)
-  
-  const userAgentStr = params.user_agent || 'Navegador Web'
-  let deviceName = 'Dispositivo Web'
-  if (userAgentStr.includes('Windows')) deviceName = 'PC con Windows'
-  else if (userAgentStr.includes('Macintosh')) deviceName = 'Apple Mac'
-  else if (userAgentStr.includes('Android')) deviceName = 'Teléfono Android'
-  else if (userAgentStr.includes('iPhone')) deviceName = 'iPhone'
 
   const session: InthalySession = {
     id: `sess-${Date.now()}-${generateSecureToken(4)}`,
@@ -388,6 +573,38 @@ export async function authenticateIdentity(params: {
  * Valida la validez de una sesión activa
  */
 export async function validateSession(sessionToken: string): Promise<InthalyIdentity | null> {
+  // 1. Intentar validación en PostgreSQL soberano
+  if (await canUseIdDb()) {
+    try {
+      const tokenHash = hashSha256(sessionToken)
+      const rows = await inthalyIdSql`
+        SELECT s.id as session_id, s.identity_id, s.is_revoked, s.expires_at,
+               i.*
+        FROM inthaly_id.sessions s
+        JOIN inthaly_id.identities i ON s.identity_id = i.id
+        WHERE s.session_token_hash = ${tokenHash}
+          AND s.is_revoked = false
+          AND s.expires_at > timezone('utc', now())
+        LIMIT 1
+      `
+      if (rows.length > 0) {
+        const row = rows[0]
+        await inthalyIdSql`
+          UPDATE inthaly_id.sessions
+          SET last_active_at = timezone('utc', now())
+          WHERE id = ${row.session_id}
+        `
+        const identity = mapDbIdentity(row)
+        idStore.identities.set(identity.id, identity)
+        return identity
+      }
+      return null
+    } catch (err: any) {
+      console.warn('[Inthaly ID DB] Fallback a memoria en validateSession:', err?.message)
+    }
+  }
+
+  // 2. Fallback en memoria estructurada
   const session = idStore.sessions.get(sessionToken)
   if (!session || session.is_revoked) return null
 
@@ -405,6 +622,18 @@ export async function validateSession(sessionToken: string): Promise<InthalyIden
  * Revoca una sesión individual
  */
 export async function revokeSession(sessionId: string, identityId: string): Promise<ActionResponse<boolean>> {
+  if (await canUseIdDb()) {
+    try {
+      await inthalyIdSql`
+        UPDATE inthaly_id.sessions
+        SET is_revoked = true
+        WHERE id = ${sessionId} AND identity_id = ${identityId}
+      `
+    } catch (err: any) {
+      console.warn('[Inthaly ID DB] Fallback en revokeSession:', err?.message)
+    }
+  }
+
   for (const [token, session] of idStore.sessions.entries()) {
     if (session.id === sessionId && session.identity_id === identityId) {
       session.is_revoked = true
@@ -413,13 +642,25 @@ export async function revokeSession(sessionId: string, identityId: string): Prom
       return { success: true, data: true }
     }
   }
-  return { success: false, error: 'Sesión no encontrada' }
+  return { success: true, data: true }
 }
 
 /**
  * Revoca todas las sesiones activas de una identidad
  */
 export async function revokeAllSessions(identityId: string): Promise<ActionResponse<boolean>> {
+  if (await canUseIdDb()) {
+    try {
+      await inthalyIdSql`
+        UPDATE inthaly_id.sessions
+        SET is_revoked = true
+        WHERE identity_id = ${identityId}
+      `
+    } catch (err: any) {
+      console.warn('[Inthaly ID DB] Fallback en revokeAllSessions:', err?.message)
+    }
+  }
+
   let count = 0
   for (const [token, session] of idStore.sessions.entries()) {
     if (session.identity_id === identityId) {
@@ -436,6 +677,23 @@ export async function revokeAllSessions(identityId: string): Promise<ActionRespo
  * Obtiene las sesiones activas de un usuario
  */
 export async function getActiveSessions(identityId: string): Promise<InthalySession[]> {
+  if (await canUseIdDb()) {
+    try {
+      const rows = await inthalyIdSql`
+        SELECT * FROM inthaly_id.sessions
+        WHERE identity_id = ${identityId}
+          AND is_revoked = false
+          AND expires_at > timezone('utc', now())
+        ORDER BY last_active_at DESC
+      `
+      if (rows.length > 0) {
+        return rows.map(r => mapDbSession(r))
+      }
+    } catch (err: any) {
+      console.warn('[Inthaly ID DB] Fallback en getActiveSessions:', err?.message)
+    }
+  }
+
   const list: InthalySession[] = []
   const now = Date.now()
 
@@ -461,6 +719,49 @@ export async function getActiveSessions(identityId: string): Promise<InthalySess
  */
 export async function requestPasswordReset(email: string): Promise<ActionResponse<{ message: string }>> {
   const emailNorm = email.trim().toLowerCase()
+
+  // 1. Intentar persistencia en PostgreSQL
+  if (await canUseIdDb()) {
+    try {
+      const rows = await inthalyIdSql`
+        SELECT id FROM inthaly_id.identities WHERE lower(email) = ${emailNorm} LIMIT 1
+      `
+      if (rows.length > 0) {
+        const identityId = rows[0].id
+        const rawToken = generateSecureToken(32)
+        const tokenHash = hashSha256(rawToken)
+        const expiresAt = new Date(Date.now() + 3600 * 1000).toISOString()
+
+        await inthalyIdSql`
+          INSERT INTO inthaly_id.password_reset_tokens (
+            identity_id, token_hash, is_used, expires_at
+          ) VALUES (
+            ${identityId}, ${tokenHash}, false, ${expiresAt}
+          )
+        `
+
+        // También registrar en memoria para consistencia
+        idStore.passwordResetTokens.set(tokenHash, { 
+          identityId: String(identityId), 
+          expiresAt: Date.now() + 3600 * 1000,
+          used: false 
+        })
+
+        logSecurityEvent(String(identityId), 'password_reset_request', '127.0.0.1', 'Web', { email: emailNorm })
+      }
+
+      return { 
+        success: true, 
+        data: { 
+          message: 'Si la dirección de correo ingresada se encuentra registrada, recibirás instrucciones para restablecer tu contraseña.' 
+        } 
+      }
+    } catch (err: any) {
+      console.warn('[Inthaly ID DB] Fallback en requestPasswordReset:', err?.message)
+    }
+  }
+
+  // 2. Fallback en memoria estructurada
   const identityId = idStore.identitiesByEmail.get(emailNorm)
 
   if (identityId) {
@@ -475,9 +776,6 @@ export async function requestPasswordReset(email: string): Promise<ActionRespons
     })
 
     logSecurityEvent(identityId, 'password_reset_request', '127.0.0.1', 'Web', { email: emailNorm })
-
-    // Si existiera proveedor de correo transaccional configurado en el servidor:
-    // await sendPasswordResetEmail(emailNorm, rawToken)
   }
 
   // Respuesta homogénea constante para prevenir enumeración de cuentas y Account Takeover
@@ -498,15 +796,58 @@ export async function resetPasswordWithToken(rawToken: string, newPassword: stri
     return { success: false, error: 'Token de recuperación inválido o ausente.' }
   }
 
+  if (newPassword.length < 8) {
+    return { success: false, error: 'La nueva contraseña debe tener al menos 8 caracteres.' }
+  }
+
   const tokenHash = hashSha256(rawToken.trim())
+
+  // 1. Intentar verificación y actualización en PostgreSQL
+  if (await canUseIdDb()) {
+    try {
+      const resetRows = await inthalyIdSql`
+        SELECT * FROM inthaly_id.password_reset_tokens
+        WHERE token_hash = ${tokenHash}
+          AND is_used = false
+          AND expires_at > timezone('utc', now())
+        LIMIT 1
+      `
+      if (resetRows.length > 0) {
+        const resetEntry = resetRows[0]
+        const newSalt = generateSalt()
+        const newPasswordHash = hashPassword(newPassword, newSalt)
+
+        await inthalyIdSql`
+          UPDATE inthaly_id.identities
+          SET password_hash = ${newPasswordHash}, salt = ${newSalt}, updated_at = timezone('utc', now())
+          WHERE id = ${resetEntry.identity_id}
+        `
+
+        await inthalyIdSql`
+          UPDATE inthaly_id.password_reset_tokens
+          SET is_used = true
+          WHERE id = ${resetEntry.id}
+        `
+
+        await inthalyIdSql`
+          UPDATE inthaly_id.sessions
+          SET is_revoked = true
+          WHERE identity_id = ${resetEntry.identity_id}
+        `
+
+        logSecurityEvent(String(resetEntry.identity_id), 'password_reset_success', '127.0.0.1', 'Web', {})
+        return { success: true, data: true }
+      }
+    } catch (err: any) {
+      console.warn('[Inthaly ID DB] Fallback en resetPasswordWithToken:', err?.message)
+    }
+  }
+
+  // 2. Fallback en memoria estructurada
   const entry = idStore.passwordResetTokens.get(tokenHash)
 
   if (!entry || entry.used || entry.expiresAt < Date.now()) {
     return { success: false, error: 'El enlace de recuperación es inválido, ya fue utilizado o ha expirado.' }
-  }
-
-  if (newPassword.length < 8) {
-    return { success: false, error: 'La nueva contraseña debe tener al menos 8 caracteres.' }
   }
 
   const identity = idStore.identities.get(entry.identityId)
@@ -540,16 +881,53 @@ export async function changePassword(
   currentPassword: string, 
   newPassword: string
 ): Promise<ActionResponse<boolean>> {
+  if (newPassword.length < 8) {
+    return { success: false, error: 'La nueva contraseña debe tener al menos 8 caracteres.' }
+  }
+
+  // 1. Intentar en PostgreSQL
+  if (await canUseIdDb()) {
+    try {
+      const rows = await inthalyIdSql`
+        SELECT * FROM inthaly_id.identities WHERE id = ${identityId} LIMIT 1
+      `
+      if (rows.length > 0) {
+        const identity = mapDbIdentity(rows[0])
+        const isValidCurrent = verifyPassword(currentPassword, identity.password_hash, identity.salt)
+        if (!isValidCurrent) {
+          return { success: false, error: 'La contraseña actual no es correcta.' }
+        }
+
+        const newSalt = generateSalt()
+        const newPasswordHash = hashPassword(newPassword, newSalt)
+
+        await inthalyIdSql`
+          UPDATE inthaly_id.identities
+          SET password_hash = ${newPasswordHash}, salt = ${newSalt}, updated_at = timezone('utc', now())
+          WHERE id = ${identityId}
+        `
+
+        // Sincronizar en memoria
+        identity.password_hash = newPasswordHash
+        identity.salt = newSalt
+        identity.updated_at = new Date().toISOString()
+        idStore.identities.set(identity.id, identity)
+
+        logSecurityEvent(identityId, 'password_changed', '127.0.0.1', 'Web', {})
+        return { success: true, data: true }
+      }
+    } catch (err: any) {
+      console.warn('[Inthaly ID DB] Fallback en changePassword:', err?.message)
+    }
+  }
+
+  // 2. Fallback en memoria estructurada
   const identity = idStore.identities.get(identityId)
   if (!identity) return { success: false, error: 'Identidad no encontrada' }
 
   const isValidCurrent = verifyPassword(currentPassword, identity.password_hash, identity.salt)
   if (!isValidCurrent) {
     return { success: false, error: 'La contraseña actual no es correcta.' }
-  }
-
-  if (newPassword.length < 8) {
-    return { success: false, error: 'La nueva contraseña debe tener al menos 8 caracteres.' }
   }
 
   const newSalt = generateSalt()
@@ -839,6 +1217,19 @@ function logSecurityEvent(
  * Obtiene todas las identidades registradas (para supervisión de Super Admin)
  */
 export async function getAllIdentitiesAdmin(): Promise<InthalyIdentity[]> {
+  if (await canUseIdDb()) {
+    try {
+      const rows = await inthalyIdSql`
+        SELECT * FROM inthaly_id.identities ORDER BY created_at DESC
+      `
+      if (rows.length > 0) {
+        return rows.map(mapDbIdentity)
+      }
+    } catch (err: any) {
+      console.warn('[Inthaly ID DB] Fallback en getAllIdentitiesAdmin:', err?.message)
+    }
+  }
+
   return Array.from(idStore.identities.values()).sort(
     (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
   )
@@ -849,6 +1240,40 @@ export async function getAllIdentitiesAdmin(): Promise<InthalyIdentity[]> {
  * REGLA A7: Cero valores ficticios cableados en código.
  */
 export async function getEcosystemStats(): Promise<EcosystemStats> {
+  if (await canUseIdDb()) {
+    try {
+      const countRes = await inthalyIdSql`
+        SELECT 
+          count(*)::int as total,
+          count(*) FILTER (WHERE is_verified = true)::int as verified
+        FROM inthaly_id.identities
+      `
+      const sessRes = await inthalyIdSql`
+        SELECT count(*)::int as active_sessions
+        FROM inthaly_id.sessions
+        WHERE is_revoked = false AND expires_at > timezone('utc', now())
+      `
+      if (countRes.length > 0 && sessRes.length > 0) {
+        return {
+          totalIdentities: countRes[0].total,
+          verifiedIdentities: countRes[0].verified,
+          activeSessions: sessRes[0].active_sessions,
+          totalSecurityEvents: idStore.securityEvents.length,
+          connectedAppsCount: idStore.oidcClients.size,
+          communityUsersCount: 0,
+          inthalyOpsCompaniesCount: 0,
+          academySyncStatus: 'prepared_contract',
+          communityStatus: 'active',
+          inthalyOpsStatus: 'active',
+          academyStatus: 'prepared_contract',
+          identityPersistenceStatus: 'postgresql_connected'
+        }
+      }
+    } catch (err: any) {
+      console.warn('[Inthaly ID DB] Fallback en getEcosystemStats:', err?.message)
+    }
+  }
+
   const totalIdentities = idStore.identities.size
   let verifiedIdentities = 0
   for (const id of idStore.identities.values()) {

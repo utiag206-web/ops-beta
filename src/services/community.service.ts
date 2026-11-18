@@ -23,6 +23,52 @@ import type {
   ReactionType
 } from '@/types/community.types'
 import type { ActionResponse } from '@/types/common.types'
+import { inthalyCommunitySql } from '@/lib/db/community-db'
+import {
+  uploadObjectToStorage,
+  generateStorageKey,
+  validateFileConstraints
+} from '@/lib/storage/object-storage.service'
+
+// Helper para verificar conectividad con inthaly_community DB
+let _comDbStatus: boolean | null = null
+let _lastComDbCheck = 0
+
+async function canUseCommunityDb(): Promise<boolean> {
+  const now = Date.now()
+  if (_comDbStatus !== null && now - _lastComDbCheck < 5000) {
+    return _comDbStatus
+  }
+  try {
+    const res = await inthalyCommunitySql`SELECT 1 as alive`
+    _comDbStatus = !!(res && res.length > 0)
+    _lastComDbCheck = now
+    return _comDbStatus
+  } catch {
+    _comDbStatus = false
+    _lastComDbCheck = now
+    return false
+  }
+}
+
+function mapDbProfile(row: any): CommunityProfile {
+  return {
+    id: String(row.id),
+    slug: row.slug || String(row.display_name).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, ''),
+    display_name: String(row.display_name),
+    headline: String(row.headline || ''),
+    bio: String(row.bio || ''),
+    avatar_url: row.avatar_url ? String(row.avatar_url) : undefined,
+    banner_url: row.cover_url ? String(row.cover_url) : undefined,
+    location_region: String(row.location_region || 'Perú'),
+    specialties: Array.isArray(row.specialties) ? row.specialties : [],
+    is_active: Boolean(row.is_active),
+    visibility: 'public',
+    allow_employer_matching: Boolean(row.allow_employer_matching),
+    connections_count: 0,
+    posts_count: 0
+  }
+}
 
 // Pesos predeterminados del motor de recomendación heurístico ponderado
 export const DEFAULT_RECOMMENDER_WEIGHTS: RecommendationEngineWeights = {
@@ -366,6 +412,26 @@ export async function getProfile(
   supabase: any,
   identifier: string
 ): Promise<CommunityProfile | null> {
+  // 1. Intentar consulta en PostgreSQL soberano (inthaly_community.profiles)
+  if (await canUseCommunityDb()) {
+    try {
+      const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(identifier)
+      const rows = isUuid
+        ? await inthalyCommunitySql`SELECT * FROM inthaly_community.profiles WHERE id = ${identifier} LIMIT 1`
+        : await inthalyCommunitySql`SELECT * FROM inthaly_community.profiles WHERE lower(display_name) = lower(${identifier.replace(/-/g, ' ')}) LIMIT 1`
+
+      if (rows.length > 0) {
+        const p = mapDbProfile(rows[0])
+        memoryStore.profiles.set(p.id, p)
+        memoryStore.profiles.set(p.slug, p)
+        return p
+      }
+    } catch (err: any) {
+      console.warn('[Community DB] Fallback en getProfile:', err?.message)
+    }
+  }
+
+  // 2. Consulta en Supabase si está disponible
   try {
     const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(identifier)
     const column = isUuid ? 'id' : 'slug'
@@ -383,7 +449,7 @@ export async function getProfile(
     // Si la tabla remota no existe aún, procedemos a fallback en memoria
   }
 
-  // Fallback seguro en memoria
+  // 3. Fallback seguro en memoria
   const cached = memoryStore.profiles.get(identifier)
   return cached || null
 }
@@ -413,6 +479,47 @@ export async function upsertProfile(
     updated_at: new Date().toISOString()
   }
 
+  // 1. Intentar persistencia en PostgreSQL soberano
+  if (await canUseCommunityDb()) {
+    try {
+      const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(payload.id)
+      if (isUuid) {
+        const rows = await inthalyCommunitySql`
+          INSERT INTO inthaly_community.profiles (
+            id, display_name, headline, bio, location_region, specialties,
+            avatar_url, cover_url, allow_employer_matching, is_active, updated_at
+          ) VALUES (
+            ${payload.id}, ${payload.display_name}, ${payload.headline || ''}, ${payload.bio || ''},
+            ${payload.location_region || 'Perú'}, ${payload.specialties || []},
+            ${payload.avatar_url || null}, ${payload.banner_url || null},
+            ${Boolean(payload.allow_employer_matching)}, ${payload.is_active ?? true}, timezone('utc', now())
+          )
+          ON CONFLICT (id) DO UPDATE SET
+            display_name = EXCLUDED.display_name,
+            headline = EXCLUDED.headline,
+            bio = EXCLUDED.bio,
+            location_region = EXCLUDED.location_region,
+            specialties = EXCLUDED.specialties,
+            avatar_url = COALESCE(EXCLUDED.avatar_url, inthaly_community.profiles.avatar_url),
+            cover_url = COALESCE(EXCLUDED.cover_url, inthaly_community.profiles.cover_url),
+            allow_employer_matching = EXCLUDED.allow_employer_matching,
+            is_active = EXCLUDED.is_active,
+            updated_at = timezone('utc', now())
+          RETURNING *
+        `
+        if (rows.length > 0) {
+          const saved = mapDbProfile(rows[0])
+          memoryStore.profiles.set(saved.id, saved)
+          memoryStore.profiles.set(saved.slug, saved)
+          return { success: true, data: saved }
+        }
+      }
+    } catch (err: any) {
+      console.warn('[Community DB] Fallback en upsertProfile:', err?.message)
+    }
+  }
+
+  // 2. Intentar en Supabase si está disponible
   try {
     const { data, error } = await supabase
       .from('community_profiles')
@@ -429,6 +536,7 @@ export async function upsertProfile(
     // Si Supabase remoto aún no cuenta con la tabla, guardamos en memoria
   }
 
+  // 3. Fallback en memoria estructurada
   memoryStore.profiles.set(payload.id, payload)
   memoryStore.profiles.set(payload.slug, payload)
   return { success: true, data: payload }
@@ -510,6 +618,45 @@ export async function getGroups(
   supabase: any,
   options?: { category?: string; search?: string; limit?: number }
 ): Promise<CommunityGroup[]> {
+  // 1. Intentar consulta en PostgreSQL soberano (inthaly_community.groups)
+  if (await canUseCommunityDb()) {
+    try {
+      const rows = options?.category && options.category !== 'all'
+        ? await inthalyCommunitySql`
+            SELECT * FROM inthaly_community.groups 
+            WHERE lower(category) = lower(${options.category}) 
+            ORDER BY members_count DESC 
+            LIMIT ${options?.limit || 50}
+          `
+        : await inthalyCommunitySql`
+            SELECT * FROM inthaly_community.groups 
+            ORDER BY members_count DESC 
+            LIMIT ${options?.limit || 50}
+          `
+
+      if (rows.length > 0) {
+        return rows.map((r: any) => ({
+          id: String(r.id),
+          slug: String(r.slug),
+          name: String(r.name),
+          description: String(r.description || ''),
+          category: String(r.category),
+          custom_tags: Array.isArray(r.custom_tags) ? r.custom_tags : [],
+          privacy: r.privacy || 'public',
+          join_policy: 'open',
+          group_rules: [],
+          created_by: String(r.created_by),
+          members_count: Number(r.members_count || 1),
+          posts_count: 0,
+          created_at: new Date(r.created_at).toISOString()
+        }))
+      }
+    } catch (err: any) {
+      console.warn('[Community DB] Fallback en getGroups:', err?.message)
+    }
+  }
+
+  // 2. Consulta en Supabase si está disponible
   try {
     let query = supabase.from('community_groups').select('*')
     if (options?.category && options.category !== 'all') {
@@ -543,6 +690,34 @@ export async function getGroupBySlug(
   supabase: any,
   slug: string
 ): Promise<CommunityGroup | null> {
+  if (await canUseCommunityDb()) {
+    try {
+      const rows = await inthalyCommunitySql`
+        SELECT * FROM inthaly_community.groups WHERE slug = ${slug} LIMIT 1
+      `
+      if (rows.length > 0) {
+        const r = rows[0]
+        return {
+          id: String(r.id),
+          slug: String(r.slug),
+          name: String(r.name),
+          description: String(r.description || ''),
+          category: String(r.category),
+          custom_tags: Array.isArray(r.custom_tags) ? r.custom_tags : [],
+          privacy: r.privacy || 'public',
+          join_policy: 'open',
+          group_rules: [],
+          created_by: String(r.created_by),
+          members_count: Number(r.members_count || 1),
+          posts_count: 0,
+          created_at: new Date(r.created_at).toISOString()
+        }
+      }
+    } catch (err: any) {
+      console.warn('[Community DB] Fallback en getGroupBySlug:', err?.message)
+    }
+  }
+
   try {
     const { data, error } = await supabase.from('community_groups').select('*').eq('slug', slug).maybeSingle()
     if (!error && data) return data as CommunityGroup
@@ -585,6 +760,47 @@ export async function createGroup(
     created_at: new Date().toISOString()
   }
 
+  // 1. Intentar persistencia en PostgreSQL
+  if (await canUseCommunityDb()) {
+    try {
+      const isAuthorUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(groupData.created_by)
+      if (isAuthorUuid) {
+        const rows = await inthalyCommunitySql`
+          INSERT INTO inthaly_community.groups (
+            name, slug, description, category, privacy, custom_tags, created_by, members_count
+          ) VALUES (
+            ${groupData.name}, ${slug}, ${groupData.description || ''}, ${groupData.category},
+            ${groupData.privacy || 'public'}, ${groupData.custom_tags || []}, ${groupData.created_by}, 1
+          ) RETURNING *
+        `
+        if (rows.length > 0) {
+          const r = rows[0]
+          const created: CommunityGroup = {
+            id: String(r.id),
+            slug: String(r.slug),
+            name: String(r.name),
+            description: String(r.description || ''),
+            category: String(r.category),
+            custom_tags: Array.isArray(r.custom_tags) ? r.custom_tags : [],
+            privacy: r.privacy || 'public',
+            join_policy: groupData.join_policy || 'open',
+            group_rules: [],
+            created_by: String(r.created_by),
+            members_count: Number(r.members_count || 1),
+            posts_count: 0,
+            created_at: new Date(r.created_at).toISOString()
+          }
+          memoryStore.groups.set(created.id, created)
+          memoryStore.groups.set(created.slug, created)
+          return { success: true, data: created }
+        }
+      }
+    } catch (err: any) {
+      console.warn('[Community DB] Fallback en createGroup:', err?.message)
+    }
+  }
+
+  // 2. Intentar en Supabase
   try {
     const { data, error } = await supabase.from('community_groups').insert(newGroup).select().maybeSingle()
     if (!error && data) {
@@ -609,6 +825,27 @@ export async function joinGroup(
   groupId: string,
   profileId: string
 ): Promise<ActionResponse<boolean>> {
+  if (await canUseCommunityDb()) {
+    try {
+      const isGroupUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(groupId)
+      const isProfileUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(profileId)
+      if (isGroupUuid && isProfileUuid) {
+        await inthalyCommunitySql`
+          INSERT INTO inthaly_community.group_members (group_id, profile_id, role)
+          VALUES (${groupId}, ${profileId}, 'member')
+          ON CONFLICT (group_id, profile_id) DO NOTHING
+        `
+        await inthalyCommunitySql`
+          UPDATE inthaly_community.groups
+          SET members_count = members_count + 1
+          WHERE id = ${groupId}
+        `
+      }
+    } catch (err: any) {
+      console.warn('[Community DB] Fallback en joinGroup:', err?.message)
+    }
+  }
+
   const group = memoryStore.groups.get(groupId)
   const status = group?.join_policy === 'requires_approval' ? 'pending_approval' : 'active'
 
@@ -647,6 +884,50 @@ export async function getFeedPosts(
   supabase: any,
   options?: { groupId?: string; limit?: number }
 ): Promise<CommunityPost[]> {
+  // 1. Intentar consulta en PostgreSQL soberano
+  if (await canUseCommunityDb()) {
+    try {
+      const rows = options?.groupId
+        ? await inthalyCommunitySql`
+            SELECT p.*, pr.display_name, pr.headline, pr.avatar_url
+            FROM inthaly_community.posts p
+            LEFT JOIN inthaly_community.profiles pr ON p.author_id = pr.id
+            WHERE p.group_id = ${options.groupId}
+            ORDER BY p.created_at DESC
+            LIMIT ${options?.limit || 20}
+          `
+        : await inthalyCommunitySql`
+            SELECT p.*, pr.display_name, pr.headline, pr.avatar_url
+            FROM inthaly_community.posts p
+            LEFT JOIN inthaly_community.profiles pr ON p.author_id = pr.id
+            ORDER BY p.created_at DESC
+            LIMIT ${options?.limit || 20}
+          `
+
+      if (rows.length > 0) {
+        return rows.map((r: any) => ({
+          id: String(r.id),
+          author_id: String(r.author_id),
+          author_name: String(r.display_name || 'Colega Profesional'),
+          author_headline: String(r.headline || ''),
+          author_avatar: r.avatar_url ? String(r.avatar_url) : undefined,
+          group_id: r.group_id ? String(r.group_id) : undefined,
+          content: String(r.content),
+          media_urls: Array.isArray(r.media_urls) ? r.media_urls : [],
+          tags: Array.isArray(r.tags) ? r.tags : [],
+          visibility: 'public',
+          likes_count: Number(r.likes_count || 0),
+          comments_count: Number(r.comments_count || 0),
+          shares_count: 0,
+          created_at: new Date(r.created_at).toISOString(),
+          is_liked: false
+        }))
+      }
+    } catch (err: any) {
+      console.warn('[Community DB] Fallback en getFeedPosts:', err?.message)
+    }
+  }
+
   try {
     let query = supabase.from('community_posts').select('*, author:community_profiles(*), group:community_groups(*)')
     if (options?.groupId) {
@@ -681,6 +962,48 @@ export async function createPost(
 ): Promise<ActionResponse<CommunityPost>> {
   const author = await getProfile(supabase, postData.author_id)
   const group = postData.group_id ? await getGroupBySlug(supabase, postData.group_id) : null
+
+  // 1. Intentar persistencia en PostgreSQL soberano
+  if (await canUseCommunityDb()) {
+    try {
+      const isAuthorUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(postData.author_id)
+      if (isAuthorUuid) {
+        const rows = await inthalyCommunitySql`
+          INSERT INTO inthaly_community.posts (
+            author_id, group_id, content, media_urls, tags
+          ) VALUES (
+            ${postData.author_id}, ${postData.group_id || null}, ${postData.content},
+            ${postData.media_urls || []}, ${postData.tags || []}
+          ) RETURNING *
+        `
+        if (rows.length > 0) {
+          const r = rows[0]
+          const created: CommunityPost = {
+            id: String(r.id),
+            author_id: String(r.author_id),
+            author_name: author?.display_name || 'Colega Profesional',
+            author_headline: author?.headline || '',
+            author_avatar: author?.avatar_url,
+            group_id: r.group_id ? String(r.group_id) : undefined,
+            content: String(r.content),
+            media_urls: Array.isArray(r.media_urls) ? r.media_urls : (postData.media_urls || []),
+            tags: Array.isArray(r.tags) ? r.tags : [],
+            visibility: postData.visibility || 'public',
+            likes_count: 0,
+            comments_count: 0,
+            shares_count: 0,
+            created_at: new Date(r.created_at).toISOString(),
+            author: author || undefined,
+            group: group || null
+          }
+          memoryStore.posts.unshift(created)
+          return { success: true, data: created }
+        }
+      }
+    } catch (err: any) {
+      console.warn('[Community DB] Fallback en createPost:', err?.message)
+    }
+  }
 
   const newPost: CommunityPost = {
     id: `post-${Date.now()}`,
@@ -1056,4 +1379,49 @@ export async function getSavedPostIds(
 ): Promise<string[]> {
   const userSaves = memoryStore.savedPosts.get(userId)
   return userSaves ? Array.from(userSaves) : []
+}
+
+// ==============================================================================
+// 9. ALMACENAMIENTO DE OBJETOS MULTIMEDIA (MinIO S3 AUTOGESTIONADO)
+// ==============================================================================
+
+/**
+ * Sube y valida un archivo multimedia (avatar, portada o documento) usando MinIO S3
+ * Previene la saturación de PostgreSQL al mantener binarios fuera de la base de datos.
+ */
+export async function uploadCommunityMedia(params: {
+  profileId: string
+  fileBuffer: Buffer
+  mimeType: string
+  fileSizeBytes: number
+  type: 'avatar' | 'cover' | 'document'
+  originalFilename?: string
+}): Promise<ActionResponse<{ url: string; key: string }>> {
+  const validation = validateFileConstraints(params.fileSizeBytes, params.mimeType, params.type)
+  if (!validation.valid) {
+    return { success: false, error: validation.error }
+  }
+
+  const ext = params.mimeType.split('/')[1] || 'bin'
+  const prefix = params.type === 'avatar' ? 'avatars' : params.type === 'cover' ? 'covers' : 'docs'
+  const key = generateStorageKey(prefix, params.profileId, ext)
+
+  const uploadResult = await uploadObjectToStorage({
+    bucket: 'community-media',
+    key,
+    contentType: params.mimeType,
+    buffer: params.fileBuffer
+  })
+
+  if (!uploadResult.success) {
+    return { success: false, error: uploadResult.error || 'Error al almacenar el archivo en MinIO' }
+  }
+
+  return {
+    success: true,
+    data: {
+      url: uploadResult.url,
+      key: uploadResult.key
+    }
+  }
 }
