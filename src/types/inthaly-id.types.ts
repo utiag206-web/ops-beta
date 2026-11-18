@@ -37,7 +37,7 @@ export interface InthalySession {
   last_active_at: string
 }
 
-export type SecurityEventType = 
+export type SecurityEventType =
   | 'login_success'
   | 'login_failed'
   | 'register'

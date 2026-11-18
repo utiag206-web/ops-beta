@@ -3,9 +3,9 @@
 import React, { useState, useRef, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { 
-  Search, Users, MessageSquare, Bell, 
-  ArrowLeft, LogOut, ChevronDown, 
+import {
+  Search, Users, MessageSquare, Bell,
+  ArrowLeft, LogOut, ChevronDown,
   ExternalLink, ShieldCheck, User, Home, Shield
 } from 'lucide-react'
 
@@ -41,7 +41,7 @@ export default function CommunityNavbar() {
   return (
     <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-slate-200/90 shadow-xs">
       <div className="w-full max-w-[1536px] mx-auto px-3 sm:px-6 h-16 flex items-center justify-between gap-2 sm:gap-4">
-        
+
         {/* ========================================================================= */}
         {/* 1. LADO IZQUIERDO: LOGO E IDENTIDAD CORPORATIVA INTHALY                   */}
         {/* ========================================================================= */}
@@ -71,7 +71,7 @@ export default function CommunityNavbar() {
         {/* Resuelve: Retorno claro al Feed/Inicio desde cualquier vista y balance    */}
         {/* ========================================================================= */}
         <div className="flex items-center gap-2 sm:gap-3 flex-1 justify-center max-w-2xl mx-1 sm:mx-4">
-          
+
           {/* Barra de Búsqueda Rápida */}
           <div className="relative w-full max-w-xs hidden md:block">
             <Search size={15} className="absolute left-3 text-slate-400 pointer-events-none top-1/2 -translate-y-1/2" />
@@ -89,11 +89,10 @@ export default function CommunityNavbar() {
             {/* 1. Feed Principal / Inicio */}
             <Link
               href="/comunidad"
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
-                isFeed
-                  ? 'bg-blue-600 text-white shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-white/80'
-              }`}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${isFeed
+                ? 'bg-blue-600 text-white shadow-xs'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-white/80'
+                }`}
               title="Ir al Feed Principal"
             >
               <Home size={15} />
@@ -103,11 +102,10 @@ export default function CommunityNavbar() {
             {/* 2. Grupos & Foros */}
             <Link
               href="/comunidad/grupos"
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
-                isGroups
-                  ? 'bg-blue-600 text-white shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-white/80'
-              }`}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${isGroups
+                ? 'bg-blue-600 text-white shadow-xs'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-white/80'
+                }`}
               title="Explorar Grupos Técnicos"
             >
               <Users size={15} />
@@ -117,11 +115,10 @@ export default function CommunityNavbar() {
             {/* 3. Mi Perfil */}
             <Link
               href="/comunidad/perfil"
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
-                isProfile
-                  ? 'bg-blue-600 text-white shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-white/80'
-              }`}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${isProfile
+                ? 'bg-blue-600 text-white shadow-xs'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-white/80'
+                }`}
               title="Ver Mi Perfil Profesional"
             >
               <User size={15} />
@@ -135,7 +132,7 @@ export default function CommunityNavbar() {
         {/* 3. LADO DERECHO: ACCIONES LIMPIAS CON RELIEVE Y ESTILO CORPORATIVO        */}
         {/* ========================================================================= */}
         <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
-          
+
           {/* Botón Volver a InthalyOps */}
           <Link
             href="/dashboard"
@@ -154,11 +151,10 @@ export default function CommunityNavbar() {
                 setIsNotificationsOpen(!isNotificationsOpen)
                 setUnreadNotifications(0)
               }}
-              className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all relative cursor-pointer border ${
-                isNotificationsOpen 
-                  ? 'bg-blue-50 border-blue-200 text-blue-700 shadow-xs' 
-                  : 'bg-white hover:bg-slate-100 border-slate-200 text-slate-600 shadow-2xs'
-              }`}
+              className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all relative cursor-pointer border ${isNotificationsOpen
+                ? 'bg-blue-50 border-blue-200 text-blue-700 shadow-xs'
+                : 'bg-white hover:bg-slate-100 border-slate-200 text-slate-600 shadow-2xs'
+                }`}
               title="Notificaciones profesionales"
             >
               <Bell size={16} />

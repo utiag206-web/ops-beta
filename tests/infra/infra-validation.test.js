@@ -70,6 +70,40 @@ describe('ETAPA 1: Verificación de Artefactos de Infraestructura Autogestionada
     assert.match(envExample, /POSTGRES_SUPERUSER_PASSWORD=DEFINIR_/);
     assert.match(envExample, /INTHALY_ID_DATABASE_URL=/);
     assert.match(envExample, /INTHALY_COMMUNITY_DATABASE_URL=/);
+    assert.match(envExample, /MINIO_ROOT_PASSWORD=DEFINIR_/);
     assert.doesNotMatch(envExample, /SuperAdmin2026!/);
+  });
+
+  test('Infra 7: MinIO S3 está configurado para almacenamiento de objetos sin cargar PostgreSQL', () => {
+    const composeContent = fs.readFileSync(path.join(rootDir, 'infra/docker/docker-compose.yml'), 'utf8');
+    assert.match(composeContent, /minio:/);
+    assert.match(composeContent, /minio_setup:/);
+    assert.match(composeContent, /inthaly-id-assets/);
+    assert.match(composeContent, /community-media/);
+    assert.match(composeContent, /academy-resources/);
+  });
+
+  test('Infra 8: Capa de persistencia en src/lib/db segrega conexiones entre inthaly_id y comunidad', () => {
+    const idDbPath = path.join(rootDir, 'src/lib/db/inthaly-id-db.ts');
+    const comDbPath = path.join(rootDir, 'src/lib/db/community-db.ts');
+    assert.equal(fs.existsSync(idDbPath), true);
+    assert.equal(fs.existsSync(comDbPath), true);
+
+    const idDb = fs.readFileSync(idDbPath, 'utf8');
+    const comDb = fs.readFileSync(comDbPath, 'utf8');
+
+    assert.match(idDb, /inthaly_id_user/);
+    assert.match(comDb, /inthaly_community_user/);
+    assert.doesNotMatch(comDb, /inthaly_id_user/, 'Comunidad NUNCA debe usar credenciales de inthaly_id');
+  });
+
+  test('Infra 9: Servicio de almacenamiento valida restricciones de tamaño y tipos MIME', () => {
+    const storagePath = path.join(rootDir, 'src/lib/storage/object-storage.service.ts');
+    assert.equal(fs.existsSync(storagePath), true);
+    const storageCode = fs.readFileSync(storagePath, 'utf8');
+    assert.match(storageCode, /validateFileConstraints/);
+    assert.match(storageCode, /uploadObjectToStorage/);
+    assert.match(storageCode, /image\/jpeg/);
+    assert.match(storageCode, /application\/pdf/);
   });
 });

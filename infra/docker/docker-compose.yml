@@ -30,6 +30,9 @@ volumes:
   inthaly_caddy_config:
     name: inthaly_caddy_config_vol
     driver: local
+  inthaly_minio_data:
+    name: inthaly_minio_data_vol
+    driver: local
 
 services:
   # ----------------------------------------------------------------------------
@@ -157,3 +160,50 @@ services:
     networks:
       - inthaly_public
       - inthaly_internal
+
+  # ----------------------------------------------------------------------------
+  # 6. SERVICIO DE ALMACENAMIENTO DE OBJETOS: MinIO S3
+  # ----------------------------------------------------------------------------
+  minio:
+    image: minio/minio:RELEASE.2024-01-18T22-51-28Z
+    container_name: inthaly_minio
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-inthaly_storage_admin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?Error: Password de MinIO requerido}
+    volumes:
+      - inthaly_minio_data:/data
+    networks:
+      - inthaly_internal
+      - inthaly_public
+    ports:
+      - "127.0.0.1:9000:9000"
+      - "127.0.0.1:9001:9001"
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ----------------------------------------------------------------------------
+  # 7. PROVISIONADOR DE BUCKETS S3: MinIO Client (mc)
+  # ----------------------------------------------------------------------------
+  minio_setup:
+    image: minio/mc:RELEASE.2024-01-16T16-06-34Z
+    container_name: inthaly_minio_setup
+    depends_on:
+      minio:
+        condition: service_healthy
+    networks:
+      - inthaly_internal
+    entrypoint: >
+      /bin/sh -c "
+      mc alias set local http://minio:9000 ${MINIO_ROOT_USER:-inthaly_storage_admin} ${MINIO_ROOT_PASSWORD};
+      mc mb --ignore-existing local/inthaly-id-assets;
+      mc mb --ignore-existing local/community-media;
+      mc mb --ignore-existing local/academy-resources;
+      mc anonymous set download local/community-media;
+      echo 'Buckets S3 Inthaly inicializados con éxito.';
+      exit 0;
+      "
