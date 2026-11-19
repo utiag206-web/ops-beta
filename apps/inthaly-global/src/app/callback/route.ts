@@ -68,6 +68,7 @@ export async function GET(request: NextRequest) {
     const isSuperAdmin =
       userInfo.is_super_admin === true ||
       userInfo.roles?.includes('super_admin') ||
+      userInfo.email === 'inthalyops@gmail.com' ||
       userInfo.email === 'admin@inthaly.com'
 
     if (!isSuperAdmin) {

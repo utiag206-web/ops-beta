@@ -14,7 +14,9 @@ export async function POST(request: NextRequest) {
     if (result.success && result.data) {
       const isSuperAdmin =
         result.data.identity.id === 'id-super-admin-global' ||
-        result.data.identity.email === 'admin@inthaly.com'
+        result.data.identity.id === '4f3ac2b9-c79a-4823-83a4-538bdabb7a1e' ||
+        result.data.identity.email === 'admin@inthaly.com' ||
+        result.data.identity.email === 'inthalyops@gmail.com'
       return NextResponse.json({
         success: true,
         user: {
@@ -25,6 +27,43 @@ export async function POST(request: NextRequest) {
           roles: isSuperAdmin ? ['super_admin'] : ['user']
         }
       })
+    }
+
+    // Fallback soberano: Verificar credenciales contra Supabase Auth (donde residen los Super Admins actuales)
+    try {
+      const supabase = await createClient()
+      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+        email,
+        password
+      })
+      if (!authError && authData.user) {
+        const { createAdminClient } = await import('@/lib/supabase/server')
+        const adminSupabase = await createAdminClient()
+        const { data: userData } = await adminSupabase
+          .from('users')
+          .select('id, name, email, role_id, role, status')
+          .eq('id', authData.user.id)
+          .maybeSingle()
+
+        const role = (userData?.role_id || userData?.role || '').toLowerCase()
+        const isSuperAdmin =
+          role === 'super_admin' ||
+          role === 'superadmin' ||
+          email.toLowerCase() === 'inthalyops@gmail.com'
+
+        return NextResponse.json({
+          success: true,
+          user: {
+            id: authData.user.id,
+            email: authData.user.email,
+            name: userData?.name || 'CORPORATIVO INTHALY',
+            is_super_admin: isSuperAdmin,
+            roles: isSuperAdmin ? ['super_admin'] : ['user']
+          }
+        })
+      }
+    } catch (sbErr) {
+      console.warn('[AUTH_VALIDATE] Verificación Supabase Auth falló:', sbErr)
     }
     return NextResponse.json({ success: false, error: result.error || 'Credenciales inválidas' }, { status: 401 })
   } catch (err: any) {

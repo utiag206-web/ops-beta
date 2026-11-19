@@ -60,7 +60,11 @@ async function handleUserInfo(request: NextRequest) {
     )
   }
 
-  const isSuperAdmin = identity.id === 'id-super-admin-global' || identity.email === 'admin@inthaly.com'
+  const isSuperAdmin =
+    identity.id === 'id-super-admin-global' ||
+    identity.id === '4f3ac2b9-c79a-4823-83a4-538bdabb7a1e' ||
+    identity.email === 'admin@inthaly.com' ||
+    identity.email === 'inthalyops@gmail.com'
 
   const claims = {
     sub: identity.id,

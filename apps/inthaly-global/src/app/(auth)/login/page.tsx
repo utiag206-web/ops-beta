@@ -8,8 +8,8 @@ const initialState: LoginActionState = {}
 
 export default function GlobalLoginPage() {
   const [state, formAction, isPending] = useActionState(loginAdminAction, initialState)
-  const [email, setEmail] = useState('admin@inthaly.com')
-  const [password, setPassword] = useState('SuperAdmin2026!')
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
 
   return (
     <div className="min-h-screen bg-slate-950 flex items-center justify-center p-4">
@@ -59,7 +59,7 @@ export default function GlobalLoginPage() {
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="admin@inthaly.com"
+                  placeholder="correo@ejemplo.com"
                   className="w-full pl-9 pr-3 py-2 text-xs border border-slate-200 rounded-xl focus:outline-hidden focus:border-blue-600 font-medium"
                 />
               </div>

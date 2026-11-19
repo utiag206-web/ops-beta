@@ -152,7 +152,7 @@ export function AdminSidebar({ user }: { user?: AdminUser }) {
                 {user?.name || 'Super Administrador'}
               </span>
               <span className="text-[10px] text-slate-400 truncate block">
-                {user?.email || 'admin@inthaly.com'}
+                {user?.email || 'inthalyops@gmail.com'}
               </span>
             </div>
           </div>

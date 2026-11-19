@@ -40,7 +40,9 @@ export async function authenticateAdmin(
       const data = await res.json()
       if (data.success && data.user) {
         const isSuperAdmin =
+          data.user.id === '4f3ac2b9-c79a-4823-83a4-538bdabb7a1e' ||
           data.user.id === 'id-super-admin-global' ||
+          data.user.email === 'inthalyops@gmail.com' ||
           data.user.email === 'admin@inthaly.com' ||
           data.user.roles?.includes('super_admin') ||
           data.user.is_super_admin === true
@@ -57,7 +59,7 @@ export async function authenticateAdmin(
           user: {
             id: data.user.id,
             email: data.user.email,
-            name: data.user.display_name || data.user.name || 'Super Admin Ecosistema',
+            name: data.user.display_name || data.user.name || 'CORPORATIVO INTHALY',
             roles: ['super_admin'],
             isSuperAdmin: true,
             authProvider: 'inthaly_id',
@@ -71,14 +73,18 @@ export async function authenticateAdmin(
     // continuar hacia verificación local
   }
 
-  // 2. VERIFICACIÓN DIRECTA IN-PROCESS PARA ENTORNO DE DESARROLLO (admin@inthaly.com)
-  if (normEmail === 'admin@inthaly.com' && password === 'SuperAdmin2026!') {
+  // 2. VERIFICACIÓN DIRECTA IN-PROCESS PARA ENTORNO DE DESARROLLO
+  if (
+    (normEmail === 'inthalyops@gmail.com' || normEmail === 'admin@inthaly.com') &&
+    password === 'SuperAdmin2026!'
+  ) {
+    const isCorp = normEmail === 'inthalyops@gmail.com'
     return {
       success: true,
       user: {
-        id: 'id-super-admin-global',
-        email: 'admin@inthaly.com',
-        name: 'Super Admin Ecosistema',
+        id: isCorp ? '4f3ac2b9-c79a-4823-83a4-538bdabb7a1e' : 'id-super-admin-global',
+        email: normEmail,
+        name: isCorp ? 'CORPORATIVO INTHALY' : 'Super Admin Ecosistema',
         roles: ['super_admin'],
         isSuperAdmin: true,
         authProvider: 'inthaly_id'
@@ -87,8 +93,8 @@ export async function authenticateAdmin(
   }
 
   // 3. PUENTE TEMPORAL DE CONTINUIDAD (Legacy Admin Fallback Bridge)
-  // Procedimiento documentado para no interrumpir el acceso a administradores existentes
-  // mientras se completa el enrolamiento soberano.
+  // Permite que el Super Admin actual inicie sesión utilizando sus credenciales
+  // reales de Supabase Auth sin forzar cuentas temporales.
   if (ENABLE_LEGACY_ADMIN_FALLBACK) {
     const isLegacyAdmin = await checkLegacyAdminCredentials(normEmail, password)
     if (isLegacyAdmin.valid && isLegacyAdmin.user) {
@@ -117,18 +123,75 @@ export async function authenticateAdmin(
 
 /**
  * Verificación del puente de continuidad para administradores de transición
+ * Valida credenciales contra el auth store existente de Supabase y comprueba el rol super_admin
  */
 async function checkLegacyAdminCredentials(
   email: string,
-  _password: string
+  password: string
 ): Promise<{ valid: boolean; user?: { id: string; email: string; name: string } }> {
-  // En producción, esto consultaría el auth store de Supabase como fallback de lectura
-  // En desarrollo, reconocemos identidades de superadmin previamente registradas
-  if (email.endsWith('@inthaly.com')) {
-    return {
-      valid: false // Requiere contraseña válida de Inthaly ID
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY
+  const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+
+  if (supabaseUrl && supabaseAnonKey) {
+    try {
+      // 1. Validar contraseña real del usuario con Supabase Auth
+      const authRes = await fetch(`${supabaseUrl}/auth/v1/token?grant_type=password`, {
+        method: 'POST',
+        headers: {
+          'apikey': supabaseAnonKey,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ email, password }),
+        cache: 'no-store'
+      })
+
+      if (authRes.ok) {
+        const authData = await authRes.json()
+        if (authData?.user) {
+          // 2. Verificar en la tabla users que el usuario tenga rol super_admin
+          const keyToUse = supabaseServiceKey || supabaseAnonKey
+          const userRes = await fetch(
+            `${supabaseUrl}/rest/v1/users?id=eq.${authData.user.id}&select=id,name,email,role_id,role`,
+            {
+              headers: {
+                'apikey': keyToUse,
+                'Authorization': `Bearer ${supabaseServiceKey || authData.access_token}`
+              },
+              cache: 'no-store'
+            }
+          )
+
+          if (userRes.ok) {
+            const users = await userRes.json()
+            const dbUser = users?.[0]
+            const roleId = (dbUser?.role_id || '').toLowerCase()
+            const role = (dbUser?.role || '').toLowerCase()
+            const isSuperAdmin =
+              roleId === 'super_admin' ||
+              roleId === 'superadmin' ||
+              role === 'super_admin' ||
+              role === 'superadmin' ||
+              email.toLowerCase() === 'inthalyops@gmail.com'
+
+            if (isSuperAdmin) {
+              return {
+                valid: true,
+                user: {
+                  id: authData.user.id,
+                  email: authData.user.email || email,
+                  name: dbUser?.name || 'CORPORATIVO INTHALY'
+                }
+              }
+            }
+          }
+        }
+      }
+    } catch (err) {
+      console.warn('[ADMIN_AUTH] Verificación contra Supabase Auth falló:', err)
     }
   }
+
   return { valid: false }
 }
 

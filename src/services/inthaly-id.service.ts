@@ -224,14 +224,30 @@ function seedIdStorageIfAllowed() {
     updated_at: new Date().toISOString()
   }
 
-  // Usuario 2: Super Administrador
+  // Usuario 2: Super Administrador Corporativo Real
   const salt2 = generateSalt()
   const p2: InthalyIdentity = {
+    id: '4f3ac2b9-c79a-4823-83a4-538bdabb7a1e',
+    email: 'inthalyops@gmail.com',
+    display_name: 'CORPORATIVO INTHALY',
+    password_hash: hashPassword('SuperAdmin2026!', salt2),
+    salt: salt2,
+    is_verified: true,
+    status: 'active',
+    mfa_enabled: true,
+    last_login_at: new Date().toISOString(),
+    created_at: new Date(Date.now() - 60 * 24 * 3600 * 1000).toISOString(),
+    updated_at: new Date().toISOString()
+  }
+
+  // Usuario 3: Admin fallback para suite de tests
+  const salt3 = generateSalt()
+  const p3: InthalyIdentity = {
     id: 'id-super-admin-global',
     email: 'admin@inthaly.com',
     display_name: 'Super Admin Ecosistema',
-    password_hash: hashPassword('SuperAdmin2026!', salt2),
-    salt: salt2,
+    password_hash: hashPassword('SuperAdmin2026!', salt3),
+    salt: salt3,
     is_verified: true,
     status: 'active',
     mfa_enabled: true,
@@ -245,6 +261,9 @@ function seedIdStorageIfAllowed() {
 
   idStore.identities.set(p2.id, p2)
   idStore.identitiesByEmail.set(p2.email.toLowerCase(), p2.id)
+
+  idStore.identities.set(p3.id, p3)
+  idStore.identitiesByEmail.set(p3.email.toLowerCase(), p3.id)
 
   // Sesión inicial para Carlos Mendoza
   const sessionToken1 = generateSecureToken(32)

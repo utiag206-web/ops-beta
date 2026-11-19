@@ -99,8 +99,18 @@ describe('Fase 2: Autenticación Administrativa e Integración OIDC Soberana', (
       assert.match(content, /ENABLE_LEGACY_ADMIN_FALLBACK/)
       assert.match(content, /logBridgeAudit/)
       assert.match(content, /ADMIN_SECURITY_AUDIT/)
-      assert.match(content, /id-super-admin-global/)
+      assert.match(content, /inthalyops@gmail\.com/)
       assert.match(content, /admin@inthaly\.com/)
+      assert.match(content, /checkLegacyAdminCredentials/)
+    })
+
+    test('Formulario de login en INTHALY GLOBAL respeta credenciales del super admin y no fuerza cuentas demo', () => {
+      const filePath = path.join(rootDir, 'apps/inthaly-global/src/app/(auth)/login/page.tsx')
+      const content = fs.readFileSync(filePath, 'utf8')
+
+      assert.match(content, /const \[email, setEmail\] = useState\(''\)/)
+      assert.match(content, /const \[password, setPassword\] = useState\(''\)/)
+      assert.doesNotMatch(content, /useState\('admin@inthaly\.com'\)/)
     })
 
     test('Dashboard layout implementa guardia soberana contra accesos no autorizados', () => {
