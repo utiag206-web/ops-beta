@@ -3,13 +3,12 @@
 import React from 'react'
 import {
   ExternalLink,
-  Shield,
-  Bell,
   RefreshCw,
-  Search
+  ShieldCheck
 } from 'lucide-react'
+import type { AdminUser } from '@/types/admin-auth.types'
 
-export function AdminHeader() {
+export function AdminHeader({ user }: { user?: AdminUser }) {
   return (
     <header className="h-14 bg-white border-b border-slate-200/90 px-6 flex items-center justify-between sticky top-0 z-30 shadow-2xs">
       <div className="flex items-center gap-3">
@@ -18,8 +17,9 @@ export function AdminHeader() {
           <span className="text-slate-300">/</span>
           <span className="text-xs font-semibold text-slate-500">Centro de Control & Administración</span>
         </div>
-        <span className="hidden sm:inline-flex items-center gap-1 text-[10px] font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200">
-          Entorno Aislado
+        <span className="hidden sm:inline-flex items-center gap-1 text-[10px] font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-full border border-blue-200">
+          <ShieldCheck size={11} className="text-blue-600" />
+          {user?.authProvider === 'legacy_bridge' ? 'Puente Temporal' : 'Inthaly ID Soberano'}
         </span>
       </div>
 

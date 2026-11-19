@@ -36,7 +36,7 @@ import {
 import { inthalyIdSql } from '@/lib/db/inthaly-id-db'
 
 // Clave secreta interna para firma de tokens JWT
-const INTHALY_ID_JWT_SECRET = process.env.INTHALY_ID_JWT_SECRET || 'inthaly-id-core-secret-key-2026-sovereignty'
+export const INTHALY_ID_JWT_SECRET = process.env.INTHALY_ID_JWT_SECRET || 'inthaly-id-core-secret-key-2026-sovereignty'
 
 // Helper para verificar conectividad con inthaly_id DB
 let _idDbStatus: boolean | null = null
@@ -151,7 +151,7 @@ function registerDefaultOidcClients() {
     created_at: new Date().toISOString()
   }
 
-  // Cliente 2: Consola Global (Cliente Confidencial)
+  // Cliente 2: Consola Global (Cliente Confidencial / Soporte PKCE)
   const clientConsole: OidcClient = {
     client_id: 'inthaly-global-console',
     client_name: 'Consola Global del Ecosistema',
@@ -159,6 +159,8 @@ function registerDefaultOidcClients() {
     client_secret_hash: hashSha256(process.env.CONSOLE_OIDC_SECRET || 'console-secret-server-only'),
     redirect_uris: [
       'http://localhost:3000/super-admin/callback',
+      'http://localhost:3001/callback',
+      'http://localhost:3001/api/auth/callback',
       'https://admin.inthaly.com/callback'
     ],
     allowed_scopes: ['openid', 'profile', 'email', 'admin.all'],
@@ -1165,6 +1167,28 @@ export async function exchangeOidcCode(params: {
       identity
     }
   }
+}
+
+/**
+ * Obtiene una identidad por su ID único soberano.
+ */
+export async function getIdentityById(identityId: string): Promise<InthalyIdentity | null> {
+  if (await canUseIdDb()) {
+    try {
+      const rows = await inthalyIdSql`SELECT * FROM inthaly_id.identities WHERE id = ${identityId} LIMIT 1`
+      if (rows.length > 0) return mapDbIdentity(rows[0])
+    } catch {
+      // fallback a memoria
+    }
+  }
+  return idStore.identities.get(identityId) || null
+}
+
+/**
+ * Obtiene un cliente OIDC registrado por su client_id.
+ */
+export function getOidcClient(clientId: string): OidcClient | null {
+  return idStore.oidcClients.get(clientId) || null
 }
 
 // ==============================================================================

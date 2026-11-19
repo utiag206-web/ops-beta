@@ -20,6 +20,8 @@ import {
   Shield,
   CircleDot
 } from 'lucide-react'
+import { logoutAdminAction } from '@/app/(auth)/login/actions'
+import type { AdminUser } from '@/types/admin-auth.types'
 
 interface NavItem {
   label: string
@@ -69,7 +71,7 @@ const navSections: NavSection[] = [
   },
 ]
 
-export function AdminSidebar() {
+export function AdminSidebar({ user }: { user?: AdminUser }) {
   const pathname = usePathname()
 
   return (
@@ -96,7 +98,7 @@ export function AdminSidebar() {
       <div className="flex-1 overflow-y-auto px-3 py-4 space-y-6">
         {navSections.map((section, idx) => (
           <div key={idx} className="space-y-1">
-            <span className="text-[10px] font-bold text-slate-300 uppercase tracking-wider px-2 block mb-1.5">
+            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-2 block mb-1.5">
               {section.title}
             </span>
             <div className="space-y-0.5">
@@ -110,11 +112,11 @@ export function AdminSidebar() {
                     className={`flex items-center justify-between px-2.5 py-2 rounded-xl text-xs font-semibold transition-all group ${
                       isActive
                         ? 'bg-blue-600 text-white shadow-xs font-bold'
-                        : 'text-slate-200 hover:text-white hover:bg-slate-900'
+                        : 'text-slate-300 hover:text-white hover:bg-slate-900'
                     }`}
                   >
                     <div className="flex items-center gap-2.5 truncate">
-                      <Icon size={16} className={isActive ? 'text-white' : 'text-slate-300 group-hover:text-slate-200'} />
+                      <Icon size={16} className={isActive ? 'text-white' : 'text-slate-400 group-hover:text-slate-200'} />
                       <span className="truncate">{item.label}</span>
                     </div>
                     {item.badge && (
@@ -135,28 +137,34 @@ export function AdminSidebar() {
         <div className="flex items-center justify-between px-2 py-1.5 bg-slate-900/80 rounded-xl border border-slate-800 text-[11px]">
           <div className="flex items-center gap-1.5">
             <CircleDot size={10} className="text-emerald-400 animate-pulse" />
-            <span className="text-slate-200 font-medium">Ecosistema Soberano</span>
+            <span className="text-slate-300 font-medium">Ecosistema Soberano</span>
           </div>
           <span className="text-[10px] text-emerald-400 font-bold">100% OK</span>
         </div>
 
         <div className="flex items-center justify-between px-2 pt-1 text-xs">
           <div className="flex items-center gap-2 truncate">
-            <div className="w-7 h-7 rounded-lg bg-slate-800 flex items-center justify-center text-slate-300 font-bold text-xs">
+            <div className="w-7 h-7 rounded-lg bg-slate-800 flex items-center justify-center text-slate-300 font-bold text-xs shrink-0">
               <Shield size={14} className="text-blue-400" />
             </div>
             <div className="truncate">
-              <span className="text-white font-bold block leading-tight text-xs truncate">Super Administrador</span>
-              <span className="text-[10px] text-slate-300 truncate block">admin@inthaly.com</span>
+              <span className="text-white font-bold block leading-tight text-xs truncate">
+                {user?.name || 'Super Administrador'}
+              </span>
+              <span className="text-[10px] text-slate-400 truncate block">
+                {user?.email || 'admin@inthaly.com'}
+              </span>
             </div>
           </div>
-          <button
-            type="button"
-            title="Cerrar sesión administrativa"
-            className="p-1.5 text-slate-300 hover:text-rose-400 hover:bg-slate-900 rounded-lg transition-colors cursor-pointer"
-          >
-            <LogOut size={14} />
-          </button>
+          <form action={logoutAdminAction}>
+            <button
+              type="submit"
+              title="Cerrar sesión administrativa"
+              className="p-1.5 text-slate-400 hover:text-rose-400 hover:bg-slate-900 rounded-lg transition-colors cursor-pointer"
+            >
+              <LogOut size={14} />
+            </button>
+          </form>
         </div>
       </div>
     </aside>
