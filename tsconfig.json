@@ -39,6 +39,7 @@
   "exclude": [
     "node_modules",
     "scratch",
-    "next-prod-boilerplate"
+    "next-prod-boilerplate",
+    "apps"
   ]
 }
