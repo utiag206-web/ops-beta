@@ -142,6 +142,7 @@ export async function getAdminOidcClients(): Promise<AdminOidcClientRecord[]> {
       clientType: 'public',
       redirectUris: [
         'http://localhost:3000/comunidad/callback',
+        'http://localhost:3003/callback',
         'https://comunidad.inthaly.com/callback'
       ],
       allowedScopes: ['openid', 'profile', 'email', 'community.read', 'community.write'],

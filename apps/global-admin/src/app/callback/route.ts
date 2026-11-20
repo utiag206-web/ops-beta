@@ -5,7 +5,7 @@ import type { AdminUser } from '@/types/admin-auth.types'
 export const dynamic = 'force-dynamic'
 
 const INTHALY_ID_BASE_URL =
-  process.env.INTHALY_ID_URL || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+  process.env.INTHALY_ID_URL || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3002'
 
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams

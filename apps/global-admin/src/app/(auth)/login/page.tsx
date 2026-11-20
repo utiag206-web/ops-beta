@@ -100,7 +100,7 @@ export default function GlobalLoginPage() {
             </div>
 
             <a
-              href="http://localhost:3000/api/oidc/authorize?client_id=inthaly-global-console&redirect_uri=http://localhost:3001/callback&response_type=code&scope=openid%20profile%20email%20admin.all"
+              href="http://localhost:3002/api/oidc/authorize?client_id=inthaly-global-console&redirect_uri=http://localhost:3001/callback&response_type=code&scope=openid%20profile%20email%20admin.all"
               className="w-full py-2 px-3 border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-bold rounded-xl transition-colors flex items-center justify-center gap-2"
             >
               <Sparkles size={14} className="text-blue-600" />
