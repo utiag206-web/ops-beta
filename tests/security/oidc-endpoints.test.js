@@ -14,7 +14,7 @@ describe('Fase 2: Autenticación Administrativa e Integración OIDC Soberana', (
 
   describe('1. Verificación Estructural de Endpoints OIDC Estándar', () => {
     test('Endpoint /.well-known/openid-configuration existe y cumple RFC 8414', () => {
-      const filePath = path.join(rootDir, 'src/app/.well-known/openid-configuration/route.ts')
+      const filePath = path.join(rootDir, 'apps/inthaly-ops/src/app/.well-known/openid-configuration/route.ts')
       assert.ok(fs.existsSync(filePath), 'El archivo discovery OIDC debe existir')
       const content = fs.readFileSync(filePath, 'utf8')
 
@@ -31,7 +31,7 @@ describe('Fase 2: Autenticación Administrativa e Integración OIDC Soberana', (
     })
 
     test('Endpoint /api/oidc/token existe y soporta grant_type=authorization_code con PKCE y Secret', () => {
-      const filePath = path.join(rootDir, 'src/app/api/oidc/token/route.ts')
+      const filePath = path.join(rootDir, 'apps/inthaly-ops/src/app/api/oidc/token/route.ts')
       assert.ok(fs.existsSync(filePath), 'El archivo token OIDC debe existir')
       const content = fs.readFileSync(filePath, 'utf8')
 
@@ -46,7 +46,7 @@ describe('Fase 2: Autenticación Administrativa e Integración OIDC Soberana', (
     })
 
     test('Endpoint /api/oidc/userinfo existe y valida Bearer token con reclamos estándar', () => {
-      const filePath = path.join(rootDir, 'src/app/api/oidc/userinfo/route.ts')
+      const filePath = path.join(rootDir, 'apps/inthaly-ops/src/app/api/oidc/userinfo/route.ts')
       assert.ok(fs.existsSync(filePath), 'El archivo userinfo OIDC debe existir')
       const content = fs.readFileSync(filePath, 'utf8')
 
@@ -60,8 +60,8 @@ describe('Fase 2: Autenticación Administrativa e Integración OIDC Soberana', (
     })
 
     test('Endpoint /api/oidc/authorize y /api/oidc/jwks existen', () => {
-      const authPath = path.join(rootDir, 'src/app/api/oidc/authorize/route.ts')
-      const jwksPath = path.join(rootDir, 'src/app/api/oidc/jwks/route.ts')
+      const authPath = path.join(rootDir, 'apps/inthaly-ops/src/app/api/oidc/authorize/route.ts')
+      const jwksPath = path.join(rootDir, 'apps/inthaly-ops/src/app/api/oidc/jwks/route.ts')
       assert.ok(fs.existsSync(authPath), 'El archivo authorize OIDC debe existir')
       assert.ok(fs.existsSync(jwksPath), 'El archivo jwks OIDC debe existir')
 
@@ -76,7 +76,7 @@ describe('Fase 2: Autenticación Administrativa e Integración OIDC Soberana', (
 
   describe('2. Verificación de la Capa de Sesión Administrativa de INTHALY GLOBAL', () => {
     test('admin-session.ts implementa cookie inthaly_global_session con HMAC-SHA256 y SameSite Lax', () => {
-      const filePath = path.join(rootDir, 'apps/inthaly-global/src/lib/auth/admin-session.ts')
+      const filePath = path.join(rootDir, 'apps/global-admin/src/lib/auth/admin-session.ts')
       assert.ok(fs.existsSync(filePath), 'admin-session.ts debe existir')
       const content = fs.readFileSync(filePath, 'utf8')
 
@@ -91,7 +91,7 @@ describe('Fase 2: Autenticación Administrativa e Integración OIDC Soberana', (
     })
 
     test('admin-auth.service.ts implementa autenticación Inthaly ID y puente de continuidad controlado', () => {
-      const filePath = path.join(rootDir, 'apps/inthaly-global/src/lib/auth/admin-auth.service.ts')
+      const filePath = path.join(rootDir, 'apps/global-admin/src/lib/auth/admin-auth.service.ts')
       assert.ok(fs.existsSync(filePath), 'admin-auth.service.ts debe existir')
       const content = fs.readFileSync(filePath, 'utf8')
 
@@ -105,7 +105,7 @@ describe('Fase 2: Autenticación Administrativa e Integración OIDC Soberana', (
     })
 
     test('Formulario de login en INTHALY GLOBAL respeta credenciales del super admin y no fuerza cuentas demo', () => {
-      const filePath = path.join(rootDir, 'apps/inthaly-global/src/app/(auth)/login/page.tsx')
+      const filePath = path.join(rootDir, 'apps/global-admin/src/app/(auth)/login/page.tsx')
       const content = fs.readFileSync(filePath, 'utf8')
 
       assert.match(content, /const \[email, setEmail\] = useState\(''\)/)
@@ -114,7 +114,7 @@ describe('Fase 2: Autenticación Administrativa e Integración OIDC Soberana', (
     })
 
     test('Dashboard layout implementa guardia soberana contra accesos no autorizados', () => {
-      const filePath = path.join(rootDir, 'apps/inthaly-global/src/app/(dashboard)/layout.tsx')
+      const filePath = path.join(rootDir, 'apps/global-admin/src/app/(dashboard)/layout.tsx')
       assert.ok(fs.existsSync(filePath), 'Dashboard layout debe existir')
       const content = fs.readFileSync(filePath, 'utf8')
 
@@ -124,7 +124,7 @@ describe('Fase 2: Autenticación Administrativa e Integración OIDC Soberana', (
     })
 
     test('OIDC callback en INTHALY GLOBAL valida intercambio y permisos de superadmin', () => {
-      const filePath = path.join(rootDir, 'apps/inthaly-global/src/app/callback/route.ts')
+      const filePath = path.join(rootDir, 'apps/global-admin/src/app/callback/route.ts')
       assert.ok(fs.existsSync(filePath), 'callback/route.ts debe existir')
       const content = fs.readFileSync(filePath, 'utf8')
 

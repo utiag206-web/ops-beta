@@ -84,8 +84,8 @@ describe('ETAPA 1: Verificación de Artefactos de Infraestructura Autogestionada
   });
 
   test('Infra 8: Capa de persistencia en src/lib/db segrega conexiones entre inthaly_id y comunidad', () => {
-    const idDbPath = path.join(rootDir, 'src/lib/db/inthaly-id-db.ts');
-    const comDbPath = path.join(rootDir, 'src/lib/db/community-db.ts');
+    const idDbPath = path.join(rootDir, 'apps/inthaly-ops/src/lib/db/inthaly-id-db.ts');
+    const comDbPath = path.join(rootDir, 'apps/inthaly-ops/src/lib/db/community-db.ts');
     assert.equal(fs.existsSync(idDbPath), true);
     assert.equal(fs.existsSync(comDbPath), true);
 
@@ -98,7 +98,7 @@ describe('ETAPA 1: Verificación de Artefactos de Infraestructura Autogestionada
   });
 
   test('Infra 9: Servicio de almacenamiento valida restricciones de tamaño y tipos MIME', () => {
-    const storagePath = path.join(rootDir, 'src/lib/storage/object-storage.service.ts');
+    const storagePath = path.join(rootDir, 'apps/inthaly-ops/src/lib/storage/object-storage.service.ts');
     assert.equal(fs.existsSync(storagePath), true);
     const storageCode = fs.readFileSync(storagePath, 'utf8');
     assert.match(storageCode, /validateFileConstraints/);

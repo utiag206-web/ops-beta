@@ -74,8 +74,8 @@ describe('ETAPA 1 - Bloque 5: Integridad de Esquemas DDL, Respaldo y RestauraciÃ
   });
 
   test('IntegraciÃ³n de Servicios: inthaly-id.service y community.service incorporan persistencia PostgreSQL y MinIO', () => {
-    const idServicePath = path.join(rootDir, 'src/services/inthaly-id.service.ts');
-    const comServicePath = path.join(rootDir, 'src/services/community.service.ts');
+    const idServicePath = path.join(rootDir, 'apps/inthaly-ops/src/services/inthaly-id.service.ts');
+    const comServicePath = path.join(rootDir, 'apps/inthaly-ops/src/services/community.service.ts');
 
     const idCode = fs.readFileSync(idServicePath, 'utf8');
     const comCode = fs.readFileSync(comServicePath, 'utf8');

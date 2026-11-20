@@ -10,7 +10,7 @@ const path = require('node:path')
 
 describe('Fase 5: Configuración Global y Gestión Multiempresa Soberana', () => {
   const rootDir = path.resolve(__dirname, '../../')
-  const settingsAppDir = path.join(rootDir, 'apps/inthaly-global/src/app/(dashboard)/settings')
+  const settingsAppDir = path.join(rootDir, 'apps/global-admin/src/app/(dashboard)/settings')
 
   describe('1. Verificación Estructural de los 9 Submódulos de Configuración', () => {
     const submodules = [
@@ -52,7 +52,7 @@ describe('Fase 5: Configuración Global y Gestión Multiempresa Soberana', () =>
   describe('2. Servicio Central de Configuración (global-settings.service.ts)', () => {
     const servicePath = path.join(
       rootDir,
-      'apps/inthaly-global/src/lib/settings/global-settings.service.ts'
+      'apps/global-admin/src/lib/settings/global-settings.service.ts'
     )
 
     test('global-settings.service.ts existe y define contratos fuertemente tipados', () => {
@@ -89,7 +89,7 @@ describe('Fase 5: Configuración Global y Gestión Multiempresa Soberana', () =>
     test('Catálogo de empresas segrega empresas reales de contratistas demo', () => {
       const dataServicePath = path.join(
         rootDir,
-        'apps/inthaly-global/src/lib/data/ecosystem-data.service.ts'
+        'apps/global-admin/src/lib/data/ecosystem-data.service.ts'
       )
       assert.ok(fs.existsSync(dataServicePath), 'ecosystem-data.service.ts debe existir')
       const content = fs.readFileSync(dataServicePath, 'utf8')

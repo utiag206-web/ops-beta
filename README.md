@@ -1,80 +1,83 @@
-# ⚡ InthalyOps — Sistema Operativo Empresarial Multiempresa
+# ECOSISTEMA TECNOLÓGICO INTHALY
+> **Centro Único de Desarrollo y Operación del Ecosistema Inthaly**  
+> Repositorio Monorepo Multi-Aplicación Soberano.
 
-> **Versión Estable:** `v1.4.0` (Congelada y en Producción)  
-> **Plataforma Integral de Gestión y Operaciones para Minería, Agricultura, Forestal, Logística y Mantenimiento.**  
-> Arquitectura moderna con **Next.js 15 (App Router)**, **React 19**, **Supabase (PostgreSQL + RLS)** y motor híbrido **Offline-First**.
-
----
-
-## 🚀 Resumen del Proyecto
-
-**InthalyOps** es una plataforma SaaS empresarial diseñada para operar de forma resiliente en entornos de alta exigencia (faenas mineras en altura, campamentos remotos, fundos agrícolas y centros logísticos). 
-
-Permite coordinar personal, tareo diario, maquinarias pesadas, recepción de mineral, inventarios críticos, caja chica y seguridad industrial (SOMA), funcionando tanto con conexión permanente como en **modo 100% desconectado (offline)** con sincronización automática al restablecerse internet.
+Bienvenido al espacio central de desarrollo del **Ecosistema Inthaly**. Aquí residen de manera organizada e independiente todas las aplicaciones, servicios, infraestructura y documentación del ecosistema.
 
 ---
 
-## 📚 Hub de Documentación Técnica
+## 1. Mapa de Aplicaciones y Productos
 
-Toda la arquitectura, decisiones de diseño, convenciones y guías de desarrollo están documentadas en el directorio [`docs/`](./docs/):
-
-| Documento | Enlace | Propósito |
-| :--- | :--- | :--- |
-| **Guía para Desarrolladores** | [README_FOR_DEVELOPERS.md](./docs/README_FOR_DEVELOPERS.md) | Onboarding rápido, variables de entorno, comandos de compilación y flujo de trabajo local. |
-| **Arquitectura del Proyecto** | [PROJECT_ARCHITECTURE.md](./docs/PROJECT_ARCHITECTURE.md) | Flujo de ejecución Next.js 15, capas de servidor/cliente, App Shell y diagramas mermaid. |
-| **Índice de Módulos y Rutas** | [PROJECT_INDEX.md](./docs/PROJECT_INDEX.md) | Mapeo detallado de las 44+ rutas, Server Actions y componentes clave. |
-| **Guía de Base de Datos** | [DATABASE_GUIDE.md](./docs/DATABASE_GUIDE.md) | Esquema PostgreSQL en Supabase, tablas maestras, RLS y las 34 migraciones. |
-| **Autenticación y Permisos** | [AUTH_AND_PERMISSIONS.md](./docs/AUTH_AND_PERMISSIONS.md) | Autenticación SSR con cookies, matriz de roles y sistema RBAC Granular V1. |
-| **Seguridad Multiempresa** | [MULTITENANT_SECURITY.md](./docs/MULTITENANT_SECURITY.md) | Aislamiento lógico por `company_id`, protección anti-IDOR/BOLA e impersonación. |
-| **Guía Online / Offline** | [ONLINE_OFFLINE_GUIDE.md](./docs/ONLINE_OFFLINE_GUIDE.md) | Persistencia con IndexedDB (`idb`), Service Worker (`sw.js`) y cola `sync_queue`. |
-| **Guía de Despliegue** | [DEPLOYMENT_GUIDE.md](./docs/DEPLOYMENT_GUIDE.md) | Compilación `standalone`, Docker, variables de producción y checklist pre-deploy. |
-| **Convenciones de Código** | [DEVELOPMENT_CONVENTIONS.md](./docs/DEVELOPMENT_CONVENTIONS.md) | Directrices para Server Actions, tipado TypeScript y Sistema de Movimiento. |
-| **Problemas Conocidos** | [KNOWN_ISSUES.md](./docs/KNOWN_ISSUES.md) | Consideraciones de librerías (`xlsx`), paginación y límites operativos. |
-| **Registro de Cambios** | [CHANGELOG.md](./docs/CHANGELOG.md) | Historial detallado de versiones y mejoras implementadas. |
+| Aplicación | Carpeta Física | Puerto | URL Local | Descripción |
+| :--- | :--- | :---: | :--- | :--- |
+| **InthalyOps** | `apps/inthaly-ops` | **3000** | [http://localhost:3000](http://localhost:3000) | Sistema de gestión empresarial, tareo minero, operaciones de campo, RLS y portal de trabajadores. |
+| **INTHALY GLOBAL** | `apps/global-admin` | **3001** | [http://localhost:3001/login](http://localhost:3001/login) | Consola Administrativa Central y Centro de Control de todo el ecosistema. |
+| **Inthaly ID** | `apps/inthaly-id` *(en extracción)* | **3002** | [http://localhost:3002](http://localhost:3002) | Identidad centralizada, sesiones criptográficas y servidor OIDC RFC 8414 / RFC 7636. |
+| **Comunidad Inthaly** | `apps/community` *(en extracción)* | **3003** | [http://localhost:3003](http://localhost:3003) | Red profesional, foros técnicos especializados y grupos de la industria. |
+| **Inthaly Academia** | `D:\INTHALY\extracted` | **8000** | [http://localhost:8000](http://localhost:8000) | Plataforma de formación y cursos LMS (Laravel 12 / MySQL independiente). |
 
 ---
 
-## 🛠️ Stack Tecnológico Principal
+## 2. Estructura del Proyecto
 
-- **Framework Web:** [Next.js 15.5](https://nextjs.org/) (App Router, Server Actions, Standalone Build).
-- **Biblioteca de UI:** [React 19.2](https://react.dev/).
-- **Lenguaje:** [TypeScript 5](https://www.typescriptlang.org/) (Verificación estricta sin errores).
-- **Estilos & Diseño:** [Tailwind CSS v4](https://tailwindcss.com/) + Sistema de Movimiento Empresarial en GPU.
-- **Base de Datos & Auth:** [Supabase](https://supabase.com/) (PostgreSQL 15, Auth SSR con cookies seguras y RLS reforzado).
-- **PWA & Offline:** `@ducanh2912/next-pwa`, Service Worker personalizado (`public/sw.js`) e IndexedDB (`idb`).
-- **Iconografía:** [Lucide React](https://lucide.dev/).
-- **Notificaciones:** [Sonner](https://sonner.emilkowal.ski/).
-
----
-
-## ⚡ Comandos Rápidos
-
-```bash
-# Instalar dependencias
-npm install
-
-# Iniciar servidor local de desarrollo
-npm run dev
-
-# Verificación estricta de TypeScript (0 errores)
-npx tsc --noEmit
-
-# Compilación optimizada para producción
-npm run build
-
-# Arrancar servidor de producción local
-npm run start
+```text
+D:\ecosistema inthaly\
+│
+├── apps/
+│   ├── inthaly-ops/             <- Sistema de gestión empresarial (Puerto 3000)
+│   ├── global-admin/            <- Consola Global y Centro de Control (Puerto 3001)
+│   ├── inthaly-id/              <- Servidor de identidad y OIDC (Puerto 3002)
+│   └── community/               <- Red profesional y foros (Puerto 3003)
+│
+├── packages/
+│   ├── shared-ui/               <- Tokens corporativos, paleta de colores y componentes
+│   ├── shared-types/            <- Contratos TypeScript compartidos entre aplicaciones
+│   └── shared-config/           <- Mapa canónico de puertos y configuraciones comunes
+│
+├── infra/                       <- Despliegue Docker, PostgreSQL soberano, MinIO S3 y backups
+├── docs/                        <- Documentación técnica clasificada por producto
+└── tests/                       <- 75 pruebas automatizadas de integridad y seguridad
 ```
 
 ---
 
-## 🛡️ Principios de Protección del Ecosistema
+## 3. Guía Práctica de Ejecución Local
 
-- **Aislamiento Multiempresa Estricto:** Toda acción valida la empresa en servidor con `getStrictCompanyId()`.
-- **Cero Fugas de Secretos:** La clave `SUPABASE_SERVICE_ROLE_KEY` jamás llega al navegador del cliente.
-- **Sin Migraciones DDL sin Autorización:** La estructura de base de datos permanece protegida y versionada en `supabase/migrations/`.
-- **Continuidad Operativa:** El modo offline y el motor de sincronización se preservan en cada versión.
+### Opción A: Comandos por Terminal
+
+#### 1. Iniciar InthalyOps (Puerto 3000)
+```powershell
+cd "D:\ecosistema inthaly\apps\inthaly-ops"
+npm run dev
+```
+*Disponible en:* `http://localhost:3000`
+
+#### 2. Iniciar INTHALY GLOBAL (Puerto 3001)
+En una segunda terminal:
+```powershell
+cd "D:\ecosistema inthaly\apps\global-admin"
+npm run dev
+```
+*Disponible en:* `http://localhost:3001/login`  
+*(Ingresa con tu correo de Super Admin: `inthalyops@gmail.com`)*
 
 ---
 
-*InthalyOps © 2026 — Operaciones que impulsan tu gente y tu negocio.*
+### Opción B: Comandos Centralizados desde la Raíz
+Desde la carpeta raíz `D:\ecosistema inthaly`:
+- Iniciar InthalyOps: `npm run dev:ops`
+- Iniciar INTHALY GLOBAL: `npm run dev:admin`
+- Ejecutar pruebas automáticas: `npm test`
+
+---
+
+## 4. Documentación Centralizada
+
+Toda la documentación técnica se encuentra organizada en la carpeta `docs/`:
+- **Arquitectura General:** [`docs/architecture/`](docs/architecture/)
+- **Consola Global:** [`docs/inthaly-global/`](docs/inthaly-global/)
+- **Inthaly ID:** [`docs/inthaly-id/`](docs/inthaly-id/)
+- **InthalyOps:** [`docs/inthaly-ops/`](docs/inthaly-ops/)
+- **Comunidad Inthaly:** [`docs/community/`](docs/community/)
+- **Infraestructura y Recuperación:** [`infra/docs/`](infra/docs/)
+- **Índice Completo de Documentación:** [`docs/README.md`](docs/README.md)

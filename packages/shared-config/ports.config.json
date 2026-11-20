@@ -1,0 +1,35 @@
+{
+  "ecosystem": "INTHALY",
+  "ports": {
+    "inthaly-ops": {
+      "port": 3000,
+      "protocol": "http",
+      "url": "http://localhost:3000",
+      "description": "Sistema de Gestión Empresarial y Minera"
+    },
+    "global-admin": {
+      "port": 3001,
+      "protocol": "http",
+      "url": "http://localhost:3001",
+      "description": "Consola Global Administrativa y Centro de Control"
+    },
+    "inthaly-id": {
+      "port": 3002,
+      "protocol": "http",
+      "url": "http://localhost:3002",
+      "description": "Servidor de Identidad Central y OIDC"
+    },
+    "community": {
+      "port": 3003,
+      "protocol": "http",
+      "url": "http://localhost:3003",
+      "description": "Red Profesional y Foros Técnicos"
+    },
+    "academia": {
+      "port": 8000,
+      "protocol": "http",
+      "url": "http://localhost:8000",
+      "description": "Plataforma de Formación LMS (Laravel 12 / MySQL)"
+    }
+  }
+}

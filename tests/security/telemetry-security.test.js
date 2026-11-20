@@ -27,7 +27,7 @@ describe('Fase 4: Centro de Control, Telemetría Segura y Aislamiento Docker', (
     })
 
     test('Dockerfile de inthaly-global no contiene herramientas de escape de contenedor', () => {
-      const dockerfilePath = path.join(rootDir, 'apps/inthaly-global/Dockerfile')
+      const dockerfilePath = path.join(rootDir, 'apps/global-admin/Dockerfile')
       assert.ok(fs.existsSync(dockerfilePath), 'Dockerfile debe existir')
       const content = fs.readFileSync(dockerfilePath, 'utf8')
 
@@ -40,7 +40,7 @@ describe('Fase 4: Centro de Control, Telemetría Segura y Aislamiento Docker', (
     test('system-telemetry.service.ts implementa métricas reales sin shell exec inseguro', () => {
       const servicePath = path.join(
         rootDir,
-        'apps/inthaly-global/src/lib/telemetry/system-telemetry.service.ts'
+        'apps/global-admin/src/lib/telemetry/system-telemetry.service.ts'
       )
       assert.ok(fs.existsSync(servicePath), 'system-telemetry.service.ts debe existir')
       const content = fs.readFileSync(servicePath, 'utf8')
@@ -73,7 +73,7 @@ describe('Fase 4: Centro de Control, Telemetría Segura y Aislamiento Docker', (
     test('Definición de servicios cubre los 5 contenedores soberanos en red interna', () => {
       const servicePath = path.join(
         rootDir,
-        'apps/inthaly-global/src/lib/telemetry/system-telemetry.service.ts'
+        'apps/global-admin/src/lib/telemetry/system-telemetry.service.ts'
       )
       const content = fs.readFileSync(servicePath, 'utf8')
 
@@ -88,7 +88,7 @@ describe('Fase 4: Centro de Control, Telemetría Segura y Aislamiento Docker', (
     test('API Route /api/telemetry existe y desactiva caché', () => {
       const routePath = path.join(
         rootDir,
-        'apps/inthaly-global/src/app/api/telemetry/route.ts'
+        'apps/global-admin/src/app/api/telemetry/route.ts'
       )
       assert.ok(fs.existsSync(routePath), 'route.ts debe existir')
       const content = fs.readFileSync(routePath, 'utf8')

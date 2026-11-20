@@ -4,8 +4,8 @@ const fs = require('node:fs');
 const path = require('node:path');
 
 test('Arquitectura Modular: Capa src/types/ existe con exportadores canónicos', () => {
-  const typesDir = path.join(process.cwd(), 'src', 'types');
-  assert.ok(fs.existsSync(typesDir), 'src/types/ debe existir');
+  const typesDir = path.join(process.cwd(), 'apps', 'inthaly-ops', 'src', 'types');
+  assert.ok(fs.existsSync(typesDir), 'apps/inthaly-ops/src/types/ debe existir');
   
   const expectedFiles = [
     'common.types.ts',
@@ -22,8 +22,8 @@ test('Arquitectura Modular: Capa src/types/ existe con exportadores canónicos',
 });
 
 test('Arquitectura Modular: Capa src/hooks/ existe con exportadores canónicos', () => {
-  const hooksDir = path.join(process.cwd(), 'src', 'hooks');
-  assert.ok(fs.existsSync(hooksDir), 'src/hooks/ debe existir');
+  const hooksDir = path.join(process.cwd(), 'apps', 'inthaly-ops', 'src', 'hooks');
+  assert.ok(fs.existsSync(hooksDir), 'apps/inthaly-ops/src/hooks/ debe existir');
 
   const expectedHooks = [
     'useTerminology.ts',
@@ -41,8 +41,8 @@ test('Arquitectura Modular: Capa src/hooks/ existe con exportadores canónicos',
 });
 
 test('Arquitectura Modular: Capa src/services/ existe con exportadores de negocio', () => {
-  const servicesDir = path.join(process.cwd(), 'src', 'services');
-  assert.ok(fs.existsSync(servicesDir), 'src/services/ debe existir');
+  const servicesDir = path.join(process.cwd(), 'apps', 'inthaly-ops', 'src', 'services');
+  assert.ok(fs.existsSync(servicesDir), 'apps/inthaly-ops/src/services/ debe existir');
 
   const expectedServices = [
     'workers.service.ts',

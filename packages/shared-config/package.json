@@ -1,0 +1,6 @@
+{
+  "name": "@inthaly/shared-config",
+  "version": "1.0.0",
+  "private": true,
+  "main": "./ports.config.json"
+}
