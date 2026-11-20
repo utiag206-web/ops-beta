@@ -13,6 +13,8 @@
     "dev:id": "npm run dev --workspace=inthaly-id",
     "build:ops": "npm run build --workspace=inthaly-ops",
     "build:admin": "npm run build --workspace=global-admin",
+    "build:id": "npm run build --workspace=inthaly-id",
+    "build:community": "npm run build --workspace=community",
     "test": "node --test tests/**/*.test.js"
   },
   "dependencies": {
