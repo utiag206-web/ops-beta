@@ -6,7 +6,7 @@
  */
 
 export interface StorageUploadOptions {
-  bucket: 'inthaly-id-assets' | 'community-media' | 'academy-resources'
+  bucket: 'inthaly-community' | 'inthaly-id' | 'inthaly-id-assets' | 'community-media' | 'academy-resources'
   key: string
   contentType: string
   buffer: Buffer
