@@ -11,8 +11,9 @@ interface CachedExtendedUser {
   data: any
   timestamp: number
 }
-const SESSION_CACHE_TTL = 30 * 1000 // 30 segundos de memoria en servidor para transiciones rápidas
-const sessionMemoryCache = new Map<string, CachedExtendedUser>()
+const SESSION_CACHE_TTL = 45 * 1000 // 45 segundos de memoria en servidor para navegaciones instantaneas
+const sessionMemoryCache: Map<string, CachedExtendedUser> =
+  (globalThis as any).__inthaly_session_cache ?? ((globalThis as any).__inthaly_session_cache = new Map())
 
 export function clearUserSessionCache(userId?: string) {
   if (userId) {

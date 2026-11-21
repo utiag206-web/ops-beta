@@ -49,8 +49,9 @@ interface CacheEntry {
   cachedAt: number
 }
 
-const PROFILE_CACHE = new Map<string, CacheEntry>()
-const CACHE_TTL_MS = 1000 * 60 * 5 // 5 minutos de TTL en memoria
+const PROFILE_CACHE: Map<string, CacheEntry> =
+  (globalThis as any).__inthaly_profile_cache ?? ((globalThis as any).__inthaly_profile_cache = new Map())
+const CACHE_TTL_MS = 1000 * 60 * 10 // 10 minutos de TTL en memoria
 
 /**
  * Invalida el caché de perfil para una empresa (útil tras actualizaciones).

@@ -71,13 +71,13 @@ import { createAdminClient } from '@/lib/supabase/server'
 /**
  * Obtiene la configuración global del ecosistema (Memoizado por ciclo de request)
  */
-let cachedGlobalSettings: { data: GlobalSettingsData; timestamp: number } | null = null
-const GLOBAL_SETTINGS_TTL = 60 * 1000 // 60s memory cache
+const GLOBAL_SETTINGS_TTL = 120 * 1000 // 120s memory cache
 
 export const getGlobalSettings = cache(async function getGlobalSettings(): Promise<GlobalSettingsData | null> {
   const now = Date.now()
-  if (cachedGlobalSettings && (now - cachedGlobalSettings.timestamp) < GLOBAL_SETTINGS_TTL) {
-    return cachedGlobalSettings.data
+  const cached = (globalThis as any).__inthaly_global_settings_cache
+  if (cached && (now - cached.timestamp) < GLOBAL_SETTINGS_TTL) {
+    return cached.data
   }
 
   try {
@@ -90,7 +90,7 @@ export const getGlobalSettings = cache(async function getGlobalSettings(): Promi
       .maybeSingle()
 
     if (error || !data) {
-      return cachedGlobalSettings ? cachedGlobalSettings.data : null
+      return cached ? cached.data : null
     }
 
     const { description, commercial_whatsapp } = parseEcosystemDescription(data.ecosystem_description)
@@ -101,10 +101,10 @@ export const getGlobalSettings = cache(async function getGlobalSettings(): Promi
       commercial_whatsapp: commercial_whatsapp || '51923207309'
     } as GlobalSettingsData
 
-    cachedGlobalSettings = { data: result, timestamp: now }
+    ;(globalThis as any).__inthaly_global_settings_cache = { data: result, timestamp: now }
     return result
   } catch (err) {
-    return cachedGlobalSettings ? cachedGlobalSettings.data : null
+    return cached ? cached.data : null
   }
 })
 

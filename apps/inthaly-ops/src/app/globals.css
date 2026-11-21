@@ -459,8 +459,7 @@ div.fixed.inset-0.flex.items-center.justify-center > div {
 
 /* 2. Motion Utility Classes */
 .nth-page-enter {
-  animation: nth-fade-slide-up 480ms cubic-bezier(0.16, 1, 0.3, 1) both;
-  will-change: opacity, transform;
+  animation: nth-fade-slide-up 320ms cubic-bezier(0.16, 1, 0.3, 1) ease-out;
 }
 
 /* Instant dimming feedback on route exit / click */
