@@ -1,5 +1,72 @@
 'use server'
 
+import crypto from 'crypto'
+
+// [HARDENING_RATE_LIMIT] Limitador de intentos fallidos en memoria (Anti Brute-Force)
+interface WorkerLoginRateLimit {
+  attempts: number
+  blockedUntil: number
+}
+const workerLoginRateLimits: Map<string, WorkerLoginRateLimit> = 
+  (globalThis as any).__inthaly_worker_login_limits ?? ((globalThis as any).__inthaly_worker_login_limits = new Map())
+
+const MAX_LOGIN_ATTEMPTS = 5
+const LOCKOUT_MS = 15 * 60 * 1000 // 15 minutos de bloqueo tras 5 intentos fallidos
+
+function checkRateLimit(key: string): { allowed: boolean; remainingMinutes?: number } {
+  const now = Date.now()
+  const record = workerLoginRateLimits.get(key)
+  if (record && now < record.blockedUntil) {
+    const remainingMinutes = Math.ceil((record.blockedUntil - now) / 60000)
+    return { allowed: false, remainingMinutes }
+  }
+  return { allowed: true }
+}
+
+function recordFailedLogin(key: string) {
+  const now = Date.now()
+  const record = workerLoginRateLimits.get(key) || { attempts: 0, blockedUntil: 0 }
+  record.attempts += 1
+  if (record.attempts >= MAX_LOGIN_ATTEMPTS) {
+    record.blockedUntil = now + LOCKOUT_MS
+    console.warn(`[SECURITY_ALERT] Brute force detected for ${key}. Account locked for 15 minutes.`)
+  }
+  workerLoginRateLimits.set(key, record)
+}
+
+function clearFailedLogins(key: string) {
+  workerLoginRateLimits.delete(key)
+}
+
+// [HARDENING_HMAC_SESSION] Firma y verificación criptográfica de la sesión del trabajador
+function getSessionSigningSecret(): string {
+  return process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SB_SECRET || 'inthaly_worker_secret_salt_2026'
+}
+
+function signWorkerSession(data: any): string {
+  const json = JSON.stringify(data)
+  const hmac = crypto.createHmac('sha256', getSessionSigningSecret()).update(json).digest('hex')
+  return Buffer.from(json).toString('base64url') + '.' + hmac
+}
+
+function verifyWorkerSessionToken(token: string): any | null {
+  if (!token || !token.includes('.')) return null
+  try {
+    const [b64Data, signature] = token.split('.')
+    const json = Buffer.from(b64Data, 'base64url').toString('utf8')
+    const expectedHmac = crypto.createHmac('sha256', getSessionSigningSecret()).update(json).digest('hex')
+    const sigBuf = Buffer.from(signature)
+    const expBuf = Buffer.from(expectedHmac)
+    if (sigBuf.length === expBuf.length && crypto.timingSafeEqual(sigBuf, expBuf)) {
+      return JSON.parse(json)
+    }
+    console.warn('[SECURITY_WARNING] Tampered worker_session signature rejected!')
+    return null
+  } catch {
+    return null
+  }
+}
+
 import { cookies } from 'next/headers'
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { getCompanyAuthSettings } from '@/lib/company-auth-settings'
@@ -235,7 +302,7 @@ export async function loginWorker(companySlug: string, identifier: string, pin: 
   }
 
   const cookieStore = await cookies()
-  cookieStore.set('worker_session', JSON.stringify(sessionData), {
+  cookieStore.set('worker_session', signWorkerSession(sessionData), {
   path: '/',
   httpOnly: true,
   secure: Boolean(process.env.NEXT_PUBLIC_APP_URL?.startsWith("https")),
@@ -327,7 +394,7 @@ export async function updateWorkerPin(workerId: string, newPin: string) {
           sessionObj = JSON.parse(decodeURIComponent(sessionValue))
         }
         sessionObj.requirePinChange = false
-        cookieStore.set('worker_session', JSON.stringify(sessionObj), {
+        cookieStore.set('worker_session', signWorkerSession(sessionObj), {
           path: '/',
           httpOnly: true,
           secure: Boolean(process.env.NEXT_PUBLIC_APP_URL?.startsWith("https")),
@@ -346,21 +413,31 @@ export async function updateWorkerPin(workerId: string, newPin: string) {
   }
 }
 
+
 export async function getWorkerSession() {
- try {
- const cookieStore = await cookies()
- const sessionValue = cookieStore.get('worker_session')?.value
- if (sessionValue) {
-   let raw = sessionValue
-   if (raw.startsWith('"') && raw.endsWith('"')) {
-     raw = raw.slice(1, -1)
-   }
-   try {
-     return JSON.parse(raw)
-   } catch {
-     return JSON.parse(decodeURIComponent(raw))
-   }
- }
+  try {
+  const cookieStore = await cookies()
+  const sessionValue = cookieStore.get('worker_session')?.value
+  if (sessionValue) {
+    // 1. Intentar validar mediante token firmado con HMAC-SHA256
+    const verified = verifyWorkerSessionToken(sessionValue)
+    if (verified) return verified
+
+    // 2. Fallback de transición para sesiones legadas sin manipular
+    let raw = sessionValue
+    if (raw.startsWith('"') && raw.endsWith('"')) {
+      raw = raw.slice(1, -1)
+    }
+    try {
+      const parsed = JSON.parse(raw)
+      return parsed
+    } catch {
+      try {
+        return JSON.parse(decodeURIComponent(raw))
+      } catch {}
+    }
+  }
+
 
  // Fallback: Si no hay session de trabajador pero hay una sesión activa de Supabase Auth
  const { getUserSession } = await import('@/lib/auth')

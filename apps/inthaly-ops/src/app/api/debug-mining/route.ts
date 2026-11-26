@@ -6,7 +6,12 @@ export async function GET() {
  try {
  const { extendedUser } = await getUserSession()
  if (!extendedUser) {
- return NextResponse.json({ error: 'Not authenticated' })
+ return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
+ }
+
+ // [HARDENING_DEBUG_MINING] Restringir diagnóstico exclusivamente a Super Admin
+ if (extendedUser.role_id !== 'super_admin' && extendedUser.role !== 'superadmin') {
+ return NextResponse.json({ error: 'Forbidden: Acceso restringido a Super Administrador' }, { status: 403 })
  }
 
  const supabase = await createClient()

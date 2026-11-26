@@ -468,7 +468,25 @@ export async function deleteWorkerDocument(id: string, workerId: string, filePat
  return { success: false, error: 'No tienes permisos.' }
  }
 
+ // [HARDENING_IDOR_DOC_DELETE] Validar que la ruta de almacenamiento pertenezca estrictamente a la empresa activa
+ if (!filePath || !filePath.startsWith(companyId + '/') || filePath.includes('..')) {
+ return { success: false, error: 'No autorizado: La ruta del archivo no pertenece al ámbito de tu empresa.' }
+ }
+
  const supabase = await createAdminClient()
+
+ // [HARDENING_IDOR_DOC_DELETE] Verificar que el registro documental exista y pertenezca a la empresa
+ const { data: docRecord } = await supabase
+ .from('worker_documents')
+ .select('id, company_id')
+ .eq('id', id)
+ .eq('worker_id', workerId)
+ .eq('company_id', companyId)
+ .maybeSingle()
+
+ if (!docRecord) {
+ return { success: false, error: 'Documento no encontrado o no pertenece a tu empresa.' }
+ }
 
  // 1. Delete from Storage
  const { error: storageError } = await supabase.storage

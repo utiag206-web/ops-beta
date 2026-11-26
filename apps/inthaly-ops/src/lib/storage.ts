@@ -1,4 +1,20 @@
 
+// [HARDENING_SEGURIDAD] Reglas estrictas de validación de archivos
+const ALLOWED_EXTENSIONS = ['jpg', 'jpeg', 'png', 'webp', 'pdf', 'xlsx', 'xls', 'csv', 'doc', 'docx', 'txt']
+const DANGEROUS_EXTENSIONS = ['svg', 'html', 'htm', 'xhtml', 'xml', 'exe', 'dll', 'bat', 'cmd', 'sh', 'php', 'js', 'mjs', 'py', 'cgi', 'vbs', 'ps1']
+const MAX_FILE_SIZE_BYTES = 15 * 1024 * 1024 // 15 Megabytes
+
+export function validateUploadFile(fileName: string, sizeBytes: number, mimeType?: string) {
+  if (sizeBytes > MAX_FILE_SIZE_BYTES) {
+    throw new Error(`El archivo excede el tamaño máximo permitido de 15MB (${(sizeBytes / (1024 * 1024)).toFixed(1)}MB)`)
+  }
+  const ext = (fileName.split('.').pop() || '').toLowerCase().trim()
+  if (!ext || !ALLOWED_EXTENSIONS.includes(ext) || DANGEROUS_EXTENSIONS.includes(ext)) {
+    throw new Error(`Tipo de archivo no permitido (.${ext}). Solo se permiten documentos seguros e imágenes (JPG, PNG, WEBP, PDF, Excel).`)
+  }
+}
+
+
 
 export type StorageBucket = 'incidencias' | 'worker_documents' | 'ppe_signatures' | 'petty-cash' | 'soma' | 'planta'
 

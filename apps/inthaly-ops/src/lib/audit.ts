@@ -1,3 +1,23 @@
+
+// [HARDENING_AUDIT_LOGS] Sanitizador recursivo para impedir que credenciales se graben en los logs
+function sanitizeAuditDetails(obj: any): any {
+  if (!obj || typeof obj !== 'object') return obj
+  if (Array.isArray(obj)) return obj.map(sanitizeAuditDetails)
+  
+  const SENSITIVE_KEYS = ['password', 'pin', 'token', 'secret', 'authorization', 'cookie', 'service_role']
+  const clean: Record<string, any> = {}
+  for (const [k, v] of Object.entries(obj)) {
+    if (SENSITIVE_KEYS.some(sk => k.toLowerCase().includes(sk))) {
+      clean[k] = '[REDACTED_SECURITY]'
+    } else if (typeof v === 'object') {
+      clean[k] = sanitizeAuditDetails(v)
+    } else {
+      clean[k] = v
+    }
+  }
+  return clean
+}
+
 import { createAdminClient } from '@/lib/supabase/server'
 
 export interface AuditEventPayload {
@@ -27,7 +47,7 @@ export async function logAuditEvent(payload: AuditEventPayload) {
       report_title: payload.title,
       category: payload.category || 'AUDIT_SECURITY',
       format: 'AUDIT_EVENT',
-      filters_applied: payload.details || {},
+      filters_applied: sanitizeAuditDetails(payload.details || {}),
       records_count: 1,
       status: payload.status || 'COMPLETED'
     }])

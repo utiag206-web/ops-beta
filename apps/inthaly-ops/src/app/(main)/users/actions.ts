@@ -103,6 +103,11 @@ export async function createUser(prevState: any, formData: FormData) {
       return { success: false, error: 'Todos los campos son obligatorios.' }
     }
 
+    // [HARDENING_PRIVILEGE_ESCALATION] Impedir que un admin de empresa cree usuarios con rol super_admin
+    if (roleId.toLowerCase() === 'super_admin' && extendedUser.role_id !== 'super_admin') {
+      return { success: false, error: 'No autorizado: Solo un Super Administrador puede crear usuarios con rol de Super Admin.' }
+    }
+
     // 0. Verificar si el trabajador ya está vinculado
     if (workerId && workerId !== 'none') {
       const { data: existingLink } = await supabaseAdmin
@@ -294,6 +299,11 @@ export async function updateUserRole(userId: string, role_id: string) {
     const supabaseAdmin = getSupabaseAdmin()
     if (extendedUser.role_id !== 'admin' && extendedUser.role_id !== 'super_admin') {
       return { success: false, error: 'Permiso denegado.' }
+    }
+
+    // [HARDENING_PRIVILEGE_ESCALATION] Impedir que un admin de empresa asigne el rol super_admin
+    if (role_id.toLowerCase() === 'super_admin' && extendedUser.role_id !== 'super_admin') {
+      return { success: false, error: 'No autorizado: Solo un Super Administrador puede asignar el rol de Super Admin.' }
     }
 
     // PROTECCIÓN: No se puede quitar el rol de administrador si es el último
