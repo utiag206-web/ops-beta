@@ -12,11 +12,12 @@ export async function getIncidencias(filters?: { status?: string, category?: str
  if (!extendedUser || !companyId) return { error: 'No autorizado' }
 
  let query = applyIsolation(
- supabase.from('incidencias').select('*'),
+ supabase.from('incidencias').select('id, company_id, area_location, description, severity, status, event_date, incident_category, corrective_actions, photo_urls, reported_by, created_at'),
  companyId,
  extendedUser.role_id
  )
  .order('created_at', { ascending: false })
+ .limit(100)
 
  if (filters?.status) {
  query = query.eq('status', filters.status)
@@ -30,7 +31,10 @@ export async function getIncidencias(filters?: { status?: string, category?: str
  }
  }
 
- const { data: rawData, error } = await query
+ const [{ data: rawData, error }, { data: companyReporters }] = await Promise.all([
+   query,
+   supabase.from('users').select('id, name').eq('company_id', companyId)
+ ])
 
  if (error) {
  console.error('SERVER_GET_INCIDENCIAS_ERROR:', JSON.stringify(error, null, 2))
@@ -39,14 +43,14 @@ export async function getIncidencias(filters?: { status?: string, category?: str
 
  if (!rawData || rawData.length === 0) return { data: [] }
 
- // Manual Join Fallback for reporter names
- const reporterIds = Array.from(new Set(rawData.map((i: any) => i.reported_by))).filter((id: any) => id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id))
- 
- const { data: reporters } = reporterIds.length > 0
- ? await supabase.from('users').select('id, name').in('id', reporterIds)
- : { data: [] }
- 
- const reporterMap = new Map((reporters || []).map((r: any) => [r.id, r.name]))
+ const reporterMap = new Map((companyReporters || []).map((r: any) => [r.id, r.name]))
+ const missingReporterIds = Array.from(new Set(rawData.map((i: any) => i.reported_by)))
+   .filter((id: any) => id && !reporterMap.has(id) && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id))
+
+ if (missingReporterIds.length > 0) {
+   const { data: extraReporters } = await supabase.from('users').select('id, name').in('id', missingReporterIds)
+   ;(extraReporters || []).forEach((r: any) => reporterMap.set(r.id, r.name))
+ }
 
  const data = rawData.map((i: any) => ({
  ...i,

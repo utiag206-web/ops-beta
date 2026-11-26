@@ -3,7 +3,7 @@
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { getUserSession, getStrictCompanyId, applyIsolation } from '@/lib/auth'
 import { revalidatePath } from 'next/cache'
-import { tareoService } from '@/services'
+import * as tareoService from '@/services/tareo.service'
 
 export async function getWorkCycles() {
  const { extendedUser } = await getUserSession()

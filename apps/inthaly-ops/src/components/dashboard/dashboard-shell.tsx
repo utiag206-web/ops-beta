@@ -1,821 +1,827 @@
 'use client'
- 
+
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { 
- Users, UserCheck, ShieldAlert, BadgeDollarSign, 
- Package, Boxes, ClipboardCheck, Activity, 
- Clock, CheckCircle2, ArrowRight, FileText,
- Mountain, Bed, Construction, MountainSnow,
- Bus, Coins, Calendar, Shield, GraduationCap, MessageSquare, Eye,
- ArrowDownLeft, ArrowUpRight, AlertTriangle, Building2, ShoppingCart, Truck, Plus, AlertCircle,
- LayoutDashboard, LayoutGrid, Box, TrendingUp, TrendingDown, ArrowUpDown, ClipboardList, ShieldCheck,
- UserCircle, Wrench, Fuel, Cpu, Hammer, TreePine
+import {
+  Users, UserCheck, ShieldAlert, BadgeDollarSign,
+  Package, Boxes, ClipboardCheck, Activity,
+  Clock, CheckCircle2, ArrowRight, FileText,
+  Mountain, Bed, Construction, MountainSnow,
+  Bus, Coins, Calendar, Shield, GraduationCap, MessageSquare, Eye,
+  ArrowDownLeft, ArrowUpRight, AlertTriangle, Building2, ShoppingCart, Truck, Plus, AlertCircle,
+  LayoutDashboard, LayoutGrid, Box, TrendingUp, TrendingDown, ArrowUpDown, ClipboardList, ShieldCheck,
+  UserCircle, Wrench, Fuel, Cpu, Hammer, TreePine
 } from 'lucide-react'
+import dynamic from 'next/dynamic'
 import { normalizeAreaName } from '@/lib/permissions'
 import { StatWidget, AlertWidget, ListWidget, WelcomeHero } from './widgets'
-import { AttendanceMarker } from '@/components/attendance/attendance-marker'
-import { PPEList } from '@/components/ppe/ppe-list'
-import { BonusList } from '@/components/bonuses/bonus-list'
-import { TransportList } from '@/components/transport/transport-list'
-import { AttendanceList } from '@/components/attendance/attendance-list'
 import { ROLE_NAMES } from '@/lib/constants'
 
+const AttendanceMarker = dynamic(() => import('@/components/attendance/attendance-marker').then(m => m.AttendanceMarker))
+const PPEList = dynamic(() => import('@/components/ppe/ppe-list').then(m => m.PPEList))
+const BonusList = dynamic(() => import('@/components/bonuses/bonus-list').then(m => m.BonusList))
+const TransportList = dynamic(() => import('@/components/transport/transport-list').then(m => m.TransportList))
+
 interface DashboardShellProps {
- user: any
- stats: any
- localIp?: string
+  user: any
+  stats: any
+  localIp?: string
 }
 
 // Lógica de prioridad estricta (Espejo de Sidebar y Actions)
 function getViewMode(role_id: string, area: string | null) {
- const role = role_id?.toLowerCase()
- const cleanArea = area ? normalizeAreaName(area) : ''
- if (role === 'gerente') return 'GERENTE'
- if (['admin', 'super_admin', 'superadmin'].includes(role)) return 'ADMIN'
- if (role === 'administracion') return 'FINANCE'
- if (role === 'soma' || (role === 'jefe_area' && cleanArea === 'seguridad soma')) return 'SOMA'
- if (role === 'jefe_area' && cleanArea === 'cocina') return 'COCINA'
- if (role === 'mecanica' || (role === 'jefe_area' && cleanArea === 'mecanica')) return 'MECANICA'
- if (role === 'supervisor') return 'SUPERVISOR'
- if (role === 'operaciones' || (role === 'jefe_area' && ['operaciones', 'mina'].includes(cleanArea))) return 'OPERACIONES'
- if (role === 'almacen' || role === 'logistica' || (role === 'jefe_area' && ['almacen y mantenimiento', 'almacen', 'logistica'].includes(cleanArea))) return 'ALMACEN'
- if (role === 'trabajador') return 'WORKER'
- return 'DEFAULT'
+  const role = role_id?.toLowerCase()
+  const cleanArea = area ? normalizeAreaName(area) : ''
+  if (role === 'gerente') return 'GERENTE'
+  if (['admin', 'super_admin', 'superadmin'].includes(role)) return 'ADMIN'
+  if (role === 'administracion') return 'FINANCE'
+  if (role === 'soma' || (role === 'jefe_area' && cleanArea === 'seguridad soma')) return 'SOMA'
+  if (role === 'jefe_area' && cleanArea === 'cocina') return 'COCINA'
+  if (role === 'mecanica' || (role === 'jefe_area' && cleanArea === 'mecanica')) return 'MECANICA'
+  if (role === 'supervisor') return 'SUPERVISOR'
+  if (role === 'operaciones' || (role === 'jefe_area' && ['operaciones', 'mina'].includes(cleanArea))) return 'OPERACIONES'
+  if (role === 'almacen' || role === 'logistica' || (role === 'jefe_area' && ['almacen y mantenimiento', 'almacen', 'logistica'].includes(cleanArea))) return 'ALMACEN'
+  if (role === 'trabajador') return 'WORKER'
+  return 'DEFAULT'
 }
 
 export function DashboardShell({ user, stats, localIp }: DashboardShellProps) {
- const roleName = ROLE_NAMES[user.role_id] || "Usuario"
- const companyName = user.company_name || "Empresa"
- const viewMode = stats.activeView === 'WORKER' ? 'WORKER' : getViewMode(user.role_id, user.area)
+  const roleName = ROLE_NAMES[user.role_id] || "Usuario"
+  const companyName = user.company_name || "Empresa"
+  const viewMode = stats.activeView === 'WORKER' ? 'WORKER' : getViewMode(user.role_id, user.area)
 
- const [selectedTalk, setSelectedTalk] = useState<any>(null)
- const [selectedTraining, setSelectedTraining] = useState<any>(null)
- const router = useRouter()
+  const [selectedTalk, setSelectedTalk] = useState<any>(null)
+  const [selectedTraining, setSelectedTraining] = useState<any>(null)
+  const router = useRouter()
 
- useEffect(() => {
+  useEffect(() => {
     const companyId = user?.active_company_id || user?.company_id
     if (!companyId) return
 
     const supabase = createClient()
+    let refreshTimer: NodeJS.Timeout | null = null
     const channel = supabase.channel(`dashboard_changes_${companyId}`)
-      .on('postgres_changes', { 
-        event: '*', 
-        schema: 'public', 
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
         table: 'attendance',
         filter: `company_id=eq.${companyId}`
       }, () => {
-        router.refresh()
+        if (refreshTimer) clearTimeout(refreshTimer)
+        refreshTimer = setTimeout(() => {
+          router.refresh()
+        }, 800)
       })
       .subscribe()
 
     return () => {
+      if (refreshTimer) clearTimeout(refreshTimer)
       supabase.removeChannel(channel)
     }
   }, [router, user?.active_company_id, user?.company_id])
 
- const renderDashboardWidgets = () => {
- switch (viewMode) {
- case 'GERENTE':
- return (
- <div className="space-y-4 sm:space-y-5">
- <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3 sm:gap-4">
- <StatWidget 
- title="Personal Total" value={stats.admin?.totalWorkers?.toString() || '0'} 
- icon={UserCheck} color="text-indigo-600" bg="bg-indigo-50" href="/workers"
- />
- <StatWidget 
- title="Caja chica central" value={`S/ ${stats.admin?.totalCajaChicaBalance?.toLocaleString(undefined, { minimumFractionDigits: 2 }) || '0.00'}`} 
- icon={Coins} color="text-emerald-600" bg="bg-emerald-50" href="/caja-chica"
- />
- <StatWidget 
- title="Requerimientos" value={stats.admin?.pendingRequirementsCount?.toString() || '0'} 
- icon={FileText} color="text-rose-500" bg="bg-rose-50" href="/requerimientos"
- />
- <StatWidget 
- title="Bonificaciones Pend." value={stats.admin?.pendingBonusesCount?.toString() || '0'} 
- icon={BadgeDollarSign} color="text-amber-600" bg="bg-amber-50" href="/bonuses"
- />
- <StatWidget 
- title="Incidentes Abiertos" value={stats.admin?.openIncidents?.toString() || '0'} 
- icon={ShieldAlert} color="text-rose-600" bg="bg-rose-50" href="/incidencias?category=soma"
- />
- </div>
+  const renderDashboardWidgets = () => {
+    switch (viewMode) {
+      case 'GERENTE':
+        return (
+          <div className="space-y-4 sm:space-y-5">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3 sm:gap-4">
+              <StatWidget
+                title="Personal Total" value={stats.admin?.totalWorkers?.toString() || '0'}
+                icon={UserCheck} color="text-indigo-600" bg="bg-indigo-50" href="/workers"
+              />
+              <StatWidget
+                title="Caja chica central" value={`S/ ${stats.admin?.totalCajaChicaBalance?.toLocaleString(undefined, { minimumFractionDigits: 2 }) || '0.00'}`}
+                icon={Coins} color="text-emerald-600" bg="bg-emerald-50" href="/caja-chica"
+              />
+              <StatWidget
+                title="Requerimientos" value={stats.admin?.pendingRequirementsCount?.toString() || '0'}
+                icon={FileText} color="text-rose-500" bg="bg-rose-50" href="/requerimientos"
+              />
+              <StatWidget
+                title="Bonificaciones Pend." value={stats.admin?.pendingBonusesCount?.toString() || '0'}
+                icon={BadgeDollarSign} color="text-amber-600" bg="bg-amber-50" href="/bonuses"
+              />
+              <StatWidget
+                title="Incidentes Abiertos" value={stats.admin?.openIncidents?.toString() || '0'}
+                icon={ShieldAlert} color="text-rose-600" bg="bg-rose-50" href="/incidencias?category=soma"
+              />
+            </div>
 
- <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 sm:gap-5">
- <div className="xl:col-span-2 bg-white rounded-xl sm:rounded-2xl p-4 sm:p-5 shadow-xs border border-slate-100">
- <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 sm:mb-6">
- <div>
- <h3 className="text-base sm:text-lg font-bold text-slate-800 tracking-tight">Supervisión Semanal</h3>
- <p className="text-slate-400 text-xs mt-0.5">Actividad General Operativa</p>
- </div>
- <div className="bg-indigo-50 px-5 py-2 rounded-2xl text-indigo-600 font-bold text-xs border border-indigo-100">Monitoreo</div>
- </div>
- <div className="h-[200px] md:h-[300px] w-full flex items-end justify-between gap-2 md:gap-4 px-2 md:px-4">
- {(stats.admin?.weeklyActivity || []).map((day: any) => {
- const maxWeekly = Math.max(...(stats.admin?.weeklyActivity || []).map((d:any) => d.count || 0), 1)
- const height = Math.min((day.count / maxWeekly) * 100, 100)
- return (
- <div key={day.day} className="flex-1 flex flex-col items-center gap-4 group">
- <div className="relative w-full flex flex-col items-center">
- <div className="absolute -top-10 opacity-0 group-hover:opacity-100 transition-all bg-slate-900 text-white text-[10px] font-bold px-3 py-1.5 rounded-lg shadow-xl translate-y-2 group-hover:translate-y-0">
- {day.count} movs.
- </div>
- <div 
- className="w-full max-w-[40px] bg-gradient-to-t from-indigo-600 to-blue-400 rounded-2xl transition-all duration-1000 ease-out shadow-lg shadow-indigo-200 group-hover:shadow-indigo-300"
- style={{ height: `${height}%`, minHeight: '8px' }}
- />
- </div>
- <span className="text-[10px] font-bold text-slate-400 tracking-tighter">
- {(() => {
- const [y, m, d] = day.day.split('-').map(Number)
- return new Date(y, m - 1, d).toLocaleDateString(undefined, { weekday: 'short' })
- })()}
- </span>
- </div>
- )
- })}
- </div>
- </div>
+            <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 sm:gap-5">
+              <div className="xl:col-span-2 bg-white rounded-xl sm:rounded-2xl p-4 sm:p-5 shadow-xs border border-slate-100">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 sm:mb-6">
+                  <div>
+                    <h3 className="text-base sm:text-lg font-bold text-slate-800 tracking-tight">Supervisión Semanal</h3>
+                    <p className="text-slate-400 text-xs mt-0.5">Actividad General Operativa</p>
+                  </div>
+                  <div className="bg-indigo-50 px-5 py-2 rounded-2xl text-indigo-600 font-bold text-xs border border-indigo-100">Monitoreo</div>
+                </div>
+                <div className="h-[200px] md:h-[300px] w-full flex items-end justify-between gap-2 md:gap-4 px-2 md:px-4">
+                  {(stats.admin?.weeklyActivity || []).map((day: any) => {
+                    const maxWeekly = Math.max(...(stats.admin?.weeklyActivity || []).map((d: any) => d.count || 0), 1)
+                    const height = Math.min((day.count / maxWeekly) * 100, 100)
+                    return (
+                      <div key={day.day} className="flex-1 flex flex-col items-center gap-4 group">
+                        <div className="relative w-full flex flex-col items-center">
+                          <div className="absolute -top-10 opacity-0 group-hover:opacity-100 transition-all bg-slate-900 text-white text-[10px] font-bold px-3 py-1.5 rounded-lg shadow-xl translate-y-2 group-hover:translate-y-0">
+                            {day.count} movs.
+                          </div>
+                          <div
+                            className="w-full max-w-[40px] bg-gradient-to-t from-indigo-600 to-blue-400 rounded-2xl transition-all duration-1000 ease-out shadow-lg shadow-indigo-200 group-hover:shadow-indigo-300"
+                            style={{ height: `${height}%`, minHeight: '8px' }}
+                          />
+                        </div>
+                        <span className="text-[10px] font-bold text-slate-400 tracking-tighter">
+                          {(() => {
+                            const [y, m, d] = day.day.split('-').map(Number)
+                            return new Date(y, m - 1, d).toLocaleDateString(undefined, { weekday: 'short' })
+                          })()}
+                        </span>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
 
- <div className="xl:col-span-1 space-y-8">
- <div className="bg-gradient-to-br from-slate-900 to-indigo-950 rounded-2xl md:rounded-[2rem] p-8 md:p-10 text-white shadow-2xl relative overflow-hidden group">
- <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl" />
- <h3 className="text-xl font-bold text-white tracking-tight mb-6 flex items-center gap-3">
- <ShieldCheck size={24} className="text-emerald-400 animate-pulse" />
- Consola de Aprobaciones
- </h3>
- <div className="space-y-4">
- <div className="p-4 bg-white/5 rounded-2xl border border-white/10 flex items-center justify-between">
- <div>
- <h4 className="text-xs font-bold text-slate-300 tracking-normal">Requerimientos</h4>
- <p className="text-lg font-bold text-white">{stats.admin?.pendingRequirementsCount} Pendientes</p>
- </div>
- <Link href="/requerimientos" className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-[10px] font-bold rounded-xl tracking-tight transition-all">Ver</Link>
- </div>
+              <div className="xl:col-span-1 space-y-8">
+                <div className="bg-gradient-to-br from-slate-900 to-indigo-950 rounded-2xl md:rounded-[2rem] p-8 md:p-10 text-white shadow-2xl relative overflow-hidden group">
+                  <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl" />
+                  <h3 className="text-xl font-bold text-white tracking-tight mb-6 flex items-center gap-3">
+                    <ShieldCheck size={24} className="text-emerald-400 animate-pulse" />
+                    Consola de Aprobaciones
+                  </h3>
+                  <div className="space-y-4">
+                    <div className="p-4 bg-white/5 rounded-2xl border border-white/10 flex items-center justify-between">
+                      <div>
+                        <h4 className="text-xs font-bold text-slate-300 tracking-normal">Requerimientos</h4>
+                        <p className="text-lg font-bold text-white">{stats.admin?.pendingRequirementsCount} Pendientes</p>
+                      </div>
+                      <Link href="/requerimientos" className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-[10px] font-bold rounded-xl tracking-tight transition-all">Ver</Link>
+                    </div>
 
- <div className="p-4 bg-white/5 rounded-2xl border border-white/10 flex items-center justify-between">
- <div>
- <h4 className="text-xs font-bold text-slate-300 tracking-normal">Bonificaciones</h4>
- <p className="text-lg font-bold text-white">{stats.admin?.pendingBonusesCount} En Espera</p>
- </div>
- <Link href="/bonuses" className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-[10px] font-bold rounded-xl tracking-tight transition-all">Ver</Link>
- </div>
+                    <div className="p-4 bg-white/5 rounded-2xl border border-white/10 flex items-center justify-between">
+                      <div>
+                        <h4 className="text-xs font-bold text-slate-300 tracking-normal">Bonificaciones</h4>
+                        <p className="text-lg font-bold text-white">{stats.admin?.pendingBonusesCount} En Espera</p>
+                      </div>
+                      <Link href="/bonuses" className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-[10px] font-bold rounded-xl tracking-tight transition-all">Ver</Link>
+                    </div>
 
- <div className="p-4 bg-white/5 rounded-2xl border border-white/10 flex items-center justify-between">
- <div>
- <h4 className="text-xs font-bold text-slate-300 tracking-normal">Pasajes / Transportes</h4>
- <p className="text-lg font-bold text-white">{stats.admin?.pendingTransportCount} Pendientes</p>
- </div>
- <Link href="/bonuses" className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-[10px] font-bold rounded-xl tracking-tight transition-all">Ver</Link>
- </div>
- </div>
- </div>
+                    <div className="p-4 bg-white/5 rounded-2xl border border-white/10 flex items-center justify-between">
+                      <div>
+                        <h4 className="text-xs font-bold text-slate-300 tracking-normal">Pasajes / Transportes</h4>
+                        <p className="text-lg font-bold text-white">{stats.admin?.pendingTransportCount} Pendientes</p>
+                      </div>
+                      <Link href="/bonuses" className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-[10px] font-bold rounded-xl tracking-tight transition-all">Ver</Link>
+                    </div>
+                  </div>
+                </div>
 
- <div className="bg-white rounded-[2rem] p-8 border border-slate-100 shadow-sm">
- <h4 className="text-[10px] font-bold text-slate-400 tracking-tight mb-4 flex items-center gap-2">
- <AlertCircle size={14} className="text-rose-500 animate-pulse" /> Incidentes de Seguridad
- </h4>
- <div className="p-4 bg-rose-50 rounded-2xl border border-rose-100 flex items-center justify-between">
- <span className="text-xs font-bold text-slate-800 tracking-tight">Incidencias Reportadas</span>
- <span className="text-lg font-bold text-rose-600">{stats.admin?.openIncidents}</span>
- </div>
- </div>
- </div>
- </div>
- </div>
- )
-
- case 'ADMIN':
- return (
- <div className="space-y-4 sm:space-y-5">
- <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3.5 sm:gap-4">
- <StatWidget 
- title="Usuarios" value={stats.admin?.activeUsers?.toString() || '0'} 
- icon={Users} color="text-indigo-600" bg="bg-indigo-50" href="/users"
- />
- <StatWidget 
- title="Personal" value={stats.admin?.totalWorkers?.toString() || '0'} 
- icon={UserCheck} color="text-blue-600" bg="bg-blue-50" href="/workers"
- />
- <StatWidget 
- title="Caja chica" value={`S/ ${stats.admin?.totalCajaChicaBalance?.toLocaleString(undefined, { minimumFractionDigits: 2 }) || '0.00'}`} 
- icon={Coins} color="text-emerald-600" bg="bg-emerald-50" href="/caja-chica"
- />
- <StatWidget 
- title="Bonos pendientes" value={stats.admin?.pendingBonusesCount?.toString() || '0'} 
- icon={BadgeDollarSign} color="text-amber-600" bg="bg-amber-50" href="/bonuses"
- />
- <StatWidget 
- title="Pasajes pendientes" value={stats.admin?.pendingTransportCount?.toString() || '0'} 
- icon={Bus} color="text-indigo-500" bg="bg-indigo-50" href="/bonuses"
- />
- <StatWidget 
- title="Incidencias" value={stats.admin?.openIncidents?.toString() || '0'} 
- icon={ShieldAlert} color="text-rose-600" bg="bg-rose-50" href="/incidencias?category=soma"
- />
- <StatWidget 
- title="Gestión de Personal" value={stats.admin?.movementsToday?.toString() || '0'} 
- icon={UserCheck} color="text-blue-600" bg="bg-blue-50" href="/movements"
- />
- <StatWidget 
- title="Requerimientos" value={stats.admin?.pendingRequirementsCount?.toString() || '0'} 
- icon={FileText} color="text-rose-500" bg="bg-rose-50" href="/requerimientos"
- />
- <StatWidget 
- title="Control de Inventario" value={stats.admin?.totalProducts?.toString() || '0'} 
- icon={Boxes} color="text-indigo-600" bg="bg-indigo-50" href="/inventory/stock"
- />
- <StatWidget 
- title="Activos Controlados" value={stats.admin?.assetsCount?.toString() || '0'} 
- icon={Package} color="text-slate-600" bg="bg-slate-50" href="/assets"
- />
- </div>
-
- <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 sm:gap-6">
- <div className="xl:col-span-2 bg-white rounded-xl sm:rounded-2xl p-4 sm:p-5 shadow-xs border border-slate-100">
- <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 sm:mb-6">
- <div>
- <h3 className="text-base sm:text-lg font-bold text-slate-800 tracking-tight">Actividad Semanal</h3>
- <p className="text-slate-400 text-xs mt-0.5">Movimientos de Inventario</p>
- </div>
- <div className="bg-blue-50 px-3.5 py-1 rounded-xl text-blue-600 font-bold text-xs border border-blue-100">Tiempo Real</div>
- </div>
- <div className="h-[180px] md:h-[240px] w-full flex items-end justify-between gap-2 md:gap-4 px-2 md:px-4">
- {(stats.admin?.weeklyActivity || []).map((day: any) => {
- const maxWeekly = Math.max(...(stats.admin?.weeklyActivity || []).map((d:any) => d.count || 0), 1)
- const height = Math.min((day.count / maxWeekly) * 100, 100)
- return (
- <div key={day.day} className="flex-1 flex flex-col items-center gap-2.5 group">
- <div className="relative w-full flex flex-col items-center">
- <div className="absolute -top-8 opacity-0 group-hover:opacity-100 transition-all bg-slate-900 text-white text-[10px] font-bold px-2 py-1 rounded shadow-md translate-y-1 group-hover:translate-y-0">
- {day.count} mov.
- </div>
- <div 
- className="w-full max-w-[36px] bg-gradient-to-t from-blue-600 to-indigo-400 rounded-xl transition-all duration-700 ease-out shadow-sm shadow-blue-200 group-hover:shadow-blue-300"
- style={{ height: `${height}%`, minHeight: '6px' }}
- />
- </div>
- <span className="text-[10px] font-semibold text-slate-400 tracking-tighter">
- {(() => {
- const [y, m, d] = day.day.split('-').map(Number)
- return new Date(y, m - 1, d).toLocaleDateString(undefined, { weekday: 'short' })
- })()}
- </span>
- </div>
- )
- })}
- </div>
- </div>
-
- <div className="xl:col-span-1 space-y-4 sm:space-y-5">
- <div className="bg-[#1D4ED8] rounded-xl sm:rounded-2xl p-4 sm:p-5 shadow-lg shadow-blue-900/15 relative overflow-hidden group">
- <div className="absolute top-0 right-0 w-48 h-48 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2 blur-2xl group-hover:bg-white/20 transition-all" />
- <div className="relative z-10">
- <div className="flex items-center gap-2.5 mb-4 sm:mb-5">
- <div className="p-2 bg-white/10 backdrop-blur-xl rounded-xl border border-white/20">
- <LayoutDashboard className="text-white" size={18} />
- </div>
- <h3 className="text-base sm:text-lg font-bold text-white tracking-tight">Acciones Rápidas</h3>
- </div>
- <div className="space-y-2">
- <Link href="/workers" className="flex items-center justify-between p-2.5 bg-white/10 hover:bg-white/20 border border-white/10 rounded-xl transition-all group">
- <div className="flex items-center gap-2.5">
- <Users className="text-blue-300" size={16} />
- <span className="text-[11px] font-semibold text-white tracking-tight">Registrar Trabajador</span>
- </div>
- <Plus className="text-white/50 group-hover:rotate-90 transition-transform" size={14} />
- </Link>
- <Link href="/incidencias?category=soma" className="flex items-center justify-between p-2.5 bg-white/10 hover:bg-white/20 border border-white/10 rounded-xl transition-all group">
- <div className="flex items-center gap-2.5">
- <ShieldAlert className="text-rose-300" size={16} />
- <span className="text-[11px] font-semibold text-white tracking-tight">Registrar Incidencia</span>
- </div>
- <Plus className="text-white/50 group-hover:rotate-90 transition-transform" size={14} />
- </Link>
- <Link href="/requerimientos" className="flex items-center justify-between p-2.5 bg-white/10 hover:bg-white/20 border border-white/10 rounded-xl transition-all group">
- <div className="flex items-center gap-2.5">
- <FileText className="text-amber-300" size={16} />
- <span className="text-[11px] font-semibold text-white tracking-tight">Crear Requerimiento</span>
- </div>
- <Plus className="text-white/50 group-hover:rotate-90 transition-transform" size={14} />
- </Link>
- <Link href="/inventory/stock" className="flex items-center justify-between p-2.5 bg-white/10 hover:bg-white/20 border border-white/10 rounded-xl transition-all group">
- <div className="flex items-center gap-2.5">
- <Package className="text-emerald-300" size={16} />
- <span className="text-[11px] font-semibold text-white tracking-tight">Ingreso Inventario</span>
- </div>
- <Plus className="text-white/50 group-hover:rotate-90 transition-transform" size={14} />
- </Link>
- </div>
- </div>
- </div>
-
- <div className="bg-white rounded-xl sm:rounded-2xl p-4 sm:p-5 border border-slate-100 shadow-xs">
- <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-3 flex items-center gap-1.5">
- <AlertTriangle size={13} className="text-rose-500" /> Alerta de Inventario
- </h4>
- <div className="space-y-3">
- <div className="flex items-center justify-between p-3 bg-rose-50 rounded-xl border border-rose-100">
- <span className="text-xs font-bold text-slate-800 tracking-tight">Productos con Bajo Stock</span>
- <span className="text-base font-black text-rose-600">{stats.admin?.criticalProductsCount}</span>
- </div>
- <Link href="/inventory/stock" className="block text-center text-[11px] font-bold text-blue-600 tracking-tight hover:underline">Ver Inventario Total</Link>
- </div>
- </div>
- </div>
- </div>
- </div>
- )
-
- case 'FINANCE':
- return (
- <div className="space-y-12">
- <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
- <StatWidget 
- title="Caja chica (Admin)" value={`S/ ${stats.admin?.totalCajaChicaBalance?.toLocaleString(undefined, { minimumFractionDigits: 2 }) || '0.00'}`} 
- icon={Coins} color="text-emerald-600" bg="bg-emerald-50" href="/caja-chica"
- />
- <StatWidget 
- title="Bonos pendientes" value={stats.admin?.pendingBonusesCount?.toString() || '0'} 
- icon={BadgeDollarSign} color="text-amber-600" bg="bg-amber-50" href="/bonuses"
- />
- <StatWidget 
- title="Pasajes pendientes" value={stats.admin?.pendingTransportCount?.toString() || '0'} 
- icon={Bus} color="text-indigo-600" bg="bg-indigo-50" href="/bonuses"
- />
- <StatWidget 
- title="Personal Registrado" value={stats.admin?.totalWorkers?.toString() || '0'} 
- icon={UserCheck} color="text-slate-600" bg="bg-slate-50" href="/workers"
- />
- </div>
- <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
- <div className="lg:col-span-2 bg-white rounded-[2rem] p-10 border border-slate-100 shadow-sm">
- <h3 className="text-xl font-bold text-slate-800 mb-6 flex items-center gap-3">
- <TrendingUp className="text-emerald-500" size={24} /> Reporte Financiero Rápido
- </h3>
- <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
- <div className="p-8 bg-slate-50 rounded-[2rem] border border-slate-100">
- <p className="text-[10px] font-bold text-slate-400 tracking-tight mb-2">Total en Bonos</p>
- <p className="text-3xl font-bold text-slate-800 tracking-tighter">S/ {(stats.admin?.pendingBonusesCount * 150).toLocaleString()}</p>
- <p className="text-[10px] font-bold text-slate-400 mt-1 italic">* Estimado basado en promedio</p>
- </div>
- <div className="p-8 bg-slate-50 rounded-[2rem] border border-slate-100">
- <p className="text-[10px] font-bold text-slate-400 tracking-tight mb-2">Total en Pasajes</p>
- <p className="text-3xl font-bold text-slate-800 tracking-tighter">S/ {(stats.admin?.pendingTransportCount * 80).toLocaleString()}</p>
- <p className="text-[10px] font-bold text-slate-400 mt-1 italic">* Estimado basado en promedio</p>
- </div>
- </div>
- </div>
- <div className="bg-slate-900 rounded-[2rem] p-10 text-white shadow-2xl relative overflow-hidden group">
- <div className="absolute -bottom-10 -right-10 w-40 h-40 bg-white/5 rounded-full blur-2xl group-hover:bg-white/10 transition-all" />
- <h3 className="text-xl font-bold mb-8">Gestión Financiera</h3>
- <div className="space-y-4">
- <Link href="/caja-chica" className="flex items-center justify-between p-4 bg-white/5 hover:bg-white/10 rounded-2xl border border-white/10 transition-all">
- <span className="text-sm font-bold">Resumen de Caja</span>
- <ArrowRight size={16} />
- </Link>
- <Link href="/reports" className="flex items-center justify-between p-4 bg-white/5 hover:bg-white/10 rounded-2xl border border-white/10 transition-all">
- <span className="text-sm font-bold">Reportes Excel</span>
- <ArrowRight size={16} />
- </Link>
- </div>
- </div>
- </div>
- </div>
- )
-
- case 'SOMA':
- return (
- <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
- <StatWidget 
- title="Incidencias Abiertas" value={stats.soma?.openIncidents?.toString() || '0'} 
- icon={AlertTriangle} color="text-orange-600" bg="bg-orange-50" href="/incidencias?category=soma"
- />
- <StatWidget 
- title="Incidentes Críticos" value={stats.soma?.criticalIncidents?.toString() || '0'} 
- icon={ShieldAlert} color="text-rose-600" bg="bg-rose-50" href="/incidencias?category=soma"
- />
- <StatWidget 
- title="STOPs Abiertas" value={stats.soma?.openStops?.toString() || '0'} 
- icon={Eye} color="text-rose-600" bg="bg-rose-50" href="/soma/hsec"
- />
- <StatWidget 
- title="Capacitaciones Vencidas" value={stats.soma?.expiredTrainings?.toString() || '0'} 
- icon={GraduationCap} color="text-amber-600" bg="bg-amber-50" href="/soma/capacitaciones"
- />
- <StatWidget 
- title="Charlas Realizadas" value={stats.soma?.totalTalks?.toString() || '0'} 
- icon={MessageSquare} color="text-blue-600" bg="bg-blue-50" href="/soma/charlas"
- />
- <StatWidget 
- title="Días sin Accidentes" value={stats.soma?.daysWithoutAccidents?.toString() || '0'} 
- icon={Activity} color="text-emerald-600" bg="bg-emerald-50"
- />
- <StatWidget 
- title="Pendientes Seguimiento" value={stats.soma?.pendingFollowUp?.toString() || '0'} 
- icon={ClipboardCheck} color="text-indigo-600" bg="bg-indigo-50"
- />
- </div>
- )
-
- case 'COCINA':
- return (
- <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
- <StatWidget 
- title="Control de Inventario" value={stats.kitchen?.totalProducts?.toString() || '0'} 
- icon={Boxes} color="text-indigo-600" bg="bg-indigo-50" href="/inventory/stock"
- />
- <StatWidget 
- title="Consumo Hoy" value={`${stats.kitchen?.consumptionToday || '0'} UND`} 
- icon={ArrowUpRight} color="text-rose-600" bg="bg-rose-50" href="/inventory/history"
- />
- <StatWidget 
- title="Ingresos Hoy" value={`${stats.kitchen?.incomingToday || '0'} UND`} 
- icon={ArrowDownLeft} color="text-emerald-600" bg="bg-emerald-50" href="/inventory/history"
- />
- <StatWidget 
- title="Caja chica" value={`S/ ${stats.kitchen?.balance?.toFixed(2) || '0.00'}`} 
- icon={Coins} color="text-amber-500" bg="bg-amber-50" href="/caja-chica"
- />
- <StatWidget 
- title="Requerimientos" value={stats.kitchen?.pendingRequirements?.toString() || '0'} 
- icon={FileText} color="text-rose-600" bg="bg-rose-50" href="/requerimientos"
- />
- </div>
- )
-
- case 'OPERACIONES':
- return (
- <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
- <StatWidget 
- title="Producción del Día" value={stats.ops?.productionToday?.toString() || '0'} 
- icon={Activity} color="text-emerald-600" bg="bg-emerald-50"
- />
- <StatWidget 
- title="Personal Activo" value={stats.ops?.activeWorkers?.toString() || '0'} 
- icon={UserCheck} color="text-blue-600" bg="bg-blue-50" href="/workers"
- />
- <StatWidget 
- title="Requerimientos" value={stats.ops?.pendingRequirements?.toString() || '0'} 
- icon={ClipboardCheck} color="text-rose-600" bg="bg-rose-50" href="/requerimientos"
- />
- <StatWidget 
- title="Gestión de Personal" value={stats.ops?.movementsToday?.toString() || '0'} 
- icon={UserCheck} color="text-indigo-600" bg="bg-indigo-50" href="/movements"
- />
- <StatWidget 
- title="Incidencias Abiertas" value={stats.ops?.openIncidents?.toString() || '0'} 
- icon={AlertTriangle} color="text-rose-600" bg="bg-rose-50" href="/incidencias?category=soma"
- />
- <StatWidget 
- title="Transferencias" value={stats.ops?.transfersToday?.toString() || '0'} 
- icon={ArrowRight} color="text-indigo-400" bg="bg-indigo-50"
- />
- <StatWidget 
- title="Asistencia Hoy" value={stats.ops?.attendanceToday?.toString() || '0'} 
- icon={Calendar} color="text-blue-400" bg="bg-blue-50"
- />
- <StatWidget 
- title="Productividad %" value={`${stats.ops?.productivity || '0'} %`} 
- icon={Activity} color="text-emerald-400" bg="bg-emerald-50"
- />
- </div>
- )
-
- case 'ALMACEN':
- return (
- <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
- <StatWidget 
- title="Productos Registrados" value={stats.logistics?.registeredProducts?.toString() || '0'} 
- icon={LayoutGrid} color="text-indigo-600" bg="bg-indigo-50" href="/inventory/products"
- />
- <StatWidget 
- title="Control de Inventario" value={stats.logistics?.registeredProducts?.toString() || '0'} 
- icon={Boxes} color="text-indigo-600" bg="bg-indigo-50" href="/inventory/stock"
- badge={stats.logistics?.criticalProducts > 0 ? {
- text: `${stats.logistics.criticalProducts} Críticos`,
- color: 'bg-rose-50 border border-rose-100 text-rose-600'
- } : {
- text: 'Stock Estable',
- color: 'bg-emerald-50 border border-emerald-100 text-emerald-600'
- }}
- />
- <StatWidget 
- title="Entradas Hoy" value={stats.logistics?.incomingToday?.toString() || '0'} 
- icon={ArrowDownLeft} color="text-emerald-600" bg="bg-emerald-50" href="/movements"
- />
- <StatWidget 
- title="Salidas Hoy" value={stats.logistics?.outgoingToday?.toString() || '0'} 
- icon={ArrowUpRight} color="text-rose-600" bg="bg-rose-50" href="/movements"
- />
- <StatWidget 
- title="Activos Controlados" value={stats.admin?.assetsCount?.toString() || '0'} 
- icon={Package} color="text-slate-600" bg="bg-slate-50" href="/assets"
- />
- <StatWidget 
- title="Transferencias Pend." value={stats.logistics?.pendingTransfers?.toString() || '0'} 
- icon={Truck} color="text-indigo-400" bg="bg-indigo-50"
- />
- <StatWidget 
- title="Requerimientos" value={stats.logistics?.pendingRequirements?.toString() || '0'} 
- icon={ClipboardCheck} color="text-rose-500" bg="bg-rose-50" href="/requerimientos"
- />
- <StatWidget 
- title="Movimientos Hoy" value={stats.logistics?.movementsToday?.toString() || '0'} 
- icon={Box} color="text-blue-600" bg="bg-blue-50" href="/movements"
- />
- </div>
- )
-
-    case 'MECANICA':
-      return (
-        <div className="space-y-8">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <StatWidget 
-              title="Mantenimiento Vehículos" 
-              value={`${stats.mecanica?.totalVehicles || 2} Unidades`} 
-              icon={Truck} 
-              color="text-blue-600" 
-              bg="bg-blue-50" 
-              href="/mecanica/mantenimiento-vehiculos"
-            />
-            <StatWidget 
-              title="Generador Eléctrico" 
-              value="En Operación" 
-              icon={Activity} 
-              color="text-amber-600" 
-              bg="bg-amber-50" 
-              href="/mecanica/generador-mantenimiento"
-              badge={{ text: 'Control Diésel', color: 'bg-amber-100 text-amber-800' }}
-            />
-            <StatWidget 
-              title="Compresora Mina" 
-              value="120 PSI" 
-              icon={Cpu} 
-              color="text-indigo-600" 
-              bg="bg-indigo-50" 
-              href="/mecanica/compresora-mantenimiento"
-              badge={{ text: 'Mantenimiento', color: 'bg-indigo-100 text-indigo-800' }}
-            />
-            <StatWidget 
-              title="Equipos de Mina" 
-              value={`${stats.mecanica?.activeMineEquipment || 3} Equipos`} 
-              icon={Wrench} 
-              color="text-emerald-600" 
-              bg="bg-emerald-50" 
-              href="/mecanica/equipos-mina"
-            />
-            <StatWidget 
-              title="Checklists Pre-Uso" 
-              value="10 Pts Inspección" 
-              icon={ClipboardCheck} 
-              color="text-teal-600" 
-              bg="bg-teal-50" 
-              href="/mecanica/checklists"
-            />
-            <StatWidget 
-              title="Control Herramientas" 
-              value="Taller Mecánico" 
-              icon={Hammer} 
-              color="text-purple-600" 
-              bg="bg-purple-50" 
-              href="/mecanica/herramientas"
-            />
-            <StatWidget 
-              title="Requerimientos" 
-              value={stats.mecanica?.pendingRequirements?.toString() || '0'} 
-              icon={FileText} 
-              color="text-rose-600" 
-              bg="bg-rose-50" 
-              href="/requerimientos"
-            />
-            <StatWidget 
-              title="Caja Chica Taller" 
-              value={`S/ ${stats.mecanica?.cajaChicaBalance?.toLocaleString(undefined, { minimumFractionDigits: 2 }) || '0.00'}`} 
-              icon={Coins} 
-              color="text-emerald-600" 
-              bg="bg-emerald-50" 
-              href="/caja-chica"
-            />
-          </div>
-
-          <div className="bg-white p-8 rounded-[2rem] border border-slate-100 shadow-sm">
-            <div className="flex items-center justify-between mb-6">
-              <div>
-                <h3 className="text-xl font-bold text-slate-800 tracking-tight">Centro Operativo de Mecánica y Mantenimiento</h3>
-                <p className="text-xs text-slate-500 font-medium mt-1">Acceso directo a todos los registros de equipos, combustibles, preventivos y herramientas.</p>
+                <div className="bg-white rounded-[2rem] p-8 border border-slate-100 shadow-sm">
+                  <h4 className="text-[10px] font-bold text-slate-400 tracking-tight mb-4 flex items-center gap-2">
+                    <AlertCircle size={14} className="text-rose-500 animate-pulse" /> Incidentes de Seguridad
+                  </h4>
+                  <div className="p-4 bg-rose-50 rounded-2xl border border-rose-100 flex items-center justify-between">
+                    <span className="text-xs font-bold text-slate-800 tracking-tight">Incidencias Reportadas</span>
+                    <span className="text-lg font-bold text-rose-600">{stats.admin?.openIncidents}</span>
+                  </div>
+                </div>
               </div>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              <Link href="/mecanica/mantenimiento-vehiculos" className="p-4 rounded-2xl bg-slate-50 hover:bg-blue-50 border border-slate-100 hover:border-blue-200 transition-all flex items-center justify-between group">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center font-bold">
-                    <Truck size={20} />
-                  </div>
-                  <div>
-                    <h4 className="text-sm font-bold text-slate-800 group-hover:text-blue-600">Mantenimiento Vehículos</h4>
-                    <p className="text-[11px] text-slate-400 font-medium">Preventivo y correctivo de flota</p>
-                  </div>
-                </div>
-                <ArrowRight size={16} className="text-slate-400 group-hover:text-blue-600 group-hover:translate-x-1 transition-all" />
-              </Link>
-              <Link href="/mecanica/generador-combustible" className="p-4 rounded-2xl bg-slate-50 hover:bg-amber-50 border border-slate-100 hover:border-amber-200 transition-all flex items-center justify-between group">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center font-bold">
-                    <Fuel size={20} />
-                  </div>
-                  <div>
-                    <h4 className="text-sm font-bold text-slate-800 group-hover:text-amber-600">Generador (Combustible)</h4>
-                    <p className="text-[11px] text-slate-400 font-medium">Consumo diésel y gal/hr</p>
-                  </div>
-                </div>
-                <ArrowRight size={16} className="text-slate-400 group-hover:text-amber-600 group-hover:translate-x-1 transition-all" />
-              </Link>
-              <Link href="/mecanica/compresora-combustible" className="p-4 rounded-2xl bg-slate-50 hover:bg-indigo-50 border border-slate-100 hover:border-indigo-200 transition-all flex items-center justify-between group">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-indigo-100 text-indigo-600 flex items-center justify-center font-bold">
-                    <Cpu size={20} />
-                  </div>
-                  <div>
-                    <h4 className="text-sm font-bold text-slate-800 group-hover:text-indigo-600">Compresora (Combustible)</h4>
-                    <p className="text-[11px] text-slate-400 font-medium">Abastecimiento y rendimiento</p>
-                  </div>
-                </div>
-                <ArrowRight size={16} className="text-slate-400 group-hover:text-indigo-600 group-hover:translate-x-1 transition-all" />
-              </Link>
-              <Link href="/mecanica/checklists" className="p-4 rounded-2xl bg-slate-50 hover:bg-teal-50 border border-slate-100 hover:border-teal-200 transition-all flex items-center justify-between group">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-teal-100 text-teal-600 flex items-center justify-center font-bold">
-                    <ClipboardCheck size={20} />
-                  </div>
-                  <div>
-                    <h4 className="text-sm font-bold text-slate-800 group-hover:text-teal-600">Checklists Pre-Uso</h4>
-                    <p className="text-[11px] text-slate-400 font-medium">Inspecciones de turno</p>
-                  </div>
-                </div>
-                <ArrowRight size={16} className="text-slate-400 group-hover:text-teal-600 group-hover:translate-x-1 transition-all" />
-              </Link>
-              <Link href="/mecanica/herramientas" className="p-4 rounded-2xl bg-slate-50 hover:bg-purple-50 border border-slate-100 hover:border-purple-200 transition-all flex items-center justify-between group">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-purple-100 text-purple-600 flex items-center justify-center font-bold">
-                    <Hammer size={20} />
-                  </div>
-                  <div>
-                    <h4 className="text-sm font-bold text-slate-800 group-hover:text-purple-600">Control de Herramientas</h4>
-                    <p className="text-[11px] text-slate-400 font-medium">Inventario y operatividad</p>
-                  </div>
-                </div>
-                <ArrowRight size={16} className="text-slate-400 group-hover:text-purple-600 group-hover:translate-x-1 transition-all" />
-              </Link>
-              <Link href="/requerimientos" className="p-4 rounded-2xl bg-slate-50 hover:bg-rose-50 border border-slate-100 hover:border-rose-200 transition-all flex items-center justify-between group">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-rose-100 text-rose-600 flex items-center justify-center font-bold">
-                    <FileText size={20} />
-                  </div>
-                  <div>
-                    <h4 className="text-sm font-bold text-slate-800 group-hover:text-rose-600">Requerimientos de Taller</h4>
-                    <p className="text-[11px] text-slate-400 font-medium">Solicitud de repuestos e insumos</p>
-                  </div>
-                </div>
-                <ArrowRight size={16} className="text-slate-400 group-hover:text-rose-600 group-hover:translate-x-1 transition-all" />
-              </Link>
+          </div>
+        )
+
+      case 'ADMIN':
+        return (
+          <div className="space-y-4 sm:space-y-5">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3.5 sm:gap-4">
+              <StatWidget
+                title="Usuarios" value={stats.admin?.activeUsers?.toString() || '0'}
+                icon={Users} color="text-indigo-600" bg="bg-indigo-50" href="/users"
+              />
+              <StatWidget
+                title="Personal" value={stats.admin?.totalWorkers?.toString() || '0'}
+                icon={UserCheck} color="text-blue-600" bg="bg-blue-50" href="/workers"
+              />
+              <StatWidget
+                title="Caja chica" value={`S/ ${stats.admin?.totalCajaChicaBalance?.toLocaleString(undefined, { minimumFractionDigits: 2 }) || '0.00'}`}
+                icon={Coins} color="text-emerald-600" bg="bg-emerald-50" href="/caja-chica"
+              />
+              <StatWidget
+                title="Bonos pendientes" value={stats.admin?.pendingBonusesCount?.toString() || '0'}
+                icon={BadgeDollarSign} color="text-amber-600" bg="bg-amber-50" href="/bonuses"
+              />
+              <StatWidget
+                title="Pasajes pendientes" value={stats.admin?.pendingTransportCount?.toString() || '0'}
+                icon={Bus} color="text-indigo-500" bg="bg-indigo-50" href="/bonuses"
+              />
+              <StatWidget
+                title="Incidencias" value={stats.admin?.openIncidents?.toString() || '0'}
+                icon={ShieldAlert} color="text-rose-600" bg="bg-rose-50" href="/incidencias?category=soma"
+              />
+              <StatWidget
+                title="Gestión de Personal" value={stats.admin?.movementsToday?.toString() || '0'}
+                icon={UserCheck} color="text-blue-600" bg="bg-blue-50" href="/movements"
+              />
+              <StatWidget
+                title="Requerimientos" value={stats.admin?.pendingRequirementsCount?.toString() || '0'}
+                icon={FileText} color="text-rose-500" bg="bg-rose-50" href="/requerimientos"
+              />
+              <StatWidget
+                title="Control de Inventario" value={stats.admin?.totalProducts?.toString() || '0'}
+                icon={Boxes} color="text-indigo-600" bg="bg-indigo-50" href="/inventory/stock"
+              />
+              <StatWidget
+                title="Activos Controlados" value={stats.admin?.assetsCount?.toString() || '0'}
+                icon={Package} color="text-slate-600" bg="bg-slate-50" href="/assets"
+              />
             </div>
-          </div>
-        </div>
-      )
 
-    case 'SUPERVISOR':
-      return (
-        <div className="space-y-8">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <StatWidget 
-              title="Control de Producción" 
-              value={`${stats.supervisor?.productionToday || 0} Registros`} 
-              icon={Activity} 
-              color="text-blue-600" 
-              bg="bg-blue-50" 
-              href="/operaciones/produccion"
-              badge={{ text: 'Turno Mina', color: 'bg-blue-100 text-blue-800' }}
-            />
-            <StatWidget 
-              title="Control de Maderas" 
-              value={`${stats.supervisor?.woodToday || 0} Reportes`} 
-              icon={TreePine} 
-              color="text-amber-600" 
-              bg="bg-amber-50" 
-              href="/operaciones/maderas"
-              badge={{ text: 'Consumo / Stock', color: 'bg-amber-100 text-amber-800' }}
-            />
-            <StatWidget 
-              title="Requerimientos de Cuadrilla" 
-              value={stats.supervisor?.pendingRequirements?.toString() || '0'} 
-              icon={FileText} 
-              color="text-rose-600" 
-              bg="bg-rose-50" 
-              href="/requerimientos"
-            />
-          </div>
+            <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 sm:gap-6">
+              <div className="xl:col-span-2 bg-white rounded-xl sm:rounded-2xl p-4 sm:p-5 shadow-xs border border-slate-100">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 sm:mb-6">
+                  <div>
+                    <h3 className="text-base sm:text-lg font-bold text-slate-800 tracking-tight">Actividad Semanal</h3>
+                    <p className="text-slate-400 text-xs mt-0.5">Movimientos de Inventario</p>
+                  </div>
+                  <div className="bg-blue-50 px-3.5 py-1 rounded-xl text-blue-600 font-bold text-xs border border-blue-100">Tiempo Real</div>
+                </div>
+                <div className="h-[180px] md:h-[240px] w-full flex items-end justify-between gap-2 md:gap-4 px-2 md:px-4">
+                  {(stats.admin?.weeklyActivity || []).map((day: any) => {
+                    const maxWeekly = Math.max(...(stats.admin?.weeklyActivity || []).map((d: any) => d.count || 0), 1)
+                    const height = Math.min((day.count / maxWeekly) * 100, 100)
+                    return (
+                      <div key={day.day} className="flex-1 flex flex-col items-center gap-2.5 group">
+                        <div className="relative w-full flex flex-col items-center">
+                          <div className="absolute -top-8 opacity-0 group-hover:opacity-100 transition-all bg-slate-900 text-white text-[10px] font-bold px-2 py-1 rounded shadow-md translate-y-1 group-hover:translate-y-0">
+                            {day.count} mov.
+                          </div>
+                          <div
+                            className="w-full max-w-[36px] bg-gradient-to-t from-blue-600 to-indigo-400 rounded-xl transition-all duration-700 ease-out shadow-sm shadow-blue-200 group-hover:shadow-blue-300"
+                            style={{ height: `${height}%`, minHeight: '6px' }}
+                          />
+                        </div>
+                        <span className="text-[10px] font-semibold text-slate-400 tracking-tighter">
+                          {(() => {
+                            const [y, m, d] = day.day.split('-').map(Number)
+                            return new Date(y, m - 1, d).toLocaleDateString(undefined, { weekday: 'short' })
+                          })()}
+                        </span>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
 
-          <div className="bg-white p-8 rounded-[2rem] border border-slate-100 shadow-sm">
-            <div className="flex items-center justify-between mb-6">
-              <div>
-                <h3 className="text-xl font-bold text-slate-800 tracking-tight">Operaciones de Líder de Cuadrilla</h3>
-                <p className="text-xs text-slate-500 font-medium mt-1">Gestión directa de labores de mina, avance de producción, insumos de madera y pedidos.</p>
+              <div className="xl:col-span-1 space-y-4 sm:space-y-5">
+                <div className="bg-[#1D4ED8] rounded-xl sm:rounded-2xl p-4 sm:p-5 shadow-lg shadow-blue-900/15 relative overflow-hidden group">
+                  <div className="absolute top-0 right-0 w-48 h-48 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2 blur-2xl group-hover:bg-white/20 transition-all" />
+                  <div className="relative z-10">
+                    <div className="flex items-center gap-2.5 mb-4 sm:mb-5">
+                      <div className="p-2 bg-white/10 backdrop-blur-xl rounded-xl border border-white/20">
+                        <LayoutDashboard className="text-white" size={18} />
+                      </div>
+                      <h3 className="text-base sm:text-lg font-bold text-white tracking-tight">Acciones Rápidas</h3>
+                    </div>
+                    <div className="space-y-2">
+                      <Link href="/workers" className="flex items-center justify-between p-2.5 bg-white/10 hover:bg-white/20 border border-white/10 rounded-xl transition-all group">
+                        <div className="flex items-center gap-2.5">
+                          <Users className="text-blue-300" size={16} />
+                          <span className="text-[11px] font-semibold text-white tracking-tight">Registrar Trabajador</span>
+                        </div>
+                        <Plus className="text-white/50 group-hover:rotate-90 transition-transform" size={14} />
+                      </Link>
+                      <Link href="/incidencias?category=soma" className="flex items-center justify-between p-2.5 bg-white/10 hover:bg-white/20 border border-white/10 rounded-xl transition-all group">
+                        <div className="flex items-center gap-2.5">
+                          <ShieldAlert className="text-rose-300" size={16} />
+                          <span className="text-[11px] font-semibold text-white tracking-tight">Registrar Incidencia</span>
+                        </div>
+                        <Plus className="text-white/50 group-hover:rotate-90 transition-transform" size={14} />
+                      </Link>
+                      <Link href="/requerimientos" className="flex items-center justify-between p-2.5 bg-white/10 hover:bg-white/20 border border-white/10 rounded-xl transition-all group">
+                        <div className="flex items-center gap-2.5">
+                          <FileText className="text-amber-300" size={16} />
+                          <span className="text-[11px] font-semibold text-white tracking-tight">Crear Requerimiento</span>
+                        </div>
+                        <Plus className="text-white/50 group-hover:rotate-90 transition-transform" size={14} />
+                      </Link>
+                      <Link href="/inventory/stock" className="flex items-center justify-between p-2.5 bg-white/10 hover:bg-white/20 border border-white/10 rounded-xl transition-all group">
+                        <div className="flex items-center gap-2.5">
+                          <Package className="text-emerald-300" size={16} />
+                          <span className="text-[11px] font-semibold text-white tracking-tight">Ingreso Inventario</span>
+                        </div>
+                        <Plus className="text-white/50 group-hover:rotate-90 transition-transform" size={14} />
+                      </Link>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-white rounded-xl sm:rounded-2xl p-4 sm:p-5 border border-slate-100 shadow-xs">
+                  <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-3 flex items-center gap-1.5">
+                    <AlertTriangle size={13} className="text-rose-500" /> Alerta de Inventario
+                  </h4>
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between p-3 bg-rose-50 rounded-xl border border-rose-100">
+                      <span className="text-xs font-bold text-slate-800 tracking-tight">Productos con Bajo Stock</span>
+                      <span className="text-base font-black text-rose-600">{stats.admin?.criticalProductsCount}</span>
+                    </div>
+                    <Link href="/inventory/stock" className="block text-center text-[11px] font-bold text-blue-600 tracking-tight hover:underline">Ver Inventario Total</Link>
+                  </div>
+                </div>
               </div>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <Link href="/operaciones/produccion" className="p-4 rounded-2xl bg-slate-50 hover:bg-blue-50 border border-slate-100 hover:border-blue-200 transition-all flex items-center justify-between group">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center font-bold">
-                    <Activity size={20} />
+          </div>
+        )
+
+      case 'FINANCE':
+        return (
+          <div className="space-y-12">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+              <StatWidget
+                title="Caja chica (Admin)" value={`S/ ${stats.admin?.totalCajaChicaBalance?.toLocaleString(undefined, { minimumFractionDigits: 2 }) || '0.00'}`}
+                icon={Coins} color="text-emerald-600" bg="bg-emerald-50" href="/caja-chica"
+              />
+              <StatWidget
+                title="Bonos pendientes" value={stats.admin?.pendingBonusesCount?.toString() || '0'}
+                icon={BadgeDollarSign} color="text-amber-600" bg="bg-amber-50" href="/bonuses"
+              />
+              <StatWidget
+                title="Pasajes pendientes" value={stats.admin?.pendingTransportCount?.toString() || '0'}
+                icon={Bus} color="text-indigo-600" bg="bg-indigo-50" href="/bonuses"
+              />
+              <StatWidget
+                title="Personal Registrado" value={stats.admin?.totalWorkers?.toString() || '0'}
+                icon={UserCheck} color="text-slate-600" bg="bg-slate-50" href="/workers"
+              />
+            </div>
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+              <div className="lg:col-span-2 bg-white rounded-[2rem] p-10 border border-slate-100 shadow-sm">
+                <h3 className="text-xl font-bold text-slate-800 mb-6 flex items-center gap-3">
+                  <TrendingUp className="text-emerald-500" size={24} /> Reporte Financiero Rápido
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="p-8 bg-slate-50 rounded-[2rem] border border-slate-100">
+                    <p className="text-[10px] font-bold text-slate-400 tracking-tight mb-2">Total en Bonos</p>
+                    <p className="text-3xl font-bold text-slate-800 tracking-tighter">S/ {(stats.admin?.pendingBonusesCount * 150).toLocaleString()}</p>
+                    <p className="text-[10px] font-bold text-slate-400 mt-1 italic">* Estimado basado en promedio</p>
                   </div>
-                  <div>
-                    <h4 className="text-sm font-bold text-slate-800 group-hover:text-blue-600">Control de Producción</h4>
-                    <p className="text-[11px] text-slate-400 font-medium">Registro de labores y carros</p>
+                  <div className="p-8 bg-slate-50 rounded-[2rem] border border-slate-100">
+                    <p className="text-[10px] font-bold text-slate-400 tracking-tight mb-2">Total en Pasajes</p>
+                    <p className="text-3xl font-bold text-slate-800 tracking-tighter">S/ {(stats.admin?.pendingTransportCount * 80).toLocaleString()}</p>
+                    <p className="text-[10px] font-bold text-slate-400 mt-1 italic">* Estimado basado en promedio</p>
                   </div>
                 </div>
-                <ArrowRight size={16} className="text-slate-400 group-hover:text-blue-600 group-hover:translate-x-1 transition-all" />
-              </Link>
-              <Link href="/operaciones/maderas" className="p-4 rounded-2xl bg-slate-50 hover:bg-amber-50 border border-slate-100 hover:border-amber-200 transition-all flex items-center justify-between group">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center font-bold">
-                    <TreePine size={20} />
-                  </div>
-                  <div>
-                    <h4 className="text-sm font-bold text-slate-800 group-hover:text-amber-600">Control de Maderas</h4>
-                    <p className="text-[11px] text-slate-400 font-medium">Ingreso y consumo de cuadros</p>
-                  </div>
+              </div>
+              <div className="bg-slate-900 rounded-[2rem] p-10 text-white shadow-2xl relative overflow-hidden group">
+                <div className="absolute -bottom-10 -right-10 w-40 h-40 bg-white/5 rounded-full blur-2xl group-hover:bg-white/10 transition-all" />
+                <h3 className="text-xl font-bold mb-8">Gestión Financiera</h3>
+                <div className="space-y-4">
+                  <Link href="/caja-chica" className="flex items-center justify-between p-4 bg-white/5 hover:bg-white/10 rounded-2xl border border-white/10 transition-all">
+                    <span className="text-sm font-bold">Resumen de Caja</span>
+                    <ArrowRight size={16} />
+                  </Link>
+                  <Link href="/reports" className="flex items-center justify-between p-4 bg-white/5 hover:bg-white/10 rounded-2xl border border-white/10 transition-all">
+                    <span className="text-sm font-bold">Reportes Excel</span>
+                    <ArrowRight size={16} />
+                  </Link>
                 </div>
-                <ArrowRight size={16} className="text-slate-400 group-hover:text-amber-600 group-hover:translate-x-1 transition-all" />
-              </Link>
-              <Link href="/requerimientos" className="p-4 rounded-2xl bg-slate-50 hover:bg-rose-50 border border-slate-100 hover:border-rose-200 transition-all flex items-center justify-between group">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-rose-100 text-rose-600 flex items-center justify-center font-bold">
-                    <FileText size={20} />
-                  </div>
-                  <div>
-                    <h4 className="text-sm font-bold text-slate-800 group-hover:text-rose-600">Requerimientos</h4>
-                    <p className="text-[11px] text-slate-400 font-medium">Solicitud de materiales y repuestos</p>
-                  </div>
-                </div>
-                <ArrowRight size={16} className="text-slate-400 group-hover:text-rose-600 group-hover:translate-x-1 transition-all" />
-              </Link>
+              </div>
             </div>
           </div>
-        </div>
-      )
+        )
 
- case 'WORKER':
- return (
- <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
- <StatWidget 
- title="Asistencia Hoy" value={stats.worker?.todayAttendance || 'SIN REGISTRO'} 
- icon={Clock} color="text-blue-600" bg="bg-blue-50"
- />
- <StatWidget 
- title="Mis Bonos" value={stats.worker?.totalBonuses?.toString() || '0'} 
- icon={BadgeDollarSign} color="text-emerald-600" bg="bg-emerald-50" href="/profile"
- />
- <StatWidget 
- title="Mis Documentos" value={stats.worker?.totalDocs?.toString() || '0'} 
- icon={FileText} color="text-indigo-600" bg="bg-indigo-50" href="/documents"
- />
- <StatWidget 
- title="EPP Pendientes" value={stats.worker?.pendingPPE?.toString() || '0'} 
- icon={ShieldAlert} color="text-rose-600" bg="bg-rose-50" href="/ppe"
- />
- <StatWidget 
- title="Próxima Capacitación" value={stats.worker?.nextTraining || 'No programada'} 
- icon={GraduationCap} color="text-amber-600" bg="bg-amber-50"
- />
- <StatWidget 
- title="Próxima Charla" value={stats.worker?.nextTalk || 'No programada'} 
- icon={MessageSquare} color="text-blue-400" bg="bg-blue-50"
- />
- <StatWidget 
- title="Estado Laboral" value={stats.worker?.laborStatus || 'Activo'} 
- icon={UserCheck} color="text-emerald-400" bg="bg-emerald-50"
- />
- </div>
- )
+      case 'SOMA':
+        return (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+            <StatWidget
+              title="Incidencias Abiertas" value={stats.soma?.openIncidents?.toString() || '0'}
+              icon={AlertTriangle} color="text-orange-600" bg="bg-orange-50" href="/incidencias?category=soma"
+            />
+            <StatWidget
+              title="Incidentes Críticos" value={stats.soma?.criticalIncidents?.toString() || '0'}
+              icon={ShieldAlert} color="text-rose-600" bg="bg-rose-50" href="/incidencias?category=soma"
+            />
+            <StatWidget
+              title="STOPs Abiertas" value={stats.soma?.openStops?.toString() || '0'}
+              icon={Eye} color="text-rose-600" bg="bg-rose-50" href="/soma/hsec"
+            />
+            <StatWidget
+              title="Capacitaciones Vencidas" value={stats.soma?.expiredTrainings?.toString() || '0'}
+              icon={GraduationCap} color="text-amber-600" bg="bg-amber-50" href="/soma/capacitaciones"
+            />
+            <StatWidget
+              title="Charlas Realizadas" value={stats.soma?.totalTalks?.toString() || '0'}
+              icon={MessageSquare} color="text-blue-600" bg="bg-blue-50" href="/soma/charlas"
+            />
+            <StatWidget
+              title="Días sin Accidentes" value={stats.soma?.daysWithoutAccidents?.toString() || '0'}
+              icon={Activity} color="text-emerald-600" bg="bg-emerald-50"
+            />
+            <StatWidget
+              title="Pendientes Seguimiento" value={stats.soma?.pendingFollowUp?.toString() || '0'}
+              icon={ClipboardCheck} color="text-indigo-600" bg="bg-indigo-50"
+            />
+          </div>
+        )
 
- default:
- return null
- }
- }
+      case 'COCINA':
+        return (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+            <StatWidget
+              title="Control de Inventario" value={stats.kitchen?.totalProducts?.toString() || '0'}
+              icon={Boxes} color="text-indigo-600" bg="bg-indigo-50" href="/inventory/stock"
+            />
+            <StatWidget
+              title="Consumo Hoy" value={`${stats.kitchen?.consumptionToday || '0'} UND`}
+              icon={ArrowUpRight} color="text-rose-600" bg="bg-rose-50" href="/inventory/history"
+            />
+            <StatWidget
+              title="Ingresos Hoy" value={`${stats.kitchen?.incomingToday || '0'} UND`}
+              icon={ArrowDownLeft} color="text-emerald-600" bg="bg-emerald-50" href="/inventory/history"
+            />
+            <StatWidget
+              title="Caja chica" value={`S/ ${stats.kitchen?.balance?.toFixed(2) || '0.00'}`}
+              icon={Coins} color="text-amber-500" bg="bg-amber-50" href="/caja-chica"
+            />
+            <StatWidget
+              title="Requerimientos" value={stats.kitchen?.pendingRequirements?.toString() || '0'}
+              icon={FileText} color="text-rose-600" bg="bg-rose-50" href="/requerimientos"
+            />
+          </div>
+        )
+
+      case 'OPERACIONES':
+        return (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+            <StatWidget
+              title="Producción del Día" value={stats.ops?.productionToday?.toString() || '0'}
+              icon={Activity} color="text-emerald-600" bg="bg-emerald-50"
+            />
+            <StatWidget
+              title="Personal Activo" value={stats.ops?.activeWorkers?.toString() || '0'}
+              icon={UserCheck} color="text-blue-600" bg="bg-blue-50" href="/workers"
+            />
+            <StatWidget
+              title="Requerimientos" value={stats.ops?.pendingRequirements?.toString() || '0'}
+              icon={ClipboardCheck} color="text-rose-600" bg="bg-rose-50" href="/requerimientos"
+            />
+            <StatWidget
+              title="Gestión de Personal" value={stats.ops?.movementsToday?.toString() || '0'}
+              icon={UserCheck} color="text-indigo-600" bg="bg-indigo-50" href="/movements"
+            />
+            <StatWidget
+              title="Incidencias Abiertas" value={stats.ops?.openIncidents?.toString() || '0'}
+              icon={AlertTriangle} color="text-rose-600" bg="bg-rose-50" href="/incidencias?category=soma"
+            />
+            <StatWidget
+              title="Transferencias" value={stats.ops?.transfersToday?.toString() || '0'}
+              icon={ArrowRight} color="text-indigo-400" bg="bg-indigo-50"
+            />
+            <StatWidget
+              title="Asistencia Hoy" value={stats.ops?.attendanceToday?.toString() || '0'}
+              icon={Calendar} color="text-blue-400" bg="bg-blue-50"
+            />
+            <StatWidget
+              title="Productividad %" value={`${stats.ops?.productivity || '0'} %`}
+              icon={Activity} color="text-emerald-400" bg="bg-emerald-50"
+            />
+          </div>
+        )
+
+      case 'ALMACEN':
+        return (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+            <StatWidget
+              title="Productos Registrados" value={stats.logistics?.registeredProducts?.toString() || '0'}
+              icon={LayoutGrid} color="text-indigo-600" bg="bg-indigo-50" href="/inventory/products"
+            />
+            <StatWidget
+              title="Control de Inventario" value={stats.logistics?.registeredProducts?.toString() || '0'}
+              icon={Boxes} color="text-indigo-600" bg="bg-indigo-50" href="/inventory/stock"
+              badge={stats.logistics?.criticalProducts > 0 ? {
+                text: `${stats.logistics.criticalProducts} Críticos`,
+                color: 'bg-rose-50 border border-rose-100 text-rose-600'
+              } : {
+                text: 'Stock Estable',
+                color: 'bg-emerald-50 border border-emerald-100 text-emerald-600'
+              }}
+            />
+            <StatWidget
+              title="Entradas Hoy" value={stats.logistics?.incomingToday?.toString() || '0'}
+              icon={ArrowDownLeft} color="text-emerald-600" bg="bg-emerald-50" href="/movements"
+            />
+            <StatWidget
+              title="Salidas Hoy" value={stats.logistics?.outgoingToday?.toString() || '0'}
+              icon={ArrowUpRight} color="text-rose-600" bg="bg-rose-50" href="/movements"
+            />
+            <StatWidget
+              title="Activos Controlados" value={stats.admin?.assetsCount?.toString() || '0'}
+              icon={Package} color="text-slate-600" bg="bg-slate-50" href="/assets"
+            />
+            <StatWidget
+              title="Transferencias Pend." value={stats.logistics?.pendingTransfers?.toString() || '0'}
+              icon={Truck} color="text-indigo-400" bg="bg-indigo-50"
+            />
+            <StatWidget
+              title="Requerimientos" value={stats.logistics?.pendingRequirements?.toString() || '0'}
+              icon={ClipboardCheck} color="text-rose-500" bg="bg-rose-50" href="/requerimientos"
+            />
+            <StatWidget
+              title="Movimientos Hoy" value={stats.logistics?.movementsToday?.toString() || '0'}
+              icon={Box} color="text-blue-600" bg="bg-blue-50" href="/movements"
+            />
+          </div>
+        )
+
+      case 'MECANICA':
+        return (
+          <div className="space-y-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              <StatWidget
+                title="Mantenimiento Vehículos"
+                value={`${stats.mecanica?.totalVehicles || 2} Unidades`}
+                icon={Truck}
+                color="text-blue-600"
+                bg="bg-blue-50"
+                href="/mecanica/mantenimiento-vehiculos"
+              />
+              <StatWidget
+                title="Generador Eléctrico"
+                value="En Operación"
+                icon={Activity}
+                color="text-amber-600"
+                bg="bg-amber-50"
+                href="/mecanica/generador-mantenimiento"
+                badge={{ text: 'Control Diésel', color: 'bg-amber-100 text-amber-800' }}
+              />
+              <StatWidget
+                title="Compresora Mina"
+                value="120 PSI"
+                icon={Cpu}
+                color="text-indigo-600"
+                bg="bg-indigo-50"
+                href="/mecanica/compresora-mantenimiento"
+                badge={{ text: 'Mantenimiento', color: 'bg-indigo-100 text-indigo-800' }}
+              />
+              <StatWidget
+                title="Equipos de Mina"
+                value={`${stats.mecanica?.activeMineEquipment || 3} Equipos`}
+                icon={Wrench}
+                color="text-emerald-600"
+                bg="bg-emerald-50"
+                href="/mecanica/equipos-mina"
+              />
+              <StatWidget
+                title="Checklists Pre-Uso"
+                value="10 Pts Inspección"
+                icon={ClipboardCheck}
+                color="text-teal-600"
+                bg="bg-teal-50"
+                href="/mecanica/checklists"
+              />
+              <StatWidget
+                title="Control Herramientas"
+                value="Taller Mecánico"
+                icon={Hammer}
+                color="text-purple-600"
+                bg="bg-purple-50"
+                href="/mecanica/herramientas"
+              />
+              <StatWidget
+                title="Requerimientos"
+                value={stats.mecanica?.pendingRequirements?.toString() || '0'}
+                icon={FileText}
+                color="text-rose-600"
+                bg="bg-rose-50"
+                href="/requerimientos"
+              />
+              <StatWidget
+                title="Caja Chica Taller"
+                value={`S/ ${stats.mecanica?.cajaChicaBalance?.toLocaleString(undefined, { minimumFractionDigits: 2 }) || '0.00'}`}
+                icon={Coins}
+                color="text-emerald-600"
+                bg="bg-emerald-50"
+                href="/caja-chica"
+              />
+            </div>
+
+            <div className="bg-white p-8 rounded-[2rem] border border-slate-100 shadow-sm">
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h3 className="text-xl font-bold text-slate-800 tracking-tight">Centro Operativo de Mecánica y Mantenimiento</h3>
+                  <p className="text-xs text-slate-500 font-medium mt-1">Acceso directo a todos los registros de equipos, combustibles, preventivos y herramientas.</p>
+                </div>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                <Link href="/mecanica/mantenimiento-vehiculos" className="p-4 rounded-2xl bg-slate-50 hover:bg-blue-50 border border-slate-100 hover:border-blue-200 transition-all flex items-center justify-between group">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center font-bold">
+                      <Truck size={20} />
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-bold text-slate-800 group-hover:text-blue-600">Mantenimiento Vehículos</h4>
+                      <p className="text-[11px] text-slate-400 font-medium">Preventivo y correctivo de flota</p>
+                    </div>
+                  </div>
+                  <ArrowRight size={16} className="text-slate-400 group-hover:text-blue-600 group-hover:translate-x-1 transition-all" />
+                </Link>
+                <Link href="/mecanica/generador-combustible" className="p-4 rounded-2xl bg-slate-50 hover:bg-amber-50 border border-slate-100 hover:border-amber-200 transition-all flex items-center justify-between group">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center font-bold">
+                      <Fuel size={20} />
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-bold text-slate-800 group-hover:text-amber-600">Generador (Combustible)</h4>
+                      <p className="text-[11px] text-slate-400 font-medium">Consumo diésel y gal/hr</p>
+                    </div>
+                  </div>
+                  <ArrowRight size={16} className="text-slate-400 group-hover:text-amber-600 group-hover:translate-x-1 transition-all" />
+                </Link>
+                <Link href="/mecanica/compresora-combustible" className="p-4 rounded-2xl bg-slate-50 hover:bg-indigo-50 border border-slate-100 hover:border-indigo-200 transition-all flex items-center justify-between group">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-indigo-100 text-indigo-600 flex items-center justify-center font-bold">
+                      <Cpu size={20} />
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-bold text-slate-800 group-hover:text-indigo-600">Compresora (Combustible)</h4>
+                      <p className="text-[11px] text-slate-400 font-medium">Abastecimiento y rendimiento</p>
+                    </div>
+                  </div>
+                  <ArrowRight size={16} className="text-slate-400 group-hover:text-indigo-600 group-hover:translate-x-1 transition-all" />
+                </Link>
+                <Link href="/mecanica/checklists" className="p-4 rounded-2xl bg-slate-50 hover:bg-teal-50 border border-slate-100 hover:border-teal-200 transition-all flex items-center justify-between group">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-teal-100 text-teal-600 flex items-center justify-center font-bold">
+                      <ClipboardCheck size={20} />
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-bold text-slate-800 group-hover:text-teal-600">Checklists Pre-Uso</h4>
+                      <p className="text-[11px] text-slate-400 font-medium">Inspecciones de turno</p>
+                    </div>
+                  </div>
+                  <ArrowRight size={16} className="text-slate-400 group-hover:text-teal-600 group-hover:translate-x-1 transition-all" />
+                </Link>
+                <Link href="/mecanica/herramientas" className="p-4 rounded-2xl bg-slate-50 hover:bg-purple-50 border border-slate-100 hover:border-purple-200 transition-all flex items-center justify-between group">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-purple-100 text-purple-600 flex items-center justify-center font-bold">
+                      <Hammer size={20} />
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-bold text-slate-800 group-hover:text-purple-600">Control de Herramientas</h4>
+                      <p className="text-[11px] text-slate-400 font-medium">Inventario y operatividad</p>
+                    </div>
+                  </div>
+                  <ArrowRight size={16} className="text-slate-400 group-hover:text-purple-600 group-hover:translate-x-1 transition-all" />
+                </Link>
+                <Link href="/requerimientos" className="p-4 rounded-2xl bg-slate-50 hover:bg-rose-50 border border-slate-100 hover:border-rose-200 transition-all flex items-center justify-between group">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-rose-100 text-rose-600 flex items-center justify-center font-bold">
+                      <FileText size={20} />
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-bold text-slate-800 group-hover:text-rose-600">Requerimientos de Taller</h4>
+                      <p className="text-[11px] text-slate-400 font-medium">Solicitud de repuestos e insumos</p>
+                    </div>
+                  </div>
+                  <ArrowRight size={16} className="text-slate-400 group-hover:text-rose-600 group-hover:translate-x-1 transition-all" />
+                </Link>
+              </div>
+            </div>
+          </div>
+        )
+
+      case 'SUPERVISOR':
+        return (
+          <div className="space-y-8">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <StatWidget
+                title="Control de Producción"
+                value={`${stats.supervisor?.productionToday || 0} Registros`}
+                icon={Activity}
+                color="text-blue-600"
+                bg="bg-blue-50"
+                href="/operaciones/produccion"
+                badge={{ text: 'Turno Mina', color: 'bg-blue-100 text-blue-800' }}
+              />
+              <StatWidget
+                title="Control de Maderas"
+                value={`${stats.supervisor?.woodToday || 0} Reportes`}
+                icon={TreePine}
+                color="text-amber-600"
+                bg="bg-amber-50"
+                href="/operaciones/maderas"
+                badge={{ text: 'Consumo / Stock', color: 'bg-amber-100 text-amber-800' }}
+              />
+              <StatWidget
+                title="Requerimientos de Cuadrilla"
+                value={stats.supervisor?.pendingRequirements?.toString() || '0'}
+                icon={FileText}
+                color="text-rose-600"
+                bg="bg-rose-50"
+                href="/requerimientos"
+              />
+            </div>
+
+            <div className="bg-white p-8 rounded-[2rem] border border-slate-100 shadow-sm">
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h3 className="text-xl font-bold text-slate-800 tracking-tight">Operaciones de Líder de Cuadrilla</h3>
+                  <p className="text-xs text-slate-500 font-medium mt-1">Gestión directa de labores de mina, avance de producción, insumos de madera y pedidos.</p>
+                </div>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <Link href="/operaciones/produccion" className="p-4 rounded-2xl bg-slate-50 hover:bg-blue-50 border border-slate-100 hover:border-blue-200 transition-all flex items-center justify-between group">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center font-bold">
+                      <Activity size={20} />
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-bold text-slate-800 group-hover:text-blue-600">Control de Producción</h4>
+                      <p className="text-[11px] text-slate-400 font-medium">Registro de labores y carros</p>
+                    </div>
+                  </div>
+                  <ArrowRight size={16} className="text-slate-400 group-hover:text-blue-600 group-hover:translate-x-1 transition-all" />
+                </Link>
+                <Link href="/operaciones/maderas" className="p-4 rounded-2xl bg-slate-50 hover:bg-amber-50 border border-slate-100 hover:border-amber-200 transition-all flex items-center justify-between group">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center font-bold">
+                      <TreePine size={20} />
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-bold text-slate-800 group-hover:text-amber-600">Control de Maderas</h4>
+                      <p className="text-[11px] text-slate-400 font-medium">Ingreso y consumo de cuadros</p>
+                    </div>
+                  </div>
+                  <ArrowRight size={16} className="text-slate-400 group-hover:text-amber-600 group-hover:translate-x-1 transition-all" />
+                </Link>
+                <Link href="/requerimientos" className="p-4 rounded-2xl bg-slate-50 hover:bg-rose-50 border border-slate-100 hover:border-rose-200 transition-all flex items-center justify-between group">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-rose-100 text-rose-600 flex items-center justify-center font-bold">
+                      <FileText size={20} />
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-bold text-slate-800 group-hover:text-rose-600">Requerimientos</h4>
+                      <p className="text-[11px] text-slate-400 font-medium">Solicitud de materiales y repuestos</p>
+                    </div>
+                  </div>
+                  <ArrowRight size={16} className="text-slate-400 group-hover:text-rose-600 group-hover:translate-x-1 transition-all" />
+                </Link>
+              </div>
+            </div>
+          </div>
+        )
+
+      case 'WORKER':
+        return (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+            <StatWidget
+              title="Asistencia Hoy" value={stats.worker?.todayAttendance || 'SIN REGISTRO'}
+              icon={Clock} color="text-blue-600" bg="bg-blue-50"
+            />
+            <StatWidget
+              title="Mis Bonos" value={stats.worker?.totalBonuses?.toString() || '0'}
+              icon={BadgeDollarSign} color="text-emerald-600" bg="bg-emerald-50" href="/profile"
+            />
+            <StatWidget
+              title="Mis Documentos" value={stats.worker?.totalDocs?.toString() || '0'}
+              icon={FileText} color="text-indigo-600" bg="bg-indigo-50" href="/documents"
+            />
+            <StatWidget
+              title="EPP Pendientes" value={stats.worker?.pendingPPE?.toString() || '0'}
+              icon={ShieldAlert} color="text-rose-600" bg="bg-rose-50" href="/ppe"
+            />
+            <StatWidget
+              title="Próxima Capacitación" value={stats.worker?.nextTraining || 'No programada'}
+              icon={GraduationCap} color="text-amber-600" bg="bg-amber-50"
+            />
+            <StatWidget
+              title="Próxima Charla" value={stats.worker?.nextTalk || 'No programada'}
+              icon={MessageSquare} color="text-blue-400" bg="bg-blue-50"
+            />
+            <StatWidget
+              title="Estado Laboral" value={stats.worker?.laborStatus || 'Activo'}
+              icon={UserCheck} color="text-emerald-400" bg="bg-emerald-50"
+            />
+          </div>
+        )
+
+      default:
+        return null
+    }
+  }
 
   return (
     <div className="space-y-3 sm:space-y-3.5 pb-6 max-w-[1700px] mx-auto animate-in fade-in slide-in-from-bottom-2 duration-500">
-      
+
       {/* Hero Section */}
-      <WelcomeHero 
-        userName={user.display_name} 
-        roleName={roleName} 
+      <WelcomeHero
+        userName={user.display_name}
+        roleName={roleName}
         area={user.area}
-        companyName={companyName} 
+        companyName={companyName}
         viewMode={viewMode}
         companySlug={user.company_slug}
         localIp={localIp}
@@ -849,11 +855,11 @@ export function DashboardShell({ user, stats, localIp }: DashboardShellProps) {
             </div>
             <div className="flex flex-wrap gap-2.5">
               {stats.transversalSoma.lastTalk && (
-                <div 
+                <div
                   onClick={() => setSelectedTalk(stats.transversalSoma.lastTalk)}
                   className="bg-slate-50 border border-slate-200/60 p-3 rounded-xl flex items-center gap-3 hover:border-blue-200 hover:shadow-xs transition-all cursor-pointer"
                 >
-                  <div className="w-9 h-9 rounded-lg bg-blue-50 text-blue-500 flex items-center justify-center"><MessageSquare size={18}/></div>
+                  <div className="w-9 h-9 rounded-lg bg-blue-50 text-blue-500 flex items-center justify-center"><MessageSquare size={18} /></div>
                   <div>
                     <span className="block text-[10px] font-bold text-blue-600 uppercase tracking-wider mb-0.5">Última Charla</span>
                     <span className="block text-xs text-slate-800 font-bold keep-case">{stats.transversalSoma.lastTalk.topic}</span>
@@ -861,11 +867,11 @@ export function DashboardShell({ user, stats, localIp }: DashboardShellProps) {
                 </div>
               )}
               {stats.transversalSoma.lastTraining && (
-                <div 
+                <div
                   onClick={() => setSelectedTraining(stats.transversalSoma.lastTraining)}
                   className="bg-slate-50 border border-slate-200/60 p-3 rounded-xl flex items-center gap-3 hover:border-emerald-200 hover:shadow-xs transition-all cursor-pointer"
                 >
-                  <div className="w-9 h-9 rounded-lg bg-emerald-50 text-emerald-500 flex items-center justify-center"><GraduationCap size={18}/></div>
+                  <div className="w-9 h-9 rounded-lg bg-emerald-50 text-emerald-500 flex items-center justify-center"><GraduationCap size={18} /></div>
                   <div>
                     <span className="block text-[10px] font-bold text-emerald-600 uppercase tracking-wider mb-0.5">Capacitación</span>
                     <span className="block text-xs text-slate-800 font-bold keep-case">{stats.transversalSoma.lastTraining.title}</span>
@@ -880,7 +886,7 @@ export function DashboardShell({ user, stats, localIp }: DashboardShellProps) {
       {/* Listas Secundarias Dinámicas */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-3.5">
         {stats.recentIncidents && (['ADMIN', 'SOMA', 'OPERACIONES', 'GERENTE'].includes(viewMode)) && (
-          <ListWidget 
+          <ListWidget
             title="Siguimiento de Incidencias"
             icon={Activity}
             color="text-orange-600"
@@ -895,7 +901,7 @@ export function DashboardShell({ user, stats, localIp }: DashboardShellProps) {
         )}
 
         {stats.pendingRequirements && (['ADMIN', 'OPERACIONES', 'ALMACEN', 'COCINA', 'GERENTE'].includes(viewMode)) && (
-          <ListWidget 
+          <ListWidget
             title="Logística y Requerimientos"
             icon={ShoppingCart}
             color="text-indigo-600"
@@ -934,130 +940,130 @@ export function DashboardShell({ user, stats, localIp }: DashboardShellProps) {
       )}
 
       {selectedTalk && (
- <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
- <div className="bg-white rounded-3xl p-8 max-w-lg w-full shadow-2xl border border-slate-100 animate-in zoom-in-95 duration-200 relative">
- <button 
- onClick={() => setSelectedTalk(null)}
- className="absolute top-6 right-6 text-slate-400 hover:text-slate-600 font-bold text-sm bg-slate-100 hover:bg-slate-200 w-8 h-8 rounded-full flex items-center justify-center transition-all cursor-pointer"
- >
- ✕
- </button>
- <div className="flex items-center gap-4 mb-6">
- <div className="w-12 h-12 rounded-xl bg-blue-50 text-blue-500 flex items-center justify-center shrink-0">
- <MessageSquare size={24} />
- </div>
- <div className="min-w-0">
- <span className="block text-[10px] font-bold text-blue-600 tracking-tight">Detalle de Charla HSEC</span>
- <h3 className="text-xl font-bold text-slate-800 mt-0.5 keep-case truncate">{selectedTalk.topic}</h3>
- </div>
- </div>
- <div className="space-y-4 text-sm font-medium text-slate-600">
- <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 space-y-3">
- <div className="flex justify-between border-b border-slate-200 pb-2">
- <span className="text-slate-400 font-bold text-[10px]">Fecha:</span>
- <span className="text-slate-800 font-bold keep-case">{selectedTalk.date ? new Date(selectedTalk.date + 'T12:00:00').toLocaleDateString() : '—'}</span>
- </div>
- <div className="flex justify-between border-b border-slate-200 pb-2">
- <span className="text-slate-400 font-bold text-[10px]">Ubicación / Frente:</span>
- <span className="text-slate-800 font-bold keep-case">{selectedTalk.location || 'No especificado'}</span>
- </div>
- <div className="flex justify-between border-b border-slate-200 pb-2">
- <span className="text-slate-400 font-bold text-[10px]">Líder de Charla:</span>
- <span className="text-slate-800 font-bold keep-case">{selectedTalk.leader?.name || 'No especificado'}</span>
- </div>
- {selectedTalk.target_area && (
- <div className="flex justify-between border-b border-slate-200 pb-2">
- <span className="text-slate-400 font-bold text-[10px]">Área Objetivo:</span>
- <span className="text-slate-800 font-bold keep-case">{selectedTalk.target_area}</span>
- </div>
- )}
- {selectedTalk.material_url && (
- <div className="flex justify-between pt-1">
- <span className="text-slate-400 font-bold text-[10px]">Material de Apoyo:</span>
- <a 
- href={selectedTalk.material_url} 
- target="_blank" 
- rel="noopener noreferrer" 
- className="text-blue-600 font-bold hover:underline flex items-center gap-1 keep-case"
- >
- Descargar Material <ArrowRight size={12} />
- </a>
- </div>
- )}
- </div>
- {selectedTalk.photo_url && (
- <div className="mt-4">
- <span className="block text-slate-400 font-bold text-[10px] mb-2">Evidencia Fotográfica:</span>
- <div className="relative aspect-video w-full rounded-2xl overflow-hidden border border-slate-200 bg-slate-50">
- <img 
- src={selectedTalk.photo_url} 
- alt="Evidencia fotográfica" 
- className="object-contain w-full h-full"
- />
- </div>
- </div>
- )}
- </div>
- <div className="mt-6 flex justify-end">
- <button 
- onClick={() => setSelectedTalk(null)}
- className="bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs tracking-normal px-6 py-3 rounded-2xl shadow-lg transition-all active:scale-95 cursor-pointer"
- >
- Cerrar
- </button>
- </div>
- </div>
- </div>
- )}
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl p-8 max-w-lg w-full shadow-2xl border border-slate-100 animate-in zoom-in-95 duration-200 relative">
+            <button
+              onClick={() => setSelectedTalk(null)}
+              className="absolute top-6 right-6 text-slate-400 hover:text-slate-600 font-bold text-sm bg-slate-100 hover:bg-slate-200 w-8 h-8 rounded-full flex items-center justify-center transition-all cursor-pointer"
+            >
+              ✕
+            </button>
+            <div className="flex items-center gap-4 mb-6">
+              <div className="w-12 h-12 rounded-xl bg-blue-50 text-blue-500 flex items-center justify-center shrink-0">
+                <MessageSquare size={24} />
+              </div>
+              <div className="min-w-0">
+                <span className="block text-[10px] font-bold text-blue-600 tracking-tight">Detalle de Charla HSEC</span>
+                <h3 className="text-xl font-bold text-slate-800 mt-0.5 keep-case truncate">{selectedTalk.topic}</h3>
+              </div>
+            </div>
+            <div className="space-y-4 text-sm font-medium text-slate-600">
+              <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 space-y-3">
+                <div className="flex justify-between border-b border-slate-200 pb-2">
+                  <span className="text-slate-400 font-bold text-[10px]">Fecha:</span>
+                  <span className="text-slate-800 font-bold keep-case">{selectedTalk.date ? new Date(selectedTalk.date + 'T12:00:00').toLocaleDateString() : '—'}</span>
+                </div>
+                <div className="flex justify-between border-b border-slate-200 pb-2">
+                  <span className="text-slate-400 font-bold text-[10px]">Ubicación / Frente:</span>
+                  <span className="text-slate-800 font-bold keep-case">{selectedTalk.location || 'No especificado'}</span>
+                </div>
+                <div className="flex justify-between border-b border-slate-200 pb-2">
+                  <span className="text-slate-400 font-bold text-[10px]">Líder de Charla:</span>
+                  <span className="text-slate-800 font-bold keep-case">{selectedTalk.leader?.name || 'No especificado'}</span>
+                </div>
+                {selectedTalk.target_area && (
+                  <div className="flex justify-between border-b border-slate-200 pb-2">
+                    <span className="text-slate-400 font-bold text-[10px]">Área Objetivo:</span>
+                    <span className="text-slate-800 font-bold keep-case">{selectedTalk.target_area}</span>
+                  </div>
+                )}
+                {selectedTalk.material_url && (
+                  <div className="flex justify-between pt-1">
+                    <span className="text-slate-400 font-bold text-[10px]">Material de Apoyo:</span>
+                    <a
+                      href={selectedTalk.material_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-600 font-bold hover:underline flex items-center gap-1 keep-case"
+                    >
+                      Descargar Material <ArrowRight size={12} />
+                    </a>
+                  </div>
+                )}
+              </div>
+              {selectedTalk.photo_url && (
+                <div className="mt-4">
+                  <span className="block text-slate-400 font-bold text-[10px] mb-2">Evidencia Fotográfica:</span>
+                  <div className="relative aspect-video w-full rounded-2xl overflow-hidden border border-slate-200 bg-slate-50">
+                    <img
+                      src={selectedTalk.photo_url}
+                      alt="Evidencia fotográfica"
+                      className="object-contain w-full h-full"
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+            <div className="mt-6 flex justify-end">
+              <button
+                onClick={() => setSelectedTalk(null)}
+                className="bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs tracking-normal px-6 py-3 rounded-2xl shadow-lg transition-all active:scale-95 cursor-pointer"
+              >
+                Cerrar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
- {/* Modal Detalle Capacitación */}
- {selectedTraining && (
- <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
- <div className="bg-white rounded-3xl p-8 max-w-lg w-full shadow-2xl border border-slate-100 animate-in zoom-in-95 duration-200 relative">
- <button 
- onClick={() => setSelectedTraining(null)}
- className="absolute top-6 right-6 text-slate-400 hover:text-slate-600 font-bold text-sm bg-slate-100 hover:bg-slate-200 w-8 h-8 rounded-full flex items-center justify-center transition-all cursor-pointer"
- >
- ✕
- </button>
- <div className="flex items-center gap-4 mb-6">
- <div className="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-500 flex items-center justify-center shrink-0">
- <GraduationCap size={24} />
- </div>
- <div className="min-w-0">
- <span className="block text-[10px] font-bold text-emerald-600 tracking-tight">Detalle de Capacitación</span>
- <h3 className="text-xl font-bold text-slate-800 mt-0.5 keep-case truncate">{selectedTraining.title}</h3>
- </div>
- </div>
- <div className="space-y-4 text-sm font-medium text-slate-600">
- <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 space-y-3">
- <div className="flex justify-between border-b border-slate-200 pb-2">
- <span className="text-slate-400 font-bold text-[10px]">Fecha Realización:</span>
- <span className="text-slate-800 font-bold keep-case">{selectedTraining.date ? new Date(selectedTraining.date + 'T12:00:00').toLocaleDateString() : '—'}</span>
- </div>
- <div className="flex justify-between border-b border-slate-200 pb-2">
- <span className="text-slate-400 font-bold text-[10px]">Expositor / Capacitador:</span>
- <span className="text-slate-800 font-bold keep-case">{selectedTraining.trainer || 'No especificado'}</span>
- </div>
- <div className="flex justify-between">
- <span className="text-slate-400 font-bold text-[10px]">Fecha de Vencimiento:</span>
- <span className={`font-bold keep-case ${selectedTraining.expiry_date && new Date(selectedTraining.expiry_date) < new Date() ? 'text-rose-600' : 'text-emerald-600'}`}>
- {selectedTraining.expiry_date ? new Date(selectedTraining.expiry_date + 'T12:00:00').toLocaleDateString() : 'No vence'}
- </span>
- </div>
- </div>
- </div>
- <div className="mt-6 flex justify-end">
- <button 
- onClick={() => setSelectedTraining(null)}
- className="bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs tracking-normal px-6 py-3 rounded-2xl shadow-lg transition-all active:scale-95 cursor-pointer"
- >
- Cerrar
- </button>
- </div>
- </div>
- </div>
- )}
- </div>
- )
+      {/* Modal Detalle Capacitación */}
+      {selectedTraining && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl p-8 max-w-lg w-full shadow-2xl border border-slate-100 animate-in zoom-in-95 duration-200 relative">
+            <button
+              onClick={() => setSelectedTraining(null)}
+              className="absolute top-6 right-6 text-slate-400 hover:text-slate-600 font-bold text-sm bg-slate-100 hover:bg-slate-200 w-8 h-8 rounded-full flex items-center justify-center transition-all cursor-pointer"
+            >
+              ✕
+            </button>
+            <div className="flex items-center gap-4 mb-6">
+              <div className="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-500 flex items-center justify-center shrink-0">
+                <GraduationCap size={24} />
+              </div>
+              <div className="min-w-0">
+                <span className="block text-[10px] font-bold text-emerald-600 tracking-tight">Detalle de Capacitación</span>
+                <h3 className="text-xl font-bold text-slate-800 mt-0.5 keep-case truncate">{selectedTraining.title}</h3>
+              </div>
+            </div>
+            <div className="space-y-4 text-sm font-medium text-slate-600">
+              <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 space-y-3">
+                <div className="flex justify-between border-b border-slate-200 pb-2">
+                  <span className="text-slate-400 font-bold text-[10px]">Fecha Realización:</span>
+                  <span className="text-slate-800 font-bold keep-case">{selectedTraining.date ? new Date(selectedTraining.date + 'T12:00:00').toLocaleDateString() : '—'}</span>
+                </div>
+                <div className="flex justify-between border-b border-slate-200 pb-2">
+                  <span className="text-slate-400 font-bold text-[10px]">Expositor / Capacitador:</span>
+                  <span className="text-slate-800 font-bold keep-case">{selectedTraining.trainer || 'No especificado'}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-400 font-bold text-[10px]">Fecha de Vencimiento:</span>
+                  <span className={`font-bold keep-case ${selectedTraining.expiry_date && new Date(selectedTraining.expiry_date) < new Date() ? 'text-rose-600' : 'text-emerald-600'}`}>
+                    {selectedTraining.expiry_date ? new Date(selectedTraining.expiry_date + 'T12:00:00').toLocaleDateString() : 'No vence'}
+                  </span>
+                </div>
+              </div>
+            </div>
+            <div className="mt-6 flex justify-end">
+              <button
+                onClick={() => setSelectedTraining(null)}
+                className="bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs tracking-normal px-6 py-3 rounded-2xl shadow-lg transition-all active:scale-95 cursor-pointer"
+              >
+                Cerrar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
 }

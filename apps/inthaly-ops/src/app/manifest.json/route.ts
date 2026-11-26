@@ -20,9 +20,9 @@ export async function GET(request: Request) {
  short_name: shortName,
  description: 'Sistema de Gestión Empresarial',
  start_url: startUrl,
- display: 'standalone',
- background_color: '#06122e',
- theme_color: '#06122e',
+    display: 'standalone',
+    background_color: '#f8fafc',
+    theme_color: '#2563eb',
  icons: [
  {
  src: '/icon-192x192.png?v=1.4.0',

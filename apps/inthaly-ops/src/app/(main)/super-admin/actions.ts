@@ -1308,7 +1308,7 @@ export async function getEcosystemStatsAction() {
       supabase.from('community_profiles').select('*', { count: 'exact', head: true })
     ])
 
-    const { inthalyIdService } = await import('@/services')
+    const inthalyIdService = await import('@/services/inthaly-id.service')
     const baseStats = await inthalyIdService.getEcosystemStats()
 
     return {
@@ -1344,7 +1344,7 @@ export async function getAllIdentitiesAdminAction() {
     const role = extendedUser?.role_id?.toLowerCase()
     if (role !== 'super_admin' && role !== 'superadmin') throw new Error('Acceso Denegado')
 
-    const { inthalyIdService } = await import('@/services')
+    const inthalyIdService = await import('@/services/inthaly-id.service')
     return inthalyIdService.getAllIdentitiesAdmin()
   } catch (e: any) {
     console.error('[SUPER_ADMIN] Error getting identities:', e)
@@ -1361,7 +1361,7 @@ export async function generateDelegatedTicketAction(
     const role = extendedUser?.role_id?.toLowerCase()
     if (role !== 'super_admin' && role !== 'superadmin') throw new Error('Acceso Denegado')
 
-    const { inthalyIdService } = await import('@/services')
+    const inthalyIdService = await import('@/services/inthaly-id.service')
     return inthalyIdService.generateDelegatedAdminTicket({
       superAdminId: extendedUser.id,
       targetProduct,

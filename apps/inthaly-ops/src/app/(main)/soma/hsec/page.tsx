@@ -11,7 +11,7 @@ import {
 import { toast } from 'sonner'
 import { getHsecStops, createHsecStop, closeHsecStop, updateHsecStop, deleteHsecStop } from './actions'
 import { format } from 'date-fns'
-import { es } from 'date-fns/locale'
+import { es } from 'date-fns/locale/es'
 import { useRbac } from '@/components/providers/rbac-provider'
 import { useOffline } from '@/components/providers/offline-provider'
 import { addOperationToQueue } from '@/lib/offline-sync'

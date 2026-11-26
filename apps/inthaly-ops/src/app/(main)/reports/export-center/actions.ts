@@ -38,24 +38,24 @@ export async function getExportAuxiliaryData() {
 
   const [workersQuery, usersQuery, warehousesQuery, companyQuery] = await Promise.all([
     applyIsolation(
-      supabase.from('workers').select('*, worker_personal(*), worker_financial(*)'),
+      supabase.from('workers').select('id, name, last_name, user_id, email, dni, document_number, position, area, status, worker_personal(area, dni)'),
       companyId,
       extendedUser.role_id
     ).order('name', { ascending: true }),
 
     applyIsolation(
-      supabase.from('users').select('*'),
+      supabase.from('users').select('id, name, email, dni, document_number, role_id, area'),
       companyId,
       extendedUser.role_id
     ).order('name', { ascending: true }),
 
     applyIsolation(
-      supabase.from('warehouses').select('*'),
+      supabase.from('warehouses').select('id, name, code, area, is_default'),
       companyId,
       extendedUser.role_id
     ).order('name', { ascending: true }),
 
-    supabase.from('companies').select('*').eq('id', companyId).maybeSingle()
+    supabase.from('companies').select('id, name, tax_id, address, phone, contact_email, industry, logo_url').eq('id', companyId).maybeSingle()
   ])
 
   const seenIds = new Set<string>()

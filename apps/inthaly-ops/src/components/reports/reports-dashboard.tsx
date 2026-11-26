@@ -21,7 +21,6 @@ import {
 } from 'lucide-react'
 import { StatsCard, SimpleBarChart, DonutChart } from '@/components/reports/visual-reports'
 import { getDetailedHistory } from '@/app/(main)/reports/actions'
-import * as XLSX from 'xlsx'
 import { toast } from 'sonner'
 
 export function ReportsDashboard({ 
@@ -197,6 +196,7 @@ export function ReportsDashboard({
   }
 
   const handleExport = async (type: 'bonuses' | 'transport' | 'attendance' | 'payments') => {
+    const XLSX = await import('xlsx')
     const history = await getDetailedHistory({
       type: type === 'payments' ? 'payments' : type as any,
       startDate: `${stats.period.year}-${stats.period.month.toString().padStart(2, '0')}-01`,

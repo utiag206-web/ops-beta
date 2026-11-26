@@ -102,8 +102,8 @@ export function OfflineSessionProvider({
         console.warn('[OFFLINE_SESSION] Could not save offline snapshot:', err)
       })
 
-      // Prime offline routes & static chunks immediately for authenticated session
-      warmApplicationRoutes()
+      //Nota: warmApplicationRoutes() ya es planificado con retraso cortés en OfflineProvider.
+      // Evitamos dispararlo duplicado inmediatamente aquí para no competir con la carga inicial del dashboard.
     }
 
     // B. OFFLINE / FALLBACK: Recover session from IndexedDB if initialUser is missing or network is down

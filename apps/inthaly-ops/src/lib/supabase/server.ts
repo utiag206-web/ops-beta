@@ -1,4 +1,5 @@
 import { createServerClient } from '@supabase/ssr'
+import { createClient as createSupabaseClient, type SupabaseClient } from '@supabase/supabase-js'
 import { cookies } from 'next/headers'
 
 export async function createClient() {
@@ -28,18 +29,27 @@ export async function createClient() {
  )
 }
 
+let adminClientSingleton: SupabaseClient | null =
+  (globalThis as any).__inthaly_admin_supabase_client ?? null
+
 export async function createAdminClient() {
+ if (adminClientSingleton) {
+   return adminClientSingleton
+ }
+
  const serviceRoleKey = process.env.SB_SECRET || process.env.SUPABASE_SERVICE_ROLE_KEY
  
  if (!serviceRoleKey) {
  console.error("[ADMIN_CLIENT_DEBUG] SUPABASE_SERVICE_ROLE_KEY (or SB_SECRET) is missing!")
  }
- const { createClient: createSupabaseClient } = await import('@supabase/supabase-js')
- return createSupabaseClient(
+
+ adminClientSingleton = createSupabaseClient(
  process.env.NEXT_PUBLIC_SUPABASE_URL!,
  serviceRoleKey!,
  {
- auth: { persistSession: false }
+ auth: { persistSession: false, autoRefreshToken: false }
  }
  )
+ ;(globalThis as any).__inthaly_admin_supabase_client = adminClientSingleton
+ return adminClientSingleton
 }

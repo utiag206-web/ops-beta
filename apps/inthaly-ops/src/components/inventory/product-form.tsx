@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { X, Loader2, CheckCircle2, Box, Info, Eye } from 'lucide-react'
 import { createProduct, updateProduct, getProductCategories } from '@/app/(main)/inventory/actions'
 import { toast } from 'sonner'
+import { ModalPortal } from '@/components/ui/modal-portal'
 
 interface ProductFormProps {
  isOpen: boolean
@@ -87,29 +88,30 @@ export function ProductForm({ isOpen, onClose, onSuccess, editingProduct, isView
  }
 
  return (
+  <ModalPortal>
  <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
- <div className="bg-white w-full max-w-lg rounded-[2.5rem] shadow-2xl overflow-hidden border border-slate-100 animate-in zoom-in-95 duration-200 flex flex-col max-h-[90vh]">
- <div className="p-8 border-b border-slate-50 flex justify-between items-center bg-indigo-50/30 shrink-0">
+ <div className="bg-white w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden border border-slate-100 animate-in zoom-in-95 duration-200 flex flex-col max-h-[90vh]">
+ <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50 shrink-0">
  <div className="flex items-center gap-4">
- <div className="bg-white p-3 rounded-2xl shadow-sm border border-indigo-100/50">
- {isViewOnly ? <Eye className="text-indigo-600" size={24} /> : <Box className="text-indigo-600" size={24} /> }
+ <div className="bg-indigo-100 p-2 rounded-xl text-indigo-600">
+ {isViewOnly ? <Eye size={20} /> : <Box size={20} /> }
  </div>
  <div>
- <h2 className="text-2xl font-black text-slate-800 tracking-tight">
+ <h2 className="text-lg font-black text-slate-800 tracking-tight leading-none">
  {isViewOnly ? 'Detalle del Producto' : editingProduct ? 'Editar Producto' : 'Nuevo Producto'}
  </h2>
- <p className="text-slate-500 text-sm font-medium">
+ <p className="text-slate-500 text-xs font-medium mt-1">
  {isViewOnly ? 'Consulta los atributos base del catálogo.' : 'Define los atributos base del catálogo.'}
  </p>
  </div>
  </div>
- <button onClick={onClose} className="p-2 hover:bg-white rounded-full transition-colors text-slate-400">
+ <button onClick={onClose} className="p-1.5 hover:bg-slate-100 rounded-lg transition-colors text-slate-400">
  <X size={24} />
  </button>
  </div>
 
  <div className="flex-1 overflow-y-auto custom-scrollbar">
- <form onSubmit={handleSubmit} className="p-8 space-y-5">
+ <form onSubmit={handleSubmit} className="p-6 space-y-4">
  <div className="grid grid-cols-2 gap-4">
  <div className="space-y-1.5">
  <label className="text-[11px] font-black tracking-tight text-slate-400 px-1">Código</label>
@@ -118,7 +120,7 @@ export function ProductForm({ isOpen, onClose, onSuccess, editingProduct, isView
  disabled={isViewOnly}
  type="text"
  placeholder="SKU-001"
- className="w-full bg-slate-50 border-2 border-transparent focus:border-indigo-500 focus:bg-white rounded-2xl p-4 text-sm font-bold transition-all outline-none disabled:opacity-70"
+ className="w-full bg-slate-50 border-2 border-transparent focus:border-indigo-500 focus:bg-white rounded-xl p-2.5 text-xs sm:text-sm font-semibold transition-all outline-none disabled:opacity-70"
  value={form.code}
  onChange={e => setForm(prev => ({...prev, code: e.target.value}))}
  />
@@ -131,7 +133,7 @@ export function ProductForm({ isOpen, onClose, onSuccess, editingProduct, isView
  type="text"
  list="category-suggestions"
  placeholder="Ej: EPP, Herramientas, Alimentos"
- className="w-full bg-slate-50 border-2 border-transparent focus:border-indigo-500 focus:bg-white rounded-2xl p-4 text-sm font-bold transition-all outline-none disabled:opacity-70"
+ className="w-full bg-slate-50 border-2 border-transparent focus:border-indigo-500 focus:bg-white rounded-xl p-2.5 text-xs sm:text-sm font-semibold transition-all outline-none disabled:opacity-70"
  value={form.category}
  onChange={e => setForm(prev => ({...prev, category: e.target.value}))}
  />
@@ -150,7 +152,7 @@ export function ProductForm({ isOpen, onClose, onSuccess, editingProduct, isView
  disabled={isViewOnly}
  type="text"
  placeholder="Ej: Guantes de nitrilo reforzados"
- className="w-full bg-slate-50 border-2 border-transparent focus:border-indigo-500 focus:bg-white rounded-2xl p-4 text-sm font-bold transition-all outline-none disabled:opacity-70"
+ className="w-full bg-slate-50 border-2 border-transparent focus:border-indigo-500 focus:bg-white rounded-xl p-2.5 text-xs sm:text-sm font-semibold transition-all outline-none disabled:opacity-70"
  value={form.name}
  onChange={e => setForm(prev => ({...prev, name: e.target.value}))}
  />
@@ -162,7 +164,7 @@ export function ProductForm({ isOpen, onClose, onSuccess, editingProduct, isView
  <select 
  required
  disabled={isViewOnly}
- className="w-full bg-slate-50 border-2 border-transparent focus:border-indigo-500 focus:bg-white rounded-2xl p-4 text-sm font-bold transition-all outline-none disabled:opacity-70 appearance-none"
+ className="w-full bg-slate-50 border-2 border-transparent focus:border-indigo-500 focus:bg-white rounded-xl p-2.5 text-xs sm:text-sm font-semibold transition-all outline-none disabled:opacity-70 appearance-none"
  value={form.unit}
  onChange={e => setForm(prev => ({...prev, unit: e.target.value}))}
  >
@@ -179,7 +181,7 @@ export function ProductForm({ isOpen, onClose, onSuccess, editingProduct, isView
  <select 
  required
  disabled={isViewOnly}
- className="w-full bg-slate-50 border-2 border-transparent focus:border-indigo-500 focus:bg-white rounded-2xl p-4 text-sm font-bold transition-all outline-none disabled:opacity-70 appearance-none"
+ className="w-full bg-slate-50 border-2 border-transparent focus:border-indigo-500 focus:bg-white rounded-xl p-2.5 text-xs sm:text-sm font-semibold transition-all outline-none disabled:opacity-70 appearance-none"
  value={form.type}
  onChange={e => setForm(prev => ({...prev, type: e.target.value}))}
  >
@@ -197,7 +199,7 @@ export function ProductForm({ isOpen, onClose, onSuccess, editingProduct, isView
  disabled={isViewOnly}
  type="text"
  placeholder="Ej: 1 caja = 12 unidades"
- className="w-full bg-slate-50 border-2 border-transparent focus:border-indigo-500 focus:bg-white rounded-2xl p-4 text-sm font-bold transition-all outline-none disabled:opacity-70"
+ className="w-full bg-slate-50 border-2 border-transparent focus:border-indigo-500 focus:bg-white rounded-xl p-2.5 text-xs sm:text-sm font-semibold transition-all outline-none disabled:opacity-70"
  value={form.equivalence || ''}
  onChange={e => setForm(prev => ({...prev, equivalence: e.target.value}))}
  />
@@ -211,7 +213,7 @@ export function ProductForm({ isOpen, onClose, onSuccess, editingProduct, isView
  disabled={isViewOnly}
  type="number"
  min="0"
- className="w-full bg-slate-50 border-2 border-transparent focus:border-indigo-500 focus:bg-white rounded-2xl p-4 text-sm font-bold transition-all outline-none disabled:opacity-70"
+ className="w-full bg-slate-50 border-2 border-transparent focus:border-indigo-500 focus:bg-white rounded-xl p-2.5 text-xs sm:text-sm font-semibold transition-all outline-none disabled:opacity-70"
  value={form.min_stock}
  onChange={e => setForm(prev => ({...prev, min_stock: Number(e.target.value)}))}
  />
@@ -232,7 +234,7 @@ export function ProductForm({ isOpen, onClose, onSuccess, editingProduct, isView
  required={form.has_expiry}
  disabled={isViewOnly}
  type="date"
- className="w-full bg-slate-50 border-2 border-transparent focus:border-indigo-500 focus:bg-white rounded-2xl p-4 text-sm font-bold transition-all outline-none disabled:opacity-70"
+ className="w-full bg-slate-50 border-2 border-transparent focus:border-indigo-500 focus:bg-white rounded-xl p-2.5 text-xs sm:text-sm font-semibold transition-all outline-none disabled:opacity-70"
  value={form.expiry_date || ''}
  onChange={e => setForm(prev => ({...prev, expiry_date: e.target.value}))}
  />
@@ -294,14 +296,14 @@ export function ProductForm({ isOpen, onClose, onSuccess, editingProduct, isView
  )}
 
  <div className="flex gap-4 pt-4">
- <button type="button" onClick={onClose} className="flex-1 bg-slate-100 text-slate-600 font-black py-4 rounded-2xl transition-all hover:bg-slate-200">
+ <button type="button" onClick={onClose} className="flex-1 bg-slate-100 text-slate-600 font-black py-2.5 rounded-xl text-xs font-bold transition-all hover:bg-slate-200">
  {isViewOnly ? 'Cerrar' : 'Cancelar'}
  </button>
  {!isViewOnly && (
  <button 
  disabled={loading}
  type="submit"
- className="flex-[2] bg-indigo-600 hover:bg-indigo-700 text-white font-black py-4 rounded-2xl shadow-lg shadow-indigo-200 transition-all flex items-center justify-center gap-2"
+ className="flex-[2] bg-indigo-600 hover:bg-indigo-700 text-white font-black py-2.5 rounded-xl text-xs font-bold shadow-lg shadow-indigo-200 transition-all flex items-center justify-center gap-2"
  >
  {loading ? <Loader2 className="animate-spin" size={20} /> : <><CheckCircle2 size={20} /> {editingProduct ? 'Actualizar' : 'Guardar'}</>}
  </button>
@@ -311,5 +313,6 @@ export function ProductForm({ isOpen, onClose, onSuccess, editingProduct, isView
  </div>
  </div>
  </div>
+  </ModalPortal>
  )
 }

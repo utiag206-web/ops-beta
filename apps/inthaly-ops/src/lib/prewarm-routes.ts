@@ -69,75 +69,31 @@ export async function warmApplicationRoutes(force = false) {
   if (!navigator.onLine) return
   if (isPrewarmingRunning) return
   if (isPrewarmingComplete && !force) return
-  // En entorno local de desarrollo, Next.js compila bajo demanda (JIT).
-  // Precalentar 44 rutas simultáneas satura el servidor de desarrollo y provoca ChunkLoadError.
   if (process.env.NODE_ENV === 'development') return
 
   const p = window.location.pathname
-  if (p === '/login' || p.startsWith('/auth') || p === '/forgot-password' || p === '/reset-password' || p === '/offline') {
+  if (
+    p === '/' ||
+    p === '/login' ||
+    p === '/register' ||
+    p.startsWith('/auth') ||
+    p.startsWith('/activar') ||
+    p.startsWith('/comunidad') ||
+    p.startsWith('/id') ||
+    p === '/forgot-password' ||
+    p === '/reset-password' ||
+    p === '/offline'
+  ) {
     return
   }
 
   isPrewarmingRunning = true
-  console.log('[PREWARM] Initiating comprehensive offline pre-warming of', APP_ROUTES.length, 'routes...')
-
-  // Step 1: Pre-warm /dashboard first to guarantee cold-start opening resilience
   try {
-    const dashDocRes = await fetch('/dashboard', { 
-      headers: { 'Accept': 'text/html' },
-      cache: 'no-cache' 
-    })
-    if (dashDocRes.ok) {
-      const htmlText = await dashDocRes.text()
-      const chunkMatches = Array.from(new Set(htmlText.match(/\/_next\/static\/(?:chunks|css)\/[a-zA-Z0-9_\-\.\/]+\.(?:js|css)/g) || []))
-      await Promise.allSettled(chunkMatches.map(u => fetch(u, { cache: 'no-cache' })))
-    }
-    await fetch('/dashboard', { 
-      headers: { 'RSC': '1', 'Accept': 'text/x-component' },
-      cache: 'no-cache' 
-    })
-  } catch (err) {
-    console.warn('[PREWARM] /dashboard prime hiccup:', err)
+    // Pre-cache only the lightweight offline shell fallback on idle without flooding SSR/Supabase with 44 route renders
+    await fetch('/offline', { headers: { 'Accept': 'text/html' } })
+  } catch (_) {
+  } finally {
+    isPrewarmingRunning = false
+    isPrewarmingComplete = true
   }
-
-  // Step 2: Batch pre-warm all remaining routes (HTML, JS/CSS static assets, and RSC flight payloads)
-  // Utiliza un lote controlado y pausa de 600ms para evitar saturación de red mientras el usuario navega
-  const remainingRoutes = APP_ROUTES.filter(r => r !== '/dashboard')
-  const batchSize = 2
-
-  for (let i = 0; i < remainingRoutes.length; i += batchSize) {
-    if (!navigator.onLine) {
-      console.log('[PREWARM] Connection paused. Will resume when online.')
-      break
-    }
-    const batch = remainingRoutes.slice(i, i + batchSize)
-    await Promise.allSettled(
-      batch.map(async (route) => {
-        try {
-          // Pre-warm HTML document and download referenced static chunks
-          const htmlRes = await fetch(route, { 
-            headers: { 'Accept': 'text/html' },
-            cache: 'no-cache' 
-          })
-          if (htmlRes.ok) {
-            const htmlText = await htmlRes.text()
-            const chunkMatches = Array.from(new Set(htmlText.match(/\/_next\/static\/(?:chunks|css)\/[a-zA-Z0-9_\-\.\/]+\.(?:js|css)/g) || []))
-            await Promise.allSettled(chunkMatches.map(u => fetch(u, { cache: 'no-cache' })))
-          }
-
-          // Pre-warm canonical RSC flight stream (el Service Worker lo indexa por pathname y request)
-          await fetch(route, { 
-            headers: { 'RSC': '1', 'Accept': 'text/x-component' },
-            cache: 'no-cache' 
-          })
-        } catch (_) {}
-      })
-    )
-    // Pausa optimizada para no colisionar con el uso interactivo del usuario
-    await new Promise(r => setTimeout(r, 600))
-  }
-
-  isPrewarmingRunning = false
-  isPrewarmingComplete = true
-  console.log('[PREWARM] Universal route and static asset pre-warming completed successfully.')
 }

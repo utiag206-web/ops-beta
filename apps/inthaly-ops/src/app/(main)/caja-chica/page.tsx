@@ -37,7 +37,7 @@ import { exportPettyCashToExcel } from '@/lib/export-utils'
 import { useRbac } from '@/components/providers/rbac-provider'
 import { AddTransactionModal } from '@/components/caja-chica/add-transaction-modal'
 import { format } from 'date-fns'
-import { es } from 'date-fns/locale'
+import { es } from 'date-fns/locale/es'
 import { toast } from 'sonner'
 import { normalizeAreaName } from '@/lib/permissions'
 
@@ -70,19 +70,6 @@ export default function CajaChicaPage() {
  const [companyInfo, setCompanyInfo] = useState<any>(null)
 
  useEffect(() => {
- async function fetchCompany() {
- try {
- const { getCompanyProfile } = await import('@/app/(main)/company/actions')
- const comp = await getCompanyProfile()
- if (comp) setCompanyInfo(comp)
- } catch (err) {
- console.error('Error fetching company profile:', err)
- }
- }
- fetchCompany()
- }, [])
-
- useEffect(() => {
  async function fetchWarehouses() {
  try {
  const { getWarehouses } = await import('@/app/(main)/inventory/actions')
@@ -98,15 +85,17 @@ export default function CajaChicaPage() {
  fetchWarehouses()
  }, [])
 
- async function loadData() {
- setLoading(true)
+ const lastLoadedAreaRef = React.useRef<string | null>(null)
+ async function loadData(targetArea = area, silent = false) {
+    if (!silent) setLoading(true)
  try {
  const [s, t] = await Promise.all([
- getPettyCashStats(area),
- getPettyCashTransactions(area)
+ getPettyCashStats(targetArea),
+ getPettyCashTransactions(targetArea)
  ])
  setStats(s)
  if (t.data) setTransactions(t.data)
+ lastLoadedAreaRef.current = targetArea
  } catch (e) {
  console.error(e)
  } finally {
@@ -116,6 +105,7 @@ export default function CajaChicaPage() {
 
  useEffect(() => {
  // Si no somos admin/gerente, forzar el área según el rol
+ let effectiveArea = area
  if (!['admin', 'gerente', 'super_admin', 'superadmin'].includes(role_id || '')) {
  const target = (role_id === 'administracion' ? 'Administración' : (role_id === 'operaciones' ? 'Operaciones' : user?.area)) || ''
  
@@ -129,20 +119,18 @@ export default function CajaChicaPage() {
  // Buscar el nombre de caja exacto en la lista de almacenes (normalización)
  const normTarget = normalizeAreaName(target)
  const match = warehouses.find(w => normalizeAreaName(w) === normTarget)
- 
- if (match) {
- setArea(match)
- } else {
- setArea(target) // Fallback al texto original
+ effectiveArea = match || target
+ if (effectiveArea !== area) {
+ setArea(effectiveArea)
+ return
  }
  } else {
  setNoAreaConfigured(false)
  }
- }, [user, role_id, warehouses])
-
- useEffect(() => {
- loadData()
- }, [area])
+ if (lastLoadedAreaRef.current !== effectiveArea) {
+ loadData(effectiveArea)
+ }
+ }, [user, role_id, warehouses, area])
 
  async function handleDelete(id: string) {
  if (!confirm('¿Estás seguro de eliminar este movimiento?')) return
@@ -170,17 +158,25 @@ export default function CajaChicaPage() {
  return matchesFilter && matchesSearch
  })
 
- const handleExportExcel = () => {
+ const handleExportExcel = async () => {
  if (filteredTransactions.length === 0) {
  toast.error('No hay movimientos visibles para exportar con los filtros actuales.')
  return
  }
 
  try {
- exportPettyCashToExcel({
+ let currentCompanyInfo = companyInfo
+ if (!currentCompanyInfo) {
+ try {
+ const { getCompanyProfile } = await import('@/app/(main)/company/actions')
+ currentCompanyInfo = await getCompanyProfile()
+ if (currentCompanyInfo) setCompanyInfo(currentCompanyInfo)
+ } catch (_) {}
+ }
+ await exportPettyCashToExcel({
  transactions: filteredTransactions,
  areaName: area,
- companyInfo: companyInfo,
+ companyInfo: currentCompanyInfo || { name: user?.company_name || 'Inthaly ERP' },
  userName: user?.name,
  filterType: filter,
  searchTerm: searchTerm
@@ -502,16 +498,30 @@ export default function CajaChicaPage() {
  </div>
 
  <AddTransactionModal 
- isOpen={isModalOpen} 
- onClose={() => {
- setIsModalOpen(false)
- setSelectedTransaction(null)
- }} 
- onSuccess={() => {
- setIsModalOpen(false)
- setSelectedTransaction(null)
- loadData()
- }}
+        isOpen={isModalOpen} 
+        onClose={() => {
+          setIsModalOpen(false)
+          setSelectedTransaction(null)
+        }} 
+        onSuccess={(newTx?: any) => {
+          setIsModalOpen(false)
+          setSelectedTransaction(null)
+          if (newTx) {
+            setTransactions(prev => [newTx, ...prev])
+            setStats((prev: any) => {
+              if (!prev) return prev
+              const amt = Number(newTx.amount) || 0
+              const isIngreso = newTx.type === 'ingreso'
+              return {
+                ...prev,
+                balance: isIngreso ? prev.balance + amt : prev.balance - amt,
+                monthIncome: isIngreso ? prev.monthIncome + amt : prev.monthIncome,
+                monthExpenses: !isIngreso ? prev.monthExpenses + amt : prev.monthExpenses
+              }
+            })
+          }
+          loadData(area, true)
+        }}
  area={area}
  initialData={selectedTransaction}
  currentBalance={stats?.balance || 0}

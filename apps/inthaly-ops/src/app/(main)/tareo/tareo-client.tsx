@@ -29,6 +29,13 @@ interface TareoPageProps {
   workers: Worker[]
   userRole: string
   companyId: string
+  initialDashboardData?: {
+    monthStr: string
+    records: any[]
+    notes: any[]
+    dailyHours: number
+    punches: any[]
+  }
 }
 
 const statusColors: any = {
@@ -53,15 +60,15 @@ const autoColors: any = {
   'AC': 'bg-green-100 text-green-800 font-bold',
 }
 
-export default function TareoClient({ initialCycles, workers: propWorkers, userRole, companyId }: TareoPageProps) {
+export default function TareoClient({ initialCycles, workers: propWorkers, userRole, companyId, initialDashboardData }: TareoPageProps) {
   const [workers, setWorkers] = useState<Worker[]>(propWorkers || [])
   const { isOnline, triggerSync } = useOffline()
   const [currentDate, setCurrentDate] = useState(new Date())
-  const [tareoRecords, setTareoRecords] = useState<any[]>([])
-  const [tareoNotes, setTareoNotes] = useState<any[]>([])
-  const [attendanceLogs, setAttendanceLogs] = useState<any[]>([])
+  const [tareoRecords, setTareoRecords] = useState<any[]>(initialDashboardData?.records || [])
+  const [tareoNotes, setTareoNotes] = useState<any[]>(initialDashboardData?.notes || [])
+  const [attendanceLogs, setAttendanceLogs] = useState<any[]>(initialDashboardData?.punches || [])
   const [attendanceSettings, setAttendanceSettings] = useState<CompanyAttendanceSettings>(DEFAULT_HR_SETTINGS.attendance_settings)
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(!initialDashboardData)
   const [updatingCells, setUpdatingCells] = useState<Set<string>>(new Set())
   const [searchTerm, setSearchTerm] = useState('')
   
@@ -132,7 +139,7 @@ export default function TareoClient({ initialCycles, workers: propWorkers, userR
       if (cachedSettings) {
         setAttendanceSettings(JSON.parse(cachedSettings))
       }
-      const cachedWorkers = localStorage.getItem(`${cacheKeyPrefix}_workers`) || localStorage.getItem('workers_cache')
+      const cachedWorkers = localStorage.getItem(`${cacheKeyPrefix}_workers`) || localStorage.getItem(`workers_cache_${companyId}`) || localStorage.getItem('workers_cache')
       if (cachedWorkers && (!propWorkers || propWorkers.length === 0)) {
         try {
           const parsedW = JSON.parse(cachedWorkers)
@@ -180,9 +187,15 @@ export default function TareoClient({ initialCycles, workers: propWorkers, userR
       setTareoNotes(res.notes)
       setAttendanceLogs(res.punches)
       if (typeof window !== 'undefined') {
-        localStorage.setItem(`${cacheKeyPrefix}_records`, JSON.stringify(res.records))
-        localStorage.setItem(`${cacheKeyPrefix}_notes`, JSON.stringify(res.notes))
-        localStorage.setItem(`${cacheKeyPrefix}_punches`, JSON.stringify(res.punches))
+        setTimeout(() => {
+          try {
+            localStorage.setItem(`${cacheKeyPrefix}_records`, JSON.stringify(res.records))
+            localStorage.setItem(`${cacheKeyPrefix}_notes`, JSON.stringify(res.notes))
+            localStorage.setItem(`${cacheKeyPrefix}_punches`, JSON.stringify(res.punches))
+          } catch (storageErr) {
+            console.warn('[TAREO] Cache write failed', storageErr)
+          }
+        }, 50)
       }
       if ((res as any).attendanceSettings) {
         setAttendanceSettings((res as any).attendanceSettings)
@@ -231,44 +244,57 @@ export default function TareoClient({ initialCycles, workers: propWorkers, userR
   }, [currentMonthStr, daysInMonth, cacheKeyPrefix])
 
   useEffect(() => {
-    loadData(true)
+    const isInitialSSRMonth = initialDashboardData && initialDashboardData.monthStr === currentMonthStr
+    if (isInitialSSRMonth) {
+      if (typeof window !== 'undefined') {
+        try {
+          localStorage.setItem(`${cacheKeyPrefix}_records`, JSON.stringify(initialDashboardData.records || []))
+          localStorage.setItem(`${cacheKeyPrefix}_notes`, JSON.stringify(initialDashboardData.notes || []))
+          localStorage.setItem(`${cacheKeyPrefix}_punches`, JSON.stringify(initialDashboardData.punches || []))
+        } catch (_) {}
+      }
+      setLoading(false)
+    } else {
+      loadData(true)
+    }
 
     const supabase = createClient()
-    const channel1 = supabase.channel(`tareo_attendance_${companyId}_${currentMonthStr}`)
+    let realtimeDebounce: NodeJS.Timeout | null = null
+    const triggerDebouncedLoad = () => {
+      if (realtimeDebounce) clearTimeout(realtimeDebounce)
+      realtimeDebounce = setTimeout(() => {
+        loadData(true)
+      }, 600)
+    }
+
+    const channel = supabase.channel(`tareo_sync_${companyId}_${currentMonthStr}`)
       .on('postgres_changes', { 
         event: '*', 
         schema: 'public', 
         table: 'attendance', 
         filter: `company_id=eq.${companyId}` 
-      }, () => {
-        loadData(true)
-      })
-      .subscribe()
-      
-    const channel2 = supabase.channel(`tareo_attendance_logs_${companyId}_${currentMonthStr}`)
+      }, triggerDebouncedLoad)
       .on('postgres_changes', { 
         event: '*', 
         schema: 'public', 
         table: 'attendance_logs', 
         filter: `company_id=eq.${companyId}` 
-      }, () => {
-        loadData(true)
-      })
+      }, triggerDebouncedLoad)
       .subscribe()
 
-    // Robust Fallback: Poll every 30 seconds only if window is active
+    // Robust Fallback: Poll every 45 seconds only if window is active
     const fallbackInterval = setInterval(() => {
       if (typeof document !== 'undefined' && !document.hidden) {
         loadData(true)
       }
-    }, 30000)
+    }, 45000)
 
     return () => {
-      supabase.removeChannel(channel1)
-      supabase.removeChannel(channel2)
+      if (realtimeDebounce) clearTimeout(realtimeDebounce)
+      supabase.removeChannel(channel)
       clearInterval(fallbackInterval)
     }
-  }, [loadData, companyId, currentMonthStr])
+  }, [loadData, companyId, currentMonthStr, cacheKeyPrefix, initialDashboardData])
 
   const filteredWorkers = useMemo(() => {
     const lowerSearch = (searchTerm || '').toLowerCase()

@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Upload, FileSpreadsheet, Check, AlertCircle, ArrowLeft, Loader2, Save, Download } from 'lucide-react'
 import Link from 'next/link'
-import * as XLSX from 'xlsx'
+// Dynamic import of xlsx on demand
 import { importProducts, checkExistingProductCodes } from '@/app/(main)/inventory/actions'
 import { toast } from 'sonner'
 
@@ -31,67 +31,86 @@ export function ProductImport() {
  const [error, setError] = useState<string | null>(null)
  const [fileName, setFileName] = useState<string | null>(null)
 
- const downloadProductTemplate = () => {
  const headers = [
- 'código',
- 'nombre',
- 'categoría',
- 'descripción',
- 'unidad',
- 'tipo',
- 'stock_minimo',
- 'fecha_ingreso',
- 'observaciones',
- 'stock_inicial',
- 'almacen_destino'
+   'código',
+   'nombre',
+   'categoría',
+   'descripción',
+   'unidad',
+   'tipo',
+   'stock_minimo',
+   'fecha_ingreso',
+   'observaciones',
+   'stock_inicial',
+   'almacen_destino'
  ]
  const samples = [
- {
- código: 'SKU-001',
- nombre: 'CLAVOS 2 PULGADAS',
- categoría: 'herramientas',
- descripción: 'Clavos de acero reforzados',
- unidad: 'unidad',
- tipo: 'herramienta',
- stock_minimo: 50,
- fecha_ingreso: '2026-01-10',
- observaciones: 'Para almacén de mina',
- stock_inicial: 100,
- almacen_destino: 'Almacén Central'
- },
- {
- código: 'SKU-002',
- nombre: 'GAMBUCHOS',
- categoría: 'alimentos',
- descripción: 'Ración de chocolate de campamento',
- unidad: 'unidad',
- tipo: 'consumible',
- stock_minimo: 20,
- fecha_ingreso: '2026-01-10',
- observaciones: 'Consumo cocina',
- stock_inicial: 80,
- almacen_destino: 'Almacén Cocina'
- },
- {
- código: 'SKU-003',
- nombre: 'PITA',
- categoría: 'otro',
- descripción: 'Cuerda de pita de amarre',
- unidad: 'metros',
- tipo: 'consumible',
- stock_minimo: 10,
- fecha_ingreso: '2026-01-10',
- observaciones: 'Consumo general',
- stock_inicial: 200,
- almacen_destino: 'Almacén Central'
- }
+   {
+     código: 'SKU-001',
+     nombre: 'CLAVOS 2 PULGADAS',
+     categoría: 'herramientas',
+     descripción: 'Clavos de acero reforzados',
+     unidad: 'unidad',
+     tipo: 'herramienta',
+     stock_minimo: 50,
+     fecha_ingreso: '2026-01-10',
+     observaciones: 'Para almacén de mina',
+     stock_inicial: 100,
+     almacen_destino: 'Almacén Central'
+   },
+   {
+     código: 'SKU-002',
+     nombre: 'GAMBUCHOS',
+     categoría: 'alimentos',
+     descripción: 'Ración de chocolate de campamento',
+     unidad: 'unidad',
+     tipo: 'consumible',
+     stock_minimo: 20,
+     fecha_ingreso: '2026-01-10',
+     observaciones: 'Consumo cocina',
+     stock_inicial: 80,
+     almacen_destino: 'Almacén Cocina'
+   },
+   {
+     código: 'SKU-003',
+     nombre: 'PITA',
+     categoría: 'otro',
+     descripción: 'Cuerda de pita de amarre',
+     unidad: 'metros',
+     tipo: 'consumible',
+     stock_minimo: 10,
+     fecha_ingreso: '2026-01-10',
+     observaciones: 'Consumo general',
+     stock_inicial: 200,
+     almacen_destino: 'Almacén Central'
+   }
  ]
 
- const ws = XLSX.utils.json_to_sheet(samples, { header: headers })
+ const downloadProductTemplate = async () => {
+   const XLSX = await import('xlsx')
+   const ws = XLSX.utils.json_to_sheet(samples, { header: headers })
  const wb = XLSX.utils.book_new()
  XLSX.utils.book_append_sheet(wb, ws, 'Plantilla Productos')
  XLSX.writeFile(wb, 'Plantilla_Productos_Oficial.xlsx')
  toast.success('Plantilla descargada con éxito.')
+ }
+
+ const downloadProductCsvTemplate = () => {
+   const csvRows = [
+     headers.join(','),
+     ...samples.map(row => headers.map(h => `"${(row as any)[h] ?? ''}"`).join(','))
+   ]
+   const csvContent = '\uFEFF' + csvRows.join('\r\n')
+   const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+   const url = URL.createObjectURL(blob)
+   const a = document.createElement('a')
+   a.href = url
+   a.download = 'Plantilla_Productos_Oficial.csv'
+   document.body.appendChild(a)
+   a.click()
+   document.body.removeChild(a)
+   URL.revokeObjectURL(url)
+   toast.success('Plantilla CSV descargada con éxito.')
  }
 
  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -104,6 +123,7 @@ export function ProductImport() {
  const reader = new FileReader()
  reader.onload = async (evt) => {
  try {
+ const XLSX = await import('xlsx')
  const bstr = evt.target?.result
  const wb = XLSX.read(bstr, { type: 'binary' })
  const wsname = wb.SheetNames[0]
@@ -225,9 +245,17 @@ export function ProductImport() {
  <div className="flex flex-wrap gap-4 justify-center mt-4">
  <button 
  onClick={downloadProductTemplate}
- className="bg-white border-2 border-indigo-200 hover:bg-indigo-50 text-indigo-600 px-6 py-2.5 rounded-xl text-xs font-black tracking-tight transition-all flex items-center gap-2 shadow-sm"
+ className="bg-white border-2 border-indigo-200 hover:bg-indigo-50 text-indigo-600 px-5 py-2.5 rounded-xl text-xs font-black tracking-tight transition-all flex items-center gap-2 shadow-sm"
+ title="Descargar en formato Microsoft Excel (.xlsx)"
  >
- <Download size={16} className="text-indigo-600" /> Descargar Plantilla
+ <Download size={16} className="text-indigo-600" /> Descargar Excel (.xlsx)
+ </button>
+ <button 
+ onClick={downloadProductCsvTemplate}
+ className="bg-white border-2 border-emerald-300 hover:bg-emerald-50 text-emerald-700 px-5 py-2.5 rounded-xl text-xs font-black tracking-tight transition-all flex items-center gap-2 shadow-sm"
+ title="Descargar en formato CSV (compatible sin Microsoft Excel)"
+ >
+ <Download size={16} className="text-emerald-700" /> Descargar CSV (.csv)
  </button>
  <label className="bg-indigo-600 hover:bg-indigo-700 !text-white px-6 py-2.5 rounded-xl text-xs font-black tracking-tight cursor-pointer transition-all shadow-md flex items-center gap-2">
  <Upload size={16} className="!text-white" />
@@ -240,6 +268,9 @@ export function ProductImport() {
  />
  </label>
  </div>
+ <p className="text-[11px] text-slate-500 font-medium text-center mt-4 bg-slate-50 border border-slate-200/80 rounded-xl py-2 px-4 max-w-lg mx-auto">
+   💡 <strong>Sugerencia:</strong> Si tu equipo no tiene Microsoft Excel instalado y Windows muestra un aviso al hacer doble clic en el archivo <code>.xlsx</code>, descarga la versión <strong>«Descargar CSV (.csv)»</strong> o abre la plantilla directamente en Google Sheets.
+ </p>
  </div>
  ) : (
  <div className="space-y-6">

@@ -10,8 +10,7 @@ import {
  ArrowLeft, Hammer, Trees, Wrench, Truck, Cpu, Fuel, Activity, ClipboardCheck,
  FileSpreadsheet, Factory, Layers, Settings, Boxes, Sprout, HeartHandshake
 } from 'lucide-react'
-import { logout } from '@/app/(auth)/login/actions'
-import { stopImpersonation } from '@/app/(main)/super-admin/actions'
+import { logout, stopImpersonation } from '@/app/(auth)/login/actions'
 import { useState, useEffect, useMemo, useRef } from 'react'
 import { useUserRole } from '@/components/providers/rbac-provider'
 import { useSidebar } from '@/components/providers/sidebar-provider'
@@ -619,7 +618,7 @@ export function Sidebar() {
                       <Link
                         key={`${group.id}-${item.href}-${item.name}`}
                         href={item.href}
-                        prefetch={isHeavyModule ? false : undefined}
+                        prefetch={false}
                         onClick={(e) => {
                           if (isComingSoon) {
                             e.preventDefault()

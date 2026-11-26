@@ -1,4 +1,4 @@
-﻿import { Sidebar } from '@/components/layout/sidebar'
+import { Sidebar } from '@/components/layout/sidebar'
 import { Header } from '@/components/layout/header'
 import { getUserSession, getActiveViewMode } from '@/lib/auth'
 import { OnboardingCheck } from '@/components/auth/onboarding-check'
@@ -19,12 +19,13 @@ export default async function DashboardLayout({
 }: {
   children: React.ReactNode
 }) {
-  const session = await getUserSession()
+  const [session, viewMode, globalSettings, headersList] = await Promise.all([
+    getUserSession(),
+    getActiveViewMode(),
+    getGlobalSettings(),
+    headers()
+  ])
   const extendedUser = session?.extendedUser
-  const viewMode = await getActiveViewMode()
-  const globalSettings = await getGlobalSettings()
-  
-  const headersList = await headers()
   const pathname = (headersList.get('x-pathname') || '').split('?')[0]
   
   // 1. Mandatory Session Guard

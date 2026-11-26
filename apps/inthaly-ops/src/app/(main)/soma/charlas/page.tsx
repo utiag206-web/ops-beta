@@ -10,7 +10,7 @@ import { toast } from 'sonner'
 import { getSomaTalks, createSomaTalk, getCurrentUser, confirmSomaTalk, updateSomaTalk, deleteSomaTalk, completeTalkParticipant } from '../actions'
 import { getWorkersShort } from '@/app/(main)/workers/actions'
 import { format } from 'date-fns'
-import { es } from 'date-fns/locale'
+import { es } from 'date-fns/locale/es'
 
 import { useRbac } from '@/components/providers/rbac-provider'
 

@@ -1,6 +1,5 @@
-import * as XLSX from 'xlsx'
-
-export function exportKardexToExcel(records: any[], product: any, initialBalance: number) {
+export async function exportKardexToExcel(records: any[], product: any, initialBalance: number) {
+  const XLSX = await import('xlsx')
   const isIntegerUnit = product ? ['UND', 'UNIDAD', 'PAR', 'CAJA'].includes(product.unit.toUpperCase()) : false
 
   const dataToExport = records.map(m => {
@@ -58,8 +57,9 @@ export function exportKardexToExcel(records: any[], product: any, initialBalance
   XLSX.writeFile(wb, `Kardex_${product?.code}_${date}.xlsx`)
 }
 
-export function exportReportsToExcel(reportName: string, items: any[]) {
+export async function exportReportsToExcel(reportName: string, items: any[]) {
   if (!items || items.length === 0) return
+  const XLSX = await import('xlsx')
 
   const ws = XLSX.utils.json_to_sheet(items)
   const wb = XLSX.utils.book_new()
@@ -68,7 +68,7 @@ export function exportReportsToExcel(reportName: string, items: any[]) {
   XLSX.writeFile(wb, `Reporte_${reportName}_${date}.xlsx`)
 }
 
-export function exportPettyCashToExcel(options: {
+export async function exportPettyCashToExcel(options: {
   transactions: any[]
   areaName: string
   companyInfo?: { name?: string; tax_id?: string; address?: string } | null
@@ -76,6 +76,7 @@ export function exportPettyCashToExcel(options: {
   filterType?: string
   searchTerm?: string
 }) {
+  const XLSX = await import('xlsx')
   const { transactions, areaName, companyInfo, userName, filterType = 'all', searchTerm = '' } = options
 
   const categoryMap: Record<string, string> = {
@@ -218,7 +219,7 @@ export function exportPettyCashToExcel(options: {
   XLSX.writeFile(wb, `Reporte_CajaChica_${cleanArea}_${dateFileStr}.xlsx`)
 }
 
-export function exportTareoToExcel(options: {
+export async function exportTareoToExcel(options: {
   monthStr: string
   workers: any[]
   daysInMonth: any[]
@@ -227,6 +228,7 @@ export function exportTareoToExcel(options: {
   kpis: any
   companyInfo?: { name?: string; tax_id?: string } | null
 }) {
+  const XLSX = await import('xlsx')
   const { monthStr, workers, daysInMonth, workerStatusesMap, workerSummaries, kpis, companyInfo } = options
   const now = new Date()
   const formattedNow = `${now.toLocaleDateString('es-PE')} ${now.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' })}`

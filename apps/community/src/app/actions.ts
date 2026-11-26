@@ -31,8 +31,13 @@ async function getAuthenticatedUserId(): Promise<string> {
 }
 
 export async function getFeedPostsAction(groupId?: string) {
-  const supabase = await createAdminClient()
-  return communityService.getFeedPosts(supabase, { groupId })
+  try {
+    const supabase = await createAdminClient()
+    return await communityService.getFeedPosts(supabase, { groupId })
+  } catch (err) {
+    console.error('getFeedPostsAction error:', err)
+    return []
+  }
 }
 
 export async function createPostAction(content: string, groupId?: string, tags?: string[]) {
@@ -85,8 +90,13 @@ export async function getPostCommentsAction(postId: string) {
 }
 
 export async function getGroupsAction(category?: string, search?: string) {
-  const supabase = await createAdminClient()
-  return communityService.getGroups(supabase, { category, search })
+  try {
+    const supabase = await createAdminClient()
+    return await communityService.getGroups(supabase, { category, search })
+  } catch (err) {
+    console.error('getGroupsAction error:', err)
+    return []
+  }
 }
 
 export async function getGroupBySlugAction(slug: string) {
@@ -133,18 +143,23 @@ export async function getRecommendedProfilesAction() {
 }
 
 export async function getCommunityProfileAction(identifier?: string) {
-  const supabase = await createAdminClient()
-  let idToLookup: string
-  if (identifier) {
-    idToLookup = identifier
-  } else {
-    try {
-      idToLookup = await getAuthenticatedUserId()
-    } catch {
-      return null
+  try {
+    const supabase = await createAdminClient()
+    let idToLookup: string
+    if (identifier) {
+      idToLookup = identifier
+    } else {
+      try {
+        idToLookup = await getAuthenticatedUserId()
+      } catch {
+        return null
+      }
     }
+    return await communityService.getProfile(supabase, idToLookup)
+  } catch (err) {
+    console.error('getCommunityProfileAction error:', err)
+    return null
   }
-  return communityService.getProfile(supabase, idToLookup)
 }
 
 /**
@@ -180,8 +195,13 @@ export async function respondInvitationAction(token: string, response: 'accept' 
 }
 
 export async function getTechnicalStoriesAction() {
-  const supabase = await createAdminClient()
-  return communityService.getTechnicalStories(supabase)
+  try {
+    const supabase = await createAdminClient()
+    return await communityService.getTechnicalStories(supabase)
+  } catch (err) {
+    console.error('getTechnicalStoriesAction error:', err)
+    return []
+  }
 }
 
 export async function getOnlineContactsAction() {

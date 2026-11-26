@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { X, CheckCircle2, FlaskConical, TestTube2, Truck, Activity } from 'lucide-react'
 import { PlantMineralBatch, PlantMineralSample } from '@/app/(main)/operaciones/planta/actions'
 import { MultiplePhotoCapture } from '@/components/shared/MultiplePhotoCapture'
+import { ModalPortal } from '@/components/ui/modal-portal'
 
 export function EditTrasladoModal({ isOpen, batch, onClose, onSave }: { isOpen: boolean, batch: PlantMineralBatch | null, onClose: () => void, onSave: (data: Partial<PlantMineralBatch>) => void }) {
   const [formData, setFormData] = useState<Partial<PlantMineralBatch>>({})
@@ -19,6 +20,7 @@ export function EditTrasladoModal({ isOpen, batch, onClose, onSave }: { isOpen: 
   if (!isOpen || !batch) return null
 
   return (
+    <ModalPortal>
     <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
       <div className="bg-white rounded-2xl w-full max-w-2xl overflow-hidden shadow-2xl">
         <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
@@ -63,6 +65,7 @@ export function EditTrasladoModal({ isOpen, batch, onClose, onSave }: { isOpen: 
         </div>
       </div>
     </div>
+    </ModalPortal>
   )
 }
 
@@ -80,6 +83,7 @@ export function EditPlantaModal({ isOpen, batch, onClose, onSave }: { isOpen: bo
   if (!isOpen || !batch) return null
 
   return (
+    <ModalPortal>
     <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
       <div className="bg-white rounded-2xl w-full max-w-xl overflow-hidden shadow-2xl">
         <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
@@ -134,6 +138,7 @@ export function EditPlantaModal({ isOpen, batch, onClose, onSave }: { isOpen: bo
         </div>
       </div>
     </div>
+    </ModalPortal>
   )
 }
 
@@ -159,6 +164,7 @@ export function MuestreoModal({ isOpen, sample, batchId, onClose, onSave }: { is
   if (!isOpen) return null
 
   return (
+    <ModalPortal>
     <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
       <div className="bg-white rounded-2xl w-full max-w-xl overflow-hidden shadow-2xl">
         <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
@@ -200,6 +206,7 @@ export function MuestreoModal({ isOpen, sample, batchId, onClose, onSave }: { is
         </div>
       </div>
     </div>
+    </ModalPortal>
   )
 }
 
@@ -217,6 +224,7 @@ export function LaboratorioModal({ isOpen, sample, batchCode, onClose, onSave }:
   if (!isOpen || !sample) return null
 
   return (
+    <ModalPortal>
     <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
       <div className="bg-white rounded-2xl w-full max-w-xl overflow-hidden shadow-2xl">
         <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
@@ -262,5 +270,6 @@ export function LaboratorioModal({ isOpen, sample, batchCode, onClose, onSave }:
         </div>
       </div>
     </div>
+    </ModalPortal>
   )
 }

@@ -10,8 +10,9 @@ import { toast } from 'sonner'
 import { getSomaTrainings, createSomaTraining, updateSomaTraining, deleteSomaTraining, completeTrainingParticipant } from '../actions'
 import { getWorkersShort } from '@/app/(main)/workers/actions'
 import { format } from 'date-fns'
-import { es } from 'date-fns/locale'
+import { es } from 'date-fns/locale/es'
 import { useRbac } from '@/components/providers/rbac-provider'
+import { useOperationalContext } from '@/components/providers/operational-context-provider'
 
 // Safe date helper that never throws RangeError
 const formatDateSafe = (dateStr: string | null | undefined, fmt: string = 'dd MMM, yyyy') => {
@@ -33,6 +34,8 @@ const formatDateSafe = (dateStr: string | null | undefined, fmt: string = 'dd MM
 
 export default function CapacitacionesSomaPage() {
  const { role_id, user: rbacUser } = useRbac()
+ const { companyId } = useOperationalContext()
+ const trainingsCacheKey = companyId ? `soma_trainings_cache_${companyId}` : 'soma_trainings_cache'
   const [trainings, setTrainings] = useState<any[]>([])
   const [workers, setWorkers] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
@@ -89,7 +92,7 @@ export default function CapacitacionesSomaPage() {
           if (Array.isArray(tData)) {
             try {
               if (typeof localStorage !== 'undefined') {
-                localStorage.setItem('soma_trainings_cache', JSON.stringify(tData))
+                localStorage.setItem(trainingsCacheKey, JSON.stringify(tData))
               }
             } catch (_) {}
           }
@@ -101,7 +104,7 @@ export default function CapacitacionesSomaPage() {
       if (tData === null || !Array.isArray(tData)) {
         try {
           if (typeof localStorage !== 'undefined') {
-            const rawT = localStorage.getItem('soma_trainings_cache')
+            const rawT = localStorage.getItem(trainingsCacheKey)
             if (rawT) {
               const parsedT = JSON.parse(rawT)
               if (Array.isArray(parsedT)) tData = parsedT
@@ -126,10 +129,6 @@ export default function CapacitacionesSomaPage() {
 
   useEffect(() => {
     loadData()
-    const timer = setTimeout(() => {
-      ensureWorkers()
-    }, 500)
-    return () => clearTimeout(timer)
   }, [])
 
   const filteredTrainings = trainings.filter(t => 

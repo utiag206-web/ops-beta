@@ -20,14 +20,14 @@ export async function getProductionRecords(dateStr?: string) {
 
  let query = supabase
  .from('production_control')
- .select('*')
+ .select('id, company_id, date, workplace, shift, warehouse_id, advance_meters, nails_qty, cambuchos, chocolate_qty, pita_meters, shift_supervisor, dumper_mineral, dumper_waste, observations, created_by, created_at')
  .eq('company_id', companyId)
 
  if (dateStr) {
  query = query.eq('date', dateStr)
  }
 
- const { data, error } = await query.order('date', { ascending: false }).order('created_at', { ascending: true })
+ const { data, error } = await query.order('date', { ascending: false }).order('created_at', { ascending: true }).limit(200)
 
  if (error) {
  console.error('[PRODUCTION_ACTIONS] Error fetching records:', error)

@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { X, Loader2, CheckCircle2, Factory } from 'lucide-react'
 import { createWarehouse, updateWarehouse } from '@/app/(main)/inventory/actions'
 import { toast } from 'sonner'
+import { ModalPortal } from '@/components/ui/modal-portal'
 
 interface WarehouseFormProps {
  isOpen: boolean
@@ -75,6 +76,7 @@ export function WarehouseForm({ isOpen, onClose, onSuccess, editingWarehouse }: 
  }
 
  return (
+  <ModalPortal>
  <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
  <div className="bg-white w-full max-w-sm rounded-[2.5rem] shadow-2xl overflow-hidden border border-slate-100 animate-in zoom-in-95 duration-200">
  <div className="p-8 border-b border-slate-50 flex justify-between items-center bg-indigo-50/30">
@@ -161,5 +163,6 @@ export function WarehouseForm({ isOpen, onClose, onSuccess, editingWarehouse }: 
  </form>
  </div>
  </div>
+  </ModalPortal>
  )
 }

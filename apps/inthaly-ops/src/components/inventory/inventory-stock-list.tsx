@@ -12,7 +12,7 @@ import {
  Box, Loader2, FileSpreadsheet
 } from 'lucide-react'
 import { StockForm } from './stock-form'
-import * as XLSX from 'xlsx'
+import { ModalPortal } from '@/components/ui/modal-portal'
 import { getMovementTraceability } from '@/app/(main)/inventory/actions'
 import { toast } from 'sonner'
 import type { InventoryMovement as Movement, StockItem } from '@/types/inventory.types'
@@ -95,7 +95,8 @@ export function InventoryStockList({
  return Array.from(new Set(stock.map(item => item.warehouses?.name || item.location))).sort();
  }, [stock])
 
- const exportToExcel = () => {
+ const exportToExcel = async () => {
+ const XLSX = await import('xlsx')
  const dataToExport = stock.map(item => ({
  'Código / SKU': item.products.code,
  'Descripción': item.products.name,
@@ -433,6 +434,7 @@ function MovementDetailModal({
  const isSalida = movement.type === 'salida'
 
  return (
+  <ModalPortal>
  <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
  <div className="bg-white rounded-3xl w-full max-w-lg border border-slate-100 shadow-2xl p-6 md:p-8 flex flex-col max-h-[90vh] overflow-y-auto animate-in zoom-in-95 duration-200">
  {/* Header with Type Ribbon */}
@@ -570,5 +572,6 @@ function MovementDetailModal({
  </div>
  </div>
  </div>
+  </ModalPortal>
  )
 }

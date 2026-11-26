@@ -5,6 +5,7 @@ import { X, Loader2, CheckCircle2, Package } from 'lucide-react'
 import { updateStockRecord, getWarehouses } from '@/app/(main)/inventory/actions'
 import { WarehouseForm } from './warehouse-form'
 import { toast } from 'sonner'
+import { ModalPortal } from '@/components/ui/modal-portal'
 
 interface StockFormProps {
  isOpen: boolean
@@ -84,6 +85,7 @@ export function StockForm({ isOpen, onClose, onSuccess, products, editingItem }:
  }
 
  return (
+  <ModalPortal>
  <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
  <div className="bg-white w-full max-w-lg rounded-[2.5rem] shadow-2xl overflow-hidden border border-slate-100 animate-in zoom-in-95 duration-200">
  <div className="p-8 border-b border-slate-50 flex justify-between items-center bg-emerald-50/30">
@@ -183,5 +185,6 @@ export function StockForm({ isOpen, onClose, onSuccess, products, editingItem }:
  }}
  />
  </div>
+  </ModalPortal>
  )
 }

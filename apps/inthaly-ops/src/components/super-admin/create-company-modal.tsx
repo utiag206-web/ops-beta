@@ -1,4 +1,4 @@
-﻿'use client'
+'use client'
 
 import { useState } from 'react'
 import { 
@@ -8,6 +8,7 @@ import {
 } from 'lucide-react'
 import { createCompany } from '@/app/(main)/super-admin/actions'
 import { useRouter } from 'next/navigation'
+import { ModalPortal } from '@/components/ui/modal-portal'
 
 interface CreateCompanyModalProps {
   isOpen: boolean
@@ -128,7 +129,8 @@ export function CreateCompanyModal({ isOpen, onClose }: CreateCompanyModalProps)
 
     if (success) {
     return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
+      <ModalPortal>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
         <div className="bg-white rounded-2xl w-full max-w-md overflow-hidden shadow-2xl p-6 sm:p-7 text-center animate-in zoom-in-95 duration-200">
           <div className="w-14 h-14 bg-emerald-100 text-emerald-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
             <CheckCircle2 size={32} />
@@ -174,11 +176,13 @@ export function CreateCompanyModal({ isOpen, onClose }: CreateCompanyModalProps)
           </button>
         </div>
       </div>
+      </ModalPortal>
     )
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-sm overflow-y-auto">
+    <ModalPortal>
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-sm overflow-y-auto">
       <div className="relative my-auto bg-white rounded-2xl w-full max-w-2xl overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200 border border-slate-200 max-h-[92vh] flex flex-col">
         {/* Header */}
         <div className="p-4 sm:p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
@@ -418,6 +422,7 @@ export function CreateCompanyModal({ isOpen, onClose }: CreateCompanyModalProps)
         </form>
       </div>
     </div>
+    </ModalPortal>
   )
 }
 

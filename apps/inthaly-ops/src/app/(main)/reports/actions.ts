@@ -50,9 +50,9 @@ export async function getReportsData(month?: number, year?: number, workerId?: s
       attendanceQuery,
       ppeQuery,
       Promise.all([
-        applyIsolation(supabase.from('incidencias').select('*'), companyId, extendedUser.role_id),
-        applyIsolation(supabase.from('soma_trainings').select('*'), companyId, extendedUser.role_id),
-        applyIsolation(supabase.from('soma_hsec_stop').select('*'), companyId, extendedUser.role_id)
+        applyIsolation(supabase.from('incidencias').select('id, status'), companyId, extendedUser.role_id),
+        applyIsolation(supabase.from('soma_trainings').select('id'), companyId, extendedUser.role_id),
+        applyIsolation(supabase.from('soma_hsec_stop').select('id, status'), companyId, extendedUser.role_id)
       ])
     ])
 

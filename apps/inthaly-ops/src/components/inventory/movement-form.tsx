@@ -9,10 +9,12 @@ import {
  getNextDocumentNumber,
  getPurchaseOrders, 
  getPurchaseOrderItems,
- processInboundFromPO 
+ processInboundFromPO,
+  getSingleProductStock
 } from '@/app/(main)/inventory/actions'
 import { toast } from 'sonner'
 import { useRbac } from '@/components/providers/rbac-provider'
+import { ModalPortal } from '@/components/ui/modal-portal'
 
 interface MovementFormProps {
  isOpen: boolean
@@ -20,6 +22,11 @@ interface MovementFormProps {
  onSuccess?: (newMovement?: any, newBalance?: number) => void
  products: any[]
 }
+
+
+// Caché en memoria para evitar llamadas redundantes a la BD al reabrir el formulario
+let cachedWarehouses: any[] | null = null
+let cachedMovementTypes: any[] | null = null
 
 export function MovementForm({ isOpen, onClose, onSuccess, products }: MovementFormProps) {
  const rbac = useRbac()
@@ -62,49 +69,87 @@ export function MovementForm({ isOpen, onClose, onSuccess, products }: MovementF
 
  // Search input for products to bypass DOM rendering overhead
  const [productSearch, setProductSearch] = useState('')
+  const [availableStock, setAvailableStock] = useState<number | null>(null)
+  const [checkingStock, setCheckingStock] = useState(false)
 
- // Carga inicial
- useEffect(() => {
- if (isOpen) {
- const load = async () => {
- setInitLoading(true)
- console.log("[MOVEMENT_FORM_DEBUG] Loading initial data...")
- const [wRes, mTRes, poRes] = await Promise.all([
- getWarehouses(true), 
- getMovementTypes(),
- getPurchaseOrders()
- ])
- console.log("[MOVEMENT_FORM_DEBUG] Warehouses:", wRes.data?.length || 0, "Types:", mTRes.data?.length || 0)
- if (mTRes.error) {
- console.error("[MOVEMENT_FORM_DEBUG] Error loading types:", mTRes.error)
- toast.error(`Error al cargar tipos de movimiento: ${mTRes.error}`)
- } else if (!mTRes.data || mTRes.data.length === 0) {
- console.warn("[MOVEMENT_FORM_DEBUG] No movement types found after load/seed")
- toast.error("No se encontraron tipos de movimiento configurados en el sistema.")
- }
- 
- if (wRes.data) setWarehouses(wRes.data)
- if (mTRes.data) setMovementTypes(mTRes.data)
- if (poRes.data) setPurchaseOrders(poRes.data)
- setInitLoading(false)
- }
- load()
- } else {
- setForm(prev => ({
- ...prev,
- product_id: '', movement_type_id: '', quantity: 0, warehouse_id: '',
- target_warehouse_id: '', document_type: '', document_number: '', reference: '',
- responsible_name: '', observation: '',
- entry_origin: 'MANUAL', outbound_type: 'EXTERNAL', po_id: '', invoice_type: 'FACTURA',
- invoice_number: '', guide_number: '', 
- document_date: new Date().toISOString().split('T')[0]
- }))
- setPoItems([])
- setReceivedQtys({})
- setAdjType('plus')
- setProductSearch('')
- }
- }, [isOpen])
+ // Carga inicial optimizada con caché en memoria
+  useEffect(() => {
+    if (isOpen) {
+      const load = async () => {
+        if (cachedWarehouses && cachedMovementTypes) {
+          setWarehouses(cachedWarehouses)
+          setMovementTypes(cachedMovementTypes)
+          setInitLoading(false)
+          return
+        }
+
+        setInitLoading(true)
+        const [wRes, mTRes] = await Promise.all([
+          getWarehouses(true), 
+          getMovementTypes()
+        ])
+        
+        if (mTRes.error) {
+          console.error("[MOVEMENT_FORM_DEBUG] Error loading types:", mTRes.error)
+          toast.error(`Error al cargar tipos de movimiento: ${mTRes.error}`)
+        } else if (mTRes.data && mTRes.data.length > 0) {
+          setMovementTypes(mTRes.data)
+          cachedMovementTypes = mTRes.data
+        }
+        
+        if (wRes.data) {
+          setWarehouses(wRes.data)
+          cachedWarehouses = wRes.data
+        }
+        setInitLoading(false)
+      }
+      load()
+    } else {
+      setForm(prev => ({
+        ...prev,
+        product_id: '', movement_type_id: '', quantity: 0, warehouse_id: '',
+        target_warehouse_id: '', document_type: '', document_number: '', reference: '',
+        responsible_name: '', observation: '',
+        entry_origin: 'MANUAL', outbound_type: 'EXTERNAL', po_id: '', invoice_type: 'FACTURA',
+        invoice_number: '', guide_number: '', 
+        document_date: new Date().toISOString().split('T')[0]
+      }))
+      setPoItems([])
+      setReceivedQtys({})
+      setAdjType('plus')
+      setProductSearch('')
+      setAvailableStock(null)
+    }
+  }, [isOpen])
+
+  // Carga diferida (lazy load) de órdenes de compra SOLO cuando el usuario selecciona modo OC
+  useEffect(() => {
+    if (isOpen && form.entry_origin === 'PO' && purchaseOrders.length === 0) {
+      getPurchaseOrders().then(poRes => {
+        if (poRes.data) setPurchaseOrders(poRes.data)
+      })
+    }
+  }, [isOpen, form.entry_origin, purchaseOrders.length])
+
+  // Verificación reactiva y bajo demanda de stock en el almacén seleccionado
+  useEffect(() => {
+    let isMounted = true
+    if (form.product_id && form.warehouse_id) {
+      setCheckingStock(true)
+      getSingleProductStock(form.product_id, form.warehouse_id).then(res => {
+        if (isMounted) {
+          setAvailableStock(typeof res.stock === 'number' ? res.stock : 0)
+          setCheckingStock(false)
+        }
+      }).catch(() => {
+        if (isMounted) setCheckingStock(false)
+      })
+    } else {
+      setAvailableStock(null)
+      setCheckingStock(false)
+    }
+    return () => { isMounted = false }
+  }, [form.product_id, form.warehouse_id])
 
  // Sync productSearch when product_id is set/changed elsewhere (like SKU typing)
  useEffect(() => {
@@ -231,7 +276,14 @@ export function MovementForm({ isOpen, onClose, onSuccess, products }: MovementF
  return
  }
 
- const signedQty = isAdjustment ? (form.quantity * (adjType === 'plus' ? 1 : -1)) : form.quantity
+ 
+      // Validación preventiva de stock en tiempo real
+      if ((activeMovementType?.effect === 'OUT' || isTransfer) && availableStock !== null && form.quantity > availableStock) {
+        toast.error(`Stock insuficiente: solo hay ${availableStock} ${selectedProduct?.unit || 'UND'} disponibles en este almacén`)
+        setLoading(false)
+        return
+      }
+      const signedQty = isAdjustment ? (form.quantity * (adjType === 'plus' ? 1 : -1)) : form.quantity
  const payload = { ...form, quantity: signedQty }
  
  if (isTransfer) payload.document_type = 'TRS' 
@@ -261,19 +313,20 @@ export function MovementForm({ isOpen, onClose, onSuccess, products }: MovementF
  }
 
  return (
+  <ModalPortal>
  <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
- <div className="bg-white w-full max-w-3xl rounded-[3rem] shadow-2xl overflow-hidden border border-slate-100 animate-in zoom-in-95 duration-200 flex flex-col max-h-[90vh]">
- <div className="p-8 border-b border-slate-50 flex justify-between items-center bg-slate-50/50 shrink-0">
+ <div className="bg-white w-full max-w-3xl rounded-2xl shadow-2xl overflow-hidden border border-slate-100 animate-in zoom-in-95 duration-200 flex flex-col max-h-[90vh]">
+ <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50 shrink-0">
  <div className="flex items-center gap-4">
- <div className="bg-indigo-600 p-3 rounded-2xl text-white shadow-lg shadow-indigo-100">
- <Settings2 size={24} />
+ <div className="bg-indigo-600 p-2 rounded-xl text-white shadow-sm">
+ <Settings2 size={20} />
  </div>
  <div>
- <h2 className="text-2xl font-black text-slate-800 tracking-tight">Operación de Inventario</h2>
- <p className="text-slate-500 text-sm font-medium">Gestión de flujo físico y documental.</p>
+ <h2 className="text-lg font-black text-slate-800 tracking-tight leading-none">Operación de Inventario</h2>
+ <p className="text-slate-500 text-xs font-medium mt-1">Gestión de flujo físico y documental.</p>
  </div>
  </div>
- <button onClick={onClose} className="p-2 hover:bg-white rounded-full transition-colors text-slate-400">
+ <button onClick={onClose} className="p-1.5 hover:bg-slate-100 rounded-lg transition-colors text-slate-400">
  <X size={24} />
  </button>
  </div>
@@ -284,7 +337,7 @@ export function MovementForm({ isOpen, onClose, onSuccess, products }: MovementF
  <span className="font-bold">Sincronizando con maestros ERP...</span>
  </div>
  ) : (
- <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto custom-scrollbar p-8 space-y-8">
+ <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto custom-scrollbar p-6 space-y-5">
  
  {movementTypes.length === 0 && !initLoading && (
  <div className="bg-rose-50 border border-rose-100 p-6 rounded-3xl flex flex-col gap-4 text-rose-800">
@@ -361,7 +414,7 @@ export function MovementForm({ isOpen, onClose, onSuccess, products }: MovementF
  <label className="text-[11px] font-black tracking-tight text-slate-400 px-1">Ubicación <span className="text-rose-500">*</span></label>
  <select 
  required
- className="w-full bg-slate-50 border-2 border-transparent focus:border-indigo-500 rounded-2xl p-4 text-sm font-bold transition-all shadow-sm outline-none"
+ className="w-full bg-slate-50 border-2 border-transparent focus:border-indigo-500 rounded-xl p-2.5 text-xs sm:text-sm font-semibold transition-all shadow-sm outline-none"
  value={form.warehouse_id}
  onChange={e => setForm(prev => ({...prev, warehouse_id: e.target.value}))}
  >
@@ -395,7 +448,7 @@ export function MovementForm({ isOpen, onClose, onSuccess, products }: MovementF
  type="text"
  required
  placeholder="Filtrar producto por nombre..."
- className="w-full bg-slate-50 border-2 border-transparent focus:border-indigo-500 rounded-2xl p-4 text-sm font-bold transition-all outline-none"
+ className="w-full bg-slate-50 border-2 border-transparent focus:border-indigo-500 rounded-xl p-2.5 text-xs sm:text-sm font-semibold transition-all outline-none"
  value={productSearch}
  onFocus={() => setDropdownOpen(true)}
  onBlur={() => setTimeout(() => setDropdownOpen(false), 250)}
@@ -460,7 +513,7 @@ export function MovementForm({ isOpen, onClose, onSuccess, products }: MovementF
  <div className="space-y-1.5">
  <label className="text-[11px] font-black tracking-tight text-slate-400 px-1">Origen / Documento</label>
  <select 
- className="w-full bg-white border-2 border-transparent focus:border-emerald-500 rounded-2xl p-4 text-sm font-bold outline-none shadow-sm"
+ className="w-full bg-white border-2 border-transparent focus:border-emerald-500 rounded-xl p-2.5 text-xs sm:text-sm font-semibold outline-none shadow-sm"
  value={form.invoice_type}
  onChange={e => setForm(prev => ({...prev, invoice_type: e.target.value}))}
  >
@@ -479,7 +532,25 @@ export function MovementForm({ isOpen, onClose, onSuccess, products }: MovementF
  <div className="space-y-6 animate-in slide-in-from-top-4">
  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
  <div className="space-y-1.5">
- <label className="text-[11px] font-black tracking-tight text-rose-500 px-1">Cantidad a Retirar</label>
+ 
+              {availableStock !== null && (
+                <div className={`p-3 rounded-xl border text-xs font-bold flex items-center justify-between ${
+                  availableStock <= 0 
+                    ? 'bg-rose-50 border-rose-200 text-rose-700' 
+                    : form.quantity > availableStock 
+                      ? 'bg-amber-50 border-amber-200 text-amber-800' 
+                      : 'bg-emerald-50 border-emerald-200 text-emerald-800'
+                }`}>
+                  <span>Stock disponible en almacén: <strong>{availableStock}</strong> {selectedProduct?.unit || 'UND'}</span>
+                  {checkingStock ? (
+                    <Loader2 size={12} className="animate-spin" />
+                  ) : form.quantity > availableStock && availableStock > 0 ? (
+                    <span className="text-[10px] bg-amber-200/80 text-amber-900 px-2 py-0.5 rounded-md font-black">Excede stock</span>
+                  ) : null}
+                </div>
+              )}
+
+              <label className="text-[11px] font-black tracking-tight text-rose-500 px-1">Cantidad a Retirar</label>
  <div className="relative">
  <input 
  type="number"
@@ -497,7 +568,7 @@ export function MovementForm({ isOpen, onClose, onSuccess, products }: MovementF
  <input 
  type="text"
  placeholder="Nombre completo..."
- className="w-full bg-white border-2 border-transparent focus:border-rose-500 rounded-2xl p-4 text-sm font-bold outline-none shadow-sm"
+ className="w-full bg-white border-2 border-transparent focus:border-rose-500 rounded-xl p-2.5 text-xs sm:text-sm font-semibold outline-none shadow-sm"
  value={form.responsible_name.toUpperCase()}
  onChange={e => setForm(prev => ({...prev, responsible_name: e.target.value.toUpperCase()}))}
  />
@@ -523,7 +594,7 @@ export function MovementForm({ isOpen, onClose, onSuccess, products }: MovementF
  <label className="text-[11px] font-black tracking-tight text-indigo-600 px-1">Almacén de Destino <span className="text-rose-500">*</span></label>
  <select 
  required
- className="w-full bg-white border-2 border-indigo-100 focus:border-indigo-500 rounded-2xl p-4 text-sm font-bold outline-none shadow-sm"
+ className="w-full bg-white border-2 border-indigo-100 focus:border-indigo-500 rounded-xl p-2.5 text-xs sm:text-sm font-semibold outline-none shadow-sm"
  value={form.target_warehouse_id}
  onChange={e => setForm(prev => ({...prev, target_warehouse_id: e.target.value}))}
  >
@@ -595,7 +666,7 @@ export function MovementForm({ isOpen, onClose, onSuccess, products }: MovementF
  <input 
  type="text"
  placeholder="Ej: Inventario cíclico..."
- className="w-full bg-white border-2 border-transparent focus:border-amber-500 rounded-2xl p-4 text-sm font-bold outline-none shadow-sm"
+ className="w-full bg-white border-2 border-transparent focus:border-amber-500 rounded-xl p-2.5 text-xs sm:text-sm font-semibold outline-none shadow-sm"
  value={form.reference.toUpperCase()}
  onChange={e => setForm(prev => ({...prev, reference: e.target.value.toUpperCase()}))}
  />
@@ -611,7 +682,7 @@ export function MovementForm({ isOpen, onClose, onSuccess, products }: MovementF
  <input 
  type="text"
  placeholder="Ej: F001-000123"
- className="w-full bg-white border-2 border-transparent focus:border-indigo-500 rounded-2xl p-4 text-sm font-bold outline-none shadow-sm"
+ className="w-full bg-white border-2 border-transparent focus:border-indigo-500 rounded-xl p-2.5 text-xs sm:text-sm font-semibold outline-none shadow-sm"
  value={form.invoice_number.toUpperCase()}
  onChange={e => setForm(prev => ({...prev, invoice_number: e.target.value.toUpperCase()}))}
  />
@@ -620,7 +691,7 @@ export function MovementForm({ isOpen, onClose, onSuccess, products }: MovementF
  <label className="text-[11px] font-black tracking-tight text-slate-400 px-1">Motivo / Observación</label>
  <input 
  placeholder="Detalles adicionales..."
- className="w-full bg-white border-2 border-transparent focus:border-indigo-500 rounded-2xl p-4 text-sm font-bold outline-none shadow-sm"
+ className="w-full bg-white border-2 border-transparent focus:border-indigo-500 rounded-xl p-2.5 text-xs sm:text-sm font-semibold outline-none shadow-sm"
  value={form.observation.toUpperCase()}
  onChange={e => setForm(prev => ({...prev, observation: e.target.value.toUpperCase()}))}
  />
@@ -629,13 +700,13 @@ export function MovementForm({ isOpen, onClose, onSuccess, products }: MovementF
  </div>
 
  <div className="flex gap-4 pt-4">
- <button type="button" onClick={onClose} className="flex-1 bg-slate-100 text-slate-600 font-black py-5 rounded-3xl transition-all hover:bg-slate-200 tracking-tight text-[10px]">
+ <button type="button" onClick={onClose} className="flex-1 bg-slate-100 text-slate-600 font-black py-2.5 rounded-xl text-xs font-bold transition-all hover:bg-slate-200">
  Cancelar
  </button>
  <button 
  disabled={loading}
  type="submit"
- className="flex-[2] bg-slate-900 hover:bg-black text-white font-black py-5 rounded-3xl shadow-xl shadow-slate-100 transition-all flex items-center justify-center gap-3 tracking-tight text-[10px]"
+ className="flex-[2] bg-slate-900 hover:bg-black text-white font-black py-2.5 rounded-xl text-xs font-bold shadow-sm transition-all flex items-center justify-center gap-2"
  >
  {loading ? <Loader2 className="animate-spin" size={20} /> : <><CheckCircle2 size={20} /> Procesar Movimiento</>}
  </button>
@@ -644,6 +715,7 @@ export function MovementForm({ isOpen, onClose, onSuccess, products }: MovementF
  )}
  </div>
  </div>
+  </ModalPortal>
  )
 }
 

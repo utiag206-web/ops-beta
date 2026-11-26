@@ -459,30 +459,27 @@ div.fixed.inset-0.flex.items-center.justify-center > div {
 
 /* 2. Motion Utility Classes */
 .nth-page-enter {
-  animation: nth-fade-slide-up 320ms cubic-bezier(0.16, 1, 0.3, 1) ease-out;
+  animation: nth-fade-only 240ms ease-out both;
 }
 
 /* Instant dimming feedback on route exit / click */
 body[data-navigating="true"] .nth-page-enter {
-  opacity: 0.55;
-  transform: translateY(4px) scale(0.995);
-  transition: opacity 160ms ease-out, transform 160ms ease-out;
-  pointer-events: none;
+  opacity: 0.85;
+  transition: opacity 120ms ease-out;
 }
 
 /* Subtle entrance for module header banners */
 .nth-page-enter > div:first-child,
 .nth-header-enter {
-  animation: nth-subtle-fade 380ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation: nth-fade-only 280ms ease-out both;
 }
 
 /* Automated Cascading Stagger for KPI cards and container cards */
 .grid > div.bg-white,
 .grid > a > div.bg-white,
 .nth-card-enter {
-  animation: nth-card-enter 580ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
-  transition: transform 260ms cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 260ms cubic-bezier(0.2, 0.8, 0.2, 1) !important;
-  will-change: opacity, transform;
+  animation: nth-fade-only 320ms ease-out both;
+  transition: box-shadow 260ms cubic-bezier(0.2, 0.8, 0.2, 1) !important;
 }
 
 /* Hover elevation float effect (TikTok Dashboard V2 motion language: whileHover={{ y: -5 }}) */

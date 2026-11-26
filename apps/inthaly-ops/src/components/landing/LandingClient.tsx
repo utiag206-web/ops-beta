@@ -1,13 +1,15 @@
 'use client'
 
 import { useState } from 'react'
+import dynamic from 'next/dynamic'
 import { LandingNavbar } from './LandingNavbar'
 import { HeroSection } from './HeroSection'
 import { WhatIsSection } from './WhatIsSection'
 import { ModulesSection } from './ModulesSection'
 import { SoftwareShowcase } from './SoftwareShowcase'
 import { CtaFooterSection } from './CtaFooterSection'
-import { DemoModal } from './DemoModal'
+
+const DemoModal = dynamic(() => import('./DemoModal').then(m => m.DemoModal), { ssr: false })
 
 interface LandingClientProps {
   commercialWhatsApp?: string
@@ -42,7 +44,9 @@ export function LandingClient({ commercialWhatsApp = '51923207309' }: LandingCli
       </main>
 
       {/* Interactive Demo Request Modal */}
-      <DemoModal isOpen={isDemoModalOpen} onClose={handleCloseDemo} commercialWhatsApp={commercialWhatsApp} />
+      {isDemoModalOpen && (
+        <DemoModal isOpen={isDemoModalOpen} onClose={handleCloseDemo} commercialWhatsApp={commercialWhatsApp} />
+      )}
     </div>
   )
 }

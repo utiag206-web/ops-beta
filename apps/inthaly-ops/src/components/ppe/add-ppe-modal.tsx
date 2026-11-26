@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { Package, Calendar, User, X, Loader2, Save } from 'lucide-react'
 import { createPPEDelivery } from '@/app/(main)/ppe/actions'
+import { ModalPortal } from '@/components/ui/modal-portal'
 
 interface AddPPEDeliveryModalProps {
  workers: any[]
@@ -46,6 +47,7 @@ export function AddPPEDeliveryModal({ workers, onSuccess, onClose }: AddPPEDeliv
  }
 
  return (
+  <ModalPortal>
  <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-300">
  <div className="bg-white w-full max-w-md rounded-2xl shadow-xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
  <div className="p-6 bg-gradient-to-r from-blue-800 to-blue-600 text-white flex justify-between items-center">
@@ -131,5 +133,6 @@ export function AddPPEDeliveryModal({ workers, onSuccess, onClose }: AddPPEDeliv
  </form>
  </div>
  </div>
+  </ModalPortal>
  )
 }

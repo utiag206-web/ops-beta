@@ -1,11 +1,8 @@
 'use client'
 
-import { warmApplicationRoutes } from '@/lib/prewarm-routes'
-
 import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react'
 import { Wifi, WifiOff, RefreshCw } from 'lucide-react'
 import { getPendingOperations, updateOperationStatus, removeOperationFromQueue, replaceTemporaryIdInQueue } from '@/lib/offline-sync'
-import { initializeSyncHandlers } from '@/lib/sync-handlers'
 
 // Registry of handlers for different entities
 type SyncHandlerResult = boolean | { success: boolean, newId?: string };
@@ -13,6 +10,32 @@ const syncHandlers: Record<string, (action: string, payload: any) => Promise<Syn
 
 export function registerSyncHandler(entity: string, handler: (action: string, payload: any) => Promise<SyncHandlerResult>) {
   syncHandlers[entity] = handler
+}
+
+async function executeServerSync(entity: string, action: string, payload: any): Promise<SyncHandlerResult> {
+  if (syncHandlers[entity]) {
+    return syncHandlers[entity](action, payload)
+  }
+  const res = await fetch('/api/offline-sync', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ entity, action, payload })
+  })
+  if (!res.ok) return false
+  return res.json()
+}
+
+function isPublicOrAuthPath(p: string) {
+  return (
+    p === '/' ||
+    p === '/login' ||
+    p === '/register' ||
+    p === '/forgot-password' ||
+    p === '/reset-password' ||
+    p === '/offline' ||
+    p.startsWith('/auth') ||
+    p.startsWith('/activar')
+  )
 }
 
 interface OfflineContextType {
@@ -38,48 +61,59 @@ export function OfflineProvider({ children }: { children: React.ReactNode }) {
   const isSyncingRef = useRef(false)
 
   useEffect(() => {
-    initializeSyncHandlers()
-    
-    // Planificación cortés de precalentamiento de rutas offline:
-    // Espera a que la aplicación inicial cargue e hidrate antes de iniciar el cacheo de fondo
     let prewarmTimer: any = null
     if (typeof window !== 'undefined') {
-      const schedulePrewarm = () => {
-        if ('requestIdleCallback' in window) {
-          ;(window as any).requestIdleCallback(() => warmApplicationRoutes(), { timeout: 6000 })
-        } else {
-          prewarmTimer = setTimeout(() => warmApplicationRoutes(), 3000)
-        }
-      }
-      prewarmTimer = setTimeout(schedulePrewarm, 2500)
-    }
+      const path = window.location.pathname
+      const isDev = process.env.NODE_ENV === 'development'
 
-    if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
-      const registerSW = () => {
-        navigator.serviceWorker
-          .register('/sw.js')
-          .then((reg) => {
-            console.log('[PWA] Service Worker registered successfully, scope:', reg.scope)
-            reg.onupdatefound = () => {
-              const installingWorker = reg.installing
-              if (installingWorker) {
-                installingWorker.onstatechange = () => {
-                  if (installingWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                    console.log('[PWA] New Service Worker version installed.')
+      if (!isDev && !isPublicOrAuthPath(path)) {
+        const runPrewarm = () => {
+          import('@/lib/prewarm-routes').then(m => m.warmApplicationRoutes()).catch(() => {})
+        }
+        const schedulePrewarm = () => {
+          if ('requestIdleCallback' in window) {
+            ;(window as any).requestIdleCallback(runPrewarm, { timeout: 6000 })
+          } else {
+            prewarmTimer = setTimeout(runPrewarm, 3000)
+          }
+        }
+        prewarmTimer = setTimeout(schedulePrewarm, 2500)
+      }
+
+      if ('serviceWorker' in navigator) {
+        if (isDev) {
+          // En desarrollo local, desregistrar cualquier Service Worker previo para evitar bloqueos de streams RSC y caché obsoleta
+          navigator.serviceWorker.getRegistrations().then(regs => {
+            regs.forEach(r => r.unregister())
+          }).catch(() => {})
+        } else if (!isPublicOrAuthPath(path)) {
+          const registerSW = () => {
+            navigator.serviceWorker
+              .register('/sw.js')
+              .then((reg) => {
+                console.log('[PWA] Service Worker registered successfully, scope:', reg.scope)
+                reg.onupdatefound = () => {
+                  const installingWorker = reg.installing
+                  if (installingWorker) {
+                    installingWorker.onstatechange = () => {
+                      if (installingWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                        console.log('[PWA] New Service Worker version installed.')
+                      }
+                    }
                   }
                 }
-              }
-            }
-          })
-          .catch((err) => {
-            console.warn('[PWA] Service Worker registration failed:', err)
-          })
-      }
+              })
+              .catch((err) => {
+                console.warn('[PWA] Service Worker registration failed:', err)
+              })
+          }
 
-      if (document.readyState === 'complete') {
-        registerSW()
-      } else {
-        window.addEventListener('load', registerSW)
+          if (document.readyState === 'complete') {
+            registerSW()
+          } else {
+            window.addEventListener('load', registerSW)
+          }
+        }
       }
     }
 
@@ -112,24 +146,21 @@ export function OfflineProvider({ children }: { children: React.ReactNode }) {
       }
 
       for (const op of pending) {
-        const handler = syncHandlers[op.entity]
-        if (handler) {
-          await updateOperationStatus(op.id, 'SYNCING')
-          try {
-            const result = await handler(op.action, op.payload)
-            const success = typeof result === 'object' ? result.success : result;
-            
-            if (success) {
-              if (typeof result === 'object' && result.newId) {
-                await replaceTemporaryIdInQueue(op.payload.id, result.newId)
-              }
-              await removeOperationFromQueue(op.id)
-            } else {
-              await updateOperationStatus(op.id, 'FAILED', 'Handler returned false')
+        await updateOperationStatus(op.id, 'SYNCING')
+        try {
+          const result = await executeServerSync(op.entity, op.action, op.payload)
+          const success = typeof result === 'object' ? result.success : result;
+          
+          if (success) {
+            if (typeof result === 'object' && result.newId) {
+              await replaceTemporaryIdInQueue(op.payload.id, result.newId)
             }
-          } catch (error: any) {
-            await updateOperationStatus(op.id, 'FAILED', error.message)
+            await removeOperationFromQueue(op.id)
+          } else {
+            await updateOperationStatus(op.id, 'FAILED', 'Handler returned false')
           }
+        } catch (error: any) {
+          await updateOperationStatus(op.id, 'FAILED', error.message)
         }
       }
     } finally {
@@ -151,7 +182,9 @@ export function OfflineProvider({ children }: { children: React.ReactNode }) {
 
     const handleOnline = () => {
       setIsOnline(true)
-      warmApplicationRoutes(true)
+      if (process.env.NODE_ENV !== 'development' && typeof window !== 'undefined' && !isPublicOrAuthPath(window.location.pathname)) {
+        import('@/lib/prewarm-routes').then(m => m.warmApplicationRoutes(true)).catch(() => {})
+      }
       updatePendingCount().then((count) => {
         if (count > 0) {
           setTimeout(() => {

@@ -10,11 +10,12 @@ export async function getPPEDeliveries(workerId?: string) {
 
  const supabase = await createAdminClient()
  let query = applyIsolation(
- supabase.from('ppe_deliveries').select('*, worker:workers(name)'),
+ supabase.from('ppe_deliveries').select('id, company_id, worker_id, ppe_type, equipment_name, delivery_date, status, signature_url, created_at, worker:workers(name)'),
  companyId,
  extendedUser.role_id
  )
  .order('delivery_date', { ascending: false })
+ .limit(150)
 
  if (extendedUser.role_id === 'trabajador') {
  query = query.eq('worker_id', extendedUser.worker_id)

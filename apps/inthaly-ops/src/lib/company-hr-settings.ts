@@ -149,20 +149,22 @@ export async function generateAutomaticWorkerCodes(
   try {
     const { data: company } = await supabase
       .from('companies')
-      .select('*')
+      .select('hr_settings')
       .eq('id', companyId)
-      .single()
+      .maybeSingle()
 
     const hrSettings = getCompanyHrSettings(company)
     const codeSettings = hrSettings.code_settings
 
     const prefix = (codeSettings.code_prefix || 'EMP').trim().toUpperCase()
 
-    // Fetch existing worker codes for this company
+    // Fetch only the most recent worker codes for this company to identify highest sequence
     const { data: workers } = await supabase
       .from('workers')
       .select('cod')
       .eq('company_id', companyId)
+      .order('created_at', { ascending: false })
+      .limit(50)
 
     let maxSeq = Math.max(0, (codeSettings.initial_number || 1) - 1)
 

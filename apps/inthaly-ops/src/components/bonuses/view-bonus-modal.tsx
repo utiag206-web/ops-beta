@@ -1,6 +1,7 @@
 'use client'
 
 import { X, Coins, User, Calendar, Info, CheckCircle2, AlertCircle, DollarSign, FileText, ExternalLink } from 'lucide-react'
+import { ModalPortal } from '@/components/ui/modal-portal'
 
 interface ViewBonusModalProps {
  bonus: any
@@ -13,6 +14,7 @@ export function ViewBonusModal({ bonus, onClose }: ViewBonusModalProps) {
  const isPasaje = bonus.type === 'pasaje'
 
  return (
+  <ModalPortal>
  <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-300">
  <div className="bg-white w-full max-w-md rounded-[2rem] shadow-2xl overflow-hidden border border-slate-100 animate-in fade-in zoom-in-95 duration-200">
  {/* Header */}
@@ -204,5 +206,6 @@ export function ViewBonusModal({ bonus, onClose }: ViewBonusModalProps) {
  </div>
  </div>
  </div>
+    </ModalPortal>
  )
 }

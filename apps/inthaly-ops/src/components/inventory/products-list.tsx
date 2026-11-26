@@ -282,7 +282,7 @@ export function ProductsList({ initialProducts }: { initialProducts: Product[] }
  <ProductForm 
  isOpen={isModalOpen} 
  onClose={() => setIsModalOpen(false)} 
- onSuccess={() => router.refresh()}
+ onSuccess={() => {}}
  editingProduct={editingProduct}
  isViewOnly={viewMode}
  />

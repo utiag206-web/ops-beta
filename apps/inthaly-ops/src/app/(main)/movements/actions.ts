@@ -11,10 +11,10 @@ export async function getMovements() {
  const supabase = await createAdminClient()
 
  let query = applyIsolation(
- supabase.from('worker_movements').select(`*, worker:workers(name)`),
+ supabase.from('worker_movements').select(`id, company_id, worker_id, subida_date, bajada_date, status, location, observations, created_at, worker:workers(name)`),
  companyId,
  extendedUser.role_id
- ).order('created_at', { ascending: false })
+ ).order('created_at', { ascending: false }).limit(150)
 
  if (extendedUser.role_id === 'trabajador') {
  query = query.eq('worker_id', extendedUser.worker_id)

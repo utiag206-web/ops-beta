@@ -8,14 +8,17 @@ import { AttendanceDateFilter } from '@/components/attendance/attendance-date-fi
 export const dynamic = 'force-dynamic'
 
 export default async function AttendancePage(props: { searchParams: Promise<{ date?: string }> }) {
-  const searchParams = await props.searchParams
-  const records = await getAttendance(undefined, searchParams.date)
-  const companyId = await getStrictCompanyId()
-  const { extendedUser } = await getUserSession()
-  const viewMode = await getActiveViewMode()
+  const [searchParams, companyId, { extendedUser }, viewMode] = await Promise.all([
+    props.searchParams,
+    getStrictCompanyId(),
+    getUserSession(),
+    getActiveViewMode()
+  ])
+  const [records, ianaTimezone] = await Promise.all([
+    getAttendance(undefined, searchParams.date),
+    getCompanyTimezone(companyId)
+  ])
   const isWorker = extendedUser?.role_id?.toLowerCase() === 'trabajador' || viewMode === 'WORKER'
-
-  const ianaTimezone = await getCompanyTimezone(companyId)
   const { date: today } = getCompanyLocalTime(ianaTimezone)
   const currentDate = searchParams.date || today
 

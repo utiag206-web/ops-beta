@@ -2,7 +2,7 @@
 // Universal Offline Navigation, Static Asset Pre-caching & Sanitized Cache-API Match Architecture
 
 const CACHE_PREFIX = 'inthaly-ops'
-const CACHE_VERSION = 'v1.4.1'
+const CACHE_VERSION = 'v1.4.2'
 const STATIC_CACHE = `${CACHE_PREFIX}-static-${CACHE_VERSION}`
 const PAGES_CACHE = `${CACHE_PREFIX}-pages-${CACHE_VERSION}`
 const RSC_CACHE = `${CACHE_PREFIX}-rsc-${CACHE_VERSION}`
@@ -130,12 +130,9 @@ self.addEventListener('fetch', (event) => {
 
   // A. Next.js Static Assets (Immutable hashed files in /_next/static/*)
   if (url.pathname.startsWith('/_next/static/')) {
+    const isLocalDev = url.hostname === 'localhost' || url.hostname === '127.0.0.1'
     event.respondWith(
       caches.open(STATIC_CACHE).then(async (cache) => {
-        const isLocalDev = url.hostname === 'localhost' || url.hostname === '127.0.0.1'
-
-        // En producción busca en caché primero. En desarrollo local, busca en red primero
-        // para garantizar que siempre se sirva el chunk de la compilación activa de Next.js
         if (!isLocalDev) {
           const cached = (await cache.match(request, { ignoreSearch: true, ignoreVary: true })) ||
                          (await cache.match(url.pathname, { ignoreSearch: true, ignoreVary: true }))
@@ -145,9 +142,15 @@ self.addEventListener('fetch', (event) => {
         try {
           const networkResponse = await fetch(request)
           if (networkResponse && networkResponse.status === 200 && !networkResponse.redirected) {
-            const sanitized = await cleanResponseForCache(networkResponse)
-            await cache.put(request, sanitized.clone())
-            await cache.put(url.pathname, sanitized)
+            const responseToCache = networkResponse.clone()
+            event.waitUntil(
+              cleanResponseForCache(responseToCache)
+                .then((sanitized) => Promise.all([
+                  cache.put(request, sanitized.clone()),
+                  cache.put(url.pathname, sanitized)
+                ]))
+                .catch(() => {})
+            )
           }
           return networkResponse
         } catch (err) {
@@ -166,16 +169,22 @@ self.addEventListener('fetch', (event) => {
   if (isRsc) {
     event.respondWith(
       (async () => {
-        const cache = await caches.open(RSC_CACHE)
         try {
           const networkResponse = await fetch(request)
           if (networkResponse && networkResponse.status === 200 && !networkResponse.redirected) {
-            const sanitized = await cleanResponseForCache(networkResponse)
-            await cache.put(url.pathname, sanitized.clone())
-            await cache.put(request, sanitized)
+            const responseToCache = networkResponse.clone()
+            event.waitUntil(
+              caches.open(RSC_CACHE)
+                .then((cache) => cleanResponseForCache(responseToCache).then((sanitized) => Promise.all([
+                  cache.put(url.pathname, sanitized.clone()),
+                  cache.put(request, sanitized)
+                ])))
+                .catch(() => {})
+            )
           }
           return networkResponse
         } catch (err) {
+          const cache = await caches.open(RSC_CACHE)
           const cached = (await cache.match(url.pathname, { ignoreSearch: true, ignoreVary: true })) ||
                          (await cache.match(request, { ignoreSearch: true, ignoreVary: true }))
           if (cached) {
@@ -212,16 +221,22 @@ self.addEventListener('fetch', (event) => {
   if (isHtml) {
     event.respondWith(
       (async () => {
-        const cache = await caches.open(PAGES_CACHE)
         try {
           const networkResponse = await fetch(request)
           if (networkResponse && networkResponse.status === 200 && !networkResponse.redirected) {
-            const sanitized = await cleanResponseForCache(networkResponse)
-            await cache.put(url.pathname, sanitized.clone())
-            await cache.put(request, sanitized)
+            const responseToCache = networkResponse.clone()
+            event.waitUntil(
+              caches.open(PAGES_CACHE)
+                .then((cache) => cleanResponseForCache(responseToCache).then((sanitized) => Promise.all([
+                  cache.put(url.pathname, sanitized.clone()),
+                  cache.put(request, sanitized)
+                ])))
+                .catch(() => {})
+            )
           }
           return networkResponse
         } catch (err) {
+          const cache = await caches.open(PAGES_CACHE)
           // 1. Exact match on requested route
           let cachedPage = (await cache.match(url.pathname, { ignoreSearch: true, ignoreVary: true })) ||
                            (await cache.match(request, { ignoreSearch: true, ignoreVary: true }))

@@ -73,36 +73,28 @@ export async function POST(request: NextRequest) {
 
 export async function GET() {
   try {
-    const supabase = await createClient()
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    const { getUserSession } = await import('@/lib/auth')
+    const { user, extendedUser } = await getUserSession()
 
-    if (authError || !user) {
+    if (!user) {
       return NextResponse.json({ valid: false, reason: 'unauthenticated' }, { status: 401 })
     }
 
-    const { data: dbUser, error: dbError } = await supabase
-      .from('users')
-      .select('id, status, company_id, role_id')
-      .eq('id', user.id)
-      .maybeSingle()
-
-    if (dbError || !dbUser) {
+    if (!extendedUser) {
       return NextResponse.json({ valid: false, reason: 'user_not_found' }, { status: 404 })
-    }
-
-    const userStatus = (dbUser.status || '').toLowerCase()
-    if (userStatus === 'inactive' || userStatus === 'rejected') {
-      return NextResponse.json({ valid: false, reason: 'revoked' }, { status: 403 })
     }
 
     return NextResponse.json({ 
       valid: true, 
       userId: user.id,
-      companyId: dbUser.company_id,
-      roleId: dbUser.role_id,
-      status: userStatus
+      companyId: extendedUser.company_id,
+      roleId: extendedUser.role_id,
+      status: 'active'
     })
   } catch (err: any) {
+    if (err.digest?.startsWith('NEXT_REDIRECT')) {
+      return NextResponse.json({ valid: false, reason: 'unauthenticated' }, { status: 401 })
+    }
     return NextResponse.json({ valid: false, error: err.message }, { status: 500 })
   }
 }

@@ -23,17 +23,13 @@ export async function getCampRooms() {
  query = query.eq('worker_id', extendedUser.worker_id)
  }
 
- const { data, error } = await query
-
- console.log("FETCH RESULT CAMP:", data, error)
- console.log("--- AUDIT: CAMP FETCH FIN ---")
+ const { data, error } = await query.limit(200)
 
  if (error) {
  console.error('[CAMP] Error fetching camp rooms:', JSON.stringify(error))
  return []
  }
 
- console.log(`[CAMP] Fetched ${data?.length ?? 0} rooms for company ${companyId}`)
  return data || []
 }
 

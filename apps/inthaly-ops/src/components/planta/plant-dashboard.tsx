@@ -1,4 +1,4 @@
-﻿'use client'
+'use client'
 
 import { uploadBase64Photo } from '@/lib/upload-base64'
 import { useState, useEffect } from 'react'
@@ -6,7 +6,7 @@ import {
   Factory, Search, Plus, Filter, FileText, ChevronRight, Ban, X, Maximize2, ExternalLink,
   FlaskConical, Truck, Activity, Target, CheckCircle2, ChevronDown, ChevronUp, RefreshCw
 } from 'lucide-react'
-import { PlantMineralBatch, PlantMineralSample, getPlantSamples, createPlantBatch, updatePlantBatch, createPlantSample, updatePlantSample } from '@/app/(main)/operaciones/planta/actions'
+import { PlantMineralBatch, PlantMineralSample, getPlantSamples, getPlantSamplesBatch, createPlantBatch, updatePlantBatch, createPlantSample, updatePlantSample } from '@/app/(main)/operaciones/planta/actions'
 import { MineralReceptionModal } from './mineral-reception-modal'
 import { EditTrasladoModal, EditPlantaModal, MuestreoModal, LaboratorioModal } from './plant-modals'
 import { useOffline } from '@/components/providers/offline-provider'
@@ -107,19 +107,33 @@ export function PlantDashboard({ companyId, initialBatches, persistToServer = fa
       setBatches(currentBatches)
       setSamples(currentSamples)
 
-      // Fetch samples for online batches or load from read cache
-      for (const batch of currentBatches) {
-        if (!currentSamples[batch.id] && batch.stage !== 'anulado') {
-          if (navigator.onLine && !batch.id.startsWith('temp-')) {
-            const res = await getPlantSamples(batch.id)
+      // Fetch samples for online batches in a SINGLE batch query (eliminating N+1 loop)
+      const activeBatchIds = currentBatches
+        .filter(b => !currentSamples[b.id] && b.stage !== 'anulado')
+        .map(b => b.id)
+
+      if (activeBatchIds.length > 0) {
+        if (navigator.onLine) {
+          const onlineIds = activeBatchIds.filter(id => !id.startsWith('temp-'))
+          if (onlineIds.length > 0) {
+            const res = await getPlantSamplesBatch(onlineIds)
             if (res.success && res.data && res.data.length > 0) {
-              setSamples(prev => ({ ...prev, [batch.id]: res.data }))
-              await saveSamplesToCache(res.data as any, batch.id)
+              const grouped: Record<string, PlantMineralSample[]> = {}
+              for (const s of res.data) {
+                if (!grouped[s.batch_id]) grouped[s.batch_id] = []
+                grouped[s.batch_id].push(s)
+              }
+              setSamples(prev => ({ ...prev, ...grouped }))
+              for (const bId of Object.keys(grouped)) {
+                await saveSamplesToCache(grouped[bId] as any, bId)
+              }
             }
-          } else {
-            const cachedSamples = await getCachedSamples(batch.id)
+          }
+        } else {
+          for (const bId of activeBatchIds) {
+            const cachedSamples = await getCachedSamples(bId)
             if (cachedSamples && cachedSamples.length > 0) {
-              setSamples(prev => ({ ...prev, [batch.id]: cachedSamples as any }))
+              setSamples(prev => ({ ...prev, [bId]: cachedSamples as any }))
             }
           }
         }
@@ -155,15 +169,15 @@ export function PlantDashboard({ companyId, initialBatches, persistToServer = fa
       try {
         let processedEvidences = updates.evidences ? [...updates.evidences] : undefined
         if (processedEvidences && processedEvidences.length > 0) {
-          for (let i = 0; i < processedEvidences.length; i++) {
-            const ev = processedEvidences[i]
-            if (ev.url && ev.url.startsWith('data:image')) {
-              const uploadedUrl = await uploadBase64Photo(ev.url, companyId, 'planta')
-              if (uploadedUrl) {
-                processedEvidences[i] = { ...ev, url: uploadedUrl }
+          processedEvidences = await Promise.all(
+            processedEvidences.map(async (ev) => {
+              if (ev.url && ev.url.startsWith('data:image')) {
+                const uploadedUrl = await uploadBase64Photo(ev.url, companyId, 'planta')
+                return uploadedUrl ? { ...ev, url: uploadedUrl } : ev
               }
-            }
-          }
+              return ev
+            })
+          )
         }
 
         const cleanUpdates = processedEvidences ? { ...updates, evidences: processedEvidences } : { ...updates }
@@ -225,15 +239,15 @@ export function PlantDashboard({ companyId, initialBatches, persistToServer = fa
       try {
         let processedEvidences = sampleData.evidences ? [...sampleData.evidences] : undefined
         if (processedEvidences && processedEvidences.length > 0) {
-          for (let i = 0; i < processedEvidences.length; i++) {
-            const ev = processedEvidences[i]
-            if (ev.url && ev.url.startsWith('data:image')) {
-              const uploadedUrl = await uploadBase64Photo(ev.url, companyId, 'planta')
-              if (uploadedUrl) {
-                processedEvidences[i] = { ...ev, url: uploadedUrl }
+          processedEvidences = await Promise.all(
+            processedEvidences.map(async (ev) => {
+              if (ev.url && ev.url.startsWith('data:image')) {
+                const uploadedUrl = await uploadBase64Photo(ev.url, companyId, 'planta')
+                return uploadedUrl ? { ...ev, url: uploadedUrl } : ev
               }
-            }
-          }
+              return ev
+            })
+          )
         }
 
         const cleanSample = processedEvidences ? { ...sampleData, evidences: processedEvidences } : { ...sampleData }
@@ -328,15 +342,15 @@ export function PlantDashboard({ companyId, initialBatches, persistToServer = fa
       try {
         let processedEvidences = batchData.evidences ? [...batchData.evidences] : []
         if (processedEvidences.length > 0) {
-          for (let i = 0; i < processedEvidences.length; i++) {
-            const ev = processedEvidences[i]
-            if (ev.url && ev.url.startsWith('data:image')) {
-              const uploadedUrl = await uploadBase64Photo(ev.url, companyId, 'planta')
-              if (uploadedUrl) {
-                processedEvidences[i] = { ...ev, url: uploadedUrl }
+          processedEvidences = await Promise.all(
+            processedEvidences.map(async (ev) => {
+              if (ev.url && ev.url.startsWith('data:image')) {
+                const uploadedUrl = await uploadBase64Photo(ev.url, companyId, 'planta')
+                return uploadedUrl ? { ...ev, url: uploadedUrl } : ev
               }
-            }
-          }
+              return ev
+            })
+          )
         }
 
         const cleanBatch = { ...batchData, evidences: processedEvidences }

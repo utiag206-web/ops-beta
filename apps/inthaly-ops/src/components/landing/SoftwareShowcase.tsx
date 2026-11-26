@@ -160,11 +160,10 @@ export function SoftwareShowcase() {
               <button
                 key={s.id}
                 onClick={() => selectSlide(idx)}
-                className={`whitespace-nowrap px-3 py-1.5 rounded-lg text-xs font-bold transition-all duration-200 cursor-pointer ${
-                  isActive
-                    ? 'bg-blue-600 text-white shadow-md shadow-blue-600/25'
-                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200 hover:text-slate-900'
-                }`}
+                className={`whitespace-nowrap px-3 py-1.5 rounded-lg text-xs font-bold transition-all duration-200 cursor-pointer ${isActive
+                  ? 'bg-blue-600 text-white shadow-md shadow-blue-600/25'
+                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200 hover:text-slate-900'
+                  }`}
               >
                 {s.title}
               </button>
@@ -238,11 +237,10 @@ export function SoftwareShowcase() {
               return (
                 <div
                   key={screen.id}
-                  className={`absolute inset-0 transition-all duration-700 ease-in-out ${
-                    isActive
-                      ? 'opacity-100 scale-100 z-10'
-                      : 'opacity-0 scale-[0.995] z-0 pointer-events-none'
-                  }`}
+                  className={`absolute inset-0 transition-all duration-700 ease-in-out ${isActive
+                    ? 'opacity-100 scale-100 z-10'
+                    : 'opacity-0 scale-[0.995] z-0 pointer-events-none'
+                    }`}
                   aria-hidden={!isActive}
                 >
                   <Image
@@ -251,7 +249,7 @@ export function SoftwareShowcase() {
                     fill
                     className="object-contain sm:object-cover sm:object-top"
                     sizes="(max-width: 1280px) 100vw, 1280px"
-                    priority
+                    priority={idx === 0}
                   />
                 </div>
               )
@@ -264,11 +262,10 @@ export function SoftwareShowcase() {
               <button
                 key={dotIdx}
                 onClick={() => selectSlide(dotIdx)}
-                className={`h-1.5 rounded-full transition-all duration-300 cursor-pointer ${
-                  dotIdx === currentIndex
-                    ? 'w-6 bg-blue-600'
-                    : 'w-1.5 bg-slate-300 hover:bg-slate-400'
-                }`}
+                className={`h-1.5 rounded-full transition-all duration-300 cursor-pointer ${dotIdx === currentIndex
+                  ? 'w-6 bg-blue-600'
+                  : 'w-1.5 bg-slate-300 hover:bg-slate-400'
+                  }`}
                 aria-label={`Ir a pantalla ${dotIdx + 1}`}
               />
             ))}

@@ -9,6 +9,7 @@ import {
 import { AssetForm } from './asset-form'
 import { deleteAsset } from '@/app/(main)/assets/actions'
 import { useUserRole } from '@/components/providers/rbac-provider'
+import { useOperationalContext } from '@/components/providers/operational-context-provider'
 import { useRouter } from 'next/navigation'
 import { useEffect } from 'react'
 
@@ -25,6 +26,8 @@ interface Asset {
 export function AssetsList({ initialAssets }: { initialAssets: Asset[] }) {
  const router = useRouter()
  const { isAdmin } = useUserRole()
+ const { companyId } = useOperationalContext()
+ const assetsCacheKey = companyId ? `assets_cache_${companyId}` : 'assets_cache'
  const [assets, setAssets] = useState<Asset[]>(initialAssets)
  const [searchTerm, setSearchTerm] = useState('')
  const [isModalOpen, setIsModalOpen] = useState(false)
@@ -35,9 +38,9 @@ export function AssetsList({ initialAssets }: { initialAssets: Asset[] }) {
  useEffect(() => {
     setAssets(initialAssets)
     if (initialAssets && initialAssets.length > 0 && typeof window !== 'undefined') {
-      localStorage.setItem('assets_cache', JSON.stringify(initialAssets))
+      localStorage.setItem(assetsCacheKey, JSON.stringify(initialAssets))
     }
-  }, [initialAssets])
+  }, [initialAssets, assetsCacheKey])
 
  const handleEdit = (asset: any) => {
  setEditingAsset(asset)
@@ -88,35 +91,35 @@ export function AssetsList({ initialAssets }: { initialAssets: Asset[] }) {
  <div className="flex flex-wrap gap-2 w-full md:w-auto">
  <button 
  onClick={() => router.push('/assets/import')}
- className="flex-1 md:flex-none bg-white border-2 border-blue-100 hover:bg-blue-50/50 text-blue-700 px-6 py-3 rounded-2xl font-bold flex items-center justify-center gap-2 transition-all active:scale-95 text-sm"
+ className="flex-1 md:flex-none bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 px-5 py-2.5 rounded-xl font-bold flex items-center justify-center gap-2 transition-all active:scale-95 text-xs shadow-sm"
  >
- <FileSpreadsheet size={18} />
+ <FileSpreadsheet size={16} />
  <span>Importar</span>
  </button>
  <button 
  onClick={() => setIsModalOpen(true)}
- className="flex-1 md:flex-none bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-2xl font-bold flex items-center justify-center gap-2 transition-all shadow-lg shadow-blue-100 active:scale-95 text-sm"
+ className="flex-1 md:flex-none bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl font-bold flex items-center justify-center gap-2 transition-all shadow-sm active:scale-95 text-xs"
  >
- <Plus size={20} strokeWidth={3} />
+ <Plus size={16} strokeWidth={2.5} />
  <span>Registrar Activo</span>
  </button>
  </div>
  </div>
 
- <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+ <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
  <div className="md:col-span-2 relative">
- <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
+ <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
  <input 
  type="text"
  placeholder="Buscar por nombre o código..."
- className="w-full bg-white border-2 border-slate-100 focus:border-blue-500 rounded-2xl py-4 pl-12 pr-4 text-sm font-bold transition-all outline-none shadow-sm"
+ className="w-full bg-white border border-slate-200 focus:border-blue-500 rounded-xl py-2.5 pl-10 pr-4 text-xs font-bold transition-all outline-none shadow-sm"
  value={searchTerm}
  onChange={(e) => setSearchTerm(e.target.value)}
  />
  </div>
  <div className="flex gap-2">
- <button className="flex-1 bg-white border-2 border-slate-100 hover:bg-slate-50 rounded-2xl font-bold text-slate-600 flex items-center justify-center gap-2 transition-all shadow-sm">
- <Filter size={18} />
+ <button className="flex-1 bg-white border border-slate-200 hover:bg-slate-50 rounded-xl font-bold text-slate-600 flex items-center justify-center gap-2 py-2.5 text-xs transition-all shadow-sm">
+ <Filter size={15} />
  Filtrar
  </button>
  </div>

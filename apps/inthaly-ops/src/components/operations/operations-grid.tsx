@@ -1,5 +1,7 @@
 'use client'
 
+import { ModalPortal } from '@/components/ui/modal-portal'
+
 import React, { useState, useEffect, useRef, useTransition, useMemo } from 'react'
 import { 
  Plus, Trash2, Loader2, Save, Search, 
@@ -778,7 +780,8 @@ function OperationsFormModal({
  }
  }
 
- return (
+  return (
+    <ModalPortal>
  <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
  <div className="bg-white rounded-[2.5rem] w-full max-w-xl overflow-hidden shadow-2xl animate-in slide-in-from-bottom-8 duration-300 flex flex-col max-h-[90vh]">
  {/* Modal Header */}
@@ -903,5 +906,6 @@ function OperationsFormModal({
  </form>
  </div>
  </div>
- )
+    </ModalPortal>
+  )
 }

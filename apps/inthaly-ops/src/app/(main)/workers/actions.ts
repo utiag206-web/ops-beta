@@ -5,9 +5,9 @@ import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { getUserSession, getStrictCompanyId, applyIsolation } from '@/lib/auth'
 import { generateAutomaticWorkerCodes } from '@/lib/company-hr-settings'
 import type { Worker } from '@/types/workers.types'
-import { workersService } from '@/services'
+import * as workersService from '@/services/workers.service'
 
-export async function getWorkers(status?: string, isRecent?: boolean): Promise<Worker[]> {
+export async function getWorkers(status?: string, isRecent?: boolean, limit?: number, offset?: number): Promise<Worker[]> {
   const { extendedUser } = await getUserSession()
   const companyId = await getStrictCompanyId()
   const supabase = await createAdminClient()
@@ -627,44 +627,44 @@ export async function updateWorkerFullProfile(id: string, payload: {
  
  if (errA) throw new Error(`Fallo crítico en tabla trabajadores: ${errA.message}`)
 
- // 2. Upsert financial
- const { error: err2 } = await supabase
- .from('worker_financial')
- .upsert({
- worker_id: id,
- company_id: companyId,
- ...payload.financial,
- updated_at: new Date().toISOString()
- }, { onConflict: 'worker_id' })
+ // 2 & 3. Upsert financial and personal in parallel (Bloque B)
+  const sanitizedPersonal = {
+    ...payload.personal,
+    birth_date: payload.personal.birth_date || null,
+    marital_status: payload.personal.marital_status || null,
+    gender: payload.personal.gender || null
+  }
 
- if (err2) {
- console.error('[FINANCIAL_UPDATE_ERROR]', err2.message)
- failedFields.push('datos_financieros')
- }
+  const [resFinancial, resPersonal] = await Promise.all([
+    supabase
+      .from('worker_financial')
+      .upsert({
+        worker_id: id,
+        company_id: companyId,
+        ...payload.financial,
+        updated_at: new Date().toISOString()
+      }, { onConflict: 'worker_id' }),
+    supabase
+      .from('worker_personal')
+      .upsert({
+        worker_id: id,
+        company_id: companyId,
+        ...sanitizedPersonal,
+        updated_at: new Date().toISOString()
+      }, { onConflict: 'worker_id' })
+  ])
 
- const sanitizedPersonal = {
- ...payload.personal,
- birth_date: payload.personal.birth_date || null,
- marital_status: payload.personal.marital_status || null,
- gender: payload.personal.gender || null
- }
+  if (resFinancial.error) {
+    console.error('[FINANCIAL_UPDATE_ERROR]', resFinancial.error.message)
+    failedFields.push('datos_financieros')
+  }
 
- // 3. Upsert personal
- const { error: err3 } = await supabase
- .from('worker_personal')
- .upsert({
- worker_id: id,
- company_id: companyId,
- ...sanitizedPersonal,
- updated_at: new Date().toISOString()
- }, { onConflict: 'worker_id' })
+  if (resPersonal.error) {
+    console.error('[PERSONAL_UPDATE_ERROR]', resPersonal.error.message)
+    failedFields.push('datos_personales')
+  }
 
- if (err3) {
- console.error('[PERSONAL_UPDATE_ERROR]', err3.message)
- failedFields.push('datos_personales')
- }
-
- revalidatePath(`/workers/${id}`)
+  revalidatePath(`/workers/${id}`)
  revalidatePath('/workers')
  
  return { 

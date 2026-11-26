@@ -10,6 +10,7 @@ import {
 } from 'lucide-react'
 import { getCompanyDetails, generateClientAccessLink, updateCompanyCorporateDetails } from '@/app/(main)/super-admin/actions'
 import { getPublicAppOrigin } from '@/lib/site-url'
+import { ModalPortal } from '@/components/ui/modal-portal'
 
 interface CompanyDetailsModalProps {
   isOpen: boolean
@@ -272,7 +273,8 @@ export function CompanyDetailsModal({ isOpen, onClose, companyId }: CompanyDetai
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-end bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
+    <ModalPortal>
+      <div className="fixed inset-0 z-50 flex items-center justify-end bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
       <div className="bg-slate-50 w-full max-w-4xl h-screen overflow-hidden shadow-2xl flex flex-col animate-in slide-in-from-right duration-300">
         
         {/* Header */}
@@ -999,5 +1001,6 @@ export function CompanyDetailsModal({ isOpen, onClose, companyId }: CompanyDetai
         </div>
       </div>
     </div>
+    </ModalPortal>
   )
 }

@@ -46,18 +46,52 @@ export default async function SuperAdminPage() {
   let identities: any[] = []
 
   try {
-    const [companiesRes, usersRes, statsRes, ecoStatsRes, identitiesRes] = await Promise.all([
+    const [companiesRes, usersRes, ecoStatsRes, identitiesRes] = await Promise.all([
       getAllCompanies(),
       getAllUsers(),
-      getSystemStats(),
       getEcosystemStatsAction(),
       getAllIdentitiesAdminAction()
     ])
-    companies = companiesRes
-    users = usersRes
-    stats = statsRes
+    companies = companiesRes || []
+    users = usersRes || []
     ecosystemStats = ecoStatsRes
     identities = identitiesRes
+
+    // Compute system stats directly in memory from companiesRes and usersRes
+    // Avoids 2 duplicate round-trips to Supabase (companies + users count)
+    let realCompanies = 0
+    let testCompanies = 0
+    let activeCompanies = 0
+    let suspendedCompanies = 0
+    let pendingCompanies = 0
+
+    for (const c of companies) {
+      if (c.is_test) testCompanies++
+      else realCompanies++
+
+      if (c.status === 'active') {
+        activeCompanies++
+      } else {
+        let parsed: any = {}
+        try {
+          parsed = JSON.parse(c.working_hours || '{}')
+        } catch (_) {}
+
+        const isPending = (parsed?.demo_request || parsed?.registration_request) && parsed?.approval_status !== 'rejected'
+        if (isPending) pendingCompanies++
+        else suspendedCompanies++
+      }
+    }
+
+    stats = {
+      totalCompanies: companies.length,
+      realCompanies,
+      testCompanies,
+      activeCompanies,
+      suspendedCompanies,
+      pendingCompanies,
+      totalUsers: users.length
+    }
   } catch (error: any) {
     console.error("[SUPER_ADMIN_PAGE_CRITICAL] Failed to load global data:", error.message)
   }

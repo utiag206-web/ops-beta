@@ -2,7 +2,6 @@
 
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
-import { getUserSession } from '@/lib/auth'
 import { revalidatePath } from 'next/cache'
 
 export interface GlobalSettingsData {
@@ -121,6 +120,7 @@ export async function getCommercialWhatsApp(): Promise<string> {
  */
 export async function updateGlobalSettings(settings: GlobalSettingsData): Promise<{ success: boolean; error?: string }> {
   // Verificar permisos: Sólo SUPER_ADMIN
+  const { getUserSession } = await import('@/lib/auth')
   const { extendedUser } = await getUserSession()
   const role = extendedUser?.role_id?.toLowerCase()
   if (role !== 'super_admin' && role !== 'superadmin') {
@@ -158,8 +158,8 @@ export async function updateGlobalSettings(settings: GlobalSettingsData): Promis
   }
 
   // Refresca completamente el layout maestro para que los Server Components (como el layout) 
-  // vuelvan a hacer fetch de la configuracin global y actualicen el frontend.
-  cachedGlobalSettings = null
+  // vuelvan a hacer fetch de la configuracion global y actualicen el frontend.
+  ;(globalThis as any).__inthaly_global_settings_cache = null
   revalidatePath('/', 'layout')
 
   return { success: true }
@@ -169,6 +169,7 @@ export async function updateGlobalSettings(settings: GlobalSettingsData): Promis
  * Sube un asset (logo/favicon) directamente a la base de datos para evitar errores de Storage
  */
 export async function uploadEcosystemAsset(formData: FormData): Promise<{ success: boolean; url?: string; error?: string }> {
+  const { getUserSession } = await import('@/lib/auth')
   const { extendedUser } = await getUserSession()
   const role = extendedUser?.role_id?.toLowerCase()
   if (role !== 'super_admin' && role !== 'superadmin') {

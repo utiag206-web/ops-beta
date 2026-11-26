@@ -1,11 +1,13 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useOperationalContext } from '@/components/providers/operational-context-provider'
 import { 
   getRequirements, 
   updateRequirementStatus 
 } from '@/app/(main)/requerimientos/actions'
 import { RequirementStatusBadge, PriorityBadge, CreateRequirementModal, ApproveRequirementModal } from '@/components/requirements/requirements-components'
+import { ModalPortal } from '@/components/ui/modal-portal'
 import { 
   Search, 
   Filter, 
@@ -22,9 +24,12 @@ import {
 import { toast } from 'sonner'
 
 export default function RequirementsPage({ userRole, initialData = [] }: { userRole: string, initialData?: any[] }) {
+  const { companyId } = useOperationalContext()
+  const reqCacheKey = companyId ? `requirements_cache_${companyId}` : 'requirements_cache'
   const [requirements, setRequirements] = useState<any[]>(() => {
+    if (initialData && initialData.length > 0) return initialData
     if (typeof window !== 'undefined') {
-      const cached = localStorage.getItem('requirements_cache')
+      const cached = localStorage.getItem(reqCacheKey)
       if (cached) {
         try {
           const parsed = JSON.parse(cached)
@@ -48,7 +53,7 @@ export default function RequirementsPage({ userRole, initialData = [] }: { userR
     if (initialData && initialData.length > 0) {
       setRequirements(initialData)
       if (typeof window !== 'undefined') {
-        localStorage.setItem('requirements_cache', JSON.stringify(initialData))
+        localStorage.setItem(reqCacheKey, JSON.stringify(initialData))
       }
     }
 
@@ -89,7 +94,7 @@ export default function RequirementsPage({ userRole, initialData = [] }: { userR
             serverData = res.data
             try {
               if (typeof localStorage !== 'undefined') {
-                localStorage.setItem('requirements_cache', JSON.stringify(serverData))
+                localStorage.setItem(reqCacheKey, JSON.stringify(serverData))
               }
             } catch (_) {}
           }
@@ -102,7 +107,7 @@ export default function RequirementsPage({ userRole, initialData = [] }: { userR
       if (!baseList || baseList.length === 0) {
         try {
           if (typeof localStorage !== 'undefined') {
-            const raw = localStorage.getItem('requirements_cache')
+            const raw = localStorage.getItem(reqCacheKey)
             if (raw) {
               const cached = JSON.parse(raw)
               if (Array.isArray(cached)) baseList = cached
@@ -453,7 +458,8 @@ function RequirementDetailModal({ isOpen, onClose, requirement }: { isOpen: bool
   if (!isOpen || !requirement) return null
   
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+    <ModalPortal>
+      <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
       <div className="bg-white w-full max-w-lg rounded-[2.5rem] shadow-2xl overflow-hidden border border-slate-100 animate-in zoom-in-95 duration-200 max-h-[90vh] flex flex-col">
         {/* Header */}
         <div className="px-8 py-6 border-b border-slate-50 flex justify-between items-center bg-slate-50/50">
@@ -552,5 +558,6 @@ function RequirementDetailModal({ isOpen, onClose, requirement }: { isOpen: bool
         </div>
       </div>
     </div>
+    </ModalPortal>
   )
 }

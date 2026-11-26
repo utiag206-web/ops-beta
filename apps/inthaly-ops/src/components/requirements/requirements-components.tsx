@@ -8,6 +8,7 @@ import { toast } from 'sonner'
 import { useOffline } from '@/components/providers/offline-provider'
 import { addOperationToQueue } from '@/lib/offline-sync'
 import { v4 as uuidv4 } from 'uuid'
+import { ModalPortal } from '@/components/ui/modal-portal'
 
 export function RequirementStatusBadge({ status }: { status: string }) {
  const styles: Record<string, string> = {
@@ -208,20 +209,24 @@ export function CreateRequirementModal({ isOpen, onClose, onSuccess }: CreateReq
     }
   }
 
-  return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="bg-white w-full max-w-md rounded-[2.2rem] shadow-2xl overflow-hidden border border-slate-100 animate-in zoom-in-95 duration-200 max-h-[90vh] flex flex-col">
-        <div className="px-6 py-5 border-b border-slate-50 flex justify-between items-center bg-slate-50/50">
-          <div>
-            <h2 className="text-xl font-black text-slate-800 tracking-tight">Nuevo Requerimiento</h2>
-            <p className="text-slate-400 text-[10px] font-bold tracking-tight">Completa los detalles de tu solicitud.</p>
-          </div>
-          <button onClick={onClose} className="p-2 hover:bg-white rounded-full transition-colors text-slate-400 hover:text-slate-600 shadow-sm border border-slate-100">
-            <X size={20} />
-          </button>
-        </div>
+  if (!isOpen) return null
 
-        <form onSubmit={handleSubmit} className="px-6 py-4 space-y-4 overflow-y-auto flex-1 custom-scrollbar pb-6">
+  return (
+    <ModalPortal>
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
+        <div className="bg-white w-full max-w-md rounded-2xl sm:rounded-3xl shadow-2xl overflow-hidden border border-slate-100 animate-in zoom-in-95 duration-200 max-h-[90vh] flex flex-col">
+          <div className="px-6 py-5 border-b border-slate-50 flex justify-between items-center bg-slate-50/50 shrink-0">
+            <div>
+              <h2 className="text-lg font-black text-slate-800 tracking-tight leading-none">Nuevo Requerimiento</h2>
+              <p className="text-slate-400 text-xs font-bold tracking-tight mt-1">Completa los detalles de tu solicitud.</p>
+            </div>
+            <button onClick={onClose} className="p-2 hover:bg-slate-100 rounded-full transition-colors text-slate-400 cursor-pointer">
+              <X size={18} />
+            </button>
+          </div>
+
+          <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
+            <div className="px-6 py-4 space-y-4 overflow-y-auto flex-1 custom-scrollbar">
           <div className="grid grid-cols-2 gap-4 pt-2">
             <div className="space-y-2">
               <label className="text-[10px] font-black tracking-tight text-slate-400 px-1">Tipo de Pedido</label>
@@ -517,33 +522,37 @@ export function CreateRequirementModal({ isOpen, onClose, onSuccess }: CreateReq
  />
  </div>
 
- <div className="flex gap-4 pt-4">
- <button 
- type="button" 
- onClick={onClose}
- className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-600 font-black py-4 rounded-2xl transition-all"
- >
- Cancelar
- </button>
- <button 
- disabled={loading || fetchingProducts}
- type="submit"
- className="flex-[2] bg-indigo-600 hover:bg-indigo-700 text-white font-black py-4 rounded-2xl shadow-lg shadow-indigo-200 transition-all flex items-center justify-center gap-2"
- >
- {loading ? (
- <Loader2 className="animate-spin" size={20} />
- ) : (
- <>
- <CheckCircle2 size={20} />
- Guardar Requerimiento
- </>
- )}
- </button>
- </div>
- </form>
- </div>
- </div>
- )
+            </div>
+
+            {/* Footer Fijo */}
+            <div className="px-6 py-4 bg-slate-50 border-t border-slate-100 flex items-center justify-end gap-3 shrink-0">
+              <button 
+                type="button" 
+                onClick={onClose}
+                className="px-5 py-2.5 bg-white border border-slate-200 text-slate-700 font-bold rounded-xl text-xs hover:bg-slate-100 transition-colors"
+              >
+                Cancelar
+              </button>
+              <button 
+                disabled={loading || fetchingProducts}
+                type="submit"
+                className="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-sm text-xs transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+              >
+                {loading ? (
+                  <Loader2 className="animate-spin" size={16} />
+                ) : (
+                  <>
+                    <CheckCircle2 size={16} />
+                    Guardar Requerimiento
+                  </>
+                )}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </ModalPortal>
+  )
 }
 
 
@@ -599,56 +608,56 @@ export function ApproveRequirementModal({
  }
  }
 
- return (
- <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
- <div className="bg-white w-full max-w-sm rounded-[2rem] shadow-2xl overflow-hidden border border-slate-100 animate-in zoom-in-95 duration-200 p-8 space-y-6">
- 
- <div className="text-center space-y-2">
- <div className="w-16 h-16 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-4">
- <CheckCircle2 size={32} />
- </div>
- <h2 className="text-xl font-black text-slate-800 tracking-tight">Aprobar con Salida de Stock</h2>
- <p className="text-slate-500 text-sm font-medium">Esta acción marcará el requerimiento como aprobado y descontará el producto del inventario.</p>
- </div>
+  return (
+    <ModalPortal>
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
+        <div className="bg-white w-full max-w-sm rounded-2xl sm:rounded-3xl shadow-2xl overflow-hidden border border-slate-100 animate-in zoom-in-95 duration-200 p-6 space-y-5">
+          <div className="text-center space-y-2">
+            <div className="w-14 h-14 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-3 shadow-sm">
+              <CheckCircle2 size={28} />
+            </div>
+            <h2 className="text-lg font-black text-slate-800 tracking-tight leading-tight">Aprobar con Salida de Stock</h2>
+            <p className="text-slate-400 text-xs font-medium">Esta acción marcará el requerimiento como aprobado y descontará el producto del inventario.</p>
+          </div>
 
- <div className="space-y-2 text-left">
- <label className="text-[11px] font-black tracking-tight text-slate-400 px-1 flex items-center gap-1">
- <MapPin size={12} />
- Almacén de Origen
- </label>
- <select 
- required
- className="w-full bg-slate-50 border-2 border-transparent focus:border-blue-500 focus:bg-white rounded-2xl p-4 text-sm font-bold transition-all outline-none appearance-none"
- value={warehouseId}
- onChange={e => setWarehouseId(e.target.value)}
- >
- <option value="">Seleccionar almacén...</option>
- {warehouses.map(wh => (
- <option key={wh.id} value={wh.id}>{wh.name} ({wh.area})</option>
- ))}
- </select>
- </div>
+          <div className="space-y-1.5 text-left">
+            <label className="text-[10px] font-black tracking-tight text-slate-400 px-1 flex items-center gap-1">
+              <MapPin size={12} />
+              Almacén de Origen
+            </label>
+            <select 
+              required
+              className="w-full bg-slate-50 border border-slate-200 focus:border-blue-500 focus:bg-white rounded-xl px-3.5 py-2.5 text-xs font-bold transition-all outline-none appearance-none cursor-pointer"
+              value={warehouseId}
+              onChange={e => setWarehouseId(e.target.value)}
+            >
+              <option value="">Seleccionar almacén...</option>
+              {warehouses.map(wh => (
+                <option key={wh.id} value={wh.id}>{wh.name} ({wh.area})</option>
+              ))}
+            </select>
+          </div>
 
- <div className="flex gap-3 pt-2">
- <button 
- type="button" 
- onClick={onClose}
- className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold py-3.5 rounded-xl transition-all text-sm"
- >
- Cancelar
- </button>
- <button 
- disabled={loading}
- onClick={handleApprove}
- className="flex-[1.5] bg-blue-600 hover:bg-blue-700 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-blue-200 transition-all flex items-center justify-center gap-2 text-sm"
- >
- {loading ? <Loader2 className="animate-spin" size={18} /> : 'Confirmar Salida'}
- </button>
- </div>
-
- </div>
- </div>
- )
+          <div className="flex gap-2.5 pt-2">
+            <button 
+              type="button" 
+              onClick={onClose}
+              className="flex-1 bg-white border border-slate-200 hover:bg-slate-100 text-slate-700 font-bold py-2.5 rounded-xl transition-all text-xs"
+            >
+              Cancelar
+            </button>
+            <button 
+              disabled={loading}
+              onClick={handleApprove}
+              className="flex-[1.5] bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 rounded-xl shadow-sm transition-all flex items-center justify-center gap-2 text-xs disabled:opacity-50"
+            >
+              {loading ? <Loader2 className="animate-spin" size={16} /> : 'Confirmar Salida'}
+            </button>
+          </div>
+        </div>
+      </div>
+    </ModalPortal>
+  )
 }
 
 export function ReportIncidentModal({ 
@@ -794,24 +803,28 @@ export function ReportIncidentModal({
  }
  }
 
- return (
- <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
- <div className="bg-white w-full max-w-2xl rounded-[2.5rem] shadow-[0_20px_50px_rgba(0,0,0,0.3)] overflow-hidden animate-in zoom-in-95 duration-200 flex flex-col max-h-[90vh]">
- <div className="p-8 border-b border-slate-50 flex justify-between items-center bg-orange-50/30">
- <div>
- <h2 className="text-2xl font-black text-slate-800 tracking-tight">
- {initialCategory === 'soma' ? 'Reportar Incidente SOMA' : 'Reportar Incidencia'}
- </h2>
- <p className="text-slate-500 text-sm font-medium italic">
- {initialCategory === 'soma' ? 'FASE 2: Investigación y Seguimiento HSEC' : 'Control de anomalías y eventos operativos'}
- </p>
- </div>
- <button onClick={onClose} className="p-2 hover:bg-white rounded-full transition-colors text-slate-400">
- <X size={24} />
- </button>
- </div>
+  if (!isOpen) return null
 
- <form onSubmit={handleSubmit} className="p-10 space-y-8 overflow-y-auto custom-scrollbar">
+  return (
+    <ModalPortal>
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
+        <div className="bg-white w-full max-w-2xl rounded-2xl sm:rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 flex flex-col max-h-[90vh]">
+          <div className="px-6 py-5 border-b border-slate-50 flex justify-between items-center bg-orange-50/30 shrink-0">
+            <div>
+              <h2 className="text-xl font-black text-slate-800 tracking-tight leading-none">
+                {initialCategory === 'soma' ? 'Reportar Incidente SOMA' : 'Reportar Incidencia'}
+              </h2>
+              <p className="text-slate-500 text-xs font-medium mt-1">
+                {initialCategory === 'soma' ? 'Investigación y Seguimiento HSEC' : 'Control de anomalías y eventos operativos'}
+              </p>
+            </div>
+            <button onClick={onClose} className="p-2 hover:bg-slate-100 rounded-full transition-colors text-slate-400 cursor-pointer">
+              <X size={18} />
+            </button>
+          </div>
+
+          <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
+            <div className="p-6 space-y-5 overflow-y-auto flex-1 custom-scrollbar">
  {/* ... (existing fields remain identical) ... */}
  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
  <div className="space-y-2">
@@ -943,27 +956,34 @@ export function ReportIncidentModal({
  onChange={e => setForm(prev => ({...prev, corrective_actions: e.target.value.toUpperCase()}))}
  />
  </div>
+            </div>
 
- <div className="flex gap-4 pt-4 sticky bottom-0 bg-white">
- <button type="button" onClick={onClose} className="flex-1 bg-slate-100 text-slate-600 font-black py-5 rounded-2xl transition-all">
- Cancelar
- </button>
- <button 
- disabled={loading}
- type="submit"
- className="flex-[2] bg-orange-600 hover:bg-orange-700 text-white font-black py-5 rounded-2xl shadow-xl shadow-orange-100 transition-all flex items-center justify-center gap-3 active:scale-95"
- >
- {loading ? <Loader2 className="animate-spin text-white" size={24} /> : (
- <>
- <Activity size={20} strokeWidth={3} />
- {uploading ? 'Subiendo Evidencias...' : 'Reportar Incidencia'}
- </>
- )}
- </button>
- </div>
- </form>
- </div>
- </div>
- )
+            {/* Footer Fijo */}
+            <div className="px-6 py-4 bg-slate-50 border-t border-slate-100 flex items-center justify-end gap-3 shrink-0">
+              <button 
+                type="button" 
+                onClick={onClose} 
+                className="px-5 py-2.5 bg-white border border-slate-200 text-slate-700 font-bold rounded-xl text-xs hover:bg-slate-100 transition-colors"
+              >
+                Cancelar
+              </button>
+              <button 
+                disabled={loading}
+                type="submit"
+                className="px-6 py-2.5 bg-orange-600 hover:bg-orange-700 text-white font-bold rounded-xl shadow-sm text-xs transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+              >
+                {loading ? <Loader2 className="animate-spin text-white" size={16} /> : (
+                  <>
+                    <Activity size={16} strokeWidth={2.5} />
+                    {uploading ? 'Subiendo...' : 'Reportar Incidencia'}
+                  </>
+                )}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </ModalPortal>
+  )
 }
 

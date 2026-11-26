@@ -27,35 +27,29 @@ export async function getPettyCashStats(area: string) {
  const today = new Date()
  const firstDayOfMonth = `${today.getFullYear()}-${(today.getMonth() + 1).toString().padStart(2, '0')}-01`
 
- // 1. Obtener todas las transacciones para Saldo Actual (Total histórico de la caja)
- const { data: allTransactions } = await applyIsolation(
- supabase.from('petty_cash_transactions').select('amount, type'),
- companyId,
- extendedUser.role_id
- ).ilike('area', finalArea)
+ // 1. Obtención consolidada en UNA sola consulta (Bloque D)
+  const { data: allTransactions } = await applyIsolation(
+    supabase.from('petty_cash_transactions').select('amount, type, date'),
+    companyId,
+    extendedUser.role_id
+  ).ilike('area', finalArea)
 
- const balance = (allTransactions || []).reduce((acc: number, t: any) => {
- return t.type === 'ingreso' ? acc + Number(t.amount) : acc - Number(t.amount)
- }, 0)
+  let balance = 0
+  let monthIncome = 0
+  let monthExpenses = 0
 
- // 2. Obtener estadísticas del mes actual
- const { data: monthTransactions } = await applyIsolation(
- supabase.from('petty_cash_transactions').select('amount, type'),
- companyId,
- extendedUser.role_id
- )
- .ilike('area', finalArea)
- .gte('date', firstDayOfMonth)
+  for (const t of (allTransactions || [])) {
+    const amt = Number(t.amount) || 0
+    if (t.type === 'ingreso') {
+      balance += amt
+      if (t.date >= firstDayOfMonth) monthIncome += amt
+    } else {
+      balance -= amt
+      if (t.date >= firstDayOfMonth) monthExpenses += amt
+    }
+  }
 
- const monthIncome = (monthTransactions || [])
- .filter((t: any) => t.type === 'ingreso')
- .reduce((acc: number, t: any) => acc + Number(t.amount), 0)
-
- const monthExpenses = (monthTransactions || [])
- .filter((t: any) => t.type === 'egreso')
- .reduce((acc: number, t: any) => acc + Number(t.amount), 0)
- 
- return {
+  return {
  balance,
  monthIncome,
  monthExpenses,
@@ -186,7 +180,6 @@ export async function registerPettyCashTransaction(payload: {
  return { error: `Error en transferencia: ${rpcError.message}` }
  }
 
- revalidatePath('/dashboard')
  revalidatePath('/caja-chica')
  return { success: true }
  }
@@ -200,9 +193,9 @@ export async function registerPettyCashTransaction(payload: {
  }
  }
 
- const { error } = await supabase
- .from('petty_cash_transactions')
- .insert([{
+ const { data: insertedData, error } = await supabase
+    .from('petty_cash_transactions')
+    .insert([{
  reason: payload.reason,
  amount: payload.amount,
  payment_method: payload.payment_method,
@@ -215,12 +208,13 @@ export async function registerPettyCashTransaction(payload: {
  company_id: companyId,
  responsible_id: extendedUser.id
  }])
+    .select('*, responsible:users!responsible_id(name)')
+    .single()
 
- if (error) return { error: error.message }
- 
- revalidatePath('/dashboard')
- revalidatePath('/caja-chica')
- return { success: true }
+  if (error) return { error: error.message }
+  
+  revalidatePath('/caja-chica')
+  return { success: true, transaction: insertedData }
 }
 
 export async function deletePettyCashTransaction(id: string) {

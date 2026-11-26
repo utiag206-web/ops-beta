@@ -5,6 +5,7 @@ import { X, Loader2, Save, Mail, Key, UserCircle, ShieldAlert, Shield } from 'lu
 import { updateUserProfile, updateUserEmail, updateUserPassword } from '@/app/(main)/users/actions'
 import { UserPermissionsEditor } from './user-permissions-editor'
 import { toast } from 'sonner'
+import { ModalPortal } from '@/components/ui/modal-portal'
 
 interface EditUserModalProps {
   isOpen: boolean
@@ -80,15 +81,16 @@ export function EditUserModal({ isOpen, onClose, onSuccess, user }: EditUserModa
   }
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className={`bg-white w-full ${activeTab === 'permissions' ? 'max-w-2xl' : 'max-w-lg'} rounded-[2.5rem] shadow-2xl overflow-hidden border border-slate-100 animate-in zoom-in-95 duration-200 max-h-[90vh] flex flex-col transition-all duration-300`}>
-        <div className="px-8 py-6 border-b border-slate-50 flex justify-between items-center bg-slate-50/50">
+    <ModalPortal>
+      <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+      <div className={`bg-white w-full ${activeTab === 'permissions' ? 'max-w-2xl' : 'max-w-lg'} rounded-2xl shadow-2xl overflow-hidden border border-slate-100 animate-in zoom-in-95 duration-200 max-h-[90vh] flex flex-col transition-all duration-300`}>
+        <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
           <div>
-            <h2 className="text-2xl font-black text-slate-800 tracking-tight">Editar Usuario</h2>
-            <p className="text-slate-400 text-[10px] font-bold tracking-tight">Gestiona los detalles de acceso, perfil y permisos.</p>
+            <h2 className="text-lg font-black text-slate-800 tracking-tight leading-none">Editar Usuario</h2>
+            <p className="text-slate-500 text-xs font-medium mt-1">Gestiona los detalles de acceso, perfil y permisos.</p>
           </div>
-          <button onClick={onClose} className="p-2 hover:bg-white rounded-full transition-colors text-slate-400">
-            <X size={24} />
+          <button onClick={onClose} className="p-1.5 hover:bg-slate-100 rounded-lg transition-colors text-slate-400">
+            <X size={18} />
           </button>
         </div>
 
@@ -114,7 +116,7 @@ export function EditUserModal({ isOpen, onClose, onSuccess, user }: EditUserModa
           </button>
         </div>
 
-        <div className="p-6 md:p-8 overflow-y-auto flex-1 custom-scrollbar">
+        <div className="p-6 overflow-y-auto flex-1 custom-scrollbar space-y-4">
           {activeTab === 'profile' ? (
             <form onSubmit={handleUpdateProfile} className="space-y-6">
               <div className="space-y-2">
@@ -222,5 +224,6 @@ export function EditUserModal({ isOpen, onClose, onSuccess, user }: EditUserModa
         </div>
       </div>
     </div>
+    </ModalPortal>
   )
 }

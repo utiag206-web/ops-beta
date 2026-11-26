@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Upload, FileSpreadsheet, Check, AlertCircle, ArrowLeft, Loader2, Save, Download } from 'lucide-react'
 import Link from 'next/link'
-import * as XLSX from 'xlsx'
+// Dynamic import of xlsx on demand
 import { importAssets, checkExistingAssetCodes } from '@/app/(main)/assets/actions'
 import { toast } from 'sonner'
 
@@ -29,59 +29,78 @@ export function AssetImport() {
  const [error, setError] = useState<string | null>(null)
  const [fileName, setFileName] = useState<string | null>(null)
 
- const downloadAssetTemplate = () => {
  const headers = [
- 'código',
- 'nombre',
- 'marca',
- 'modelo',
- 'categoría',
- 'estado',
- 'ubicación',
- 'fecha_adquisicion',
- 'observaciones'
+   'código',
+   'nombre',
+   'marca',
+   'modelo',
+   'categoría',
+   'estado',
+   'ubicación',
+   'fecha_adquisicion',
+   'observaciones'
  ]
  const samples = [
- {
- código: 'ACT-001',
- nombre: 'MONTACARGAS ELÉCTRICO',
- marca: 'Toyota',
- modelo: '7FGU25',
- categoría: 'equipo',
- estado: 'operativo',
- ubicación: 'Taller Norte',
- fecha_adquisicion: '2025-06-15',
- observaciones: 'Adquirido nuevo con garantía'
- },
- {
- código: 'ACT-002',
- nombre: 'ROTOMARTILLO INDUSTRIAL',
- marca: 'Bosch',
- modelo: 'GBH 2-28',
- categoría: 'herramienta',
- estado: 'operativo',
- ubicación: 'Almacén Central',
- fecha_adquisicion: '2025-09-20',
- observaciones: 'Con maleta y accesorios'
- },
- {
- código: 'ACT-003',
- nombre: 'CAMIONETA 4X4',
- marca: 'Toyota',
- modelo: 'Hilux',
- categoría: 'equipo',
- estado: 'en mantenimiento',
- ubicación: 'Taller Central',
- fecha_adquisicion: '2024-03-10',
- observaciones: 'Cambio de pastillas de freno'
- }
+   {
+     código: 'ACT-001',
+     nombre: 'MONTACARGAS ELÉCTRICO',
+     marca: 'Toyota',
+     modelo: '7FGU25',
+     categoría: 'equipo',
+     estado: 'operativo',
+     ubicación: 'Taller Norte',
+     fecha_adquisicion: '2025-06-15',
+     observaciones: 'Adquirido nuevo con garantía'
+   },
+   {
+     código: 'ACT-002',
+     nombre: 'ROTOMARTILLO INDUSTRIAL',
+     marca: 'Bosch',
+     modelo: 'GBH 2-28',
+     categoría: 'herramienta',
+     estado: 'operativo',
+     ubicación: 'Almacén Central',
+     fecha_adquisicion: '2025-09-20',
+     observaciones: 'Con maleta y accesorios'
+   },
+   {
+     código: 'ACT-003',
+     nombre: 'CAMIONETA 4X4',
+     marca: 'Toyota',
+     modelo: 'Hilux',
+     categoría: 'equipo',
+     estado: 'en mantenimiento',
+     ubicación: 'Taller Central',
+     fecha_adquisicion: '2024-03-10',
+     observaciones: 'Cambio de pastillas de freno'
+   }
  ]
 
- const ws = XLSX.utils.json_to_sheet(samples, { header: headers })
+ const downloadAssetTemplate = async () => {
+   const XLSX = await import('xlsx')
+   const ws = XLSX.utils.json_to_sheet(samples, { header: headers })
  const wb = XLSX.utils.book_new()
  XLSX.utils.book_append_sheet(wb, ws, 'Plantilla Activos')
  XLSX.writeFile(wb, 'Plantilla_Activos_Oficial.xlsx')
  toast.success('Plantilla descargada con éxito.')
+ }
+
+ const downloadAssetCsvTemplate = () => {
+   const csvRows = [
+     headers.join(','),
+     ...samples.map(row => headers.map(h => `"${(row as any)[h] ?? ''}"`).join(','))
+   ]
+   const csvContent = '\uFEFF' + csvRows.join('\r\n')
+   const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+   const url = URL.createObjectURL(blob)
+   const a = document.createElement('a')
+   a.href = url
+   a.download = 'Plantilla_Activos_Oficial.csv'
+   document.body.appendChild(a)
+   a.click()
+   document.body.removeChild(a)
+   URL.revokeObjectURL(url)
+   toast.success('Plantilla CSV descargada con éxito.')
  }
 
  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -94,6 +113,7 @@ export function AssetImport() {
  const reader = new FileReader()
  reader.onload = async (evt) => {
  try {
+ const XLSX = await import('xlsx')
  const bstr = evt.target?.result
  const wb = XLSX.read(bstr, { type: 'binary' })
  const wsname = wb.SheetNames[0]
@@ -213,9 +233,17 @@ export function AssetImport() {
  <div className="flex flex-wrap gap-4 justify-center mt-4">
  <button 
  onClick={downloadAssetTemplate}
- className="bg-white border-2 border-blue-200 hover:bg-blue-50 text-blue-600 px-6 py-2.5 rounded-xl text-xs font-black tracking-tight transition-all flex items-center gap-2 shadow-sm"
+ className="bg-white border-2 border-blue-200 hover:bg-blue-50 text-blue-600 px-5 py-2.5 rounded-xl text-xs font-black tracking-tight transition-all flex items-center gap-2 shadow-sm"
+ title="Descargar en formato Microsoft Excel (.xlsx)"
  >
- <Download size={16} className="text-blue-600" /> Descargar Plantilla
+ <Download size={16} className="text-blue-600" /> Descargar Excel (.xlsx)
+ </button>
+ <button 
+ onClick={downloadAssetCsvTemplate}
+ className="bg-white border-2 border-emerald-300 hover:bg-emerald-50 text-emerald-700 px-5 py-2.5 rounded-xl text-xs font-black tracking-tight transition-all flex items-center gap-2 shadow-sm"
+ title="Descargar en formato CSV (compatible sin Microsoft Excel)"
+ >
+ <Download size={16} className="text-emerald-700" /> Descargar CSV (.csv)
  </button>
  <label className="bg-blue-600 hover:bg-blue-700 !text-white px-6 py-2.5 rounded-xl text-xs font-black tracking-tight cursor-pointer transition-all shadow-md flex items-center gap-2">
  <Upload size={16} className="!text-white" />
@@ -228,6 +256,9 @@ export function AssetImport() {
  />
  </label>
  </div>
+ <p className="text-[11px] text-slate-500 font-medium text-center mt-4 bg-slate-50 border border-slate-200/80 rounded-xl py-2 px-4 max-w-lg mx-auto">
+   💡 <strong>Sugerencia:</strong> Si tu equipo no tiene Microsoft Excel instalado y Windows muestra un aviso al hacer doble clic en el archivo <code>.xlsx</code>, descarga la versión <strong>«Descargar CSV (.csv)»</strong> o abre la plantilla directamente en Google Sheets.
+ </p>
  </div>
  ) : (
  <div className="space-y-6">

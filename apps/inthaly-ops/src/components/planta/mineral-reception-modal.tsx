@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { X, Truck, Scale, CheckCircle2, AlertTriangle, FileText, MapPin, User, Layers } from 'lucide-react'
 import { PlantMineralBatch } from '@/app/(main)/operaciones/planta/actions'
 import { MultiplePhotoCapture } from '@/components/shared/MultiplePhotoCapture'
+import { ModalPortal } from '@/components/ui/modal-portal'
 
 interface MineralReceptionModalProps {
   isOpen: boolean
@@ -84,8 +85,9 @@ export function MineralReceptionModal({ isOpen, onClose, onSubmit }: MineralRece
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="bg-white rounded-3xl shadow-2xl border border-slate-100 w-full max-w-2xl overflow-hidden max-h-[92vh] flex flex-col">
+    <ModalPortal>
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
+        <div className="bg-white rounded-3xl shadow-2xl border border-slate-100 w-full max-w-2xl overflow-hidden max-h-[92vh] flex flex-col">
         {/* Header */}
         <div className="px-6 py-5 bg-gradient-to-r from-blue-700 to-indigo-800 text-white flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -364,5 +366,6 @@ export function MineralReceptionModal({ isOpen, onClose, onSubmit }: MineralRece
         </form>
       </div>
     </div>
+    </ModalPortal>
   )
 }

@@ -6,7 +6,15 @@ const timezoneMap: Record<string, string> = {
  'UTC-3': 'America/Argentina/Buenos_Aires',
 }
 
-const timezoneCache = new Map<string, { tz: string; expires: number }>()
+const timezoneCache: Map<string, { tz: string; expires: number }> =
+  (globalThis as any).__inthaly_timezone_cache ?? ((globalThis as any).__inthaly_timezone_cache = new Map())
+
+export function primeCompanyTimezone(companyId: string, rawTz?: string | null) {
+ if (!companyId) return
+ const tz = rawTz || 'UTC-5'
+ const resolved = timezoneMap[tz] || (tz.includes('/') ? tz : 'America/Lima')
+ timezoneCache.set(companyId, { tz: resolved, expires: Date.now() + 10 * 60 * 1000 })
+}
 
 export async function getCompanyTimezone(companyId: string): Promise<string> {
  if (!companyId) return 'America/Lima'

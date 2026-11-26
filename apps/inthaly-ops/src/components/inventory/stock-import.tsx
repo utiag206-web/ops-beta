@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Upload, FileSpreadsheet, Check, AlertCircle, ArrowLeft, Loader2, Save, Download, AlertTriangle } from 'lucide-react'
 import Link from 'next/link'
-import * as XLSX from 'xlsx'
+// Dynamic import of xlsx on demand
 import { importInitialStock, checkExistingProductCodes } from '@/app/(main)/inventory/actions'
 import { toast } from 'sonner'
 
@@ -26,43 +26,62 @@ export function StockImport() {
  const [fileName, setFileName] = useState<string | null>(null)
  const [hasErrors, setHasErrors] = useState(false)
 
- const downloadStockTemplate = () => {
  const headers = [
- 'codigo_producto',
- 'producto',
- 'cantidad',
- 'unidad',
- 'almacen'
+   'codigo_producto',
+   'producto',
+   'cantidad',
+   'unidad',
+   'almacen'
  ]
  const samples = [
- {
- codigo_producto: 'SKU-001',
- producto: 'CLAVOS 2 PULGADAS',
- cantidad: 200,
- unidad: 'unidad',
- almacen: 'Almacén Central'
- },
- {
- codigo_producto: 'SKU-002',
- producto: 'GAMBUCHOS',
- cantidad: 150,
- unidad: 'unidad',
- almacen: 'Almacén Cocina'
- },
- {
- codigo_producto: 'SKU-003',
- producto: 'PITA',
- cantidad: 300,
- unidad: 'metros',
- almacen: 'Almacén Central'
- }
+   {
+     codigo_producto: 'SKU-001',
+     producto: 'CLAVOS 2 PULGADAS',
+     cantidad: 200,
+     unidad: 'unidad',
+     almacen: 'Almacén Central'
+   },
+   {
+     codigo_producto: 'SKU-002',
+     producto: 'GAMBUCHOS',
+     cantidad: 150,
+     unidad: 'unidad',
+     almacen: 'Almacén Cocina'
+   },
+   {
+     codigo_producto: 'SKU-003',
+     producto: 'PITA',
+     cantidad: 300,
+     unidad: 'metros',
+     almacen: 'Almacén Central'
+   }
  ]
 
- const ws = XLSX.utils.json_to_sheet(samples, { header: headers })
+ const downloadStockTemplate = async () => {
+   const XLSX = await import('xlsx')
+   const ws = XLSX.utils.json_to_sheet(samples, { header: headers })
  const wb = XLSX.utils.book_new()
  XLSX.utils.book_append_sheet(wb, ws, 'Inventario Inicial')
  XLSX.writeFile(wb, 'Plantilla_Inventario_Inicial_Oficial.xlsx')
  toast.success('Plantilla descargada con éxito.')
+ }
+
+ const downloadStockCsvTemplate = () => {
+   const csvRows = [
+     headers.join(','),
+     ...samples.map(row => headers.map(h => `"${(row as any)[h] ?? ''}"`).join(','))
+   ]
+   const csvContent = '\uFEFF' + csvRows.join('\r\n')
+   const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+   const url = URL.createObjectURL(blob)
+   const a = document.createElement('a')
+   a.href = url
+   a.download = 'Plantilla_Inventario_Inicial_Oficial.csv'
+   document.body.appendChild(a)
+   a.click()
+   document.body.removeChild(a)
+   URL.revokeObjectURL(url)
+   toast.success('Plantilla CSV descargada con éxito.')
  }
 
  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -76,6 +95,7 @@ export function StockImport() {
  const reader = new FileReader()
  reader.onload = async (evt) => {
  try {
+ const XLSX = await import('xlsx')
  const bstr = evt.target?.result
  const wb = XLSX.read(bstr, { type: 'binary' })
  const wsname = wb.SheetNames[0]
@@ -211,9 +231,17 @@ export function StockImport() {
  <div className="flex flex-wrap gap-4 justify-center mt-4">
  <button 
  onClick={downloadStockTemplate}
- className="bg-white border-2 border-emerald-200 hover:bg-emerald-50 text-emerald-600 px-6 py-2.5 rounded-xl text-xs font-black tracking-tight transition-all flex items-center gap-2 shadow-sm"
+ className="bg-white border-2 border-emerald-200 hover:bg-emerald-50 text-emerald-600 px-5 py-2.5 rounded-xl text-xs font-black tracking-tight transition-all flex items-center gap-2 shadow-sm"
+ title="Descargar en formato Microsoft Excel (.xlsx)"
  >
- <Download size={16} className="text-emerald-600" /> Descargar Plantilla
+ <Download size={16} className="text-emerald-600" /> Descargar Excel (.xlsx)
+ </button>
+ <button 
+ onClick={downloadStockCsvTemplate}
+ className="bg-white border-2 border-teal-300 hover:bg-teal-50 text-teal-700 px-5 py-2.5 rounded-xl text-xs font-black tracking-tight transition-all flex items-center gap-2 shadow-sm"
+ title="Descargar en formato CSV (compatible sin Microsoft Excel)"
+ >
+ <Download size={16} className="text-teal-700" /> Descargar CSV (.csv)
  </button>
  <label className="bg-emerald-600 hover:bg-emerald-700 !text-white px-6 py-2.5 rounded-xl text-xs font-black tracking-tight cursor-pointer transition-all shadow-md flex items-center gap-2">
  <Upload size={16} className="!text-white" />
@@ -226,6 +254,9 @@ export function StockImport() {
  />
  </label>
  </div>
+ <p className="text-[11px] text-slate-500 font-medium text-center mt-4 bg-slate-50 border border-slate-200/80 rounded-xl py-2 px-4 max-w-lg mx-auto">
+   💡 <strong>Sugerencia:</strong> Si tu equipo no tiene Microsoft Excel instalado y Windows muestra un aviso al hacer doble clic en el archivo <code>.xlsx</code>, descarga la versión <strong>«Descargar CSV (.csv)»</strong> o abre la plantilla directamente en Google Sheets.
+ </p>
  </div>
  ) : (
  <div className="space-y-6">

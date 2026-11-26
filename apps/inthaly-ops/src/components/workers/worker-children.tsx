@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { Plus, Pencil, Trash2, X, Baby } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { upsertWorkerChild, deleteWorkerChild } from '@/app/(main)/workers/actions'
+import { ModalPortal } from '@/components/ui/modal-portal'
 
 interface WorkerChild {
  id: string
@@ -170,6 +171,7 @@ export function WorkerChildren({ workerId, initialChildren, canManage = false }:
 
  {/* MODAL AGREGAR / EDITAR */}
  {isModalOpen && (
+  <ModalPortal>
  <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4">
  <div className="bg-white rounded-3xl shadow-xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95">
  <div className="flex justify-between items-center p-6 border-b border-slate-100">
@@ -232,6 +234,7 @@ export function WorkerChildren({ workerId, initialChildren, canManage = false }:
  </form>
  </div>
  </div>
+  </ModalPortal>
  )}
  </div>
  )

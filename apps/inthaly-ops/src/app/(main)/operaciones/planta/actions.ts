@@ -99,7 +99,7 @@ export async function getPlantBatches() {
       extendedUser.role_id
     )
 
-    const { data, error } = await query.order('created_at', { ascending: false })
+    const { data, error } = await query.order('created_at', { ascending: false }).limit(50)
 
     if (error) throw error
 
@@ -116,6 +116,43 @@ export async function getPlantBatches() {
   } catch (error: any) {
     console.error('[PLANTA_ERROR] getPlantBatches:', error)
     return { success: false, error: error.message || 'Error al obtener lotes.', data: [] }
+  }
+}
+
+export async function getPlantSamplesBatch(batchIds: string[]) {
+  try {
+    const { extendedUser } = await getUserSession()
+    if (!extendedUser) return { success: false, error: 'Sesión no iniciada.', data: [] }
+    if (!batchIds || batchIds.length === 0) return { success: true, data: [] }
+
+    const validIds = batchIds.filter(id => id && !id.startsWith('temp-'))
+    if (validIds.length === 0) return { success: true, data: [] }
+
+    const companyId = await getStrictCompanyId()
+    const supabase = await createAdminClient()
+
+    const query = applyIsolation(
+      supabase.from('plant_mineral_samples').select('*').in('batch_id', validIds),
+      companyId,
+      extendedUser.role_id
+    )
+
+    const { data, error } = await query.order('created_at', { ascending: false })
+    if (error) throw error
+
+    const formattedData = (data || []).map((sample: any) => {
+      const { notes, evidences } = unpackBatchNotes(sample.lab_notes)
+      return {
+        ...sample,
+        lab_notes: notes,
+        evidences: sample.evidences && sample.evidences.length > 0 ? sample.evidences : evidences
+      }
+    })
+
+    return { success: true, data: formattedData as PlantMineralSample[] }
+  } catch (error: any) {
+    console.error('[PLANTA_ERROR] getPlantSamplesBatch:', error)
+    return { success: false, error: error.message || 'Error al obtener muestras.', data: [] }
   }
 }
 

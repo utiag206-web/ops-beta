@@ -3,19 +3,29 @@ import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { getPermissionsByRole, hasPermission } from './permissions'
 import { fetchCompanyOperatingProfile, normalizeIndustryCode } from '@/lib/operating-profiles'
+import { primeCompanyTimezone } from '@/lib/date-utils'
 import { cookies } from 'next/headers'
 import { resolvePermissions, serializeToLegacyArray } from '@/lib/rbac/engine'
 import type { UserPermissionOverride } from '@/lib/rbac/types'
 
 interface CachedExtendedUser {
+  user: any
   data: any
   timestamp: number
 }
 const SESSION_CACHE_TTL = 45 * 1000 // 45 segundos de memoria en servidor para navegaciones instantaneas
+const AUTH_TOKEN_TTL = 45 * 1000 // 45 segundos de deduplicación segura alineada con SESSION_CACHE_TTL
 const sessionMemoryCache: Map<string, CachedExtendedUser> =
   (globalThis as any).__inthaly_session_cache ?? ((globalThis as any).__inthaly_session_cache = new Map())
+const tokenUserCache: Map<string, { user: any; timestamp: number }> =
+  (globalThis as any).__inthaly_token_user_cache ?? ((globalThis as any).__inthaly_token_user_cache = new Map())
 
 export function clearUserSessionCache(userId?: string) {
+  tokenUserCache.clear()
+  if ((globalThis as any).__inthaly_mw_token_cache) {
+    ;(globalThis as any).__inthaly_mw_token_cache.clear()
+  }
+  ;(globalThis as any).__inthaly_recent_login_user = null
   if (userId) {
     for (const key of sessionMemoryCache.keys()) {
       if (key.startsWith(userId)) sessionMemoryCache.delete(key)
@@ -25,20 +35,57 @@ export function clearUserSessionCache(userId?: string) {
   }
 }
 
+export function primeUserSessionCache(user: any, extendedUser: any, activeCompanyId?: string | null) {
+  if (!user?.id || !extendedUser) return
+  const cacheKey = `${user.id}:${activeCompanyId || 'none'}`
+  sessionMemoryCache.set(cacheKey, { user, data: extendedUser, timestamp: Date.now() })
+}
+
+export function primeRecentLoginUser(user: any) {
+  if (!user?.id) return
+  ;(globalThis as any).__inthaly_recent_login_user = { user, timestamp: Date.now() }
+}
+
 export const getUserSession = cache(async function getUserSession() {
  try {
  const cookieStore = await cookies()
  const activeCompanyId = cookieStore.get('active_company_id')?.value
- 
- const supabase = await createClient()
- const { data: { user }, error: authError } = await supabase.auth.getUser()
+ const now = Date.now()
 
- if (authError || !user) {
- redirect('/login')
+ // Check if we have an active auth token cookie we recently validated
+ const authCookie = cookieStore.getAll().find(c => c.name.startsWith('sb-') && c.name.includes('-auth-token'))
+ const tokenKey = authCookie?.value ? authCookie.value.slice(-64) : null
+
+ let user: any = null
+ if (tokenKey) {
+   const cachedTokenUser = tokenUserCache.get(tokenKey)
+   if (cachedTokenUser && (now - cachedTokenUser.timestamp) < AUTH_TOKEN_TTL) {
+     user = cachedTokenUser.user
+   }
+ }
+
+ if (!user && tokenKey) {
+   const recentLogin = (globalThis as any).__inthaly_recent_login_user
+   if (recentLogin && (now - recentLogin.timestamp) < 10000) {
+     user = recentLogin.user
+     ;(globalThis as any).__inthaly_recent_login_user = null
+     tokenUserCache.set(tokenKey, { user, timestamp: now })
+   }
+ }
+
+ if (!user) {
+   const supabase = await createClient()
+   const { data: { user: fetchedUser }, error: authError } = await supabase.auth.getUser()
+   if (authError || !fetchedUser) {
+     redirect('/login')
+   }
+   user = fetchedUser
+   if (tokenKey) {
+     tokenUserCache.set(tokenKey, { user, timestamp: now })
+   }
  }
 
  const cacheKey = `${user.id}:${activeCompanyId || 'none'}`
- const now = Date.now()
  const cached = sessionMemoryCache.get(cacheKey)
  if (cached && (now - cached.timestamp) < SESSION_CACHE_TTL) {
    return { user, extendedUser: cached.data }
@@ -47,7 +94,7 @@ export const getUserSession = cache(async function getUserSession() {
   const adminSupabase = await createAdminClient()
   const { data: userData, error: userError } = await adminSupabase
   .from('users')
-  .select('*, companies(id, name, logo_url, status, industry)')
+  .select('id, email, name, role_id, role, area, company_id, worker_id, status, companies(id, name, logo_url, status, industry, timezone)')
   .eq('id', user.id)
   .maybeSingle()
 
@@ -65,7 +112,7 @@ export const getUserSession = cache(async function getUserSession() {
   
   const isUuid = (val: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(val)
 
-   // Dynamic Parallel Context Resolution (Role, Worker, Company)
+   // Dynamic Parallel Context Resolution (Role, Worker, Company, Permissions, Operating Profile)
    const rolePromise = (finalCompanyId && isUuid(finalCompanyId))
      ? adminSupabase.from('user_roles').select('role_id').eq('user_id', user.id).eq('company_id', finalCompanyId).maybeSingle()
      : Promise.resolve({ data: null })
@@ -77,7 +124,7 @@ export const getUserSession = cache(async function getUserSession() {
      : Promise.resolve({ data: null })
 
    const companyPromise = (impersonating && finalCompanyId && isUuid(finalCompanyId) && finalCompanyId !== userData.company_id)
-     ? adminSupabase.from('companies').select('id, name, logo_url, status, industry').eq('id', finalCompanyId).maybeSingle()
+     ? adminSupabase.from('companies').select('id, name, logo_url, status, industry, timezone').eq('id', finalCompanyId).maybeSingle()
      : Promise.resolve({ data: userData.companies })
 
    // RBAC Granular V1: overrides individuales del usuario por empresa
@@ -89,20 +136,25 @@ export const getUserSession = cache(async function getUserSession() {
          .eq('company_id', finalCompanyId)
      : Promise.resolve({ data: [] as any[] })
 
-   const [activeRoleData, workerData, companyRes, permissionsOverrideRes] = await Promise.all([
+   const nativeCompanyObj = Array.isArray(userData.companies) ? userData.companies[0] : userData.companies
+   const operatingProfilePromise = (finalCompanyId && isUuid(finalCompanyId))
+     ? fetchCompanyOperatingProfile(finalCompanyId, adminSupabase, nativeCompanyObj?.industry || null)
+     : Promise.resolve(null)
+
+   const [activeRoleData, workerData, companyRes, permissionsOverrideRes, operatingProfile] = await Promise.all([
      rolePromise,
      workerPromise,
      companyPromise,
-     permissionsOverridePromise
+     permissionsOverridePromise,
+     operatingProfilePromise
    ])
 
-   const companyData = companyRes?.data || userData.companies
-   const companyObj = Array.isArray(companyData) ? companyData[0] : companyData
-   const activeCompanyIndustry = companyObj?.industry || (userData.companies as any)?.industry || null
+   const companyData: any = companyRes?.data || userData.companies
+   const companyObj: any = Array.isArray(companyData) ? companyData[0] : companyData
 
-   const operatingProfile = (finalCompanyId && isUuid(finalCompanyId))
-     ? await fetchCompanyOperatingProfile(finalCompanyId, adminSupabase, activeCompanyIndustry)
-     : null
+   if (finalCompanyId && companyObj?.timezone) {
+     primeCompanyTimezone(finalCompanyId, companyObj.timezone)
+   }
 
   let rbacRole: string = 'trabajador'
   if (activeRoleData?.data?.role_id) {
@@ -190,7 +242,7 @@ export const getUserSession = cache(async function getUserSession() {
  extendedUser.display_email = extendedUser.email
  }
 
- sessionMemoryCache.set(cacheKey, { data: extendedUser, timestamp: now })
+ sessionMemoryCache.set(cacheKey, { user, data: extendedUser, timestamp: now })
  return { user, extendedUser: extendedUser as any }
 
  } catch (error: any) {

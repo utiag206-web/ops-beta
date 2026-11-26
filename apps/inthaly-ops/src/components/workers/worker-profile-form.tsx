@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { toast } from 'sonner'
 import { updateWorkerFullProfile } from '@/app/(main)/workers/actions'
 import { Save, Loader2, Briefcase, Landmark, User, ShieldAlert } from 'lucide-react'
 import { WorkerChildren } from '@/components/workers/worker-children'
@@ -93,10 +94,10 @@ export function WorkerProfileForm({ worker, childrenList = [], canManage = false
  })
  setIsSaving(false)
  if (result.success) {
- alert(result.message || "Perfil actualizado correctamente.")
+ toast.success(result.message || "Perfil actualizado correctamente.")
  router.refresh()
  } else {
- alert("Error crítico: " + (result.error || "No se pudo guardar la información."))
+ toast.error("Error: " + (result.error || "No se pudo guardar la información."))
  }
  }
 

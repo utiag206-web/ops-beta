@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { Bus, Calendar, User, X, Loader2, Save, DollarSign } from 'lucide-react'
 import { createTransportPayment } from '@/app/(main)/transport/actions'
+import { ModalPortal } from '@/components/ui/modal-portal'
 
 interface AddTransportModalProps {
  workers: any[]
@@ -47,6 +48,7 @@ export function AddTransportModal({ workers, onSuccess, onClose }: AddTransportM
  }
 
  return (
+  <ModalPortal>
  <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-300">
  <div className="bg-white w-full max-w-md rounded-2xl shadow-xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
  <div className="p-6 bg-gradient-to-r from-indigo-600 to-indigo-500 text-white flex justify-between items-center">
@@ -148,5 +150,6 @@ export function AddTransportModal({ workers, onSuccess, onClose }: AddTransportM
  </form>
  </div>
  </div>
+  </ModalPortal>
  )
 }

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { 
  History, Search, Filter, Hash, 
@@ -8,6 +8,7 @@ import {
  Calendar, Clock, User, MessageSquare, Package, Plus, MapPin, X
 } from 'lucide-react'
 import { MovementForm } from './movement-form'
+import { ModalPortal } from '@/components/ui/modal-portal'
 import type { InventoryMovement as Movement } from '@/types/inventory.types'
 
 const getTypeStyle = (type: string) => {
@@ -74,16 +75,47 @@ export function InventoryMovementsList({
 
  const [selectedMovement, setSelectedMovement] = useState<Movement | null>(null)
 
- const filteredMovements = movements.filter(m => {
- const productName = (m.products?.name || '').toLowerCase()
- const productCode = (m.products?.code || '').toLowerCase()
- const observation = (m.observation || '').toLowerCase()
- const search = searchTerm.toLowerCase()
- 
- return productName.includes(search) || 
- productCode.includes(search) || 
- observation.includes(search)
- })
+ // Lógica de Kardex optimizada con useMemo: Calcular saldos acumulados (Orden Cronológico Inverso)
+ const movementsWithBalance = useMemo(() => {
+   let currentRunningBalances: Record<string, number> = { ...initialBalances }
+   const sortedDesc = [...movements].sort((a, b) => 
+     new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+   )
+
+   return sortedDesc.map(m => {
+     const key = `${m.product_id}|${m.warehouse_id}`
+     const balanceAfter = currentRunningBalances[key] || 0
+     
+     const effect = m.movement_types?.effect
+     const type = (m.type || '').toLowerCase()
+     const qty = Math.abs(Number(m.quantity))
+
+     if (effect === 'IN' || type === 'ingreso') {
+       currentRunningBalances[key] = (currentRunningBalances[key] || 0) - qty
+     } else if (effect === 'OUT' || type === 'salida') {
+       currentRunningBalances[key] = (currentRunningBalances[key] || 0) + qty
+     } else {
+       currentRunningBalances[key] = (currentRunningBalances[key] || 0) + qty
+     }
+
+     return { ...m, running_balance: balanceAfter }
+   })
+ }, [movements, initialBalances])
+
+ // Filtrado cliente instantáneo optimizado
+ const displayMovements = useMemo(() => {
+   if (!searchTerm.trim()) return movementsWithBalance
+   const search = searchTerm.toLowerCase()
+   return movementsWithBalance.filter(m => {
+     if (!m.products) return false
+     const productName = (m.products.name || '').toLowerCase()
+     const productCode = (m.products.code || '').toLowerCase()
+     const observation = (m.observation || '').toLowerCase()
+     return productName.includes(search) || 
+            productCode.includes(search) || 
+            observation.includes(search)
+   })
+ }, [movementsWithBalance, searchTerm])
 
  const getTypeStyle = (type: string) => {
  switch (type) {
@@ -158,49 +190,7 @@ export function InventoryMovementsList({
  </tr>
  </thead>
  <tbody className="divide-y divide-slate-50">
- {(() => {
- // Lógica de Kardex: Calcular saldos acumulados (Orden Cronológico Inverso) sobre la lista COMPLETA de movimientos
- // Para que el saldo sea consistente y no se altere por filtros client-side de texto, empezamos desde el saldo ACTUAL y restamos/sumamos hacia atrás.
- let currentRunningBalances: Record<string, number> = { ...initialBalances }
- 
- // 1. Ordenar por fecha DESC (lo más reciente primero)
- const sortedDesc = [...movements].sort((a, b) => 
- new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
- )
-
- const movementsWithBalance = sortedDesc.map(m => {
- const key = `${m.product_id}|${m.warehouse_id}`
- const balanceAfter = currentRunningBalances[key] || 0
- 
- const effect = m.movement_types?.effect
- const type = (m.type || '').toLowerCase()
- const qty = Math.abs(Number(m.quantity))
-
- if (effect === 'IN' || type === 'ingreso') {
- currentRunningBalances[key] = (currentRunningBalances[key] || 0) - qty
- } else if (effect === 'OUT' || type === 'salida') {
- currentRunningBalances[key] = (currentRunningBalances[key] || 0) + qty
- } else {
- currentRunningBalances[key] = (currentRunningBalances[key] || 0) + qty // Default legacy
- }
-
- return { ...m, running_balance: balanceAfter }
- })
-
- // 2. Filtrar client-side por texto sobre los movimientos que ya tienen sus saldos correctos calculados
- const displayMovements = movementsWithBalance.filter(m => {
- if (!m.products) return false
- const productName = (m.products.name || '').toLowerCase()
- const productCode = (m.products.code || '').toLowerCase()
- const observation = (m.observation || '').toLowerCase()
- const search = searchTerm.toLowerCase()
- 
- return productName.includes(search) || 
- productCode.includes(search) || 
- observation.includes(search)
- })
-
- return displayMovements.length > 0 ? displayMovements.map((m) => {
+ {displayMovements.length > 0 ? displayMovements.map((m) => {
  if (!m.products) return null;
  const isIntegerUnit = ['UND', 'UNIDAD', 'PAR', 'CAJA'].includes((m.products.unit || '').toUpperCase())
  const displayQuantity = isIntegerUnit ? Math.round(m.quantity) : m.quantity
@@ -283,8 +273,7 @@ export function InventoryMovementsList({
  <p className="text-slate-400 text-sm font-medium mt-1">Registra movimientos para empezar la trazabilidad.</p>
  </td>
  </tr>
- )
- })()}
+ )}
  </tbody>
  </table>
  </div>
@@ -311,6 +300,7 @@ function ViewMovementDetailsModal({ movement, onClose }: { movement: any; onClos
  if (!movement) return null
 
  return (
+ <ModalPortal>
  <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200 font-sans">
  <div className="bg-white w-full max-w-md rounded-[2.5rem] shadow-2xl overflow-hidden border border-slate-100 animate-in zoom-in-95 duration-200 p-8 space-y-6">
  <div className="flex justify-between items-center pb-4 border-b border-slate-100">
@@ -384,5 +374,6 @@ function ViewMovementDetailsModal({ movement, onClose }: { movement: any; onClos
  </div>
  </div>
  </div>
+ </ModalPortal>
  )
 }

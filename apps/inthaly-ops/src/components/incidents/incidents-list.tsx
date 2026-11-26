@@ -6,6 +6,7 @@ import { AlertCircle, Search, Filter, Activity, Clock, User, CheckCircle2, Chevr
 import { getIncidencias, updateIncidencia, deleteIncidencia } from '@/app/(main)/incidencias/actions'
 import { ReportIncidentModal } from '@/components/requirements/requirements-components'
 import { toast } from 'sonner'
+import { ModalPortal } from '@/components/ui/modal-portal'
 
 export function IncidentsList({ initialData = [], user, forcedCategory }: { initialData?: any[], user?: any, forcedCategory?: string }) {
  const router = useRouter()
@@ -95,9 +96,9 @@ export function IncidentsList({ initialData = [], user, forcedCategory }: { init
  return (
  <div className="space-y-8 pb-12">
  {/* ... (existing UI remains identical) ... */}
- <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white p-8 rounded-[2.5rem] shadow-sm border border-slate-50">
+ <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
  <div>
- <h1 className="text-3xl font-black text-slate-800 tracking-tight flex items-center gap-3">
+ <h1 className="text-xl font-black text-slate-800 tracking-tight flex items-center gap-3">
  <div className="bg-orange-100 p-2 rounded-xl">
  <AlertCircle className="text-orange-600" size={24} />
  </div>
@@ -112,7 +113,7 @@ export function IncidentsList({ initialData = [], user, forcedCategory }: { init
  {!isWorker && (
  <button 
  onClick={() => setIsModalOpen(true)}
- className="w-full md:w-auto bg-orange-600 hover:bg-orange-700 text-white px-8 py-4 rounded-2xl font-black transition-all flex items-center justify-center gap-3 shadow-lg shadow-orange-100 active:scale-95"
+ className="w-full md:w-auto bg-orange-600 hover:bg-orange-700 text-white px-5 py-2.5 rounded-xl font-bold text-xs transition-all flex items-center justify-center gap-2 shadow-sm active:scale-95"
  >
  <Activity size={20} strokeWidth={3} />
  <span>Reportar Incidencia</span>
@@ -350,7 +351,8 @@ function IncidentDetailModal({ isOpen, onClose, incident }: { isOpen: boolean, o
  }
  }
 
- return (
+  return (
+    <ModalPortal>
  <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
  <div className="bg-white w-full max-w-lg rounded-[2.5rem] shadow-2xl overflow-hidden border border-slate-100 animate-in zoom-in-95 duration-200 max-h-[90vh] flex flex-col">
  {/* Header */}
@@ -431,6 +433,7 @@ function IncidentDetailModal({ isOpen, onClose, incident }: { isOpen: boolean, o
  </div>
  </div>
  </div>
+    </ModalPortal>
  )
 }
 
@@ -558,7 +561,8 @@ function EditIncidentModal({
  }
  }
 
- return (
+  return (
+    <ModalPortal>
  <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
  <div className="bg-white w-full max-w-2xl rounded-[2.5rem] shadow-[0_20px_50px_rgba(0,0,0,0.3)] overflow-hidden animate-in zoom-in-95 duration-200 flex flex-col max-h-[90vh]">
  <div className="p-8 border-b border-slate-50 flex justify-between items-center bg-orange-50/30">
@@ -715,5 +719,6 @@ function EditIncidentModal({
  </form>
  </div>
  </div>
+    </ModalPortal>
  )
 }

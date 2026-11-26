@@ -2,6 +2,7 @@
 
 import React from 'react'
 import { MapPin, Clock, ShieldCheck, X, Navigation, ExternalLink, Info } from 'lucide-react'
+import { ModalPortal } from '@/components/ui/modal-portal'
 
 export interface LocationPunch {
   type: string
@@ -43,7 +44,8 @@ export const AttendanceLocationModal: React.FC<AttendanceLocationModalProps> = (
   const selectedPunch = validPunchesWithGps[0] || punches[0]
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-fade-in">
+    <ModalPortal>
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-fade-in">
       <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-3xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
         {/* Modal Header */}
         <div className="px-6 py-4 bg-slate-900/90 border-b border-slate-800 flex items-center justify-between">
@@ -188,5 +190,6 @@ export const AttendanceLocationModal: React.FC<AttendanceLocationModalProps> = (
         </div>
       </div>
     </div>
+    </ModalPortal>
   )
 }

@@ -20,6 +20,7 @@ export function AttendanceList({ records, isWorker = false, companyId }: Attenda
   useEffect(() => {
     if (!effectiveCompanyId) return
     const supabase = createClient()
+    let refreshTimer: NodeJS.Timeout | null = null
     const channel = supabase.channel(`attendance_list_${effectiveCompanyId}`)
       .on('postgres_changes', { 
         event: '*', 
@@ -27,12 +28,16 @@ export function AttendanceList({ records, isWorker = false, companyId }: Attenda
         table: 'attendance',
         filter: `company_id=eq.${effectiveCompanyId}`
       }, () => {
-        console.log('[REALTIME] Attendance list updated')
-        router.refresh()
+        if (refreshTimer) clearTimeout(refreshTimer)
+        refreshTimer = setTimeout(() => {
+          console.log('[REALTIME] Attendance list updated (debounced)')
+          router.refresh()
+        }, 600)
       })
       .subscribe()
 
     return () => {
+      if (refreshTimer) clearTimeout(refreshTimer)
       supabase.removeChannel(channel)
     }
   }, [router, effectiveCompanyId])

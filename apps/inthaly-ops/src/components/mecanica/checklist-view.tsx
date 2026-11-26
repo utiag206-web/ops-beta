@@ -10,6 +10,7 @@ import { useOffline } from '@/components/providers/offline-provider'
 import { addOperationToQueue, getPendingOperations } from '@/lib/offline-sync'
 import { v4 as uuidv4 } from 'uuid'
 import { useRbac } from '@/components/providers/rbac-provider'
+import { ModalPortal } from '@/components/ui/modal-portal'
 import {
   ChecklistRecord,
   createChecklistRecord,
@@ -625,7 +626,8 @@ export function ChecklistView({
 
       {/* Modal CREAR / EDITAR */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+        <ModalPortal>
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
           <div className="bg-white w-full max-w-2xl rounded-3xl shadow-2xl overflow-hidden border border-slate-100 animate-in zoom-in-95 duration-200 max-h-[90vh] flex flex-col">
             <div className="px-6 sm:px-8 py-5 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
               <div>
@@ -848,11 +850,13 @@ export function ChecklistView({
             </form>
           </div>
         </div>
+        </ModalPortal>
       )}
 
       {/* Modal Detalle Checklist (Ver) */}
       {selectedChecklist && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+        <ModalPortal>
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
           <div className="bg-white w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden border border-slate-100 animate-in zoom-in-95 duration-200 max-h-[90vh] flex flex-col">
             <div className="px-6 sm:px-8 py-5 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
               <div>
@@ -907,12 +911,14 @@ export function ChecklistView({
             </div>
           </div>
         </div>
+        </ModalPortal>
       )}
 
       {/* Modal Confirmación de Eliminación Física */}
       {itemToDelete && (
-        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden border border-slate-100 p-6 space-y-4">
+        <ModalPortal>
+          <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+            <div className="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden border border-slate-100 p-6 space-y-4">
             <div className="flex items-center gap-3 text-rose-600">
               <div className="w-10 h-10 rounded-full bg-rose-50 flex items-center justify-center shrink-0">
                 <ShieldAlert size={22} />
@@ -946,6 +952,7 @@ export function ChecklistView({
             </div>
           </div>
         </div>
+        </ModalPortal>
       )}
     </div>
   )

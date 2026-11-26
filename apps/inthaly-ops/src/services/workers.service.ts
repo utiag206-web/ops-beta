@@ -12,6 +12,8 @@ export interface GetWorkersOptions {
   roleId: string
   status?: string
   isRecent?: boolean
+  limit?: number
+  offset?: number
 }
 
 export interface WorkerDetailResult extends Worker {
@@ -44,6 +46,12 @@ export async function getWorkersList(
     query = query.gte('created_at', thirtyDaysAgo.toISOString())
   }
 
+  const fetchLimit = options.limit || 300
+  if (options.offset) {
+    query = query.range(options.offset, options.offset + fetchLimit - 1)
+  } else {
+    query = query.limit(fetchLimit)
+  }
   const { data: workers, error } = await query.order('created_at', { ascending: false })
 
   if (error) {

@@ -56,4 +56,6 @@ next-env.d.ts
 /seed_ops.mjs
 /deploy_prod.zip
 /.archive/
+/backups/
+backups/
 

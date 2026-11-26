@@ -8,7 +8,7 @@ import { Search, UserMinus, UserCheck, Edit2, Trash2, Loader2, User, Folder, Upl
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
-import * as XLSX from 'xlsx'
+// Dynamic import of xlsx inside handleExportExcel
 import { useTerminology, useOperationalContext } from '@/hooks'
 import type { Worker } from '@/types/workers.types'
 
@@ -25,7 +25,7 @@ export function WorkersList({ workers, canManage = false }: { workers: Worker[],
 
   useEffect(() => {
     if (workers && workers.length > 0 && typeof window !== 'undefined') {
-      localStorage.setItem('workers_cache', JSON.stringify(workers))
+      localStorage.setItem(companyId ? `workers_cache_${companyId}` : 'workers_cache', JSON.stringify(workers))
     }
   }, [workers])
 
@@ -35,21 +35,26 @@ export function WorkersList({ workers, canManage = false }: { workers: Worker[],
    if (!companyId) return
    const { createClient } = require('@/lib/supabase/client')
    const supabase = createClient()
-   const channel = supabase.channel(`workers_list_${companyId}`)
-     .on('postgres_changes', { 
-       event: '*', 
-       schema: 'public', 
-       table: 'workers',
-       filter: `company_id=eq.${companyId}`
-     }, () => {
-       console.log('[REALTIME] Workers list updated')
-       router.refresh()
-     })
-     .subscribe()
+   let refreshTimer: NodeJS.Timeout | null = null
+    const channel = supabase.channel(`workers_list_${companyId}`)
+      .on('postgres_changes', { 
+        event: '*', 
+        schema: 'public', 
+        table: 'workers',
+        filter: `company_id=eq.${companyId}`
+      }, () => {
+        if (refreshTimer) clearTimeout(refreshTimer)
+        refreshTimer = setTimeout(() => {
+          console.log('[REALTIME] Workers list updated (debounced)')
+          router.refresh()
+        }, 600)
+      })
+      .subscribe()
 
-   return () => {
-     supabase.removeChannel(channel)
-   }
+    return () => {
+      if (refreshTimer) clearTimeout(refreshTimer)
+      supabase.removeChannel(channel)
+    }
  }, [router, companyId])
 
  const handleExportExcel = async () => {
@@ -100,6 +105,7 @@ export function WorkersList({ workers, canManage = false }: { workers: Worker[],
        cuenta_cts: w.financial?.cts_account || '',
      }))
 
+     const XLSX = await import('xlsx')
      const ws = XLSX.utils.json_to_sheet(samples)
      const wb = XLSX.utils.book_new()
      XLSX.utils.book_append_sheet(wb, ws, 'Trabajadores')

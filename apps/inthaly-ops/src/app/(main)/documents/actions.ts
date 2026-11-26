@@ -14,13 +14,14 @@ export async function getWorkerDocuments() {
 
  let query = applyIsolation(
  supabase.from('worker_documents').select(`
- *, 
+ id, company_id, worker_id, name, file_type, file_url, file_path, size, issue_date, expiry_date, created_at, 
  worker:workers(name, last_name)
  `),
  companyId,
  extendedUser.role_id
  )
  .order('created_at', { ascending: false })
+ .limit(200)
 
  const viewMode = await getActiveViewMode()
  if (viewMode === 'WORKER' || extendedUser.role_id === 'trabajador') {

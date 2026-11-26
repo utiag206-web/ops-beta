@@ -92,10 +92,10 @@ export async function getMecanicaOverview() {
   const companyId = await getStrictCompanyId()
   const supabase = await createAdminClient()
 
-  // Pull existing assets to correlate with mechanics
+  // Pull only required columns from existing assets to correlate with mechanics
   const { data: assets } = await supabase
     .from('assets')
-    .select('*')
+    .select('id, name, type, code, status, location')
     .eq('company_id', companyId)
 
   return {
@@ -161,7 +161,7 @@ export async function getMaintenanceRecords(equipmentType?: string) {
     const supabase = await createAdminClient()
 
     let query = applyIsolation(
-      supabase.from('mechanics_maintenance').select('*'),
+      supabase.from('mechanics_maintenance').select('id, company_id, equipment_asset_id, equipment_name, equipment_code, equipment_type, maintenance_type, description, technician, technician_worker_id, date, hours_or_km, status, cost, next_service, observations, created_by, created_at, updated_at'),
       companyId,
       extendedUser.role_id
     )
@@ -176,7 +176,7 @@ export async function getMaintenanceRecords(equipmentType?: string) {
       }
     }
 
-    const { data, error } = await query.order('date', { ascending: false }).order('created_at', { ascending: false })
+    const { data, error } = await query.order('date', { ascending: false }).order('created_at', { ascending: false }).limit(200)
 
     if (error) {
       console.error('[MECANICA_ERROR] getMaintenanceRecords:', error)
@@ -424,7 +424,7 @@ export async function getFuelRecords(equipmentType?: string) {
     const supabase = await createAdminClient()
 
     let query = applyIsolation(
-      supabase.from('mechanics_fuel').select('*'),
+      supabase.from('mechanics_fuel').select('id, company_id, equipment_asset_id, equipment_name, equipment_code, equipment_type, date, gallons, initial_hours, final_hours, hours_operated, ratio, operator, operator_worker_id, turn, status, observation, created_by, created_at, updated_at'),
       companyId,
       extendedUser.role_id
     )
@@ -433,7 +433,7 @@ export async function getFuelRecords(equipmentType?: string) {
       query = query.eq('equipment_type', equipmentType)
     }
 
-    const { data, error } = await query.order('date', { ascending: false }).order('created_at', { ascending: false })
+    const { data, error } = await query.order('date', { ascending: false }).order('created_at', { ascending: false }).limit(200)
 
     if (error) {
       console.error('[MECANICA_ERROR] getFuelRecords:', error)
@@ -683,7 +683,7 @@ export async function getChecklistRecords(equipmentType?: string) {
     const supabase = await createAdminClient()
 
     let query = applyIsolation(
-      supabase.from('mechanics_checklists').select('*'),
+      supabase.from('mechanics_checklists').select('id, company_id, equipment_asset_id, equipment_name, equipment_code, equipment_type, inspector, inspector_worker_id, date, turn, status, checks, observations, created_by, created_at, updated_at'),
       companyId,
       extendedUser.role_id
     )
@@ -692,7 +692,7 @@ export async function getChecklistRecords(equipmentType?: string) {
       query = query.eq('equipment_type', equipmentType)
     }
 
-    const { data, error } = await query.order('date', { ascending: false }).order('created_at', { ascending: false })
+    const { data, error } = await query.order('date', { ascending: false }).order('created_at', { ascending: false }).limit(200)
 
     if (error) {
       console.error('[MECANICA_ERROR] getChecklistRecords:', error)
@@ -906,12 +906,12 @@ export async function getToolRecords() {
     const supabase = await createAdminClient()
 
     const query = applyIsolation(
-      supabase.from('mechanics_tools').select('*'),
+      supabase.from('mechanics_tools').select('id, company_id, code, name, category, brand, condition, assigned_to, assigned_worker_id, location, last_inspection_date, status, created_by, created_at, updated_at'),
       companyId,
       extendedUser.role_id
     )
 
-    const { data, error } = await query.order('name', { ascending: true })
+    const { data, error } = await query.order('name', { ascending: true }).limit(300)
 
     if (error) {
       console.error('[MECANICA_ERROR] getToolRecords:', error)

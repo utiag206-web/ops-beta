@@ -14,10 +14,10 @@ export async function getRequirements(filters?: { status?: string, priority?: st
  const userArea = extendedUser?.area
 
  let query = applyIsolation(
- supabase.from('requirements').select('*'),
+ supabase.from('requirements').select('id, company_id, title, description, type, priority, status, product_id, quantity, area, created_by, movement_id, created_at'),
  companyId,
  extendedUser.role_id
- ).order('created_at', { ascending: false })
+ ).order('created_at', { ascending: false }).limit(100)
 
  if (filters?.status && filters.status !== 'todos') {
  query = query.eq('status', filters.status)

@@ -12,6 +12,7 @@ import { getCompanyProfile, updateCompanyProfile, uploadCompanyLogo } from './ac
 import { CompanyAuthSettings, DEFAULT_AUTH_SETTINGS, getCompanyAuthSettings, extractPlainWorkingHours } from '@/lib/company-auth-settings'
 import { CompanyHrSettings, DEFAULT_HR_SETTINGS, getCompanyHrSettings, formatWorkerCode } from '@/lib/company-hr-settings'
 import { FormField, FormInput, FormSelect, FormToggleCard, FormSectionHeader } from '@/components/shared/form-controls'
+import { useOperationalContext } from '@/components/providers/operational-context-provider'
 
 const INDUSTRIES = [
   'Minería y Metalurgia',
@@ -33,6 +34,8 @@ const WORKER_RANGES = [
 
 export default function CompanyProfilePage() {
   const router = useRouter()
+  const { companyId } = useOperationalContext()
+  const companyCacheKey = companyId ? `company_profile_cache_${companyId}` : 'company_profile_cache'
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null)
@@ -77,7 +80,7 @@ export default function CompanyProfilePage() {
           try {
             profile = await getCompanyProfile()
             if (profile && typeof localStorage !== 'undefined') {
-              localStorage.setItem('company_profile_cache', JSON.stringify(profile))
+              localStorage.setItem(companyCacheKey, JSON.stringify(profile))
             }
           } catch (netErr) {
             console.warn('[Company] Error al consultar perfil en línea:', netErr)
@@ -88,7 +91,7 @@ export default function CompanyProfilePage() {
         if (!profile) {
           try {
             if (typeof localStorage !== 'undefined') {
-              const raw = localStorage.getItem('company_profile_cache')
+              const raw = localStorage.getItem(companyCacheKey)
               if (raw) {
                 const parsed = JSON.parse(raw)
                 if (parsed && typeof parsed === 'object') {

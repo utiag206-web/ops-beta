@@ -91,7 +91,7 @@ export function NavigationProgressBar() {
       setIsNavigating(false)
       setProgress(0)
       delete document.body.dataset.navigating
-    }, 8000)
+    }, 15000)
 
     return () => {
       clearTimeout(t1)

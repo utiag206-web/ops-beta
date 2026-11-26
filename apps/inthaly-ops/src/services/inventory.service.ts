@@ -107,9 +107,14 @@ export async function getInventoryMovements(
     query = query.or('area.eq.COCINA,name.ilike.%Cocina%', { foreignTable: 'warehouses' })
   }
 
-  const { data, error } = await query
-    .order('created_at', { ascending: false })
-    .limit(limit)
+  const [{ data, error }, { data: currentStocks }] = await Promise.all([
+    query.order('created_at', { ascending: false }).limit(limit),
+    applyIsolation(
+      supabase.from('inventory_stock').select('product_id, warehouse_id, quantity'),
+      companyId,
+      roleId
+    )
+  ])
 
   if (error) {
     console.error('[InventoryService] Error fetching movements:', error)
@@ -122,15 +127,6 @@ export async function getInventoryMovements(
   const initialBalances: Record<string, number> = {}
 
   try {
-    const productIds = [...new Set(data.map((m: any) => m.product_id))]
-    const warehouseIds = [...new Set(data.map((m: any) => m.warehouse_id))]
-
-    const { data: currentStocks } = await applyIsolation(
-      supabase.from('inventory_stock').select('product_id, warehouse_id, quantity'),
-      companyId,
-      roleId
-    ).in('product_id', productIds).in('warehouse_id', warehouseIds)
-
     const stockMap: Record<string, number> = {}
     currentStocks?.forEach((s: any) => {
       stockMap[`${s.product_id}|${s.warehouse_id}`] = s.quantity || 0

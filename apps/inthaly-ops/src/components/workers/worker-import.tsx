@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Upload, FileSpreadsheet, Check, AlertCircle, ArrowLeft, Loader2, Save, Download } from 'lucide-react'
 import Link from 'next/link'
-import * as XLSX from 'xlsx'
+// Dynamic import of xlsx on demand
 import { importWorkers } from '@/app/(main)/workers/actions'
 
 interface WorkerImportData {
@@ -25,23 +25,71 @@ export function WorkerImport() {
  const [error, setError] = useState<string | null>(null)
  const [fileName, setFileName] = useState<string | null>(null)
  
-  const downloadWorkerTemplate = () => {
-  const headers = [
-  'codigo',
-  'nombres',
-  'apellidos',
-  'dni',
-  'cargo',
-  'telefono',
-  'fecha_ingreso',
-  'area'
+  const templateHeaders = [
+    'codigo',
+    'nombres',
+    'apellidos',
+    'dni',
+    'cargo',
+    'telefono',
+    'fecha_ingreso',
+    'area'
   ]
-  const samples: any[] = []
 
-  const ws = XLSX.utils.json_to_sheet(samples, { header: headers })
-  const wb = XLSX.utils.book_new()
-  XLSX.utils.book_append_sheet(wb, ws, 'Plantilla Trabajadores')
-  XLSX.writeFile(wb, 'Plantilla_Trabajadores_Oficial.xlsx')
+  const templateSamples = [
+    {
+      codigo: 'TRAB-001',
+      nombres: 'JUAN CARLOS',
+      apellidos: 'PÉREZ GÓMEZ',
+      dni: '12345678',
+      cargo: 'OPERADOR DE MAQUINARIA',
+      telefono: '987654321',
+      fecha_ingreso: '2026-01-15',
+      area: 'MINA'
+    },
+    {
+      codigo: 'TRAB-002',
+      nombres: 'MARIO ALBERTO',
+      apellidos: 'QUISPE ROJAS',
+      dni: '87654321',
+      cargo: 'PERFORISTA',
+      telefono: '912345678',
+      fecha_ingreso: '2026-02-01',
+      area: 'MINA'
+    }
+  ]
+
+  const downloadWorkerTemplate = async () => {
+    const XLSX = await import('xlsx')
+    const ws = XLSX.utils.json_to_sheet(templateSamples, { header: templateHeaders })
+    ws['!cols'] = [
+      { wch: 14 },
+      { wch: 22 },
+      { wch: 22 },
+      { wch: 14 },
+      { wch: 26 },
+      { wch: 16 },
+      { wch: 16 },
+      { wch: 18 }
+    ]
+    const wb = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(wb, ws, 'Plantilla Trabajadores')
+    XLSX.writeFile(wb, 'Plantilla_Trabajadores_Oficial.xlsx')
+  }
+
+  const downloadWorkerCsvTemplate = () => {
+    const csvContent = "\uFEFF" + [
+      templateHeaders.join(';'),
+      ...templateSamples.map(s => [s.codigo, s.nombres, s.apellidos, s.dni, s.cargo, s.telefono, s.fecha_ingreso, s.area].join(';'))
+    ].join('\r\n')
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.setAttribute('download', 'Plantilla_Trabajadores_Oficial.csv')
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
   }
 
  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -52,8 +100,9 @@ export function WorkerImport() {
  setError(null)
  
  const reader = new FileReader()
- reader.onload = (evt) => {
+ reader.onload = async (evt) => {
  try {
+ const XLSX = await import('xlsx')
  const bstr = evt.target?.result
  const wb = XLSX.read(bstr, { type: 'binary' })
  const wsname = wb.SheetNames[0]
@@ -186,11 +235,21 @@ export function WorkerImport() {
  
  <div className="flex flex-wrap gap-4 justify-center mt-4">
  <button 
- onClick={downloadWorkerTemplate}
- className="bg-white border-2 border-blue-200 hover:bg-blue-50 text-blue-600 px-6 py-2.5 rounded-xl text-xs font-black tracking-tight transition-all flex items-center gap-2 shadow-sm"
- >
- <Download size={16} className="text-blue-600" /> Descargar Plantilla
- </button>
+            type="button"
+            onClick={downloadWorkerTemplate}
+            className="bg-white border-2 border-blue-200 hover:bg-blue-50 text-blue-600 px-5 py-2.5 rounded-xl text-xs font-black tracking-tight transition-all flex items-center gap-2 shadow-sm"
+            title="Descargar en formato Microsoft Excel (.xlsx)"
+          >
+            <Download size={16} className="text-blue-600" /> Descargar Excel (.xlsx)
+          </button>
+          <button 
+            type="button"
+            onClick={downloadWorkerCsvTemplate}
+            className="bg-white border-2 border-emerald-300 hover:bg-emerald-50 text-emerald-700 px-5 py-2.5 rounded-xl text-xs font-black tracking-tight transition-all flex items-center gap-2 shadow-sm"
+            title="Descargar en formato CSV (compatible sin Microsoft Excel)"
+          >
+            <Download size={16} className="text-emerald-700" /> Descargar CSV (.csv)
+          </button>
  <label className="bg-blue-600 hover:bg-blue-700 !text-white px-6 py-2.5 rounded-xl text-xs font-black tracking-tight cursor-pointer transition-all shadow-md flex items-center gap-2">
  <Upload size={16} className="!text-white" />
  <span className="!text-white">Seleccionar archivo para importar</span>
@@ -202,6 +261,9 @@ export function WorkerImport() {
  />
  </label>
  </div>
+ <p className="text-[11px] text-slate-500 font-medium text-center mt-4 bg-slate-50 border border-slate-200/80 rounded-xl py-2 px-4 max-w-lg mx-auto">
+   💡 <strong>Sugerencia:</strong> Si tu equipo no tiene Microsoft Excel instalado y Windows muestra un aviso al hacer doble clic en el archivo <code>.xlsx</code>, descarga la versión <strong>«Descargar CSV (.csv)»</strong> o abre la plantilla directamente en Google Sheets.
+ </p>
  </div>
  ) : (
  <div className="space-y-6">

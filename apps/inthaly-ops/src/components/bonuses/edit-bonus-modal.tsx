@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { Coins, Calendar, User, X, Loader2, Save, DollarSign, Bus, Paperclip, CheckCircle2 } from 'lucide-react'
 import { updateBonus } from '@/app/(main)/bonuses/actions'
 import { toast } from 'sonner'
+import { ModalPortal } from '@/components/ui/modal-portal'
 
 interface EditBonusModalProps {
  bonus: any
@@ -128,6 +129,7 @@ export function EditBonusModal({ bonus, workers, onSuccess, onClose }: EditBonus
  }
 
  return (
+  <ModalPortal>
  <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-300">
  <div className="bg-white w-full max-w-md rounded-[2rem] shadow-2xl overflow-hidden border border-slate-100 animate-in fade-in zoom-in-95 duration-200">
  <div className={`p-6 bg-gradient-to-r text-white flex justify-between items-center ${
@@ -386,5 +388,6 @@ export function EditBonusModal({ bonus, workers, onSuccess, onClose }: EditBonus
  </form>
  </div>
  </div>
+    </ModalPortal>
  )
 }

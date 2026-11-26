@@ -10,8 +10,19 @@ interface CachedDashboardStats {
   data: any
   timestamp: number
 }
-const dashboardStatsCache = new Map<string, CachedDashboardStats>()
-const DASHBOARD_STATS_TTL = 20 * 1000 // 20s
+const dashboardStatsCache: Map<string, CachedDashboardStats> =
+  (globalThis as any).__inthaly_dashboard_stats_cache ?? ((globalThis as any).__inthaly_dashboard_stats_cache = new Map())
+const DASHBOARD_STATS_TTL = 60 * 1000 // 60s cache en memoria para navegaciones fluidas entre módulos
+
+export async function clearDashboardStatsCache(companyId?: string) {
+  if (companyId) {
+    for (const key of dashboardStatsCache.keys()) {
+      if (key.startsWith(`${companyId}:`)) dashboardStatsCache.delete(key)
+    }
+  } else {
+    dashboardStatsCache.clear()
+  }
+}
 
 export async function getDashboardStats() {
   try {
@@ -75,14 +86,13 @@ export async function getDashboardStats() {
  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
  const sevenDaysAgoStr = sevenDaysAgo.toISOString().split('T')[0]
 
- const [u, w, p, cashTotal, inc, reqs, movsToday, stockAlertQuery, weekly, comps, pendingBonuses, pendingTransport, assets, weeklyAttendance, weeklyWorkerMovements, weeklyRequirements] = await Promise.all([
+ const [u, w, p, cashTotal, inc, reqs, stockAlertQuery, weekly, comps, pendingBonuses, pendingTransport, assets, weeklyAttendance, weeklyWorkerMovements, weeklyRequirements] = await Promise.all([
  applyIsolation(supabase.from('users').select('id', { count: 'exact', head: true }), companyId, user.role_id),
  applyIsolation(supabase.from('workers').select('id', { count: 'exact', head: true }), companyId, user.role_id),
  applyIsolation(supabase.from('products').select('id, min_stock'), companyId, user.role_id),
  applyIsolation(supabase.from('petty_cash_transactions').select('amount, type'), companyId, user.role_id),
  applyIsolation(supabase.from('incidencias').select('id', { count: 'exact', head: true }), companyId, user.role_id).eq('status', 'abierta'),
  applyIsolation(supabase.from('requirements').select('id', { count: 'exact', head: true }), companyId, user.role_id).eq('status', 'pendiente'),
- applyIsolation(supabase.from('worker_movements').select('id', { count: 'exact', head: true }), companyId, user.role_id).gte('created_at', today),
  applyIsolation(supabase.from('inventory_stock').select('product_id, quantity'), companyId, user.role_id),
  applyIsolation(supabase.from('inventory_movements').select('created_at, effect, quantity'), companyId, user.role_id).gte('created_at', sevenDaysAgoStr),
  isSuperAdmin ? supabase.from('companies').select('id', { count: 'exact', head: true }).eq('status', 'active') : Promise.resolve({ count: 1 } as any),
@@ -93,6 +103,7 @@ export async function getDashboardStats() {
  applyIsolation(supabase.from('worker_movements').select('created_at'), companyId, user.role_id).gte('created_at', sevenDaysAgoStr),
  applyIsolation(supabase.from('requirements').select('created_at'), companyId, user.role_id).gte('created_at', sevenDaysAgoStr)
  ])
+ const movsTodayCount = (weeklyWorkerMovements?.data || []).filter((m: any) => m.created_at && getLocalDateString(m.created_at, ianaTimezone) === today).length
 
  const balance = (cashTotal.data || []).reduce((acc: number, t: any) => {
  const val = Number(t.amount) || 0
@@ -173,7 +184,7 @@ export async function getDashboardStats() {
  totalWorkers: w.count || 0,
  totalCajaChicaBalance: balance,
  openIncidents: inc.count || 0,
- movementsToday: movsToday.count || 0,
+ movementsToday: movsTodayCount,
  activeCompanies: isSuperAdmin ? (comps.count || 1) : 1, // El admin solo ve su propia empresa
  pendingRequirementsCount: reqs.count || 0,
  criticalProductsCount: criticalProductsCount,
@@ -367,8 +378,8 @@ export async function getDashboardStats() {
  stats.todayAttendance = att.data || null
  }
 
- // 3. FETCH TRANSVERSAL SOMA PARA TODOS
- const [lastTalk, lastTrain] = await Promise.all([
+ // 3 & 4. FETCH TRANSVERSAL SOMA Y DATOS PERSONALES EN PARALELO
+ const transversalPromise = Promise.all([
  applyIsolation(
  supabase.from('soma_talks').select('id, topic, date, location, photo_url, target_area, material_url, leader:users!leader_id(name)'), 
  companyId, 
@@ -380,19 +391,25 @@ export async function getDashboardStats() {
  user.role_id
  ).order('date', { ascending: false }).limit(1).maybeSingle()
  ])
+
+ const personalPromise = (user.worker_id && !isWorker)
+   ? Promise.all([
+       supabase.from('ppe_deliveries').select('id, delivery_date, equipment_name, status').eq('worker_id', user.worker_id).order('delivery_date', { ascending: false }).limit(3),
+       supabase.from('bonuses').select('id, date, amount, reason').eq('worker_id', user.worker_id).order('date', { ascending: false }).limit(3),
+       supabase.from('transport_payments').select('id, date, amount, destination').eq('worker_id', user.worker_id).order('date', { ascending: false }).limit(3),
+       supabase.from('attendance').select('id, date, check_in, check_out').eq('worker_id', user.worker_id).order('date', { ascending: false }).limit(5)
+     ])
+   : Promise.resolve(null)
+
+ const [[lastTalk, lastTrain], personalRes] = await Promise.all([transversalPromise, personalPromise])
+
  stats.transversalSoma = {
  lastTalk: lastTalk.data,
  lastTraining: lastTrain.data
  }
 
- // 4. DATOS PERSONALES PARA ADMINS/JEFES QUE SON TRABAJADORES
- if (user.worker_id && !isWorker) {
- const [ppe, bns, trns, att] = await Promise.all([
- supabase.from('ppe_deliveries').select('id, delivery_date, equipment_name, status').eq('worker_id', user.worker_id).order('delivery_date', { ascending: false }).limit(3),
- supabase.from('bonuses').select('id, date, amount, reason').eq('worker_id', user.worker_id).order('date', { ascending: false }).limit(3),
- supabase.from('transport_payments').select('id, date, amount, destination').eq('worker_id', user.worker_id).order('date', { ascending: false }).limit(3),
- supabase.from('attendance').select('id, date, check_in, check_out').eq('worker_id', user.worker_id).order('date', { ascending: false }).limit(5)
- ])
+ if (personalRes) {
+ const [ppe, bns, trns, att] = personalRes
  stats.personalStats = { ppe: ppe.data || [], bonuses: bns.data || [], transport: trns.data || [], attendance: att.data || [] }
  }
 

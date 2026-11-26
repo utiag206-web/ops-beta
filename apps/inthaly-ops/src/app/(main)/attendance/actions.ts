@@ -13,7 +13,7 @@ export async function getAttendance(workerId?: string, date?: string) {
 
  const supabase = await createAdminClient()
  let query = applyIsolation(
- supabase.from('attendance').select('*, worker:workers(name)'),
+ supabase.from('attendance').select('id, worker_id, company_id, date, check_in, check_out, break_start, break_end, latitude, longitude, check_in_lat, check_in_lng, check_out_lat, check_out_lng, created_at, worker:workers(name)'),
  companyId,
  extendedUser.role_id
  )
@@ -26,6 +26,7 @@ export async function getAttendance(workerId?: string, date?: string) {
  query = query.eq('worker_id', extendedUser.worker_id)
  } else if (workerId && workerId !== 'none') {
  query = query.eq('worker_id', workerId)
+    if (!date || date === 'undefined') { query = query.limit(60) }
  }
 
  // OPTIMIZATION: Only fetch last 30 days for general view

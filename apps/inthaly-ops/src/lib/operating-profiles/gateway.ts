@@ -50,6 +50,9 @@ export const ROUTE_CAPABILITY_MAP: Record<string, CapabilityKey> = {
   '/servicios/bienestar-social': 'bienestar_social',
   // Verticales Mecánicas y Logísticas
   '/mecanica/mantenimiento-vehiculos': 'mecanica_vehiculos',
+  '/mecanica/generador-mantenimiento': 'mecanica',
+  '/mecanica/compresora-mantenimiento': 'mecanica',
+  '/mecanica/equipos-mina': 'mecanica',
   '/mecanica/generador-combustible': 'combustible',
   '/mecanica/compresora-combustible': 'combustible',
   '/mecanica/checklists': 'checklists',
@@ -57,6 +60,9 @@ export const ROUTE_CAPABILITY_MAP: Record<string, CapabilityKey> = {
   '/mecanica': 'mecanica',
   '/movements': 'logistica_rutas',
   '/transport': 'logistica_rutas',
+  '/ppe': 'soma',
+  '/camp': 'workers',
+  '/configuracion/warehouses': 'inventory',
   // Core Universal Inmutable
   '/workers': 'workers',
   '/attendance': 'attendance',

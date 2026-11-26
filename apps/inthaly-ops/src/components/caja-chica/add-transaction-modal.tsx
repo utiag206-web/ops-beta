@@ -24,11 +24,12 @@ import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase/client'
 import { useRbac } from '@/components/providers/rbac-provider'
 import { getWarehouses } from '@/app/(main)/inventory/actions'
+import { ModalPortal } from '@/components/ui/modal-portal'
 
 interface AddTransactionModalProps {
  isOpen: boolean
  onClose: () => void
- onSuccess: () => void
+ onSuccess: (newTx?: any) => void
  area: string
  initialData?: any
  currentBalance?: number
@@ -210,27 +211,31 @@ export function AddTransactionModal({ isOpen, onClose, onSuccess, area, initialD
  }
  }
 
- return (
- <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
- <div className="bg-white w-full max-w-xl rounded-[2rem] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300 max-h-[90vh] flex flex-col">
- <div className="p-6 md:p-8 border-b border-slate-50 flex justify-between items-center bg-slate-50/50">
- <div>
- <h2 className="text-xl md:text-2xl font-bold text-slate-800 tracking-tight">Registro de Movimiento</h2>
- <div className="flex items-center flex-wrap gap-2 mt-1">
- <span className="text-xs font-bold text-blue-600 tracking-tight">Caja Chica: {area}</span>
- {currentBalance !== undefined && (
- <span className="text-[10px] font-black bg-blue-100 text-blue-800 px-2.5 py-0.5 rounded-full tracking-normal">
- Saldo Disponible: S/ {Number(currentBalance).toFixed(2)}
- </span>
- )}
- </div>
- </div>
- <button onClick={onClose} className="p-2.5 hover:bg-white rounded-full text-slate-400 transition-all shadow-sm">
- <X size={20} />
- </button>
- </div>
+  if (!isOpen) return null
 
- <form onSubmit={handleSubmit} className="p-6 md:p-8 space-y-6 overflow-y-auto flex-1 custom-scrollbar">
+  return (
+    <ModalPortal>
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
+        <div className="bg-white w-full max-w-xl rounded-2xl sm:rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300 max-h-[90vh] flex flex-col">
+          <div className="p-5 md:p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50 shrink-0">
+            <div>
+              <h2 className="text-lg md:text-xl font-bold text-slate-800 tracking-tight leading-none">Registro de Movimiento</h2>
+              <div className="flex items-center flex-wrap gap-2 mt-1.5">
+                <span className="text-xs font-bold text-blue-600 tracking-tight">Caja Chica: {area}</span>
+                {currentBalance !== undefined && (
+                  <span className="text-[10px] font-black bg-blue-100 text-blue-800 px-2.5 py-0.5 rounded-full tracking-normal">
+                    Saldo Disponible: S/ {Number(currentBalance).toFixed(2)}
+                  </span>
+                )}
+              </div>
+            </div>
+            <button onClick={onClose} className="p-2 hover:bg-slate-100 rounded-full text-slate-400 transition-all cursor-pointer">
+              <X size={18} />
+            </button>
+          </div>
+
+          <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
+            <div className="p-5 md:p-6 space-y-5 overflow-y-auto flex-1 custom-scrollbar">
  {/* TIPO DE MOVIMIENTO */}
  <div className="grid grid-cols-2 gap-4 p-1.5 bg-slate-100 rounded-2xl border border-slate-200">
  <button
@@ -424,19 +429,31 @@ export function AddTransactionModal({ isOpen, onClose, onSuccess, area, initialD
  </label>
  </div>
  </div>
+ </div>
 
+ {/* Footer Fijo */}
+ <div className="px-6 py-4 bg-slate-50 border-t border-slate-100 flex items-center justify-end gap-3 shrink-0">
+ <button 
+ type="button" 
+ onClick={onClose} 
+ className="px-5 py-2.5 bg-white border border-slate-200 text-slate-700 font-bold rounded-xl text-xs hover:bg-slate-100 transition-colors"
+ >
+ Cancelar
+ </button>
  <button 
  type="submit"
  disabled={loading || uploading}
- className={`w-full py-5 text-white font-bold rounded-[1.5rem] transition-all shadow-xl flex items-center justify-center gap-3 disabled:opacity-50 ${
- formData.type === 'ingreso' ? 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-200' : 'bg-slate-900 hover:bg-slate-800 shadow-slate-200'
+ className={`px-6 py-2.5 text-white font-bold rounded-xl shadow-sm text-xs transition-all flex items-center justify-center gap-2 disabled:opacity-50 ${
+ formData.type === 'ingreso' ? 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-200' : 'bg-blue-600 hover:bg-blue-700 shadow-blue-200'
  }`}
  >
- {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Plus size={20} />}
- REGISTRAR {formData.type.toUpperCase()}
+ {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus size={16} />}
+ Registrar {formData.type === 'ingreso' ? 'Ingreso' : 'Egreso'}
  </button>
+ </div>
  </form>
  </div>
  </div>
+ </ModalPortal>
  )
 }

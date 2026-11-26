@@ -3,7 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-import { clearUserSessionCache } from '@/lib/auth'
+import { clearUserSessionCache, getUserSession, primeRecentLoginUser } from '@/lib/auth'
 
 export async function login(prevState: any, formData: FormData) {
  const email = formData.get('email') as string
@@ -102,11 +102,24 @@ export async function login(prevState: any, formData: FormData) {
   }
 
 
+  // Limpiar cualquier entrada previa y pre-calentar usuario autenticado para el redirect inmediato
+  clearUserSessionCache(authUser.id)
+  primeRecentLoginUser(authUser)
+
   if (role === 'super_admin' || role === 'superadmin') {
     redirect('/super-admin')
   }
 
   redirect('/dashboard')
+}
+
+export async function stopImpersonation() {
+  const { cookies } = await import('next/headers')
+  const cookieStore = await cookies()
+  cookieStore.delete('active_company_id')
+  clearUserSessionCache()
+  revalidatePath('/', 'layout')
+  return { success: true }
 }
 
 export async function logout() {

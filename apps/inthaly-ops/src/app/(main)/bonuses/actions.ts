@@ -15,10 +15,10 @@ export async function getBonuses(workerId?: string) {
 
  const supabase = await createAdminClient()
  
- // Base queries sin join automático para evitar conflicto UUID vs TEXT
- let bQuery = applyIsolation(supabase.from('bonuses').select('*'), companyId, extendedUser.role_id)
- let tQuery = applyIsolation(supabase.from('transport_payments').select('*'), companyId, extendedUser.role_id)
- let pQuery = applyIsolation(supabase.from('worker_payments').select('*'), companyId, extendedUser.role_id)
+ // Base queries con columnas explícitas sin join automático para evitar conflicto UUID vs TEXT
+ let bQuery = applyIsolation(supabase.from('bonuses').select('id, company_id, worker_id, amount, bonus_type, reason, date, status, created_at'), companyId, extendedUser.role_id)
+ let tQuery = applyIsolation(supabase.from('transport_payments').select('id, company_id, worker_id, amount, concept, destination, date, status, created_at'), companyId, extendedUser.role_id)
+ let pQuery = applyIsolation(supabase.from('worker_payments').select('id, company_id, worker_id, amount, payment_type, period, date, status, notes, created_at'), companyId, extendedUser.role_id)
 
  // UUID context filters
  const viewMode = await getActiveViewMode()
@@ -35,26 +35,17 @@ export async function getBonuses(workerId?: string) {
  pQuery = pQuery.eq('worker_id', workerId)
  }
 
- const [bRes, tRes, pRes] = await Promise.all([
+ const [bRes, tRes, pRes, workersRes] = await Promise.all([
  bQuery.order('date', { ascending: false }).limit(50),
  tQuery.order('date', { ascending: false }).limit(50),
- pQuery.order('date', { ascending: false }).limit(50)
+ pQuery.order('date', { ascending: false }).limit(50),
+ supabase.from('workers').select('id, name, last_name').eq('company_id', companyId)
  ])
 
  const rawBonuses = bRes.data || []
  const rawTransport = tRes.data || []
  const rawPayments = pRes.data || []
-
- // Obtener IDs únicos de trabajadores para hidratar nombres manualmente
- const wIds = Array.from(new Set([
- ...rawBonuses.map((b: any) => b.worker_id),
- ...rawTransport.map((t: any) => t.worker_id),
- ...rawPayments.map((p: any) => p.worker_id)
- ])).filter((id: any) => id && UUID_REGEX.test(id))
-
- const { data: workersList } = wIds.length > 0 
- ? await supabase.from('workers').select('id, name, last_name').in('id', wIds).eq('company_id', companyId)
- : { data: [] }
+ const workersList = workersRes.data || []
 
  const workerMap = new Map((workersList || []).map(w => [w.id, { ...w, name: `${w.name} ${w.last_name || ''}`.trim() }]))
 

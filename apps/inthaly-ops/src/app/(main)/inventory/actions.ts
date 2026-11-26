@@ -2,7 +2,7 @@
 
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
-import { inventoryService } from '@/services'
+import * as inventoryService from '@/services/inventory.service'
 import { getUserSession, requirePermission, getStrictCompanyId, applyIsolation } from '@/lib/auth'
 
 export async function deleteProduct(id: string) {
@@ -158,6 +158,35 @@ export async function getProductsMinimal() {
  }
 
  return { data: data || [] }
+}
+
+
+export async function searchProducts(queryText: string, limit = 20) {
+  try {
+    const { extendedUser } = await getUserSession()
+    const companyId = await getStrictCompanyId()
+    const supabase = await createAdminClient()
+
+    let q = applyIsolation(
+      supabase.from('products').select('id, name, unit, code, category, min_stock'),
+      companyId,
+      extendedUser.role_id
+    )
+
+    const clean = (queryText || '').trim()
+    if (clean) {
+      q = q.or(`name.ilike.%${clean}%,code.ilike.%${clean}%`)
+    }
+
+    const { data, error } = await q.order('name', { ascending: true }).limit(limit)
+    if (error) {
+      console.error('[INVENTORY_SEARCH_ERROR]:', error.message)
+      return { error: error.message, data: [] }
+    }
+    return { data: data || [] }
+  } catch (err: any) {
+    return { error: err.message, data: [] }
+  }
 }
 
 export async function getProducts() {
@@ -455,6 +484,33 @@ export async function getInventoryStock() {
  }
 
  return { data }
+}
+
+
+export async function getSingleProductStock(productId: string, warehouseId: string) {
+  if (!productId || !warehouseId) return { stock: 0 }
+  try {
+    const companyId = await getStrictCompanyId()
+    const { extendedUser } = await getUserSession()
+    const supabase = await createAdminClient()
+
+    const { data, error } = await applyIsolation(
+      supabase.from('inventory_stock').select('quantity'),
+      companyId,
+      extendedUser.role_id
+    )
+      .eq('product_id', productId)
+      .eq('warehouse_id', warehouseId)
+      .maybeSingle()
+
+    if (error) {
+      console.error('[INVENTORY_STOCK_CHECK_ERROR]:', error.message)
+      return { error: error.message, stock: 0 }
+    }
+    return { stock: Number(data?.quantity || 0) }
+  } catch (err: any) {
+    return { error: err.message, stock: 0 }
+  }
 }
 
 export async function checkExistingProductCodes(codes: string[]) {
@@ -998,47 +1054,45 @@ export async function createMovement(payload: {
 
  // Validate warehouse
 
- // 1. Obtener tipo de movimiento
- const { data: mType } = await supabase
- .from('movement_types')
- .select('*')
- .eq('id', payload.movement_type_id)
- .maybeSingle()
- 
- if (!mType) return { error: 'Tipo de movimiento inválido o no existe.' }
+ // 1, 2 y 3. Consultas en paralelo para validación de movimiento (Bloque D)
+  const [resMType, resProduct, resStock] = await Promise.all([
+    supabase
+      .from('movement_types')
+      .select('*')
+      .eq('id', payload.movement_type_id)
+      .maybeSingle(),
+    supabase
+      .from('products')
+      .select('unit')
+      .eq('id', payload.product_id)
+      .maybeSingle(),
+    supabase
+      .from('inventory_stock')
+      .select('quantity')
+      .eq('product_id', payload.product_id)
+      .eq('warehouse_id', payload.warehouse_id)
+      .eq('company_id', companyId)
+      .maybeSingle()
+  ])
 
- // 2. Información del producto para validar unidad
- const { data: product } = await supabase
- .from('products')
- .select('unit')
- .eq('id', payload.product_id)
- .maybeSingle()
+  const mType = resMType.data
+  if (!mType) return { error: 'Tipo de movimiento inválido o no existe.' }
 
- if (!product) return { error: 'Producto no encontrado.' }
+  const product = resProduct.data
+  if (!product) return { error: 'Producto no encontrado.' }
 
- const isIntegerUnit = product ? ['UND', 'UNIDAD', 'PAR', 'CAJA'].includes(product.unit.toUpperCase()) : false
- let finalQty = isIntegerUnit ? Math.round(payload.quantity) : payload.quantity
+  const isIntegerUnit = product ? ['UND', 'UNIDAD', 'PAR', 'CAJA'].includes(product.unit.toUpperCase()) : false
+  let finalQty = isIntegerUnit ? Math.round(payload.quantity) : payload.quantity
 
- const isAdjustment = mType.code === 'ADJUST' || mType.code === 'AJU' || mType.effect === 'SET' || mType.name?.toLowerCase().includes('ajuste')
- 
- // Solo bloqueamos negativo si NO es un ajuste
- if (!isAdjustment && finalQty < 0) return { error: 'La cantidad no puede ser negativa.' }
+  const isAdjustment = mType.code === 'ADJUST' || mType.code === 'AJU' || mType.effect === 'SET' || mType.name?.toLowerCase().includes('ajuste')
+  
+  if (!isAdjustment && finalQty < 0) return { error: 'La cantidad no puede ser negativa.' }
 
- try {
- const effect = mType.effect // IN, OUT, BOTH, SET
+  try {
+    const effect = mType.effect // IN, OUT, BOTH, SET
+    const currentStock = resStock.data?.quantity || 0
 
- // 0. Obtener stock actual para validación o cálculo de delta (Ajuste)
- const { data: st } = await supabase
- .from('inventory_stock')
- .select('quantity')
- .eq('product_id', payload.product_id)
- .eq('warehouse_id', payload.warehouse_id)
- .eq('company_id', companyId)
- .maybeSingle()
- 
- const currentStock = st?.quantity || 0
-
- if (effect === 'BOTH') {
+    if (effect === 'BOTH') {
  // 🔁 TRANSFERENCIA (ATÓMICA VÍA RPC)
  if (!payload.target_warehouse_id) throw new Error('Se requiere un almacén de destino')
  if (currentStock < finalQty) {
@@ -1141,9 +1195,6 @@ export async function createMovement(payload: {
 
  revalidatePath('/inventory/history')
  revalidatePath('/inventory/stock')
- revalidatePath('/inventory/products')
- revalidatePath('/inventory/kardex')
- revalidatePath('/dashboard')
 
  return { success: true }
  } catch (error: any) {
