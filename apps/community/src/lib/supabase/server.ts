@@ -30,7 +30,10 @@ export async function createClient() {
 }
 
 export async function createAdminClient() {
-  const serviceRoleKey = process.env.SB_SECRET || process.env.SUPABASE_SERVICE_ROLE_KEY || 'sb_secret__d8j8zevRq5zHpM2QIybjA_MkyvoL-r'
+  const serviceRoleKey = process.env.SB_SECRET || process.env.SUPABASE_SERVICE_ROLE_KEY
+  if (!serviceRoleKey) {
+    throw new Error('Configuración incompleta: Falta SB_SECRET o SUPABASE_SERVICE_ROLE_KEY')
+  }
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://kadxdfswqyhqqzyzzrte.supabase.co'
   
   const { createClient: createSupabaseClient } = await import('@supabase/supabase-js')
