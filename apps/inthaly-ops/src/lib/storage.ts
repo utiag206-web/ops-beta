@@ -8,6 +8,9 @@ export function validateUploadFile(fileName: string, sizeBytes: number, mimeType
   if (sizeBytes > MAX_FILE_SIZE_BYTES) {
     throw new Error(`El archivo excede el tamaño máximo permitido de 15MB (${(sizeBytes / (1024 * 1024)).toFixed(1)}MB)`)
   }
+  if (!fileName || typeof fileName !== 'string' || fileName.includes('..') || fileName.startsWith('/') || fileName.includes('\\')) {
+    throw new Error('Ruta o nombre de archivo inválido (Path Traversal detectado)')
+  }
   const ext = (fileName.split('.').pop() || '').toLowerCase().trim()
   if (!ext || !ALLOWED_EXTENSIONS.includes(ext) || DANGEROUS_EXTENSIONS.includes(ext)) {
     throw new Error(`Tipo de archivo no permitido (.${ext}). Solo se permiten documentos seguros e imágenes (JPG, PNG, WEBP, PDF, Excel).`)
@@ -19,16 +22,33 @@ export function validateUploadFile(fileName: string, sizeBytes: number, mimeType
 export type StorageBucket = 'incidencias' | 'worker_documents' | 'ppe_signatures' | 'petty-cash' | 'soma' | 'planta'
 
 export async function uploadFile(
- file: File | Blob, 
- bucket: StorageBucket, 
- path: string
+  file: File | Blob, 
+  bucket: StorageBucket, 
+  path: string
 ) {
- const { createAdminClient } = await import('@/lib/supabase/server')
- const supabase = await createAdminClient()
+  // [HARDENING_CHECK] Validación preventiva de seguridad
+  validateUploadFile(path, file.size, file.type)
 
- // 1. ArrayBuffer conversion
- const arrayBuffer = await file.arrayBuffer()
- const buffer = Buffer.from(arrayBuffer)
+  const { createAdminClient } = await import('@/lib/supabase/server')
+  const supabase = await createAdminClient()
+
+  // 1. ArrayBuffer conversion
+  const arrayBuffer = await file.arrayBuffer()
+  const buffer = Buffer.from(arrayBuffer)
+
+  // [MAGIC_BYTES_CHECK] Verificación de cabeceras de archivo para formatos comunes
+  const fileExt = (path.split('.').pop() || '').toLowerCase().trim()
+  if (buffer.length >= 4) {
+    if (fileExt === 'pdf' && !buffer.slice(0, 4).toString().startsWith('%PDF')) {
+      throw new Error('Contenido de archivo inválido: Cabecera no coincide con formato PDF legítimo.')
+    }
+    if (fileExt === 'png' && (buffer[0] !== 0x89 || buffer[1] !== 0x50 || buffer[2] !== 0x4E || buffer[3] !== 0x47)) {
+      throw new Error('Contenido de archivo inválido: Cabecera no coincide con formato PNG legítimo.')
+    }
+    if ((fileExt === 'jpg' || fileExt === 'jpeg') && (buffer[0] !== 0xFF || buffer[1] !== 0xD8 || buffer[2] !== 0xFF)) {
+      throw new Error('Contenido de archivo inválido: Cabecera no coincide con formato JPEG legítimo.')
+    }
+  }
  
  // 2. Upload to Supabase
  const { data, error } = await supabase.storage

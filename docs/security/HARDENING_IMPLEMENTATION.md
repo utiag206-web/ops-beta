@@ -66,3 +66,14 @@ Este documento describe con exactitud cada una de las modificaciones de código 
   - **Firma HMAC-SHA256:** Cada token de sesión emitido en la cookie `worker_session` se firma criptográficamente (`base64UrlPayload.hmacSignature`).
   - **Verificación segura en tiempo constante:** Para mitigar ataques de temporización (Timing Attacks), la comprobación de firmas utiliza `crypto.timingSafeEqual()`. Cualquier modificación al payload invalida la sesión de inmediato.
   - **Rate Limiting en Memoria:** Control de intentos fallidos por clave combinada `(companySlug:identifier)`. Tras 5 intentos fallidos consecutivos, la cuenta se bloquea por 15 minutos, mitigando ataques de diccionario o fuerza bruta sobre los PINs de 4 dígitos.
+
+
+---
+
+## 3. MEJORAS DE LA SEGUNDA REVISIÓN TÉCNICA INDEPENDIENTE
+
+Durante la segunda revisión técnica independiente se detectaron y corrigieron las siguientes brechas operativas:
+1. **Conexión Activa de Rate Limiting:** Se conectaron las llamadas `checkRateLimit(rateLimitKey)`, `recordFailedLogin(rateLimitKey)` y `clearFailedLogins(rateLimitKey)` dentro del flujo principal de `loginWorker`.
+2. **Eliminación del Fallback Inseguro en Sesiones:** Se eliminó la rama de código en `getWorkerSession` que permitía parsear cookies en texto plano sin firma HMAC si la verificación fallaba. Ahora cualquier cookie sin firma válida es rechazada de inmediato.
+3. **Fail-Closed en Secreto de Firma:** En producción (`NODE_ENV === 'production'`), el sistema exige obligatoriamente `WORKER_SESSION_SECRET` o `SUPABASE_SERVICE_ROLE_KEY`. Si faltan, el sistema no inicia con clave por defecto predecible.
+4. **Verificación de Magic Bytes en Storage:** Se añadió comprobación a nivel de buffer binario para verificar que archivos con extensión `.pdf` comiencen con `%PDF`, `.png` comiencen con cabecera PNG (`0x89 0x50 0x4E 0x47`) y `.jpg/.jpeg` con cabecera JPEG (`0xFF 0xD8 0xFF`), impidiendo el camuflaje de scripts maliciosos.
