@@ -20,97 +20,99 @@ function isJwtFarFromExpiry(cookieVal: string): boolean {
 }
 
 export async function updateSession(request: NextRequest) {
- // Redirect worker to portal if session exists and they access landing or login
- const pathname = request.nextUrl.pathname
- const workerSessionCookie = request.cookies.get('worker_session')?.value
- if (workerSessionCookie && (pathname === '/' || pathname === '/login')) {
- try {
- const session = JSON.parse(decodeURIComponent(workerSessionCookie))
- if (session?.companySlug) {
- const url = request.nextUrl.clone()
- url.pathname = `/w/${session.companySlug}`
- return NextResponse.redirect(url)
- }
- } catch (e) {
- console.error('[MIDDLEWARE] Error parsing worker session:', e)
- }
- }
+  const pathname = request.nextUrl.pathname
+  const workerSessionCookie = request.cookies.get('worker_session')?.value
+  if (workerSessionCookie && (pathname === '/' || pathname === '/login')) {
+    try {
+      const session = JSON.parse(decodeURIComponent(workerSessionCookie))
+      if (session?.companySlug) {
+        const url = request.nextUrl.clone()
+        url.pathname = `/w/${session.companySlug}`
+        return NextResponse.redirect(url)
+      }
+    } catch (e) {
+      console.error('[MIDDLEWARE] Error parsing worker session:', e)
+    }
+  }
 
- let supabaseResponse = NextResponse.next({
- request,
- })
+  // Inject x-pathname into request headers so React Server Components can read it via headers()
+  const requestHeaders = new Headers(request.headers)
+  requestHeaders.set('x-pathname', pathname)
 
- // Fast-path for public unauthenticated routes when no Supabase auth cookie is present:
- // Avoids unnecessary network round-trip to Supabase Auth (500-800ms) on cold /login or landing visits.
- const authCookie = request.cookies.getAll().find(c => c.name.startsWith('sb-') && c.name.includes('-auth-token'))
- const hasSbAuthCookie = Boolean(authCookie?.value)
- const isProtectedRoute = pathname.startsWith('/dashboard') || 
- pathname.startsWith('/workers') || 
- pathname.startsWith('/profile') ||
- pathname.startsWith('/super-admin')
+  let supabaseResponse = NextResponse.next({
+    request: {
+      headers: requestHeaders,
+    },
+  })
 
- if (!hasSbAuthCookie) {
- if (isProtectedRoute) {
- const url = request.nextUrl.clone()
- url.pathname = '/login'
- return NextResponse.redirect(url)
- }
- supabaseResponse.headers.set('x-pathname', pathname)
- return supabaseResponse
- }
+  // Fast-path for public unauthenticated routes when no Supabase auth cookie is present:
+  const authCookie = request.cookies.getAll().find(c => c.name.startsWith('sb-') && c.name.includes('-auth-token'))
+  const hasSbAuthCookie = Boolean(authCookie?.value)
+  const isProtectedRoute = pathname.startsWith('/dashboard') || 
+    pathname.startsWith('/workers') || 
+    pathname.startsWith('/profile') ||
+    pathname.startsWith('/super-admin')
 
- const tokenKey = authCookie!.value.slice(-64)
- const now = Date.now()
- const cachedMwUser = mwTokenCache.get(tokenKey)
- if (cachedMwUser && (now - cachedMwUser.timestamp) < MW_TOKEN_CACHE_TTL && isJwtFarFromExpiry(authCookie!.value)) {
-   supabaseResponse.headers.set('x-pathname', pathname)
-   return supabaseResponse
- }
+  if (!hasSbAuthCookie) {
+    if (isProtectedRoute) {
+      const url = request.nextUrl.clone()
+      url.pathname = '/login'
+      return NextResponse.redirect(url)
+    }
+    supabaseResponse.headers.set('x-pathname', pathname)
+    return supabaseResponse
+  }
 
- const supabase = createServerClient(
- process.env.NEXT_PUBLIC_SUPABASE_URL!,
- process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
- {
- cookies: {
- getAll() {
- return request.cookies.getAll()
- },
- setAll(cookiesToSet) {
- cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
- supabaseResponse = NextResponse.next({
- request,
- })
- cookiesToSet.forEach(({ name, value, options }) =>
- supabaseResponse.cookies.set(name, value, options)
- )
- },
- },
- }
- )
+  const tokenKey = authCookie!.value.slice(-64)
+  const now = Date.now()
+  const cachedMwUser = mwTokenCache.get(tokenKey)
+  if (cachedMwUser && (now - cachedMwUser.timestamp) < MW_TOKEN_CACHE_TTL && isJwtFarFromExpiry(authCookie!.value)) {
+    supabaseResponse.headers.set('x-pathname', pathname)
+    return supabaseResponse
+  }
 
- // IMPORTANT: Avoid writing any logic between createServerClient and
- // supabase.auth.getUser(). A simple mistake could make it very hard to debug
- // issues with users being randomly logged out.
- 
- const { data, error: authError } = await supabase.auth.getUser()
- const user = data?.user
- if (user && !authError) {
-   mwTokenCache.set(tokenKey, { user, timestamp: now })
- }
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return request.cookies.getAll()
+        },
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
+          supabaseResponse = NextResponse.next({
+            request: {
+              headers: requestHeaders,
+            },
+          })
+          cookiesToSet.forEach(({ name, value, options }) =>
+            supabaseResponse.cookies.set(name, value, options)
+          )
+        },
+      },
+    }
+  )
 
- if (authError && isProtectedRoute) {
- console.error(`[MIDDLEWARE] ❌ Auth Error on ${pathname}: ${authError.message}`)
- }
+  const { data, error: authError } = await supabase.auth.getUser()
+  const user = data?.user
+  if (user && !authError) {
+    mwTokenCache.set(tokenKey, { user, timestamp: now })
+  }
 
- // Handle Protected Routes
- if (!user && isProtectedRoute) {
- const url = request.nextUrl.clone()
- url.pathname = '/login'
- return NextResponse.redirect(url)
- }
+  if (authError && isProtectedRoute) {
+    console.error(`[MIDDLEWARE] ❌ Auth Error on ${pathname}: ${authError.message}`)
+  }
 
- // Inject current pathname so Layouts can read it for RBAC
- supabaseResponse.headers.set('x-pathname', pathname)
+  // Handle Protected Routes
+  if (!user && isProtectedRoute) {
+    const url = request.nextUrl.clone()
+    url.pathname = '/login'
+    return NextResponse.redirect(url)
+  }
 
- return supabaseResponse
+  // Inject current pathname on response as well
+  supabaseResponse.headers.set('x-pathname', pathname)
+
+  return supabaseResponse
 }

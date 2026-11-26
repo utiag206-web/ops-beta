@@ -45,13 +45,13 @@ export default async function DashboardLayout({
   const isImpersonating = !!extendedUser?.is_impersonating
 
   // 3. Super Admin Global Guard
-  if (isSuperAdmin && !isImpersonating && !pathname.startsWith('/super-admin')) {
+  if (isSuperAdmin && !isImpersonating && pathname && !pathname.startsWith('/super-admin')) {
     console.log(`[LAYOUT] ðŸ›¡ï¸ SuperAdmin detected outside /super-admin. Redirecting to /super-admin`)
     redirect('/super-admin')
   }
 
   // 4. Access Control Block for non-SuperAdmins
-  if (!isSuperAdmin && pathname.startsWith('/super-admin')) {
+  if (!isSuperAdmin && pathname && pathname.startsWith('/super-admin')) {
     console.log(`[LAYOUT] â›” Non-SuperAdmin tried to access /super-admin. Redirecting to /dashboard`)
     redirect('/dashboard')
   }

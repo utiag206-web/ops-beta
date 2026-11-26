@@ -92,14 +92,39 @@ export const getUserSession = cache(async function getUserSession() {
  }
 
   const adminSupabase = await createAdminClient()
-  const { data: userData, error: userError } = await adminSupabase
-  .from('users')
-  .select('id, email, name, role_id, role, area, company_id, worker_id, status, companies(id, name, logo_url, status, industry, timezone)')
-  .eq('id', user.id)
-  .maybeSingle()
+  let { data: userData, error: userError } = await adminSupabase
+    .from('users')
+    .select('id, email, name, role_id, role, area, company_id, worker_id, status, companies(id, name, logo_url, status, industry, timezone)')
+    .eq('id', user.id)
+    .maybeSingle()
 
   if (userError || !userData) {
-  return { user, extendedUser: null as any }
+    if (userError) {
+      console.error(`[AUTH_SESSION_ERROR] adminSupabase failed for user ${user.id} (${user.email}): ${userError.message}`)
+    } else {
+      console.warn(`[AUTH_SESSION_WARN] User record not found in public.users for auth user ${user.id} (${user.email})`)
+    }
+
+    // Defensive fallback: Try using the authenticated user's own client
+    try {
+      const userSupabase = await createClient()
+      const { data: userFallbackData, error: fallbackError } = await userSupabase
+        .from('users')
+        .select('id, email, name, role_id, role, area, company_id, worker_id, status, companies(id, name, logo_url, status, industry, timezone)')
+        .eq('id', user.id)
+        .maybeSingle()
+      if (userFallbackData && !fallbackError) {
+        console.log(`[AUTH_SESSION] Fallback to authenticated client succeeded for user ${user.id}`)
+        userData = userFallbackData
+        userError = null
+      }
+    } catch (fbErr: any) {
+      console.error('[AUTH_SESSION_ERROR] Fallback query failed:', fbErr?.message)
+    }
+  }
+
+  if (userError || !userData) {
+    return { user, extendedUser: null as any }
   }
 
   // Natively registered role and helper flags

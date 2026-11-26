@@ -36,11 +36,25 @@ export async function login(prevState: any, formData: FormData) {
   // Direct DB Query to avoid getUserSession cookie race condition
   const { createAdminClient } = await import('@/lib/supabase/server')
   const adminSupabase = await createAdminClient()
-  const { data: userData } = await adminSupabase
+  let { data: userData, error: userDbError } = await adminSupabase
     .from('users')
     .select('role_id, company_id, status, name, companies(id, name, status)')
     .eq('id', authUser.id)
     .maybeSingle()
+
+  if (userDbError || !userData) {
+    console.error(`[AUTH_LOGIN_WARN] admin query failed for ${authUser.id}:`, userDbError?.message || 'User not found in DB')
+    try {
+      const { data: fallbackUser } = await supabase
+        .from('users')
+        .select('role_id, company_id, status, name, companies(id, name, status)')
+        .eq('id', authUser.id)
+        .maybeSingle()
+      if (fallbackUser) {
+        userData = fallbackUser
+      }
+    } catch (_) {}
+  }
 
   const role = userData?.role_id?.toLowerCase()
   console.log(`[AUTH] Rol detectado para redirect: ${role}`)
