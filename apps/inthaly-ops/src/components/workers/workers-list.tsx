@@ -16,6 +16,7 @@ import type { Worker } from '@/types/workers.types'
 export function WorkersList({ workers, canManage = false }: { workers: Worker[], canManage?: boolean }) {
  const router = useRouter()
  const { term } = useTerminology()
+ const { companyId } = useOperationalContext()
  const [isAddModalOpen, setIsAddModalOpen] = useState(false)
  const [editingWorker, setEditingWorker] = useState<Worker | null>(null)
  const [searchTerm, setSearchTerm] = useState('')
@@ -27,9 +28,7 @@ export function WorkersList({ workers, canManage = false }: { workers: Worker[],
     if (workers && workers.length > 0 && typeof window !== 'undefined') {
       localStorage.setItem(companyId ? `workers_cache_${companyId}` : 'workers_cache', JSON.stringify(workers))
     }
-  }, [workers])
-
- const { companyId } = useOperationalContext()
+  }, [workers, companyId])
 
  useEffect(() => {
    if (!companyId) return

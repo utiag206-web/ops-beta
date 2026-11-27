@@ -147,7 +147,16 @@ export const getUserSession = cache(async function getUserSession() {
           .maybeSingle()
         if (userFallbackData && !fallbackError) {
           console.log(`[AUTH_SESSION] Fallback to authenticated client succeeded for user ${user.id}`)
-          userData = userFallbackData
+          let comp: any = null
+          if (userFallbackData.company_id && isUuid(userFallbackData.company_id)) {
+            const { data: userComp } = await userSupabase
+              .from('companies')
+              .select('id, name, logo_url, status, industry, timezone')
+              .eq('id', userFallbackData.company_id)
+              .maybeSingle()
+            comp = userComp
+          }
+          userData = { ...userFallbackData, companies: comp }
           userError = null
         }
       } catch (fbErr: any) {
@@ -200,8 +209,31 @@ export const getUserSession = cache(async function getUserSession() {
          : adminSupabase.from('workers').select('id, status').eq('id', userData.worker_id).maybeSingle())
      : Promise.resolve({ data: null })
 
-   const companyPromise = (impersonating && finalCompanyId && isUuid(finalCompanyId) && finalCompanyId !== userData.company_id)
-     ? adminSupabase.from('companies').select('id, name, logo_url, status, industry, timezone').eq('id', finalCompanyId).maybeSingle()
+   const needsCompanyFetch = Boolean(finalCompanyId && isUuid(finalCompanyId) && (!userData.companies || (impersonating && finalCompanyId !== userData.company_id)))
+
+   const companyPromise = needsCompanyFetch
+     ? (async () => {
+         try {
+           const { data: compAdmin, error: adminErr } = await adminSupabase
+             .from('companies')
+             .select('id, name, logo_url, status, industry, timezone')
+             .eq('id', finalCompanyId)
+             .maybeSingle()
+           if (compAdmin && !adminErr) return { data: compAdmin }
+         } catch (_) {}
+
+         try {
+           const userSupabase = await createClient()
+           const { data: compUser, error: userErr } = await userSupabase
+             .from('companies')
+             .select('id, name, logo_url, status, industry, timezone')
+             .eq('id', finalCompanyId)
+             .maybeSingle()
+           if (compUser && !userErr) return { data: compUser }
+         } catch (_) {}
+
+         return { data: userData.companies || null }
+       })()
      : Promise.resolve({ data: userData.companies })
 
    // RBAC Granular V1: overrides individuales del usuario por empresa
@@ -215,7 +247,17 @@ export const getUserSession = cache(async function getUserSession() {
 
    const nativeCompanyObj = Array.isArray(userData.companies) ? userData.companies[0] : userData.companies
    const operatingProfilePromise = (finalCompanyId && isUuid(finalCompanyId))
-     ? fetchCompanyOperatingProfile(finalCompanyId, adminSupabase, nativeCompanyObj?.industry || null)
+     ? (async () => {
+         try {
+           const compRes = await companyPromise
+           const effectiveComp = compRes?.data || nativeCompanyObj
+           const ind = (Array.isArray(effectiveComp) ? effectiveComp[0]?.industry : effectiveComp?.industry) || null
+           return await fetchCompanyOperatingProfile(finalCompanyId, adminSupabase, ind)
+         } catch (profileErr) {
+           console.error('[AUTH_SESSION_WARN] Could not fetch operating profile:', profileErr)
+           return null
+         }
+       })()
      : Promise.resolve(null)
 
    const [activeRoleData, workerData, companyRes, permissionsOverrideRes, operatingProfile] = await Promise.all([

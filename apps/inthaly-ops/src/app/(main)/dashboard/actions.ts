@@ -35,7 +35,21 @@ export async function getDashboardStats() {
     const companyId = user.active_company_id || user.company_id
     
     if (!companyId && user.role_id !== 'super_admin' && user.role_id !== 'superadmin') {
-      return null
+      return {
+        role_id: user.role_id,
+        company_name: user.company_name || 'Empresa',
+        activeView: 'OPERATIONAL',
+        totalWorkers: 0,
+        activeWorkers: 0,
+        presentToday: 0,
+        attendanceRate: 0,
+        pendingIncidents: 0,
+        openWorkOrders: 0,
+        activeVehicles: 0,
+        expiringDocuments: 0,
+        recentMovements: [],
+        chartData: []
+      }
     }
 
     const viewMode = await getActiveViewMode()

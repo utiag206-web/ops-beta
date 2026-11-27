@@ -8,16 +8,27 @@ import type { Worker } from '@/types/workers.types'
 import * as workersService from '@/services/workers.service'
 
 export async function getWorkers(status?: string, isRecent?: boolean, limit?: number, offset?: number): Promise<Worker[]> {
-  const { extendedUser } = await getUserSession()
-  const companyId = await getStrictCompanyId()
-  const supabase = await createAdminClient()
+  try {
+    const { extendedUser } = await getUserSession()
+    const companyId = extendedUser?.active_company_id || extendedUser?.company_id
+    if (!companyId) {
+      console.warn('[getWorkers] No companyId found in session')
+      return []
+    }
+    const supabase = await createAdminClient()
 
-  return workersService.getWorkersList(supabase, {
-    companyId,
-    roleId: extendedUser.role_id,
-    status,
-    isRecent
-  })
+    return await workersService.getWorkersList(supabase, {
+      companyId: String(companyId),
+      roleId: extendedUser?.role_id || 'admin',
+      status,
+      isRecent,
+      limit,
+      offset
+    })
+  } catch (err: any) {
+    console.error('[getWorkers] Exception in getWorkers:', err?.message)
+    return []
+  }
 }
 
 export async function exportWorkersAllData() {
