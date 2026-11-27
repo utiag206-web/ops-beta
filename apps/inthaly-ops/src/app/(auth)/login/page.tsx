@@ -21,6 +21,9 @@ function LoginForm() {
   } else if (errorParam === 'inactive') {
     noticeMessage = 'La empresa asociada se encuentra inactiva o suspendida. Comuníquese con soporte.'
     noticeType = 'warning'
+  } else if (errorParam === 'profile_not_found') {
+    noticeMessage = 'No se pudo cargar el perfil empresarial desde la base de datos. Verifique la conexión con Supabase.'
+    noticeType = 'warning'
   }
 
   const [email, setEmail] = useState('')

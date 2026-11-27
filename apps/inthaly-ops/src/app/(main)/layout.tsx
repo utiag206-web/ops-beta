@@ -31,10 +31,10 @@ export default async function DashboardLayout({
   // 1. Mandatory Session Guard
   if (!extendedUser) {
     if (pathname !== '/dashboard' && pathname !== '/login') {
-      redirect('/login')
+      redirect('/login?error=profile_not_found')
     }
     if (pathname !== '/dashboard') return null
-    redirect('/login')
+    redirect('/login?error=profile_not_found')
   }
 
   const moduleName = pathname.split('/')[1]

@@ -31,25 +31,29 @@ export async function createClient() {
 
 let adminClientSingleton: SupabaseClient | null =
   (globalThis as any).__inthaly_admin_supabase_client ?? null
+let adminClientKey: string | null =
+  (globalThis as any).__inthaly_admin_key ?? null
 
 export async function createAdminClient() {
- if (adminClientSingleton) {
-   return adminClientSingleton
- }
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SB_SECRET || ''
 
- const serviceRoleKey = process.env.SB_SECRET || process.env.SUPABASE_SERVICE_ROLE_KEY
- 
- if (!serviceRoleKey) {
- console.error("[ADMIN_CLIENT_DEBUG] SUPABASE_SERVICE_ROLE_KEY (or SB_SECRET) is missing!")
- }
+  if (!serviceRoleKey) {
+    console.error("[ADMIN_CLIENT_DEBUG] SUPABASE_SERVICE_ROLE_KEY (or SB_SECRET) is missing!")
+  }
 
- adminClientSingleton = createSupabaseClient(
- process.env.NEXT_PUBLIC_SUPABASE_URL!,
- serviceRoleKey!,
- {
- auth: { persistSession: false, autoRefreshToken: false }
- }
- )
- ;(globalThis as any).__inthaly_admin_supabase_client = adminClientSingleton
- return adminClientSingleton
+  if (adminClientSingleton && adminClientKey === serviceRoleKey && serviceRoleKey) {
+    return adminClientSingleton
+  }
+
+  adminClientSingleton = createSupabaseClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    serviceRoleKey,
+    {
+      auth: { persistSession: false, autoRefreshToken: false }
+    }
+  )
+  adminClientKey = serviceRoleKey
+  ;(globalThis as any).__inthaly_admin_supabase_client = adminClientSingleton
+  ;(globalThis as any).__inthaly_admin_key = adminClientKey
+  return adminClientSingleton
 }

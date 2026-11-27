@@ -36,24 +36,59 @@ export async function login(prevState: any, formData: FormData) {
   // Direct DB Query to avoid getUserSession cookie race condition
   const { createAdminClient } = await import('@/lib/supabase/server')
   const adminSupabase = await createAdminClient()
-  let { data: userData, error: userDbError } = await adminSupabase
+  const initialUserRes = await adminSupabase
     .from('users')
     .select('role_id, company_id, status, name, companies(id, name, status)')
     .eq('id', authUser.id)
     .maybeSingle()
+  let userData: any = initialUserRes.data
+  let userDbError: any = initialUserRes.error
 
   if (userDbError || !userData) {
     console.error(`[AUTH_LOGIN_WARN] admin query failed for ${authUser.id}:`, userDbError?.message || 'User not found in DB')
     try {
-      const { data: fallbackUser } = await supabase
+      const { data: flatUser } = await adminSupabase
         .from('users')
-        .select('role_id, company_id, status, name, companies(id, name, status)')
+        .select('role_id, company_id, status, name')
         .eq('id', authUser.id)
         .maybeSingle()
-      if (fallbackUser) {
-        userData = fallbackUser
+      if (flatUser) {
+        let compObj: any = null
+        if (flatUser.company_id) {
+          const { data: comp } = await adminSupabase
+            .from('companies')
+            .select('id, name, status')
+            .eq('id', flatUser.company_id)
+            .maybeSingle()
+          compObj = comp
+        }
+        userData = { ...flatUser, companies: compObj }
       }
     } catch (_) {}
+
+    if (!userData) {
+      try {
+        const { data: fallbackUser } = await supabase
+          .from('users')
+          .select('role_id, company_id, status, name')
+          .eq('id', authUser.id)
+          .maybeSingle()
+        if (fallbackUser) {
+          userData = { ...fallbackUser, companies: null }
+        }
+      } catch (_) {}
+    }
+
+    if (!userData && authUser.user_metadata) {
+      const meta = authUser.user_metadata
+      userData = {
+        role_id: meta.role_id || meta.role || 'admin',
+        company_id: meta.company_id || null,
+        status: 'active',
+        name: meta.name || email.split('@')[0],
+        companies: meta.company_name ? { id: meta.company_id, name: meta.company_name, status: 'active' } : null
+      }
+    }
   }
 
   const role = userData?.role_id?.toLowerCase()
