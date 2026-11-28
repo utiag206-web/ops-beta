@@ -11,8 +11,10 @@ import {
  X, AlertTriangle, Info, Calendar, DollarSign,
  TrendingUp, Award, AwardIcon, ShieldCheck,
  LayoutDashboard, Loader2, ArrowLeft, MapPin,
- Utensils, Coffee
+ Utensils, Coffee, WifiOff
 } from 'lucide-react'
+import { useOffline } from '@/components/providers/offline-provider'
+import { addOperationToQueue } from '@/lib/offline-sync'
 import { toast } from 'sonner'
 import { loginWorker, logoutWorker, updateWorkerPin } from '@/app/actions/worker-auth'
 import { getCompanyAuthSettings } from '@/lib/company-auth-settings'
@@ -65,6 +67,8 @@ type TabType = 'inicio' | 'documentos' | 'epps' | 'finanzas' | 'soma'
 
 export default function WorkerPortalClient({ company, session: initialSession }: WorkerPortalClientProps) {
   const router = useRouter()
+  const { isOnline, triggerSync } = useOffline()
+  const [isOfflineData, setIsOfflineData] = useState(false)
   const [session, setSession] = useState(initialSession)
 
   useEffect(() => {
@@ -137,33 +141,56 @@ export default function WorkerPortalClient({ company, session: initialSession }:
  return () => clearInterval(timer)
  }, [])
 
- // 1. Fast initial stats loader (instant attendance & dashboard metrics)
+  // 1. Fast initial stats loader (instant attendance & dashboard metrics) with offline cache
   const loadPortalStats = async () => {
     if (!session) return
+    const cacheKey = `wp_stats_${session.workerId}`
     setLoadingStats(true)
     try {
+      if (typeof navigator !== 'undefined' && !navigator.onLine) {
+        throw new Error('Offline')
+      }
       const statsData = await getWorkerPortalStats()
       if (statsData) {
         setStats(statsData)
         setTabLoaded(prev => ({ ...prev, inicio: true }))
+        setIsOfflineData(false)
+        if (typeof window !== 'undefined') localStorage.setItem(cacheKey, JSON.stringify(statsData))
       }
     } catch (error) {
-      console.error('[WORKER_PORTAL] Error fetching stats:', error)
+      if (typeof window !== 'undefined') {
+        const cached = localStorage.getItem(cacheKey)
+        if (cached) {
+          try {
+            setStats(JSON.parse(cached))
+            setTabLoaded(prev => ({ ...prev, inicio: true }))
+            setIsOfflineData(true)
+          } catch (_) {}
+        }
+      }
     } finally {
       setLoadingStats(false)
     }
   }
 
-  // 2. Individual tab loaders (loaded on-demand or prefetched silently)
+  // 2. Individual tab loaders with offline persistence
   const loadDocuments = async () => {
     if (!session || loadingDocs) return
+    const cacheKey = `wp_docs_${session.workerId}`
     setLoadingDocs(true)
     try {
+      if (typeof navigator !== 'undefined' && !navigator.onLine) throw new Error('Offline')
       const docsData = await getWorkerPortalDocuments()
       setDocuments(docsData || [])
       setTabLoaded(prev => ({ ...prev, documentos: true }))
+      if (typeof window !== 'undefined') localStorage.setItem(cacheKey, JSON.stringify(docsData || []))
     } catch (err) {
-      console.error('[WORKER_PORTAL] Error fetching documents:', err)
+      if (typeof window !== 'undefined') {
+        const cached = localStorage.getItem(cacheKey)
+        if (cached) {
+          try { setDocuments(JSON.parse(cached)); setTabLoaded(prev => ({ ...prev, documentos: true })) } catch (_) {}
+        }
+      }
     } finally {
       setLoadingDocs(false)
     }
@@ -171,13 +198,21 @@ export default function WorkerPortalClient({ company, session: initialSession }:
 
   const loadPPEs = async () => {
     if (!session || loadingPPE) return
+    const cacheKey = `wp_ppes_${session.workerId}`
     setLoadingPPE(true)
     try {
+      if (typeof navigator !== 'undefined' && !navigator.onLine) throw new Error('Offline')
       const ppeData = await getWorkerPortalPPEDeliveries()
       setPpeDeliveries(ppeData || [])
       setTabLoaded(prev => ({ ...prev, epps: true }))
+      if (typeof window !== 'undefined') localStorage.setItem(cacheKey, JSON.stringify(ppeData || []))
     } catch (err) {
-      console.error('[WORKER_PORTAL] Error fetching PPE deliveries:', err)
+      if (typeof window !== 'undefined') {
+        const cached = localStorage.getItem(cacheKey)
+        if (cached) {
+          try { setPpeDeliveries(JSON.parse(cached)); setTabLoaded(prev => ({ ...prev, epps: true })) } catch (_) {}
+        }
+      }
     } finally {
       setLoadingPPE(false)
     }
@@ -185,13 +220,21 @@ export default function WorkerPortalClient({ company, session: initialSession }:
 
   const loadFinances = async () => {
     if (!session || loadingFinances) return
+    const cacheKey = `wp_finances_${session.workerId}`
     setLoadingFinances(true)
     try {
+      if (typeof navigator !== 'undefined' && !navigator.onLine) throw new Error('Offline')
       const finData = await getWorkerPortalFinances()
       setFinances(finData || [])
       setTabLoaded(prev => ({ ...prev, finanzas: true }))
+      if (typeof window !== 'undefined') localStorage.setItem(cacheKey, JSON.stringify(finData || []))
     } catch (err) {
-      console.error('[WORKER_PORTAL] Error fetching finances:', err)
+      if (typeof window !== 'undefined') {
+        const cached = localStorage.getItem(cacheKey)
+        if (cached) {
+          try { setFinances(JSON.parse(cached)); setTabLoaded(prev => ({ ...prev, finanzas: true })) } catch (_) {}
+        }
+      }
     } finally {
       setLoadingFinances(false)
     }
@@ -199,8 +242,10 @@ export default function WorkerPortalClient({ company, session: initialSession }:
 
   const loadSoma = async () => {
     if (!session || loadingSoma) return
+    const cacheKey = `wp_soma_${session.workerId}`
     setLoadingSoma(true)
     try {
+      if (typeof navigator !== 'undefined' && !navigator.onLine) throw new Error('Offline')
       const [talksData, trainingsData] = await Promise.all([
         getWorkerPortalSomaTalks(),
         getWorkerPortalSomaTrainings()
@@ -208,8 +253,19 @@ export default function WorkerPortalClient({ company, session: initialSession }:
       setSomaTalks(talksData || [])
       setSomaTrainings(trainingsData || [])
       setTabLoaded(prev => ({ ...prev, soma: true }))
+      if (typeof window !== 'undefined') localStorage.setItem(cacheKey, JSON.stringify({ talks: talksData || [], trainings: trainingsData || [] }))
     } catch (err) {
-      console.error('[WORKER_PORTAL] Error fetching SOMA data:', err)
+      if (typeof window !== 'undefined') {
+        const cached = localStorage.getItem(cacheKey)
+        if (cached) {
+          try {
+            const parsed = JSON.parse(cached)
+            setSomaTalks(parsed.talks || [])
+            setSomaTrainings(parsed.trainings || [])
+            setTabLoaded(prev => ({ ...prev, soma: true }))
+          } catch (_) {}
+        }
+      }
     } finally {
       setLoadingSoma(false)
     }
@@ -438,10 +494,73 @@ export default function WorkerPortalClient({ company, session: initialSession }:
     }
   }
 
+  // Offline Punch Helper for zero-latency disconnection resilience
+  const handleOfflinePunch = async (punchType: ShiftPunchType, coords?: any) => {
+    const offlinePunchId = `punch-${crypto.randomUUID()}`
+    const now = new Date()
+    const localTime = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    const nowIso = now.toISOString()
+
+    let statusText = 'SIN REGISTRO'
+    let detailUpdate: any = {}
+
+    if (punchType === 'in') {
+      statusText = 'PRESENTE'
+      detailUpdate = { check_in: localTime }
+    } else if (punchType === 'break_start') {
+      statusText = 'EN REFRIGERIO'
+      detailUpdate = { break_start: localTime }
+    } else if (punchType === 'break_end') {
+      statusText = 'TURNO ACTIVO'
+      detailUpdate = { break_end: localTime }
+    } else if (punchType === 'out') {
+      statusText = 'JORNADA COMPLETADA'
+      detailUpdate = { check_out: localTime }
+    }
+
+    const newStats = {
+      ...(stats || {}),
+      todayAttendance: statusText,
+      todayAttendanceDetail: {
+        ...(stats?.todayAttendanceDetail || {}),
+        ...detailUpdate,
+        isPending: true
+      }
+    }
+
+    setStats(newStats)
+    if (session?.workerId && typeof window !== 'undefined') {
+      localStorage.setItem(`wp_stats_${session.workerId}`, JSON.stringify(newStats))
+    }
+
+    await addOperationToQueue({
+      id: offlinePunchId,
+      entity: 'attendance',
+      action: 'worker_punch',
+      payload: {
+        type: punchType,
+        coords: coords || {},
+        worker_id: session?.workerId,
+        timestamp: nowIso
+      },
+      company_id: session?.companyId || company.id
+    })
+
+    setIsLocationModalOpen(false)
+    toast.info('Sin conexión. Marcación guardada localmente en tu dispositivo. Se sincronizará automáticamente al detectar señal.')
+    triggerSync()
+  }
+
   // Handle Check In
   const handleCheckIn = async (selectedLocationId?: string) => {
     setMarkingAttendance(true)
     try {
+      if (typeof navigator !== 'undefined' && !navigator.onLine) {
+        const coords = await getPosition().catch(() => ({}))
+        await handleOfflinePunch('in', { ...coords, locationId: selectedLocationId })
+        return
+      }
+
       const coords = await getPosition()
       const res = await checkInWorker({ ...coords, locationId: selectedLocationId })
       if (res.success) {
@@ -464,7 +583,11 @@ export default function WorkerPortalClient({ company, session: initialSession }:
         toast.error(res.error || 'Error al registrar ingreso.')
       }
     } catch (error: any) {
-      toast.error(error.message || 'Error de red al registrar ingreso.')
+      if (typeof navigator !== 'undefined' && !navigator.onLine) {
+        await handleOfflinePunch('in', { locationId: selectedLocationId })
+      } else {
+        toast.error(error.message || 'Error de red al registrar ingreso.')
+      }
     } finally {
       setMarkingAttendance(false)
     }
@@ -474,6 +597,12 @@ export default function WorkerPortalClient({ company, session: initialSession }:
   const handleBreakStart = async (selectedLocationId?: string) => {
     setMarkingAttendance(true)
     try {
+      if (typeof navigator !== 'undefined' && !navigator.onLine) {
+        const coords = await getPosition().catch(() => ({}))
+        await handleOfflinePunch('break_start', { ...coords, locationId: selectedLocationId })
+        return
+      }
+
       const coords = await getPosition()
       const res = await registerWorkerPunch('break_start', { ...coords, locationId: selectedLocationId })
       if (res.success) {
@@ -496,7 +625,11 @@ export default function WorkerPortalClient({ company, session: initialSession }:
         toast.error(res.error || 'Error al registrar inicio de refrigerio.')
       }
     } catch (error: any) {
-      toast.error(error.message || 'Error de red al registrar inicio de refrigerio.')
+      if (typeof navigator !== 'undefined' && !navigator.onLine) {
+        await handleOfflinePunch('break_start', { locationId: selectedLocationId })
+      } else {
+        toast.error(error.message || 'Error de red al registrar inicio de refrigerio.')
+      }
     } finally {
       setMarkingAttendance(false)
     }
@@ -506,6 +639,12 @@ export default function WorkerPortalClient({ company, session: initialSession }:
   const handleBreakEnd = async (selectedLocationId?: string) => {
     setMarkingAttendance(true)
     try {
+      if (typeof navigator !== 'undefined' && !navigator.onLine) {
+        const coords = await getPosition().catch(() => ({}))
+        await handleOfflinePunch('break_end', { ...coords, locationId: selectedLocationId })
+        return
+      }
+
       const coords = await getPosition()
       const res = await registerWorkerPunch('break_end', { ...coords, locationId: selectedLocationId })
       if (res.success) {
@@ -528,7 +667,11 @@ export default function WorkerPortalClient({ company, session: initialSession }:
         toast.error(res.error || 'Error al registrar fin de refrigerio.')
       }
     } catch (error: any) {
-      toast.error(error.message || 'Error de red al registrar fin de refrigerio.')
+      if (typeof navigator !== 'undefined' && !navigator.onLine) {
+        await handleOfflinePunch('break_end', { locationId: selectedLocationId })
+      } else {
+        toast.error(error.message || 'Error de red al registrar fin de refrigerio.')
+      }
     } finally {
       setMarkingAttendance(false)
     }
@@ -538,6 +681,12 @@ export default function WorkerPortalClient({ company, session: initialSession }:
   const handleCheckOut = async (selectedLocationId?: string) => {
     setMarkingAttendance(true)
     try {
+      if (typeof navigator !== 'undefined' && !navigator.onLine) {
+        const coords = await getPosition().catch(() => ({}))
+        await handleOfflinePunch('out', { ...coords, locationId: selectedLocationId })
+        return
+      }
+
       const coords = await getPosition()
       const res = await checkOutWorker({ ...coords, locationId: selectedLocationId })
       if (res.success) {
@@ -560,7 +709,11 @@ export default function WorkerPortalClient({ company, session: initialSession }:
         toast.error(res.error || 'Error al registrar salida.')
       }
     } catch (error: any) {
-      toast.error(error.message || 'Error de red al registrar salida.')
+      if (typeof navigator !== 'undefined' && !navigator.onLine) {
+        await handleOfflinePunch('out', { locationId: selectedLocationId })
+      } else {
+        toast.error(error.message || 'Error de red al registrar salida.')
+      }
     } finally {
       setMarkingAttendance(false)
     }
@@ -645,38 +798,58 @@ export default function WorkerPortalClient({ company, session: initialSession }:
  }
  }, [activePPETosign])
 
- // Submit Signature
- const handleSaveSignature = async () => {
- const canvas = canvasRef.current
- if (!canvas || !activePPETosign) return
+  // Submit Signature with offline signature queueing
+  const handleSaveSignature = async () => {
+    const canvas = canvasRef.current
+    if (!canvas || !activePPETosign) return
 
- // Simple validation: check if the canvas is blank
- const blank = document.createElement('canvas')
- blank.width = canvas.width
- blank.height = canvas.height
- if (canvas.toDataURL() === blank.toDataURL()) {
- toast.warning('Por favor, realice su firma antes de confirmar.')
- return
- }
+    // Simple validation: check if the canvas is blank
+    const blank = document.createElement('canvas')
+    blank.width = canvas.width
+    blank.height = canvas.height
+    if (canvas.toDataURL() === blank.toDataURL()) {
+      toast.warning('Por favor, realice su firma antes de confirmar.')
+      return
+    }
 
- setIsSigning(true)
- try {
- const signatureBase64 = canvas.toDataURL('image/png')
- const res = await signWorkerPortalPPEDelivery(activePPETosign.id, signatureBase64)
- 
- if (res.success) {
- toast.success('¡EPP firmado digitalmente con éxito!')
- setActivePPETosign(null)
- await loadPortalData()
- } else {
- toast.error(res.error || 'Error al guardar la firma.')
- }
- } catch (error) {
- toast.error('Error al procesar la firma.')
- } finally {
- setIsSigning(false)
- }
- }
+    setIsSigning(true)
+    try {
+      const signatureBase64 = canvas.toDataURL('image/png')
+      if (typeof navigator !== 'undefined' && !navigator.onLine) {
+        await addOperationToQueue({
+          id: `ppe-${crypto.randomUUID()}`,
+          entity: 'ppe',
+          action: 'sign_delivery',
+          payload: { deliveryId: activePPETosign.id, signatureBase64 },
+          company_id: session?.companyId || company.id
+        })
+        setPpeDeliveries(prev => prev.map(p => p.id === activePPETosign.id ? { ...p, status: 'signed_offline' } : p))
+        toast.info('Sin conexión. Firma de EPP guardada localmente en tu dispositivo.')
+        setActivePPETosign(null)
+        triggerSync()
+        return
+      }
+
+      const res = await signWorkerPortalPPEDelivery(activePPETosign.id, signatureBase64)
+      
+      if (res.success) {
+        toast.success('¡EPP firmado digitalmente con éxito!')
+        setActivePPETosign(null)
+        await loadPortalData()
+      } else {
+        toast.error(res.error || 'Error al guardar la firma.')
+      }
+    } catch (error) {
+      if (typeof navigator !== 'undefined' && !navigator.onLine) {
+        toast.info('Sin conexión. Firma guardada localmente.')
+        setActivePPETosign(null)
+      } else {
+        toast.error('Error al procesar la firma.')
+      }
+    } finally {
+      setIsSigning(false)
+    }
+  }
 
  const handleGoToAdmin = () => {
  document.cookie = 'view_mode=OPERATIONAL; path=/; max-age=31536000; SameSite=Lax'
@@ -932,6 +1105,12 @@ export default function WorkerPortalClient({ company, session: initialSession }:
  <h2 className="text-lg font-black tracking-tight leading-tight flex items-center gap-2 text-slate-900">
  <span>{session.name} {session.last_name.split(' ')[0]}</span>
  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shadow-sm" />
+ {(!isOnline || isOfflineData) && (
+   <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-bold bg-amber-50 text-amber-800 border border-amber-200">
+     <WifiOff size={10} />
+     Caché Offline
+   </span>
+ )}
  </h2>
  {session.position && (
  <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-white/60 border border-blue-200/50 text-[10px] text-blue-900 font-bold tracking-wide mt-1 shadow-sm">

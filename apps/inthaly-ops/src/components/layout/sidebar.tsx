@@ -273,6 +273,7 @@ export function Sidebar() {
 
       case 'ADMIN':
         resolved = groups.map(g => {
+          if (g.id === 'mecanica') return { ...g, items: g.items.filter(i => i.name !== 'Requerimientos de Taller') }
           if (g.id === 'soma') return { ...g, items: g.items.filter(i => i.name !== 'Dashboard de Seguridad') }
           return g
         })
@@ -280,6 +281,9 @@ export function Sidebar() {
 
       case 'GERENTE':
         resolved = groups.map(g => {
+          if (g.id === 'mecanica') {
+            return { ...g, items: g.items.filter(i => i.name !== 'Requerimientos de Taller') }
+          }
           if (g.id === 'configuracion') {
             return { ...g, items: g.items.filter(i => ['profile', 'company'].includes(i.module)) }
           }
@@ -570,7 +574,7 @@ export function Sidebar() {
       <div className="flex-1 space-y-1">
         {filteredGroups.map((group) => {
           const isCollapsed = collapsed[group.id]
-          const hasActiveChild = group.items.some((item: any) => pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href)))
+          const hasActiveChild = group.items.some((item: any) => pathname === item.href || (item.href !== '/dashboard' && item.href !== '/super-admin' && pathname.startsWith(`${item.href}/`)))
           const isOpenByDefault = (group.id === 'mecanica' && context === 'MECANICA') || (group.id === 'operaciones' && context === 'SUPERVISOR')
           const effectivelyCollapsed = isCollapsed === undefined ? (isOpenByDefault ? false : !hasActiveChild) : isCollapsed
 
@@ -604,7 +608,18 @@ export function Sidebar() {
                         isActive = pathname === '/dashboard' && viewMode === 'OPERATIONAL'
                       }
                     } else {
-                      isActive = pathname === item.href || (item.href !== '/super-admin' && item.href !== '/dashboard' && pathname.startsWith(item.href))
+                      if (pathname === item.href) {
+                        isActive = true
+                      } else if (
+                        item.href !== '/super-admin' &&
+                        item.href !== '/dashboard' &&
+                        item.href !== '/reports' &&
+                        item.href !== '/requerimientos' &&
+                        item.href !== '/inventory' &&
+                        item.href !== '/operaciones'
+                      ) {
+                        isActive = pathname.startsWith(`${item.href}/`)
+                      }
                     }
                     
                     const Icon = item.icon

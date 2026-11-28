@@ -1,12 +1,15 @@
 import { NextResponse } from 'next/server'
 import { attendanceSyncHandler } from '@/lib/sync-handlers/attendance-sync'
+import { cajaChicaSyncHandler } from '@/lib/sync-handlers/caja-chica-sync'
 import { hsecSyncHandler } from '@/lib/sync-handlers/hsec-sync'
 import { incidenciasSyncHandler } from '@/lib/sync-handlers/incidencias-sync'
 import { mecanicaSyncHandler } from '@/lib/sync-handlers/mecanica-sync'
 import { movementsSyncHandler } from '@/lib/sync-handlers/movements-sync'
 import { plantaSyncHandler } from '@/lib/sync-handlers/planta-sync'
+import { ppeSyncHandler } from '@/lib/sync-handlers/ppe-sync'
 import { requerimientosSyncHandler } from '@/lib/sync-handlers/requerimientos-sync'
 import { tareoSyncHandler } from '@/lib/sync-handlers/tareo-sync'
+import { workersSyncHandler } from '@/lib/sync-handlers/workers-sync'
 
 export async function POST(request: Request) {
   try {
@@ -14,6 +17,12 @@ export async function POST(request: Request) {
     let result: any = false
 
     switch (entity) {
+      case 'workers':
+        result = await workersSyncHandler(action, payload)
+        break
+      case 'caja_chica':
+        result = await cajaChicaSyncHandler(action, payload)
+        break
       case 'planta_mineral':
         result = await plantaSyncHandler(action, payload)
         break
@@ -37,6 +46,9 @@ export async function POST(request: Request) {
         break
       case 'hsec':
         result = await hsecSyncHandler(action, payload)
+        break
+      case 'ppe':
+        result = await ppeSyncHandler(action, payload)
         break
       default:
         return NextResponse.json({ success: false, error: `Unknown entity: ${entity}` }, { status: 400 })

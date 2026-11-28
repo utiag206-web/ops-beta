@@ -23,6 +23,9 @@ import { registerPettyCashTransaction } from '@/app/(main)/caja-chica/actions'
 import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase/client'
 import { useRbac } from '@/components/providers/rbac-provider'
+import { useOffline } from '@/components/providers/offline-provider'
+import { useOperationalContext } from '@/hooks'
+import { addOperationToQueue } from '@/lib/offline-sync'
 import { getWarehouses } from '@/app/(main)/inventory/actions'
 import { ModalPortal } from '@/components/ui/modal-portal'
 
@@ -50,6 +53,8 @@ const CATEGORIES = [
 
 export function AddTransactionModal({ isOpen, onClose, onSuccess, area, initialData, currentBalance }: AddTransactionModalProps) {
  const { role_id } = useRbac()
+ const { isOnline, triggerSync } = useOffline()
+ const { companyId } = useOperationalContext()
  const [loading, setLoading] = useState(false)
  const [uploading, setUploading] = useState(false)
  const [targetArea, setTargetArea] = useState('')
@@ -173,10 +178,34 @@ export function AddTransactionModal({ isOpen, onClose, onSuccess, area, initialD
  return
  }
 
- setLoading(true)
- 
- try {
- if (initialData?.id) {
+  setLoading(true)
+  
+  try {
+    const online = typeof navigator !== 'undefined' ? navigator.onLine : isOnline
+    if (!online) {
+      const tempId = initialData?.id || `temp-${crypto.randomUUID()}`
+      const txPayload = {
+        ...formData,
+        amount: Number(formData.amount),
+        area,
+        category: formData.category,
+        target_area: targetArea
+      }
+      await addOperationToQueue({
+        id: tempId,
+        entity: 'caja_chica',
+        action: initialData?.id ? 'update_transaction' : 'create_transaction',
+        payload: initialData?.id ? { id: tempId, updates: txPayload } : txPayload,
+        company_id: companyId || 'local'
+      })
+      toast.info('Sin conexión. Movimiento de caja chica guardado localmente en cola de sincronización.')
+      onSuccess({ ...txPayload, id: tempId, isPending: true })
+      onClose()
+      triggerSync()
+      return
+    }
+
+  if (initialData?.id) {
  // Mode: EDIT
  const { updatePettyCashTransaction } = await import('@/app/(main)/caja-chica/actions')
  const result = await updatePettyCashTransaction(initialData.id, {

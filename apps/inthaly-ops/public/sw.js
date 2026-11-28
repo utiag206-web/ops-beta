@@ -2,7 +2,7 @@
 // Universal Offline Navigation, Static Asset Pre-caching & Sanitized Cache-API Match Architecture
 
 const CACHE_PREFIX = 'inthaly-ops'
-const CACHE_VERSION = 'v1.4.2'
+const CACHE_VERSION = 'v1.4.4'
 const STATIC_CACHE = `${CACHE_PREFIX}-static-${CACHE_VERSION}`
 const PAGES_CACHE = `${CACHE_PREFIX}-pages-${CACHE_VERSION}`
 const RSC_CACHE = `${CACHE_PREFIX}-rsc-${CACHE_VERSION}`
@@ -189,6 +189,12 @@ self.addEventListener('fetch', (event) => {
                          (await cache.match(request, { ignoreSearch: true, ignoreVary: true }))
           if (cached) {
             return cached
+          }
+          // Fallback to cached dashboard or offline RSC stream
+          const fallbackRsc = (await cache.match('/dashboard', { ignoreSearch: true, ignoreVary: true })) ||
+                              (await cache.match('/offline', { ignoreSearch: true, ignoreVary: true }))
+          if (fallbackRsc) {
+            return fallbackRsc
           }
           throw new TypeError('Offline RSC unavailable')
         }

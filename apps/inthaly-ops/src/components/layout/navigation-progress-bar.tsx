@@ -106,10 +106,10 @@ export function NavigationProgressBar() {
   return (
     <div
       aria-hidden="true"
-      className="fixed top-0 left-0 right-0 z-[99999] pointer-events-none h-[2.5px] bg-transparent"
+      className="fixed top-0 left-0 right-0 z-[99999] pointer-events-none h-[3px] bg-transparent"
     >
       <div
-        className="h-full bg-gradient-to-r from-sky-400 via-blue-500 to-indigo-600 shadow-sm transition-all ease-out"
+        className="h-full bg-gradient-to-r from-sky-400 via-blue-500 to-indigo-600 shadow-[0_0_12px_rgba(59,130,246,0.8),0_0_6px_rgba(96,165,250,0.6)] transition-all ease-out"
         style={{
           width: `${progress}%`,
           transitionDuration: progress === 100 ? '150ms' : '250ms',

@@ -1,6 +1,6 @@
 'use client'
 
-import { Lock, Mail, AlertCircle, Loader2 } from 'lucide-react'
+import { Lock, Mail, AlertCircle, Loader2, ArrowLeft } from 'lucide-react'
 import { useActionState, useState, useEffect, Suspense } from 'react'
 import { login } from './actions'
 import Link from 'next/link'
@@ -52,7 +52,20 @@ function LoginForm() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-slate-50 p-4">
-      <div className="w-full max-w-md bg-white rounded-2xl shadow-xl overflow-hidden">
+      <div className="w-full max-w-md">
+        {/* Enlace visible en móvil y escritorio para regresar a la landing */}
+        <div className="mb-3.5 flex items-center justify-between px-1">
+          <Link
+            href="/"
+            className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-600 hover:text-blue-700 bg-white hover:bg-slate-100/80 border border-slate-200/90 px-3 py-1.5 rounded-xl shadow-xs transition-all active:scale-95 cursor-pointer"
+          >
+            <ArrowLeft size={14} className="text-slate-500" />
+            <span>Volver al inicio</span>
+          </Link>
+          <span className="text-[11px] font-semibold text-slate-400 tracking-tight">Acceso Corporativo</span>
+        </div>
+
+        <div className="bg-white rounded-2xl shadow-xl overflow-hidden border border-slate-100">
         <div className="p-8 text-center bg-gradient-to-r from-blue-800 to-blue-600">
           <div className="mx-auto flex justify-center mb-3"><InthalyIsotype size={60} /></div>
           <h1 className="text-2xl font-black tracking-tight text-white">Inthaly<span className="text-sky-300">Ops</span></h1>
@@ -152,16 +165,16 @@ function LoginForm() {
               )}
             </button>
 
-            <div className="text-center mt-5 pt-3 border-t border-slate-100">
+            <div className="text-center mt-5 pt-3 border-t border-slate-100 flex items-center justify-end">
               <p className="text-xs text-slate-500">
-                ¿Tu empresa aún no cuenta con acceso corporativo?{' '}
                 <Link href="/" className="text-blue-600 font-bold hover:underline">
-                  Solicita una demostración
+                  Solicitar demo
                 </Link>
               </p>
             </div>
           </form>
         </div>
+      </div>
       </div>
     </div>
   )

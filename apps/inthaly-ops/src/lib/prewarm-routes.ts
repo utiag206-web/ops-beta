@@ -61,6 +61,19 @@ export const APP_ROUTES = [
   '/super-admin/settings/audit'
 ]
 
+const CRITICAL_OFFLINE_ROUTES = [
+  '/offline',
+  '/dashboard',
+  '/workers',
+  '/attendance',
+  '/tareo',
+  '/requerimientos',
+  '/caja-chica',
+  '/inventory/stock',
+  '/operaciones/planta',
+  '/mecanica'
+]
+
 let isPrewarmingRunning = false
 let isPrewarmingComplete = false
 
@@ -89,8 +102,36 @@ export async function warmApplicationRoutes(force = false) {
 
   isPrewarmingRunning = true
   try {
-    // Pre-cache only the lightweight offline shell fallback on idle without flooding SSR/Supabase with 44 route renders
-    await fetch('/offline', { headers: { 'Accept': 'text/html' } })
+    // 1. Prewarm primary offline shell
+    await fetch('/offline', { headers: { 'Accept': 'text/html' } }).catch(() => {})
+
+    // 2. Prewarm critical operational modules sequentially in idle without flooding server
+    for (const route of CRITICAL_OFFLINE_ROUTES) {
+      if (route === p) continue // Already loaded in current view
+      try {
+        // Fetch both HTML document and RSC payload so route is fully navigable offline
+        const [htmlRes] = await Promise.all([
+          fetch(route, { headers: { 'Accept': 'text/html' } }),
+          fetch(route, { headers: { 'RSC': '1' } }).catch(() => null)
+        ])
+
+        if (htmlRes && htmlRes.ok) {
+          const htmlText = await htmlRes.text()
+          const chunkMatches = Array.from(new Set(htmlText.match(/\/_next\/static\/(?:chunks|css)\/[a-zA-Z0-9_\-\.\/]+\.(?:js|css)/g) || []))
+          if (chunkMatches.length > 0) {
+            // Pre-cache runtime scripts/styles in batches of 4
+            for (let i = 0; i < chunkMatches.length; i += 4) {
+              const batch = chunkMatches.slice(i, i + 4)
+              await Promise.allSettled(batch.map(chunk => fetch(chunk).catch(() => null)))
+            }
+          }
+        }
+        // Polite delay between routes to avoid competing with user interactions
+        await new Promise(resolve => setTimeout(resolve, 250))
+      } catch (_) {
+        // Soft fail per route, continue warming others
+      }
+    }
   } catch (_) {
   } finally {
     isPrewarmingRunning = false

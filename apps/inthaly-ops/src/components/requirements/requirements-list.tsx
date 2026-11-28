@@ -178,36 +178,36 @@ export default function RequirementsPage({ userRole, initialData = [] }: { userR
   }
 
   return (
-    <div className="space-y-8 pb-12">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 bg-white p-6 sm:p-8 rounded-2xl sm:rounded-[2rem] shadow-sm border border-slate-50">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6 text-left w-full md:w-auto">
-          <div className="w-12 h-12 sm:w-16 sm:h-16 bg-indigo-100 text-indigo-600 rounded-2xl sm:rounded-[2rem] flex items-center justify-center shadow-sm shrink-0">
-            <Package size={24} className="sm:w-8 sm:h-8" />
+    <div className="space-y-3.5 sm:space-y-4 pb-8">
+      {/* Header Compacto Empresarial */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-3 bg-white p-3.5 sm:p-4 rounded-xl shadow-xs border border-slate-100">
+        <div className="flex items-center gap-3 text-left w-full md:w-auto">
+          <div className="w-10 h-10 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center shadow-2xs shrink-0 border border-indigo-100/50">
+            <Package size={20} />
           </div>
           <div>
-            <h1 className="text-2xl sm:text-3xl font-black text-slate-800 tracking-tight leading-tight">
+            <h1 className="text-base sm:text-lg font-bold text-slate-800 tracking-tight leading-snug">
               Gestión de Requerimientos
             </h1>
-            <p className="text-slate-500 font-medium text-xs sm:text-sm mt-0.5 sm:mt-1">Solicitudes operativas y flujos de aprobación.</p>
+            <p className="text-slate-500 font-medium text-xs">Solicitudes operativas y flujos de aprobación.</p>
           </div>
         </div>
         
         <button 
           onClick={() => setIsModalOpen(true)}
-          className="w-full md:w-auto bg-indigo-600 hover:bg-indigo-700 text-white px-8 py-4 rounded-xl sm:rounded-2xl font-bold transition-all flex items-center justify-center gap-3 shadow-lg shadow-indigo-100 active:scale-95 text-xs sm:text-base"
+          className="w-full md:w-auto bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl font-bold transition-all flex items-center justify-center gap-2 shadow-sm shadow-indigo-200 active:scale-95 text-xs cursor-pointer"
         >
-          <Plus size={20} strokeWidth={3} />
+          <Plus size={16} strokeWidth={2.5} />
           <span>Nuevo Requerimiento</span>
         </button>
       </div>
 
-      {/* Filters Area */}
-      <div className="flex flex-wrap items-center gap-4">
-        <div className="flex items-center gap-2 bg-white px-4 py-2.5 rounded-2xl border border-slate-100 shadow-sm flex-1 max-w-xs">
-          <Filter size={16} className="text-slate-400" />
+      {/* Filters Area Compacta */}
+      <div className="flex flex-wrap items-center gap-2.5">
+        <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-xl border border-slate-200 shadow-2xs flex-1 max-w-xs">
+          <Filter size={14} className="text-slate-400 shrink-0" />
           <select 
-            className="bg-transparent text-sm font-bold text-slate-600 outline-none w-full"
+            className="bg-transparent text-xs font-semibold text-slate-700 outline-none w-full cursor-pointer"
             value={filters.status}
             onChange={e => setFilters(prev => ({...prev, status: e.target.value}))}
           >
@@ -219,10 +219,10 @@ export default function RequirementsPage({ userRole, initialData = [] }: { userR
           </select>
         </div>
 
-        <div className="flex items-center gap-2 bg-white px-4 py-2.5 rounded-2xl border border-slate-100 shadow-sm">
-          <Clock size={16} className="text-slate-400" />
+        <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-xl border border-slate-200 shadow-2xs">
+          <Clock size={14} className="text-slate-400 shrink-0" />
           <select 
-            className="bg-transparent text-sm font-bold text-slate-600 outline-none"
+            className="bg-transparent text-xs font-semibold text-slate-700 outline-none cursor-pointer"
             value={filters.priority}
             onChange={e => setFilters(prev => ({...prev, priority: e.target.value}))}
           >
@@ -234,33 +234,33 @@ export default function RequirementsPage({ userRole, initialData = [] }: { userR
         </div>
       </div>
 
-      {/* Main Table */}
-      <div className="bg-white rounded-[2rem] shadow-sm border border-slate-100 overflow-hidden">
+      {/* Main Table Compacta */}
+      <div className="bg-white rounded-xl shadow-xs border border-slate-100 overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full">
+          <table className="w-full text-left">
             <thead>
-              <tr className="bg-slate-50/50 border-b border-slate-100">
-                <th className="py-5 px-6 text-[11px] font-bold text-slate-400 tracking-tight text-center">Tipo</th>
-                <th className="py-5 px-6 text-[11px] font-bold text-slate-400 tracking-tight">Motivo / Detalle</th>
-                <th className="py-5 px-6 text-[11px] font-bold text-slate-400 tracking-tight">Código</th>
-                <th className="py-5 px-6 text-[11px] font-bold text-slate-400 tracking-tight">Producto</th>
-                <th className="py-5 px-4 text-[11px] font-bold text-slate-400 tracking-tight text-center">Cant.</th>
-                <th className="py-5 px-4 text-[11px] font-bold text-slate-400 tracking-tight text-center">Unidad</th>
-                <th className="py-5 px-4 text-[11px] font-bold text-slate-400 tracking-tight text-center">Área</th>
-                <th className="py-5 px-6 text-[11px] font-bold text-slate-400 tracking-tight">Solicitado por</th>
-                <th className="py-5 px-6 text-[11px] font-bold text-slate-400 tracking-tight text-center">Prioridad</th>
-                <th className="py-5 px-6 text-[11px] font-bold text-slate-400 tracking-tight text-center">Estado</th>
-                <th className="py-5 px-6 text-[11px] font-bold text-slate-400 tracking-tight text-center">Fecha</th>
-                <th className="py-5 px-8 text-[11px] font-bold text-slate-400 tracking-tight text-right">Acciones</th>
+              <tr className="bg-slate-50/70 border-b border-slate-100">
+                <th className="py-2.5 px-3.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider text-center">Tipo</th>
+                <th className="py-2.5 px-3.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Motivo / Detalle</th>
+                <th className="py-2.5 px-3.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Código</th>
+                <th className="py-2.5 px-3.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Producto</th>
+                <th className="py-2.5 px-2.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider text-center">Cant.</th>
+                <th className="py-2.5 px-2.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider text-center">Unidad</th>
+                <th className="py-2.5 px-2.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider text-center">Área</th>
+                <th className="py-2.5 px-3.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Solicitado por</th>
+                <th className="py-2.5 px-3.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider text-center">Prioridad</th>
+                <th className="py-2.5 px-3.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider text-center">Estado</th>
+                <th className="py-2.5 px-3.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider text-center">Fecha</th>
+                <th className="py-2.5 px-4 text-[10px] font-bold text-slate-400 uppercase tracking-wider text-right">Acciones</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
               {loading ? (
                 <tr>
-                  <td colSpan={12} className="py-20 text-center">
-                    <div className="flex flex-col items-center gap-4">
-                      <div className="w-10 h-10 border-4 border-indigo-100 border-t-indigo-600 rounded-full animate-spin" />
-                      <p className="text-sm font-bold text-slate-400">Cargando requerimientos...</p>
+                  <td colSpan={12} className="py-12 text-center">
+                    <div className="flex flex-col items-center gap-2">
+                      <div className="w-8 h-8 border-3 border-indigo-100 border-t-indigo-600 rounded-full animate-spin" />
+                      <p className="text-xs font-semibold text-slate-400">Cargando requerimientos...</p>
                     </div>
                   </td>
                 </tr>
@@ -268,48 +268,48 @@ export default function RequirementsPage({ userRole, initialData = [] }: { userR
                 const canManageStatus = isGlobalAdmin || isJefeArea
                 
                 return (
-                  <tr key={req.id} className="group hover:bg-slate-50/50 transition-colors">
-                    <td className="px-6 py-6 text-center">
-                      <span className="bg-slate-100 text-slate-500 text-[9px] font-bold px-2 py-1 rounded shadow-sm border border-slate-200 tracking-tighter">
+                  <tr key={req.id} className="group hover:bg-slate-50/70 transition-colors">
+                    <td className="px-3.5 py-2 text-center">
+                      <span className="bg-slate-100 text-slate-600 text-[9px] font-bold px-1.5 py-0.5 rounded border border-slate-200 tracking-tight uppercase">
                         {req.type}
                       </span>
                     </td>
-                    <td className="py-6 px-6 max-w-[200px]">
-                      <p className="text-xs font-bold text-slate-800 leading-tight line-clamp-2">
+                    <td className="py-2 px-3.5 max-w-[200px]">
+                      <p className="text-xs font-bold text-slate-800 leading-tight line-clamp-1 group-hover:text-indigo-600 transition-colors">
                         {req.title || req.description}
                       </p>
                     </td>
-                    <td className="py-6 px-6">
-                      <div className="flex items-center gap-2">
-                        <div className={`p-2 rounded-lg shrink-0 ${req.products?.is_new ? 'bg-amber-100 text-amber-600' : 'bg-slate-100 text-slate-400'}`}>
-                          <Hash size={14} />
+                    <td className="py-2 px-3.5">
+                      <div className="flex items-center gap-1.5">
+                        <div className={`p-1 rounded shrink-0 ${req.products?.is_new ? 'bg-amber-100 text-amber-600' : 'bg-slate-100 text-slate-400'}`}>
+                          <Hash size={11} />
                         </div>
-                        <span className={`text-xs font-bold tracking-tighter ${req.products?.is_new ? 'text-amber-700 bg-amber-50 px-2 py-0.5 rounded border border-amber-200' : 'text-indigo-600'}`}>
+                        <span className={`text-xs font-mono font-bold tracking-tight ${req.products?.is_new ? 'text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200 text-[11px]' : 'text-slate-700'}`}>
                           {req.products?.code || 'S/C'}
                         </span>
                       </div>
                     </td>
-                    <td className="py-6 px-6 min-w-[200px]">
+                    <td className="py-2 px-3.5 min-w-[180px]">
                       {req.products?.name ? (
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <div className={`p-2 rounded-lg shrink-0 ${req.products?.is_new ? 'bg-amber-50 text-amber-500' : 'bg-indigo-50 text-indigo-400'}`}>
-                            <Package size={14} />
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <div className={`p-1 rounded shrink-0 ${req.products?.is_new ? 'bg-amber-50 text-amber-500' : 'bg-indigo-50 text-indigo-500'}`}>
+                            <Package size={12} />
                           </div>
-                          <span className="text-sm font-bold text-slate-800 tracking-tight">
+                          <span className="text-xs font-bold text-slate-800 tracking-tight">
                             {req.products?.name}
                           </span>
                           {req.products?.is_new && (
-                            <span className="text-[9px] font-black bg-amber-100 text-amber-800 px-2 py-0.5 rounded-md border border-amber-300/60 whitespace-nowrap shadow-2xs">
-                              ✨ Pendiente de Registro
+                            <span className="text-[8.5px] font-bold bg-amber-50 text-amber-800 px-1.5 py-0.2 rounded border border-amber-200 whitespace-nowrap">
+                              ✨ Nuevo
                             </span>
                           )}
                         </div>
                       ) : req.type === 'fondos' ? (
-                        <div className="flex items-center gap-2">
-                          <div className="bg-emerald-50 p-2 rounded-lg text-emerald-500 shrink-0">
-                            <Package size={14} />
+                        <div className="flex items-center gap-1.5">
+                          <div className="bg-emerald-50 p-1 rounded text-emerald-600 shrink-0">
+                            <Package size={12} />
                           </div>
-                          <span className="text-xs font-black text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-100 tracking-tight">
+                          <span className="text-[11px] font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200 tracking-tight">
                             Solicitud de Fondos
                           </span>
                         </div>
@@ -317,64 +317,64 @@ export default function RequirementsPage({ userRole, initialData = [] }: { userR
                         <span className="text-[10px] text-slate-400 italic">No especificado</span>
                       )}
                     </td>
-                    <td className="py-6 px-4 text-center">
-                      <span className="text-sm font-bold text-slate-800">
+                    <td className="py-2 px-2.5 text-center">
+                      <span className="text-xs font-bold text-slate-800 font-mono">
                         {req.quantity}
                       </span>
                     </td>
-                    <td className="py-6 px-4 text-center">
-                      <span className="text-[10px] font-bold text-slate-600 bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-100 tracking-tight whitespace-nowrap">
-                        {req.type === 'fondos' ? 'Soles (S/)' : (req.products?.unit || '—')}
+                    <td className="py-2 px-2.5 text-center">
+                      <span className="text-[10px] font-semibold text-slate-600 bg-slate-50 px-2 py-0.5 rounded border border-slate-200 tracking-tight whitespace-nowrap">
+                        {req.type === 'fondos' ? 'S/' : (req.products?.unit || '—')}
                       </span>
                     </td>
-                    <td className="py-6 px-4 text-center">
-                      <span className="text-[9px] font-bold text-indigo-500 bg-indigo-50/30 px-2 py-1 rounded-lg">
+                    <td className="py-2 px-2.5 text-center">
+                      <span className="text-[9px] font-bold text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded border border-indigo-100">
                         {req.area || '—'}
                       </span>
                     </td>
-                    <td className="py-6 px-6">
-                      <span className="text-[10px] text-slate-600 font-bold whitespace-nowrap">
+                    <td className="py-2 px-3.5">
+                      <span className="text-[11px] text-slate-700 font-medium whitespace-nowrap truncate block max-w-[130px]">
                         {req.user?.name || 'Sistema'}
                       </span>
                     </td>
-                    <td className="py-6 px-6 text-center">
+                    <td className="py-2 px-3.5 text-center">
                       <PriorityBadge priority={req.priority} />
                     </td>
-                    <td className="py-6 px-6 text-center">
-                      <div className="flex flex-col items-center gap-1">
+                    <td className="py-2 px-3.5 text-center">
+                      <div className="flex flex-col items-center gap-0.5">
                         <RequirementStatusBadge status={req.status} />
                         {req.isPending && (
-                          <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 border border-amber-200 flex items-center gap-1 shadow-xs">
-                            <Clock size={10} className="animate-spin text-amber-600" />
-                            Pendiente sinc.
+                          <span className="text-[8.5px] font-bold px-1.5 py-0.2 rounded bg-amber-50 text-amber-800 border border-amber-200 flex items-center gap-1">
+                            <Clock size={9} className="animate-spin text-amber-600" />
+                            Offline
                           </span>
                         )}
                       </div>
                     </td>
-                    <td className="py-6 px-6 text-center">
-                      <span className="text-[10px] font-bold text-slate-500">
+                    <td className="py-2 px-3.5 text-center">
+                      <span className="text-[10px] font-semibold text-slate-500 whitespace-nowrap">
                         {req.created_at ? new Date(req.created_at).toLocaleDateString() : '—'}
                       </span>
                     </td>
-                    <td className="py-6 px-8 text-right">
-                      <div className="flex items-center justify-end gap-2">
+                    <td className="py-2 px-4 text-right">
+                      <div className="flex items-center justify-end gap-1.5">
                         {canManageStatus ? (
-                          <div className="flex gap-2">
+                          <div className="flex gap-1.5">
                             {req.status === 'pendiente' && (
                               <>
                                 <button 
                                   onClick={() => handleApproveClick(req)}
-                                  className="p-2.5 bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white rounded-xl transition-all shadow-sm border border-blue-100/50"
+                                  className="p-1.5 bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white rounded-lg transition-all active:scale-95 border border-blue-200 shadow-2xs cursor-pointer"
                                   title="Aprobar / Atender"
                                 >
-                                  <CheckCircle2 size={16} />
+                                  <CheckCircle2 size={13} />
                                 </button>
                                 <button 
                                   onClick={() => handleStatusUpdate(req.id, 'rechazado')}
-                                  className="p-2.5 bg-rose-50 text-rose-600 hover:bg-rose-600 hover:text-white rounded-xl transition-all shadow-sm border border-rose-100/50"
+                                  className="p-1.5 bg-rose-50 text-rose-600 hover:bg-rose-600 hover:text-white rounded-lg transition-all active:scale-95 border border-rose-200 shadow-2xs cursor-pointer"
                                   title="Rechazar"
                                 >
-                                  <X size={16} />
+                                  <X size={13} />
                                 </button>
                               </>
                             )}

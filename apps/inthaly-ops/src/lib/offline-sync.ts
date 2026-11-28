@@ -1,4 +1,4 @@
-﻿import { openDB, DBSchema, IDBPDatabase } from 'idb'
+import { openDB, DBSchema, IDBPDatabase } from 'idb'
 
 export interface SyncOperation {
   id: string
@@ -77,6 +77,13 @@ interface InthalyDB extends DBSchema {
       'by-batch': string
     }
   }
+  workers_cache: {
+    key: string
+    value: any
+    indexes: {
+      'by-company': string
+    }
+  }
 }
 
 let dbPromise: Promise<IDBPDatabase<InthalyDB>> | null = null
@@ -84,7 +91,7 @@ let dbPromise: Promise<IDBPDatabase<InthalyDB>> | null = null
 export function getDB() {
   if (typeof window === 'undefined') return null
   if (!dbPromise) {
-    dbPromise = openDB<InthalyDB>('inthaly-ops-offline', 2, {
+    dbPromise = openDB<InthalyDB>('inthaly-ops-offline', 3, {
       upgrade(db, oldVersion) {
         // v1 store
         if (!db.objectStoreNames.contains('sync_queue')) {
@@ -103,6 +110,11 @@ export function getDB() {
         if (!db.objectStoreNames.contains('plant_samples_cache')) {
           const sampleStore = db.createObjectStore('plant_samples_cache', { keyPath: 'id' })
           sampleStore.createIndex('by-batch', 'batch_id')
+        }
+        // v3 store for workers offline persistence
+        if (!db.objectStoreNames.contains('workers_cache')) {
+          const workerStore = db.createObjectStore('workers_cache', { keyPath: 'id' })
+          workerStore.createIndex('by-company', 'company_id')
         }
       },
     })
@@ -228,6 +240,11 @@ export async function clearOfflineSession(): Promise<void> {
   const db = await getDB()
   if (!db) return
   await db.delete('auth_session', 'current_session')
+  try {
+    await db.clear('workers_cache')
+    await db.clear('plant_batches_cache')
+    await db.clear('plant_samples_cache')
+  } catch (_) {}
 }
 
 export function isOfflineSessionValid(session: OfflineAuthSession | null): boolean {
@@ -240,7 +257,45 @@ export function isOfflineSessionValid(session: OfflineAuthSession | null): boole
 }
 
 // ==========================================
-// 3. READ CACHE: PLANTA Y MINERAL
+// 3. READ CACHE: WORKERS (PERSONAL)
+// ==========================================
+
+export async function saveWorkersToCache(workers: any[], companyId: string): Promise<void> {
+  const db = await getDB()
+  if (!db || !workers || !Array.isArray(workers)) return
+
+  const tx = db.transaction('workers_cache', 'readwrite')
+  for (const w of workers) {
+    if (w && w.id) {
+      await tx.store.put({ ...w, company_id: companyId, _cached_at: new Date().toISOString() })
+    }
+  }
+  await tx.done
+}
+
+export async function getCachedWorkers(companyId: string): Promise<any[]> {
+  const db = await getDB()
+  if (!db) return []
+  try {
+    return await db.getAllFromIndex('workers_cache', 'by-company', companyId)
+  } catch {
+    return []
+  }
+}
+
+export async function addOfflineWorkerToCache(worker: any, companyId: string): Promise<void> {
+  const db = await getDB()
+  if (!db || !worker) return
+  await db.put('workers_cache', {
+    ...worker,
+    company_id: companyId,
+    _offline_pending: true,
+    _cached_at: new Date().toISOString()
+  })
+}
+
+// ==========================================
+// 4. READ CACHE: PLANTA Y MINERAL
 // ==========================================
 
 export async function saveBatchesToCache(batches: CachedPlantBatch[], companyId: string): Promise<void> {

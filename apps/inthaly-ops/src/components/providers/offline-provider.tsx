@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react'
 import { Wifi, WifiOff, RefreshCw } from 'lucide-react'
+import { toast } from 'sonner'
 import { getPendingOperations, updateOperationStatus, removeOperationFromQueue, replaceTemporaryIdInQueue } from '@/lib/offline-sync'
 
 // Registry of handlers for different entities
@@ -182,11 +183,13 @@ export function OfflineProvider({ children }: { children: React.ReactNode }) {
 
     const handleOnline = () => {
       setIsOnline(true)
+      toast.success('Conexión a Internet restablecida')
       if (process.env.NODE_ENV !== 'development' && typeof window !== 'undefined' && !isPublicOrAuthPath(window.location.pathname)) {
         import('@/lib/prewarm-routes').then(m => m.warmApplicationRoutes(true)).catch(() => {})
       }
       updatePendingCount().then((count) => {
         if (count > 0) {
+          toast.info(`Sincronizando ${count} operaciones pendientes...`)
           setTimeout(() => {
             triggerSync()
           }, 500)
@@ -196,6 +199,7 @@ export function OfflineProvider({ children }: { children: React.ReactNode }) {
     
     const handleOffline = () => {
       setIsOnline(false)
+      toast.warning('Modo sin conexión activado. Las operaciones se guardarán localmente.')
     }
 
     window.addEventListener('online', handleOnline)

@@ -4,12 +4,13 @@ import { useState, useEffect } from 'react'
 import { AddWorkerModal } from '@/components/workers/add-worker-modal'
 import { EditWorkerModal } from '@/components/workers/edit-worker-modal'
 import { deleteWorker, reactivateWorker, getWorkers, exportWorkersAllData } from '@/app/(main)/workers/actions'
-import { Search, UserMinus, UserCheck, Edit2, Trash2, Loader2, User, Folder, Upload, Plus, Filter, Download, CheckCircle2, Clock } from 'lucide-react'
+import { Search, UserMinus, UserCheck, Edit2, Trash2, Loader2, User, Folder, Upload, Plus, Filter, Download, CheckCircle2, Clock, WifiOff } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 // Dynamic import of xlsx inside handleExportExcel
 import { useTerminology, useOperationalContext } from '@/hooks'
+import { saveWorkersToCache, getCachedWorkers } from '@/lib/offline-sync'
 import type { Worker } from '@/types/workers.types'
 
 
@@ -17,6 +18,8 @@ export function WorkersList({ workers, canManage = false }: { workers: Worker[],
  const router = useRouter()
  const { term } = useTerminology()
  const { companyId } = useOperationalContext()
+ const [displayWorkers, setDisplayWorkers] = useState<Worker[]>(workers || [])
+ const [isOfflineData, setIsOfflineData] = useState(false)
  const [isAddModalOpen, setIsAddModalOpen] = useState(false)
  const [editingWorker, setEditingWorker] = useState<Worker | null>(null)
  const [searchTerm, setSearchTerm] = useState('')
@@ -25,8 +28,19 @@ export function WorkersList({ workers, canManage = false }: { workers: Worker[],
  const [isExporting, setIsExporting] = useState(false)
 
   useEffect(() => {
-    if (workers && workers.length > 0 && typeof window !== 'undefined') {
-      localStorage.setItem(companyId ? `workers_cache_${companyId}` : 'workers_cache', JSON.stringify(workers))
+    if (workers && workers.length > 0) {
+      setDisplayWorkers(workers)
+      setIsOfflineData(false)
+      if (companyId) {
+        saveWorkersToCache(workers, companyId).catch(() => {})
+      }
+    } else if (companyId && (!workers || workers.length === 0)) {
+      getCachedWorkers(companyId).then((cached) => {
+        if (cached && cached.length > 0) {
+          setDisplayWorkers(cached)
+          setIsOfflineData(true)
+        }
+      }).catch(() => {})
     }
   }, [workers, companyId])
 
@@ -118,7 +132,7 @@ export function WorkersList({ workers, canManage = false }: { workers: Worker[],
    }
  }
 
- const filteredWorkers = workers.filter(worker => {
+ const filteredWorkers = displayWorkers.filter(worker => {
  const isWorkerActive = worker.status?.toUpperCase() === 'ACTIVO' || worker.status?.toUpperCase() === 'ACTIVE'
  const statusMatch = activeTab === 'activo' ? isWorkerActive : !isWorkerActive
 
@@ -170,7 +184,15 @@ export function WorkersList({ workers, canManage = false }: { workers: Worker[],
     <div className="space-y-3.5 sm:space-y-4">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-3 bg-white p-4 sm:p-5 rounded-xl border border-slate-100 shadow-xs">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-slate-800 tracking-tight">Gestión de Personal</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-xl sm:text-2xl font-bold text-slate-800 tracking-tight">Gestión de Personal</h1>
+            {isOfflineData && (
+              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-amber-50 text-amber-800 border border-amber-200">
+                <WifiOff size={12} />
+                Caché Offline
+              </span>
+            )}
+          </div>
           <p className="text-xs text-slate-500 font-medium mt-0.5">Listado maestro de {term('worker.plural', 'trabajadores').toLowerCase()} y colaboradores.</p>
         </div>
         {canManage && (
@@ -363,10 +385,10 @@ export function WorkersList({ workers, canManage = false }: { workers: Worker[],
  {/* Mobile Card View */}
  <div className="md:hidden divide-y divide-slate-100">
  {filteredWorkers.map((worker) => (
- <div key={worker.id} className="p-6 space-y-4">
- <div className="flex items-start justify-between gap-4">
- <div className="flex items-center gap-4">
- <div className="w-14 h-14 rounded-2xl bg-slate-100 flex items-center justify-center overflow-hidden border-2 border-white shadow-md">
+ <div key={worker.id} className="p-3.5 space-y-2.5">
+ <div className="flex items-start justify-between gap-3">
+ <div className="flex items-center gap-3">
+ <div className="w-11 h-11 rounded-xl bg-slate-100 flex items-center justify-center overflow-hidden border border-slate-200 shadow-2xs">
  {worker.photo_url ? (
  <img src={worker.photo_url} alt={worker.name} className="w-full h-full object-cover" />
  ) : (
@@ -401,42 +423,42 @@ export function WorkersList({ workers, canManage = false }: { workers: Worker[],
  </div>
  </div>
 
- <div className="bg-slate-50 rounded-2xl p-4 grid grid-cols-2 gap-4 border border-slate-100/50">
+ <div className="bg-slate-50 rounded-xl p-2.5 grid grid-cols-2 gap-2 border border-slate-100/70">
  <div>
- <p className="text-[10px] font-bold text-slate-400 tracking-tight mb-1">DNI / Documento</p>
- <p className="text-sm font-bold text-slate-700">{worker.dni}</p>
+ <p className="text-[9px] font-bold text-slate-400 uppercase tracking-tight mb-0.5">DNI / Documento</p>
+ <p className="text-xs font-bold text-slate-700 font-mono">{worker.dni}</p>
  </div>
  <div className="text-right">
- <p className="text-[10px] font-bold text-slate-400 tracking-tight mb-1">Cargo / Puesto</p>
- <p className="text-sm font-bold text-slate-700 truncate">{worker.position}</p>
+ <p className="text-[9px] font-bold text-slate-400 uppercase tracking-tight mb-0.5">Cargo / Puesto</p>
+ <p className="text-xs font-bold text-slate-700 truncate capitalize">{worker.position}</p>
  </div>
  </div>
 
  {canManage && (
- <div className="flex gap-3 pt-1">
+ <div className="flex gap-2 pt-0.5">
  <button 
  onClick={() => setEditingWorker(worker)}
- className="flex-1 flex items-center justify-center gap-2 bg-white border border-slate-200 text-slate-600 py-2.5 rounded-xl text-[10px] font-bold tracking-tight transition-all active:scale-95 shadow-sm"
+ className="flex-1 flex items-center justify-center gap-1.5 bg-white border border-slate-200 text-slate-700 py-1.5 rounded-lg text-xs font-semibold tracking-tight transition-all active:scale-95 shadow-2xs hover:bg-slate-50"
  >
- <Edit2 size={14} />
+ <Edit2 size={13} />
  Editar
  </button>
  {activeTab === 'activo' ? (
  <button 
  onClick={() => handleDelete(worker.id, worker.name)}
  disabled={isDeleting === worker.id}
- className="flex-1 flex items-center justify-center gap-2 bg-rose-50 border border-rose-100 text-rose-600 py-2.5 rounded-xl text-[10px] font-bold tracking-tight transition-all active:scale-95 shadow-sm"
+ className="flex-1 flex items-center justify-center gap-1.5 bg-rose-50 border border-rose-100 text-rose-600 py-1.5 rounded-lg text-xs font-semibold tracking-tight transition-all active:scale-95 shadow-2xs hover:bg-rose-100 disabled:opacity-50"
  >
- {isDeleting === worker.id ? <Loader2 size={14} className="animate-spin" /> : <UserMinus size={14} />}
+ {isDeleting === worker.id ? <Loader2 size={13} className="animate-spin" /> : <UserMinus size={13} />}
  Desactivar
  </button>
  ) : (
  <button 
  onClick={() => handleReactivate(worker.id, worker.name)}
  disabled={isDeleting === worker.id}
- className="flex-1 flex items-center justify-center gap-2 bg-emerald-50 border border-emerald-100 text-emerald-600 py-2.5 rounded-xl text-[10px] font-bold tracking-tight transition-all active:scale-95 shadow-sm"
+ className="flex-1 flex items-center justify-center gap-1.5 bg-emerald-50 border border-emerald-100 text-emerald-600 py-1.5 rounded-lg text-xs font-semibold tracking-tight transition-all active:scale-95 shadow-2xs hover:bg-emerald-100 disabled:opacity-50"
  >
- {isDeleting === worker.id ? <Loader2 size={14} className="animate-spin" /> : <UserCheck size={14} />}
+ {isDeleting === worker.id ? <Loader2 size={13} className="animate-spin" /> : <UserCheck size={13} />}
  Reactivar
  </button>
  )}
@@ -461,6 +483,10 @@ export function WorkersList({ workers, canManage = false }: { workers: Worker[],
  <AddWorkerModal 
  isOpen={isAddModalOpen} 
  onClose={() => setIsAddModalOpen(false)} 
+ onWorkerCreatedOffline={(newWorker) => {
+   setDisplayWorkers(prev => [newWorker, ...prev])
+   setIsOfflineData(true)
+ }}
  />
  )}
 

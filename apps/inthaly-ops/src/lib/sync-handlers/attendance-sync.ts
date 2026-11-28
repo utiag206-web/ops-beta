@@ -1,4 +1,5 @@
 import { checkIn, checkOut } from '@/app/(main)/attendance/actions'
+import { registerWorkerPunch, ShiftPunchType } from '@/app/actions/worker-portal'
 
 export async function attendanceSyncHandler(action: string, payload: any): Promise<boolean> {
   try {
@@ -9,6 +10,11 @@ export async function attendanceSyncHandler(action: string, payload: any): Promi
       }
       case 'check_out': {
         const res = await checkOut()
+        return res.success
+      }
+      case 'worker_punch': {
+        const punchType = (payload?.type || 'in') as ShiftPunchType
+        const res = await registerWorkerPunch(punchType, payload?.coords)
         return res.success
       }
       default:

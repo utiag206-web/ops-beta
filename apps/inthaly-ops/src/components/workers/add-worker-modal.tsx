@@ -4,10 +4,15 @@ import { useState, useActionState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { X, UserPlus, AlertCircle, Loader2 } from 'lucide-react'
 import { createWorker } from '@/app/(main)/workers/actions'
+import { addOperationToQueue, addOfflineWorkerToCache } from '@/lib/offline-sync'
+import { useOperationalContext } from '@/hooks'
+import { useOffline } from '@/components/providers/offline-provider'
+import { toast } from 'sonner'
 
 interface AddWorkerModalProps {
   isOpen: boolean
   onClose: () => void
+  onWorkerCreatedOffline?: (worker: any) => void
 }
 
 const initialState = {
@@ -15,9 +20,11 @@ const initialState = {
   success: false as boolean,
 }
 
-export function AddWorkerModal({ isOpen, onClose }: AddWorkerModalProps) {
+export function AddWorkerModal({ isOpen, onClose, onWorkerCreatedOffline }: AddWorkerModalProps) {
   const [state, formAction, isPending] = useActionState(createWorker, initialState)
   const [mounted, setMounted] = useState(false)
+  const { companyId } = useOperationalContext()
+  const { isOnline, triggerSync } = useOffline()
 
   useEffect(() => {
     setMounted(true)
@@ -29,6 +36,69 @@ export function AddWorkerModal({ isOpen, onClose }: AddWorkerModalProps) {
       onClose()
     }
   }, [state?.success, onClose])
+
+  const handleFormSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    const online = typeof navigator !== 'undefined' ? navigator.onLine : isOnline
+    if (!online) {
+      e.preventDefault()
+      const formData = new FormData(e.currentTarget)
+      const name = formData.get('name') as string
+      const lastName = formData.get('last_name') as string
+      const dni = formData.get('dni') as string
+      const position = formData.get('position') as string
+      const phone = (formData.get('phone') as string) || null
+      const hireDate = (formData.get('hire_date') as string) || null
+      const cod = (formData.get('cod') as string) || null
+
+      if (!name || !dni || !position) {
+        toast.error('Nombre, DNI y Cargo son obligatorios.')
+        return
+      }
+
+      const tempId = `temp-${crypto.randomUUID()}`
+      const offlineWorker = {
+        id: tempId,
+        name: name.toUpperCase(),
+        last_name: lastName ? lastName.toUpperCase() : '',
+        dni,
+        position: position.toUpperCase(),
+        phone,
+        hire_date: hireDate || new Date().toISOString().split('T')[0],
+        status: 'ACTIVO',
+        created_at: new Date().toISOString(),
+        company_id: companyId || 'local'
+      }
+
+      try {
+        await addOperationToQueue({
+          id: tempId,
+          entity: 'workers',
+          action: 'create_worker',
+          payload: {
+            name,
+            last_name: lastName,
+            dni,
+            position,
+            phone,
+            hire_date: hireDate,
+            cod
+          },
+          company_id: companyId || 'local'
+        })
+
+        if (companyId) {
+          await addOfflineWorkerToCache(offlineWorker, companyId)
+        }
+
+        onWorkerCreatedOffline?.(offlineWorker)
+        toast.info('Sin conexión. Trabajador registrado localmente en cola de sincronización.')
+        onClose()
+        triggerSync()
+      } catch (err: any) {
+        toast.error('Error al guardar localmente: ' + (err?.message || ''))
+      }
+    }
+  }
 
   if (!isOpen || !mounted) return null
 
@@ -59,7 +129,7 @@ export function AddWorkerModal({ isOpen, onClose }: AddWorkerModalProps) {
         </div>
 
         {/* Cuerpo del Formulario con Scroll Interno Suave */}
-        <form id="add-worker-form" action={formAction} className="flex flex-col flex-1 overflow-hidden">
+        <form id="add-worker-form" action={formAction} onSubmit={handleFormSubmit} className="flex flex-col flex-1 overflow-hidden">
           <div className="p-5 overflow-y-auto flex-1 space-y-3.5">
             {state?.error && (
               <div className="p-3 bg-red-50 border border-red-200 text-red-600 rounded-lg flex items-center gap-2 text-xs font-medium">
